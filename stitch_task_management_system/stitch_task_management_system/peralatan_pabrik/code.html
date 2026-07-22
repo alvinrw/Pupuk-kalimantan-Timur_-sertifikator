@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Peralatan Pabrik - Sertifikator</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600&amp;family=JetBrains+Mono:wght@400;600&amp;family=Source+Serif+4:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary-fixed-variant": "#5c4300",
+                      "surface-container-highest": "#e0e3e5",
+                      "on-tertiary-container": "#fffbff",
+                      "on-error": "#ffffff",
+                      "on-surface-variant": "#404752",
+                      "tertiary-fixed-dim": "#ffb780",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-high": "#e6e8ea",
+                      "tertiary-container": "#b35e00",
+                      "status-success": "#10B981",
+                      "secondary-fixed-dim": "#f8bd2a",
+                      "on-secondary-fixed": "#261a00",
+                      "surface-bright": "#f7f9fb",
+                      "on-primary": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "background": "#f7f9fb",
+                      "surface-container": "#eceef0",
+                      "surface-variant": "#e0e3e5",
+                      "text-muted": "#64748B",
+                      "error": "#ba1a1a",
+                      "primary-fixed-dim": "#a2c9ff",
+                      "surface-container-low": "#f2f4f6",
+                      "on-secondary": "#ffffff",
+                      "status-error": "#EF4444",
+                      "surface": "#f7f9fb",
+                      "inverse-on-surface": "#eff1f3",
+                      "tertiary-fixed": "#ffdcc4",
+                      "on-error-container": "#93000a",
+                      "border-subtle": "#E2E8F0",
+                      "surface-dim": "#d8dadc",
+                      "tertiary": "#8f4a00",
+                      "on-primary-fixed": "#001c38",
+                      "inverse-primary": "#a2c9ff",
+                      "on-primary-container": "#fdfcff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-surface": "#191c1e",
+                      "secondary-fixed": "#ffdfa0",
+                      "secondary-container": "#fec330",
+                      "on-tertiary-fixed": "#2f1400",
+                      "outline": "#707783",
+                      "status-warning": "#F59E0B",
+                      "on-background": "#191c1e",
+                      "on-secondary-container": "#6f5100",
+                      "primary-fixed": "#d3e4ff",
+                      "secondary": "#795900",
+                      "on-primary-fixed-variant": "#004881",
+                      "on-tertiary-fixed-variant": "#6f3800",
+                      "primary-container": "#0077ce",
+                      "inverse-surface": "#2d3133",
+                      "outline-variant": "#c0c7d4",
+                      "primary": "#005ea4",
+                      "surface-tint": "#0060a8",
+                      "status-info": "#0EA5E9",
+                      "text-main": "#0F172A"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin-mobile": "16px",
+                      "container-max": "1440px",
+                      "gutter": "24px",
+                      "unit": "4px"
+              },
+              "fontFamily": {
+                      "data-tabular": [
+                              "JetBrains Mono"
+                      ],
+                      "body-sm": [
+                              "Hanken Grotesk"
+                      ],
+                      "body-lg": [
+                              "Hanken Grotesk"
+                      ],
+                      "label-caps": [
+                              "JetBrains Mono"
+                      ],
+                      "display-lg": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-sm": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-md": [
+                              "\"Source Serif 4\""
+                      ],
+                      "headline-lg": [
+                              "\"Source Serif 4\""
+                      ],
+                      "body-md": [
+                              "Hanken Grotesk"
+                      ]
+              },
+              "fontSize": {
+                      "data-tabular": [
+                              "13px",
+                              {
+                                      "lineHeight": "18px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg": [
+                              "48px",
+                              {
+                                      "lineHeight": "56px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-4 bg-surface-container-lowest dark:bg-inverse-surface border-r border-border-subtle dark:border-outline-variant fixed left-0 top-0 h-screen w-[260px] z-50">
+<div class="px-6 mb-8 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center font-bold font-headline-sm text-headline-sm">S</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">Sertifikator</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Enterprise Compliance</p>
+</div>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full bg-primary text-on-primary py-2 px-4 rounded font-body-sm text-body-sm font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">add</span>
+                New Request
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto px-4 flex flex-col gap-1">
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+                Dashboard
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-primary bg-primary/5 border-l-4 border-primary hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">factory</span>
+                Equipment
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">verified</span>
+                Asset Licensing
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">workspace_premium</span>
+                Product Licensing
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">analytics</span>
+                Monitoring
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">notifications</span>
+                Notifications
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">history</span>
+                History
+            </a>
+</div>
+<div class="mt-auto px-4 flex flex-col gap-1 border-t border-border-subtle pt-4">
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">support</span>
+                Help Center
+            </a>
+<a class="flex items-center gap-3 px-4 py-3 rounded text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined">logout</span>
+                Log Out
+            </a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="flex-1 md:ml-[260px] min-h-screen bg-background">
+<!-- Header -->
+<header class="bg-surface-container-lowest border-b border-border-subtle px-gutter py-4 sticky top-0 z-40 flex items-center justify-between">
+<div>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface">Peralatan Pabrik</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">Kelola dan pantau status seluruh peralatan pabrik.</p>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-on-primary hover:bg-primary/90 px-4 py-2 rounded flex items-center gap-2 font-body-sm text-body-sm transition-colors">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Tambah Peralatan
+                </button>
+</div>
+</header>
+<!-- Content -->
+<div class="p-gutter max-w-container-max mx-auto space-y-6">
+<!-- Filters & Search -->
+<div class="bg-surface-container-lowest rounded-lg border border-border-subtle p-4 flex flex-col sm:flex-row gap-4 items-end justify-between">
+<div class="flex flex-wrap gap-4 flex-1">
+<div class="w-full sm:w-64">
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Cari Peralatan</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-10 pr-3 py-2 bg-surface border border-border-subtle rounded text-body-sm font-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors" placeholder="Nama, ID, atau Kategori..." type="text"/>
+</div>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Status</label>
+<select class="w-full sm:w-40 px-3 py-2 bg-surface border border-border-subtle rounded text-body-sm font-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none">
+<option value="">Semua Status</option>
+<option value="layak">Layak</option>
+<option value="repair">Repair</option>
+<option value="tidak_layak">Tidak Layak</option>
+</select>
+</div>
+<div>
+<label class="block font-label-caps text-label-caps text-on-surface-variant mb-1">Kategori</label>
+<select class="w-full sm:w-48 px-3 py-2 bg-surface border border-border-subtle rounded text-body-sm font-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors appearance-none">
+<option value="">Semua Kategori</option>
+<option value="mesin_produksi">Mesin Produksi</option>
+<option value="alat_berat">Alat Berat</option>
+<option value="kelistrikan">Kelistrikan</option>
+</select>
+</div>
+</div>
+<button class="px-4 py-2 text-primary border border-border-subtle hover:bg-surface-container-low rounded font-body-sm text-body-sm transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">filter_list</span>
+                    Reset Filter
+                </button>
+</div>
+<!-- Data Table -->
+<div class="bg-surface-container-lowest rounded-lg border border-border-subtle overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-border-subtle">
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant w-16">ID</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant">Nama Peralatan</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant">Kategori</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant">Tgl Inspeksi Terakhir</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant">Status</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant text-right">Aksi</th>
+</tr>
+</thead>
+<tbody class="font-data-tabular text-data-tabular text-on-surface divide-y divide-border-subtle">
+<!-- Row 1 -->
+<tr class="hover:bg-surface/50 transition-colors">
+<td class="py-3 px-4 text-text-muted">EQ-1042</td>
+<td class="py-3 px-4 font-medium">Turbine Generator Alpha</td>
+<td class="py-3 px-4">Mesin Produksi</td>
+<td class="py-3 px-4">12 Okt 2023</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-status-success/10 text-status-success font-medium text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+                                        Layak
+                                    </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1"><span class="material-symbols-outlined text-lg">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface/50 transition-colors">
+<td class="py-3 px-4 text-text-muted">EQ-1043</td>
+<td class="py-3 px-4 font-medium">Conveyor Belt System B</td>
+<td class="py-3 px-4">Mesin Produksi</td>
+<td class="py-3 px-4">10 Nov 2023</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-status-warning/10 text-status-warning font-medium text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+                                        Repair
+                                    </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1"><span class="material-symbols-outlined text-lg">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface/50 transition-colors">
+<td class="py-3 px-4 text-text-muted">EQ-1044</td>
+<td class="py-3 px-4 font-medium">Forklift Heavy Lift XT</td>
+<td class="py-3 px-4">Alat Berat</td>
+<td class="py-3 px-4">05 Des 2023</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-status-success/10 text-status-success font-medium text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+                                        Layak
+                                    </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1"><span class="material-symbols-outlined text-lg">more_vert</span></button>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface/50 transition-colors">
+<td class="py-3 px-4 text-text-muted">EQ-1045</td>
+<td class="py-3 px-4 font-medium">Main Power Transformer 01</td>
+<td class="py-3 px-4">Kelistrikan</td>
+<td class="py-3 px-4">22 Sep 2023</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-status-error/10 text-status-error font-medium text-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-status-error"></span>
+                                        Tidak Layak
+                                    </span>
+</td>
+<td class="py-3 px-4 text-right">
+<button class="text-on-surface-variant hover:text-primary transition-colors p-1"><span class="material-symbols-outlined text-lg">more_vert</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="bg-surface-container-lowest border-t border-border-subtle p-4 flex items-center justify-between">
+<p class="font-body-sm text-body-sm text-on-surface-variant">Menampilkan 1-4 dari 42 peralatan</p>
+<div class="flex items-center gap-2">
+<button class="p-1 rounded text-outline hover:text-on-surface disabled:opacity-50 transition-colors" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded bg-primary text-on-primary font-body-sm text-body-sm flex items-center justify-center">1</button>
+<button class="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-container-low font-body-sm text-body-sm flex items-center justify-center transition-colors">2</button>
+<button class="w-8 h-8 rounded text-on-surface-variant hover:bg-surface-container-low font-body-sm text-body-sm flex items-center justify-center transition-colors">3</button>
+<button class="p-1 rounded text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

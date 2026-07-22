@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+
+<html class="light" lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sertifikator - History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@100..900&family=JetBrains+Mono:wght@100..900&family=Source+Serif+4:wght@100..900&display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-error-container": "#93000a",
+                        "surface-container": "#eceef0",
+                        "on-secondary-fixed": "#261a00",
+                        "status-warning": "#F59E0B",
+                        "surface-container-highest": "#e0e3e5",
+                        "tertiary-container": "#b35e00",
+                        "on-primary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "on-primary-fixed-variant": "#004881",
+                        "on-tertiary": "#ffffff",
+                        "border-subtle": "#E2E8F0",
+                        "status-success": "#10B981",
+                        "on-tertiary-fixed-variant": "#6f3800",
+                        "surface-bright": "#f7f9fb",
+                        "error-container": "#ffdad6",
+                        "surface-dim": "#d8dadc",
+                        "primary-container": "#0077ce",
+                        "on-background": "#191c1e",
+                        "inverse-on-surface": "#eff1f3",
+                        "on-tertiary-container": "#fffbff",
+                        "outline": "#707783",
+                        "inverse-surface": "#2d3133",
+                        "on-surface": "#191c1e",
+                        "secondary-fixed-dim": "#f8bd2a",
+                        "surface-tint": "#0060a8",
+                        "surface-container-lowest": "#ffffff",
+                        "status-error": "#EF4444",
+                        "tertiary-fixed": "#ffdcc4",
+                        "on-secondary-container": "#6f5100",
+                        "on-surface-variant": "#404752",
+                        "outline-variant": "#c0c7d4",
+                        "primary": "#005ea4",
+                        "on-primary-container": "#fdfcff",
+                        "surface": "#f7f9fb",
+                        "secondary-fixed": "#ffdfa0",
+                        "on-primary-fixed": "#001c38",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#2f1400",
+                        "tertiary-fixed-dim": "#ffb780",
+                        "text-muted": "#64748B",
+                        "on-secondary-fixed-variant": "#5c4300",
+                        "primary-fixed": "#d3e4ff",
+                        "surface-variant": "#e0e3e5",
+                        "tertiary": "#8f4a00",
+                        "secondary": "#795900",
+                        "surface-container-low": "#f2f4f6",
+                        "status-info": "#0EA5E9",
+                        "on-secondary": "#ffffff",
+                        "surface-container-high": "#e6e8ea",
+                        "primary-fixed-dim": "#a2c9ff",
+                        "secondary-container": "#fec330",
+                        "text-main": "#0F172A",
+                        "background": "#f7f9fb",
+                        "inverse-primary": "#a2c9ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "container-max": "1440px",
+                        "gutter": "24px",
+                        "margin-mobile": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["\"Source Serif 4\""],
+                        "headline-lg": ["\"Source Serif 4\""],
+                        "label-caps": ["JetBrains Mono"],
+                        "data-tabular": ["JetBrains Mono"],
+                        "body-md": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"],
+                        "headline-md": ["\"Source Serif 4\""],
+                        "display-lg": ["\"Source Serif 4\""]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }],
+                        "label-caps": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "data-tabular": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background font-body-md min-h-screen flex">
+<!-- SideNavBar -->
+<nav class="hidden md:flex bg-surface-container-lowest dark:bg-inverse-surface border-r border-border-subtle dark:border-outline-variant fixed left-0 top-0 h-screen w-[260px] flex-col py-4 z-50">
+<div class="px-gutter mb-8 flex items-center gap-3">
+<div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+</div>
+<div>
+<h1 class="font-headline-sm text-headline-sm font-bold text-primary">Sertifikator</h1>
+<p class="font-label-caps text-label-caps text-on-surface-variant">Enterprise Compliance</p>
+</div>
+</div>
+<div class="px-gutter mb-6">
+<button class="w-full bg-primary hover:bg-primary/90 text-on-primary font-body-sm py-2 px-4 rounded transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" data-icon="add">add</span>
+                New Request
+            </button>
+</div>
+<div class="flex-1 overflow-y-auto px-4">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                        Dashboard
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="factory">factory</span>
+                        Equipment
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+                        Asset Licensing
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="workspace_premium">workspace_premium</span>
+                        Product Licensing
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="analytics">analytics</span>
+                        Monitoring
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+                        Notifications
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-primary bg-primary/5 border-l-4 border-primary hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="history" data-weight="fill" style="font-variation-settings: 'FILL' 1;">history</span>
+                        History
+                    </a>
+</li>
+</ul>
+</div>
+<div class="px-4 mt-auto pt-4 border-t border-border-subtle">
+<ul class="space-y-1">
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="support">support</span>
+                        Help Center
+                    </a>
+</li>
+<li>
+<a class="flex items-center gap-3 px-4 py-2.5 rounded-lg text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-[0.98] font-label-caps text-label-caps" href="#">
+<span class="material-symbols-outlined" data-icon="logout">logout</span>
+                        Log Out
+                    </a>
+</li>
+</ul>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-1 ml-0 md:ml-[260px] flex flex-col min-h-screen">
+<!-- Top Mobile Nav (if needed, but using standard header here) -->
+<header class="md:hidden bg-surface-container-lowest border-b border-border-subtle h-16 sticky top-0 flex items-center px-4 z-40">
+<button class="text-on-surface-variant p-2 -ml-2">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary ml-2">History</h1>
+</header>
+<div class="p-gutter flex-1 w-full max-w-container-max mx-auto">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-background mb-1">Activity Log</h2>
+<p class="text-on-surface-variant font-body-sm">Comprehensive history of all actions, updates, and compliance events.</p>
+</div>
+<!-- Controls -->
+<div class="flex flex-col sm:flex-row gap-3">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-sm" data-icon="search">search</span>
+<input class="pl-9 pr-4 py-2 border border-border-subtle rounded bg-surface-container-lowest text-body-sm focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none w-full sm:w-64 transition-all" placeholder="Search logs..." type="text"/>
+</div>
+<button class="flex items-center justify-center gap-2 px-4 py-2 border border-border-subtle rounded bg-surface-container-lowest text-body-sm hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="calendar_today">calendar_today</span>
+<span>Date Range</span>
+</button>
+<button class="flex items-center justify-center gap-2 px-4 py-2 border border-border-subtle rounded bg-surface-container-lowest text-body-sm hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="filter_list">filter_list</span>
+<span>Filter</span>
+</button>
+</div>
+</div>
+<!-- Data Table Container -->
+<div class="bg-surface-container-lowest border border-border-subtle rounded-lg overflow-hidden shadow-sm">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead class="bg-surface-container-low border-b border-border-subtle">
+<tr>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant uppercase whitespace-nowrap w-48">Date & Time</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant uppercase whitespace-nowrap w-48">User</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant uppercase whitespace-nowrap w-48">Activity</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant uppercase whitespace-nowrap min-w-[200px]">Asset / Product</th>
+<th class="py-3 px-4 font-label-caps text-label-caps text-on-surface-variant uppercase whitespace-nowrap">Details</th>
+</tr>
+</thead>
+<tbody class="font-data-tabular text-data-tabular divide-y divide-border-subtle">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4 text-on-surface-variant">2023-10-27 14:32</td>
+<td class="py-3 px-4 text-on-background font-medium">Budi Santoso</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-status-success/10 text-status-success font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+                                        Status Update
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-background">ISO-9001-2015 (QMS)</td>
+<td class="py-3 px-4 text-on-surface-variant">Changed status from 'Review' to 'Approved'.</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4 text-on-surface-variant">2023-10-27 11:15</td>
+<td class="py-3 px-4 text-on-background font-medium">System Admin</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-primary/10 text-primary font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                                        Doc Upload
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-background">Factory Boiler A-1</td>
+<td class="py-3 px-4 text-on-surface-variant">Uploaded mandatory safety inspection report (PDF).</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4 text-on-surface-variant">2023-10-26 16:45</td>
+<td class="py-3 px-4 text-on-background font-medium">Siti Aminah</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-status-warning/10 text-status-warning font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+                                        Modification
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-background">Crane License 2023</td>
+<td class="py-3 px-4 text-on-surface-variant">Updated expiry date field based on new OCR data.</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4 text-on-surface-variant">2023-10-26 09:10</td>
+<td class="py-3 px-4 text-on-background font-medium">System Admin</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded bg-status-error/10 text-status-error font-label-caps text-[10px]">
+<span class="w-1.5 h-1.5 rounded-full bg-status-error"></span>
+                                        Alert
+                                    </span>
+</td>
+<td class="py-3 px-4 text-on-background">Generator Set C</td>
+<td class="py-3 px-4 text-on-surface-variant">Automated flag: License expires in 30 days.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="border-t border-border-subtle p-4 flex items-center justify-between bg-surface-container-lowest">
+<span class="text-body-sm text-on-surface-variant">Showing 1 to 4 of 128 entries</span>
+<div class="flex gap-1">
+<button class="px-3 py-1 border border-border-subtle rounded text-body-sm text-on-surface-variant hover:bg-surface-container-low disabled:opacity-50" disabled="">Prev</button>
+<button class="px-3 py-1 border border-primary bg-primary text-on-primary rounded text-body-sm">1</button>
+<button class="px-3 py-1 border border-border-subtle rounded text-body-sm text-on-surface-variant hover:bg-surface-container-low">2</button>
+<button class="px-3 py-1 border border-border-subtle rounded text-body-sm text-on-surface-variant hover:bg-surface-container-low">3</button>
+<button class="px-3 py-1 border border-border-subtle rounded text-body-sm text-on-surface-variant hover:bg-surface-container-low">Next</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
