@@ -7,7 +7,6 @@ import PeralatanPabrik from './pages/PeralatanPabrik';
 import MonitoringSertifikasi from './pages/MonitoringSertifikasi';
 import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
-import RiwayatAktivitas from './pages/RiwayatAktivitas';
 import Pengaturan from './pages/Pengaturan';
 
 import {
@@ -103,12 +102,6 @@ export default function App() {
             subtitle="Sertifikasi SNI Urea, NPK, sertifikat Halal, dan registrasi edar Kementerian Pertanian"
             categoryName="Sertifikasi Produk"
             onAddRenewalBatch={handleAddRenewalBatch}
-          />
-        );
-      case 'riwayat':
-        return (
-          <RiwayatAktivitas
-            activityLogs={activityLogs}
           />
         );
       case 'pengaturan':
