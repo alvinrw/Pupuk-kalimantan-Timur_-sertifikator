@@ -80,13 +80,17 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         ))}
       </div>
 
-      {/* Corporate Rebranding Footer with Pupuk Kaltim logo */}
+      {/* Corporate Rebranding Footer with Official Logos */}
       <div className="p-3 border-t border-slate-200 bg-slate-50/80 space-y-2">
         <div className="flex items-center justify-between px-1">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono-data">ENTITAS BUMN</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono-data">ENTITAS BUMN REBRANDING</span>
         </div>
         <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2">
-          <PupukKaltimLogo className="h-5" />
+          <div className="flex items-center justify-around gap-2 py-0.5">
+            <PupukKaltimLogo className="h-6" />
+            <PupukIndonesiaLogo className="h-6" />
+            <DanantaraLogo className="h-6" />
+          </div>
         </div>
 
         {/* User Account */}

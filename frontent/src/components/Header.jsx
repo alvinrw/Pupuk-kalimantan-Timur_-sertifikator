@@ -28,13 +28,13 @@ export default function Header({ activeTab }) {
         </div>
       </div>
 
-      {/* Corporate Rebranding Logos Group (Pupuk Kaltim • Pupuk Indonesia • Danantara) */}
-      <div className="hidden lg:flex items-center gap-4 bg-slate-50 px-3.5 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-        <PupukKaltimLogo className="h-6" />
-        <span className="h-4 w-[1px] bg-slate-300" />
-        <PupukIndonesiaLogo className="h-6" />
-        <span className="h-4 w-[1px] bg-slate-300" />
-        <DanantaraLogo className="h-6" />
+      {/* Official Rebranding Logos (Pupuk Kaltim • Pupuk Indonesia • Danantara) */}
+      <div className="hidden lg:flex items-center gap-4 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+        <PupukKaltimLogo className="h-7" />
+        <span className="h-5 w-[1px] bg-slate-300" />
+        <PupukIndonesiaLogo className="h-7" />
+        <span className="h-5 w-[1px] bg-slate-300" />
+        <DanantaraLogo className="h-7" />
       </div>
     </header>
   );
