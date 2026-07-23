@@ -33,6 +33,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
+        { id: "riwayat-perpanjangan", label: "Riwayat Perpanjangan", icon: History },
         { id: "pengaturan", label: "Pengaturan", icon: Settings },
       ]
     }

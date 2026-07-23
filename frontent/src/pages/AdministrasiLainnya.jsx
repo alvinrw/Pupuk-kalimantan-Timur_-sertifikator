@@ -13,12 +13,14 @@ import {
   RefreshCw,
   X,
   Check,
-  Building2
+  Building2,
+  Eye
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryCiptaanModal from '../components/SingleEntryCiptaanModal';
+import DocumentDetailPage from './DocumentDetailPage';
 
 export default function AdministrasiLainnya() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +34,7 @@ export default function AdministrasiLainnya() {
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
+  const [detailModalItem, setDetailModalItem] = useState(null);
 
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
@@ -216,6 +219,24 @@ export default function AdministrasiLainnya() {
     (eq.judulCiptaan.toLowerCase().includes(searchTargetItemTerm.toLowerCase()) ||
      eq.jenisCiptaan.toLowerCase().includes(searchTargetItemTerm.toLowerCase()))
   );
+
+  if (detailModalItem) {
+    return (
+      <DocumentDetailPage
+        item={detailModalItem}
+        onBack={() => setDetailModalItem(null)}
+        onSaveUpdate={(updatedItem) => {
+          setCiptaanList(prev => prev.map(i => i.id === updatedItem.id ? { ...i, ...updatedItem, judulCiptaan: updatedItem.merekItem || i.judulCiptaan } : i));
+        }}
+        onQuickRenew={(id) => {
+          alert(`Inisiasi Perpanjangan untuk ciptaan ${id}. Menuju menu Monitoring.`);
+        }}
+        onQuickDecommission={(id) => {
+          alert(`Menandai ciptaan ${id} sebagai Afkir.`);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 font-sans-clean">
@@ -422,7 +443,11 @@ export default function AdministrasiLainnya() {
                       </td>
                     )}
                     {isVisible("judulCiptaan") && (
-                      <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                      <td
+                        onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
+                        className="py-3.5 px-4 font-bold text-slate-900 hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap"
+                        title="Klik untuk Lihat Detail"
+                      >
                         <div className="flex items-center gap-2">
                           <FileCheck className={`w-3.5 h-3.5 ${item.hasCertificatePdf ? 'text-emerald-600' : 'text-slate-300'}`} />
                           <span>{item.judulCiptaan}</span>
@@ -450,45 +475,15 @@ export default function AdministrasiLainnya() {
                       </td>
                     )}
 
-                    {/* ROW ACTION DROPDOWN */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap relative">
-                      <div className="relative inline-block text-left">
-                        <button
-                          onClick={() => setOpenActionRowId(openActionRowId === item.id ? null : item.id)}
-                          className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-md shadow-2xs flex items-center gap-1"
-                        >
-                          <span>Aksi</span>
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-
-                        {openActionRowId === item.id && (
-                          <div className="absolute right-0 top-9 z-40 w-52 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs text-left font-sans-clean">
-                            <button
-                              onClick={() => { setHistoryTargetItem({ code: item.jenisCiptaan, title: item.judulCiptaan, certificateNo: item.noSertifikat || "-", expiryDate: item.kapanBerakhir, issuer: "Dirjen KI Kemenkumham" }); setOpenActionRowId(null); }}
-                              className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-lg flex items-center gap-2 font-bold text-[#005ea4]"
-                            >
-                              <History className="w-4 h-4 text-[#005ea4]" />
-                              <span>Riwayat Sertifikat</span>
-                            </button>
-
-                            <button
-                              onClick={() => openReassignTargetModal(item)}
-                              className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg flex items-center gap-2 font-bold text-slate-800"
-                            >
-                              <RefreshCw className="w-4 h-4 text-[#005ea4]" />
-                              <span>Ganti Target Sertifikat</span>
-                            </button>
-
-                            <button
-                              onClick={() => requestDeleteRow(item.id)}
-                              className="w-full text-left px-3 py-2 hover:bg-rose-50 rounded-lg flex items-center gap-2 font-bold text-rose-700 border-t border-slate-100"
-                            >
-                              <Trash2 className="w-4 h-4 text-rose-600" />
-                              <span>Hapus Baris</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                    {/* LIHAT DETAIL BUTTON */}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
+                      <button
+                        onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
+                        className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Lihat Detail</span>
+                      </button>
                     </td>
                   </tr>
                 ))

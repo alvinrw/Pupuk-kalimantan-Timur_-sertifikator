@@ -13,12 +13,14 @@ import {
   RefreshCw,
   X,
   Check,
-  Building2
+  Building2,
+  Eye
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
+import DocumentDetailPage from './DocumentDetailPage';
 
 export default function PeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +36,7 @@ export default function PeralatanPabrik() {
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
+  const [detailModalItem, setDetailModalItem] = useState(null);
 
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
@@ -294,6 +297,24 @@ export default function PeralatanPabrik() {
      eq.jenisPeralatan.toLowerCase().includes(searchTargetItemTerm.toLowerCase()) ||
      eq.lokasi.toLowerCase().includes(searchTargetItemTerm.toLowerCase()))
   );
+
+  if (detailModalItem) {
+    return (
+      <DocumentDetailPage
+        item={detailModalItem}
+        onBack={() => setDetailModalItem(null)}
+        onSaveUpdate={(updatedItem) => {
+          setEquipmentList(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+        }}
+        onQuickRenew={(id) => {
+          alert(`Inisiasi Perpanjangan Sertifikat untuk item ${id}. Menuju menu Monitoring.`);
+        }}
+        onQuickDecommission={(id) => {
+          alert(`Menandai item ${id} sebagai Aset Afkir.`);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 font-sans-clean">
@@ -559,7 +580,11 @@ export default function PeralatanPabrik() {
                       </td>
                     )}
                     {isVisible("merekItem") && (
-                      <td className="py-3.5 px-4 font-bold text-slate-900 whitespace-nowrap">
+                      <td
+                        onClick={() => setDetailModalItem(item)}
+                        className="py-3.5 px-4 font-bold text-slate-900 hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap"
+                        title="Klik untuk Lihat Detail"
+                      >
                         {item.merekItem}
                       </td>
                     )}
@@ -628,47 +653,15 @@ export default function PeralatanPabrik() {
                       </td>
                     )}
 
-                    {/* COMPLETE "AKSI" DROPDOWN BUTTON ON ROW */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap relative">
-                      <div className="relative inline-block text-left">
-                        <button
-                          onClick={() => setOpenActionRowId(openActionRowId === item.id ? null : item.id)}
-                          className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-md shadow-2xs flex items-center gap-1"
-                        >
-                          <span>Aksi</span>
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        </button>
-
-                        {/* Dropdown Popover */}
-                        {openActionRowId === item.id && (
-                          <div className="absolute right-0 top-9 z-40 w-52 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs text-left font-sans-clean">
-                            <button
-                              onClick={() => { setHistoryTargetItem({ code: item.tipe, title: item.merekItem, certificateNo: item.noSertifikat, expiryDate: item.berakhir, issuer: item.keterangan }); setOpenActionRowId(null); }}
-                              className="w-full text-left px-3 py-2 hover:bg-slate-100 rounded-lg flex items-center gap-2 font-bold text-[#005ea4]"
-                            >
-                              <History className="w-4 h-4 text-[#005ea4]" />
-                              <span>Riwayat Sertifikat</span>
-                            </button>
-
-                            {/* GANTI TARGET SERTIFIKAT OPTION IN ROW AKSI MENU */}
-                            <button
-                              onClick={() => openReassignTargetModal(item)}
-                              className="w-full text-left px-3 py-2 hover:bg-blue-50 rounded-lg flex items-center gap-2 font-bold text-slate-800"
-                            >
-                              <RefreshCw className="w-4 h-4 text-[#005ea4]" />
-                              <span>Ganti Target Sertifikat</span>
-                            </button>
-
-                            <button
-                              onClick={() => requestDeleteRow(item.id)}
-                              className="w-full text-left px-3 py-2 hover:bg-rose-50 rounded-lg flex items-center gap-2 font-bold text-rose-700 border-t border-slate-100"
-                            >
-                              <Trash2 className="w-4 h-4 text-rose-600" />
-                              <span>Hapus Baris</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                    {/* LIHAT DETAIL BUTTON ON ROW */}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
+                      <button
+                        onClick={() => setDetailModalItem(item)}
+                        className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Lihat Detail</span>
+                      </button>
                     </td>
                   </tr>
                 ))

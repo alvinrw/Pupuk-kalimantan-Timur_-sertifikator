@@ -7,6 +7,7 @@ import PeralatanPabrik from './pages/PeralatanPabrik';
 import MonitoringSertifikasi from './pages/MonitoringSertifikasi';
 import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
+import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
 import Pengaturan from './pages/Pengaturan';
 
 import {
@@ -104,6 +105,8 @@ export default function App() {
             onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
+      case 'riwayat-perpanjangan':
+        return <RiwayatPerpanjangan />;
       case 'pengaturan':
         return <Pengaturan />;
       default:
