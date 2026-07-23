@@ -1,5 +1,4 @@
 import React from 'react';
-import CorporateLogosGroup from './CorporateLogos';
 
 export default function Header({ activeTab }) {
   const getTabTitle = () => {
@@ -24,11 +23,6 @@ export default function Header({ activeTab }) {
         <h2 className="text-base font-extrabold text-slate-800 tracking-tight">
           {getTabTitle()}
         </h2>
-      </div>
-
-      {/* Official Corporate Logos Group (Pupuk Kaltim • Pupuk Indonesia • Danantara) */}
-      <div className="hidden lg:block shrink-0">
-        <CorporateLogosGroup />
       </div>
     </header>
   );
