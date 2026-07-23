@@ -1,5 +1,5 @@
 import React from 'react';
-import { PupukKaltimLogo, PupukIndonesiaLogo, DanantaraLogo } from './CorporateLogos';
+import CorporateLogosGroup from './CorporateLogos';
 
 export default function Header({ activeTab }) {
   const getTabTitle = () => {
@@ -19,22 +19,16 @@ export default function Header({ activeTab }) {
 
   return (
     <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-20 font-sans-clean">
-      {/* Title Area */}
+      {/* Page Title Area */}
       <div className="flex items-center gap-4">
-        <div>
-          <h2 className="text-base font-extrabold text-slate-800 tracking-tight">
-            {getTabTitle()}
-          </h2>
-        </div>
+        <h2 className="text-base font-extrabold text-slate-800 tracking-tight">
+          {getTabTitle()}
+        </h2>
       </div>
 
-      {/* Official Rebranding Logos (Pupuk Kaltim • Pupuk Indonesia • Danantara) */}
-      <div className="hidden lg:flex items-center gap-4 bg-slate-50 px-4 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-        <PupukKaltimLogo className="h-7" />
-        <span className="h-5 w-[1px] bg-slate-300" />
-        <PupukIndonesiaLogo className="h-7" />
-        <span className="h-5 w-[1px] bg-slate-300" />
-        <DanantaraLogo className="h-7" />
+      {/* Official Corporate Logos Group (Pupuk Kaltim • Pupuk Indonesia • Danantara) */}
+      <div className="hidden lg:block shrink-0">
+        <CorporateLogosGroup />
       </div>
     </header>
   );
