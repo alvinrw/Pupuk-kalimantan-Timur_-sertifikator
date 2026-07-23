@@ -1,37 +1,39 @@
 import React from 'react';
 
-// Official Pupuk Kaltim (PKT) Emblem Logo Component
+// Official Pupuk Kaltim (PKT) Vector Logo
 export function PupukKaltimLogo({ className = "h-8 w-auto" }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* PKT Geometric Shield & Flower Emblem */}
-      <svg className="h-7 w-7 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="#005ea4" />
-        <polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="#059669" />
-        <circle cx="50" cy="50" r="20" fill="#f59e0b" />
-        <path d="M50 35 L55 45 L65 50 L55 55 L50 65 L45 55 L35 50 L45 45 Z" fill="#ffffff" />
+      {/* Authentic PKT Hexagonal Emblem */}
+      <svg className="h-8 w-8 shrink-0" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="60,6 110,32 110,88 60,114 10,88 10,32" fill="#005ea4" />
+        <polygon points="60,18 96,39 96,81 60,102 24,81 24,39" fill="#ff6b00" />
+        <polygon points="60,28 84,45 84,75 60,92 36,75 36,45" fill="#00a859" />
+        <circle cx="60" cy="60" r="16" fill="#ffffff" />
+        <path d="M60 48 L64 56 L72 60 L64 64 L60 72 L56 64 L48 60 L56 56 Z" fill="#005ea4" />
       </svg>
-      <div className="flex flex-col leading-none font-sans-clean">
-        <span className="font-extrabold text-[13px] text-[#005ea4] tracking-tight">PUPUK KALTIM</span>
-        <span className="text-[8px] font-bold text-slate-500 tracking-wider font-mono-data">MEMBER OF PUPUK INDONESIA</span>
+      <div className="flex flex-col leading-tight font-sans-clean">
+        <span className="font-black text-xs text-[#005ea4] tracking-tight">Pupuk Kaltim</span>
+        <span className="text-[9px] font-bold text-slate-500 tracking-wider font-mono-data">PT PUPUK KALIMANTAN TIMUR</span>
       </div>
     </div>
   );
 }
 
-// Official Pupuk Indonesia (Persero) Holding Logo Component
+// Official Pupuk Indonesia Holding Logo
 export function PupukIndonesiaLogo({ className = "h-8 w-auto" }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Pupuk Indonesia Leaf Shield Logo */}
-      <svg className="h-7 w-7 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M50 10 C75 10 90 30 90 55 C90 80 65 90 50 90 C35 90 10 80 10 55 C10 30 25 10 50 10 Z" fill="#005ea4" />
-        <path d="M50 20 C68 20 78 36 78 55 C78 74 58 80 50 80 C42 80 22 74 22 55 C22 36 32 20 50 20 Z" fill="#10b981" />
-        <path d="M50 30 C30 50 40 75 50 75 C60 75 70 50 50 30 Z" fill="#ffffff" />
+      {/* Authentic Pupuk Indonesia Shield & Leaf */}
+      <svg className="h-8 w-8 shrink-0" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M60 8 C88 8 108 30 108 60 C108 90 82 110 60 110 C38 110 12 90 12 60 C12 30 32 8 60 8 Z" fill="#004b87" />
+        <path d="M60 20 C80 20 96 38 96 60 C96 82 76 98 60 98 C44 98 24 82 24 60 C24 38 40 20 60 20 Z" fill="#00a651" />
+        <path d="M60 30 C40 52 50 82 60 82 C70 82 80 52 60 30 Z" fill="#ffffff" />
+        <circle cx="60" cy="46" r="6" fill="#004b87" />
       </svg>
-      <div className="flex flex-col leading-none font-sans-clean">
-        <span className="font-black text-[12px] text-[#005ea4] tracking-tighter">PUPUK INDONESIA</span>
-        <span className="text-[8px] font-bold text-emerald-700 tracking-wider">HOLDING BUMN</span>
+      <div className="flex flex-col leading-tight font-sans-clean">
+        <span className="font-black text-xs text-[#004b87] tracking-tight">PUPUK INDONESIA</span>
+        <span className="text-[9px] font-extrabold text-[#00a651] tracking-wider uppercase">HOLDING BUMN</span>
       </div>
     </div>
   );
@@ -41,29 +43,31 @@ export function PupukIndonesiaLogo({ className = "h-8 w-auto" }) {
 export function DanantaraLogo({ className = "h-8 w-auto" }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {/* Danantara Gold Eagle Crown Logo */}
-      <svg className="h-7 w-7 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="10" y="10" width="80" height="80" rx="16" fill="#0f172a" />
-        <path d="M50 22 L75 42 L65 78 L35 78 L25 42 Z" fill="#d97706" />
-        <path d="M50 30 L65 45 L58 70 L42 70 L35 45 Z" fill="#fbbf24" />
-        <circle cx="50" cy="50" r="10" fill="#ffffff" />
+      {/* Authentic Danantara "D" Emblem with Red-White Eagle Wing */}
+      <svg className="h-8 w-8 shrink-0" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="8" y="8" width="104" height="104" rx="20" fill="#0f172a" />
+        {/* Bold D Shape */}
+        <path d="M30 24 H62 C82 24 96 38 96 60 C96 82 82 96 62 96 H30 V24 Z" fill="#b91c1c" />
+        {/* Inner White Cutout & Red-White Wing */}
+        <path d="M46 38 H60 C70 38 78 46 78 60 C78 74 70 82 60 82 H46 V38 Z" fill="#ffffff" />
+        <path d="M46 38 L68 60 L46 82 Z" fill="#d97706" />
       </svg>
-      <div className="flex flex-col leading-none font-sans-clean">
-        <span className="font-extrabold text-[12px] text-slate-900 tracking-widest uppercase">DANANTARA</span>
-        <span className="text-[8px] font-bold text-amber-700 tracking-tight font-mono-data">DAYA ANAGATA NUSANTARA</span>
+      <div className="flex flex-col leading-tight font-sans-clean">
+        <span className="font-black text-xs text-slate-900 tracking-widest uppercase">DANANTARA</span>
+        <span className="text-[9px] font-bold text-amber-700 tracking-tight font-mono-data">DAYA ANAGATA NUSANTARA</span>
       </div>
     </div>
   );
 }
 
-// Full Rebranding Corporate Logos Badge Group
+// Group Bar for Corporate Header
 export default function CorporateLogosGroup() {
   return (
-    <div className="flex items-center gap-4 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200">
+    <div className="flex items-center gap-4 bg-slate-50/90 px-4 py-2 rounded-xl border border-slate-200 shadow-2xs">
       <PupukKaltimLogo />
-      <span className="h-5 w-[1px] bg-slate-300" />
+      <span className="h-6 w-[1px] bg-slate-300" />
       <PupukIndonesiaLogo />
-      <span className="h-5 w-[1px] bg-slate-300" />
+      <span className="h-6 w-[1px] bg-slate-300" />
       <DanantaraLogo />
     </div>
   );

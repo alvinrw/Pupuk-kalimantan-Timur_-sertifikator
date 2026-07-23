@@ -10,6 +10,7 @@ import {
   History,
   Settings
 } from 'lucide-react';
+import { PupukKaltimLogo, PupukIndonesiaLogo, DanantaraLogo } from './CorporateLogos';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const menuGroups = [
@@ -41,25 +42,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   return (
     <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 h-screen sticky top-0 z-30 font-sans-clean border-r border-slate-200 shadow-xs">
-      {/* Brand Header: REBRANDED CLEAN CORPORATE LOGO (NO "S" BOX, NO "PT PUPUK KALTIM" SUBTITLE) */}
-      <div className="h-16 px-5 flex items-center border-b border-slate-200 bg-slate-50/80">
-        <div className="flex items-center gap-3">
-          {/* Rebranded Official PKT Emblem */}
-          <svg className="h-8 w-8 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="#005ea4" />
-            <polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="#059669" />
-            <circle cx="50" cy="50" r="20" fill="#f59e0b" />
-            <path d="M50 35 L55 45 L65 50 L55 55 L50 65 L45 55 L35 50 L45 45 Z" fill="#ffffff" />
-          </svg>
-          <div>
-            <h1 className="font-logo-sutasoma text-xl font-bold tracking-tight text-[#005ea4] leading-none uppercase">
-              SERTIFIKATOR
-            </h1>
-            <span className="text-[9px] font-mono-data font-extrabold text-emerald-700 tracking-wider block mt-1 uppercase">
-              PKT • Danantara BUMN
-            </span>
-          </div>
-        </div>
+      {/* Brand Header: CLEAN TULISAN SERTIFIKATOR (TANPA KOTAK S, TANPA LOGO SAMPING, TANPA SUBTITLE PT PUPUK KALTIM) */}
+      <div className="h-16 px-6 flex items-center border-b border-slate-200 bg-slate-50/50">
+        <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none">
+          SERTIFIKATOR
+        </h1>
       </div>
 
       {/* Navigation List */}
@@ -93,8 +80,16 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         ))}
       </div>
 
-      {/* User Footer */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50">
+      {/* Corporate Rebranding Footer with Pupuk Kaltim logo */}
+      <div className="p-3 border-t border-slate-200 bg-slate-50/80 space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider font-mono-data">ENTITAS BUMN</span>
+        </div>
+        <div className="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs space-y-2">
+          <PupukKaltimLogo className="h-5" />
+        </div>
+
+        {/* User Account */}
         <div className="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200 shadow-xs">
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100"
