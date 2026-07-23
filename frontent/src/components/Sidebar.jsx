@@ -41,18 +41,22 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
   return (
     <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 h-screen sticky top-0 z-30 font-sans-clean border-r border-slate-200 shadow-xs">
-      {/* Brand Header with Sutasoma logo */}
-      <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50">
+      {/* Brand Header: REBRANDED CLEAN CORPORATE LOGO (NO "S" BOX, NO "PT PUPUK KALTIM" SUBTITLE) */}
+      <div className="h-16 px-5 flex items-center border-b border-slate-200 bg-slate-50/80">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#005ea4] text-white flex items-center justify-center font-bold font-logo-sutasoma text-xl shadow-xs">
-            S
-          </div>
+          {/* Rebranded Official PKT Emblem */}
+          <svg className="h-8 w-8 shrink-0" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="50,5 90,25 90,75 50,95 10,75 10,25" fill="#005ea4" />
+            <polygon points="50,15 80,30 80,70 50,85 20,70 20,30" fill="#059669" />
+            <circle cx="50" cy="50" r="20" fill="#f59e0b" />
+            <path d="M50 35 L55 45 L65 50 L55 55 L50 65 L45 55 L35 50 L45 45 Z" fill="#ffffff" />
+          </svg>
           <div>
-            <h1 className="font-logo-sutasoma text-xl font-bold tracking-tight text-[#005ea4]">
-              Sertifikator
+            <h1 className="font-logo-sutasoma text-xl font-bold tracking-tight text-[#005ea4] leading-none uppercase">
+              SERTIFIKATOR
             </h1>
-            <span className="text-[10px] font-sans-clean uppercase tracking-wider text-slate-500 block -mt-1 font-bold">
-              PT Pupuk Kaltim
+            <span className="text-[9px] font-mono-data font-extrabold text-emerald-700 tracking-wider block mt-1 uppercase">
+              PKT • Danantara BUMN
             </span>
           </div>
         </div>
@@ -98,8 +102,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             className="w-8 h-8 rounded-full object-cover border border-slate-300"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">Bambang Hermawan</p>
-            <p className="text-[11px] text-slate-500 truncate font-medium">Admin Compliance K3LH</p>
+            <p className="text-xs font-bold text-slate-800 truncate">Tim Admin PKT</p>
+            <p className="text-[10px] text-slate-500 font-mono-data truncate">admin@pupukkaltim.com</p>
           </div>
         </div>
       </div>
