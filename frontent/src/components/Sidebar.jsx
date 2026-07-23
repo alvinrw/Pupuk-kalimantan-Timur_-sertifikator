@@ -6,9 +6,7 @@ import {
   FileSpreadsheet,
   FolderKanban,
   PackageCheck,
-  Activity,
-  History,
-  Settings
+  Activity
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -16,7 +14,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     {
       group: "UTAMA",
       items: [
-        { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+        { id: "dashboard", label: "Dashboard Overview", icon: LayoutDashboard },
       ]
     },
     {
@@ -33,7 +31,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
-        { id: "pengaturan", label: "Pengaturan", icon: Settings },
       ]
     }
   ];
@@ -105,3 +102,5 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     </aside>
   );
 }
+
+

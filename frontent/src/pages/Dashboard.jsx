@@ -30,7 +30,7 @@ export default function Dashboard({ stats }) {
 
   const statusPieData = [
     { name: 'Sertifikat Aktif (Valid)', value: stats.activeCount || 128, color: '#10B981' },
-    { name: 'Mendekati Expired (< 30 Hari)', value: stats.warningCount || 14, color: '#F59E0B' },
+    { name: 'Mendekati Expired (< 2 Bulan)', value: stats.warningCount || 14, color: '#F59E0B' },
     { name: 'Expired / Kadaluarsa', value: stats.expiredCount || 6, color: '#EF4444' },
   ];
 
@@ -150,7 +150,7 @@ export default function Dashboard({ stats }) {
           {/* Warning */}
           <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Akan Expired (&lt;30 Hari)</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Akan Expired (&lt;2 Bulan / 60 Hari)</span>
               <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
                 <Clock className="w-4 h-4" />
               </div>
@@ -266,3 +266,5 @@ export default function Dashboard({ stats }) {
     </div>
   );
 }
+
+

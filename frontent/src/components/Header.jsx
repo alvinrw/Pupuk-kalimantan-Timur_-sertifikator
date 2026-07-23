@@ -10,7 +10,6 @@ export default function Header({ activeTab }) {
       case 'perizinan-proyek': return 'Perizinan Proyek & Konstruksi';
       case 'perizinan-produk': return 'Perizinan & Sertifikasi Produk';
       case 'monitoring': return 'Monitoring & Evaluasi Perizinan';
-      case 'pengaturan': return 'Pengaturan Sistem & Pengguna';
       default: return 'Sertifikator System';
     }
   };
@@ -28,3 +27,5 @@ export default function Header({ activeTab }) {
     </header>
   );
 }
+
+
