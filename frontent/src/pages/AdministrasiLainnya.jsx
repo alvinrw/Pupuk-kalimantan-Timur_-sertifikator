@@ -90,23 +90,68 @@ export default function AdministrasiLainnya() {
   };
 
   // Connected Master Data Ciptaan
-  const [ciptaanList, setCiptaanList] = useState(
-    masterCertificatesData.filter(d => d.categoryKey === 'administrasi-lainnya')
-  );
+  const [ciptaanList, setCiptaanList] = useState(() => {
+    const raw = masterCertificatesData.filter(d => d.categoryKey === 'administrasi-lainnya');
+    if (raw.length > 0) {
+      return raw.map((item, idx) => ({
+        id: item.id || `HAKI-${idx}`,
+        no: idx + 1,
+        judulCiptaan: item.judulCiptaan || item.merekItem || item.title || "Program Komputer",
+        jenisCiptaan: item.jenisCiptaan || item.jenisItem || "Program Komputer (Software)",
+        tanggalCiptaan: item.tanggalCiptaan || item.issueDate || item.terbit || "2024-03-10",
+        masaBerlaku: item.masaBerlaku || "5 Tahun",
+        kapanBerakhir: item.kapanBerakhir || item.expiryDate || item.berakhir || "2029-03-10",
+        noSertifikat: item.noSertifikat || item.certificateNo || item.code || "-",
+        hasCertificatePdf: item.hasCertificatePdf !== false,
+        status: item.status || "Aktif",
+        merekItem: item.merekItem || item.judulCiptaan,
+        jenisPeralatan: item.jenisItem || item.jenisCiptaan
+      }));
+    }
+    return [
+      {
+        id: "CIP-01",
+        no: 1,
+        judulCiptaan: "Sistem Informasi Sertifikator Inventory AI PKT",
+        jenisCiptaan: "Program Komputer (Software)",
+        tanggalCiptaan: "2024-03-10",
+        masaBerlaku: "5 Tahun",
+        kapanBerakhir: "2029-03-10",
+        noSertifikat: "EC00202400192",
+        hasCertificatePdf: true,
+        status: "Aktif"
+      },
+      {
+        id: "CIP-02",
+        no: 2,
+        judulCiptaan: "Buku Panduan Keselamatan Operasi Kilang Amonia-4",
+        jenisCiptaan: "Buku / Karya Tulis",
+        tanggalCiptaan: "2019-08-15",
+        masaBerlaku: "5 Tahun",
+        kapanBerakhir: "2024-01-15",
+        noSertifikat: "EC00201999120",
+        hasCertificatePdf: true,
+        status: "Expired"
+      }
+    ];
+  });
 
   // Unique options for dropdown filters
-  const uniqueJenis = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.jenisCiptaan))], [ciptaanList]);
-  const uniqueMasa = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.masaBerlaku))], [ciptaanList]);
+  const uniqueJenis = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.jenisCiptaan || i.jenisItem).filter(Boolean))], [ciptaanList]);
+  const uniqueMasa = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.masaBerlaku).filter(Boolean))], [ciptaanList]);
 
   // Process Search & Category Filtering
   const filteredData = useMemo(() => {
     return ciptaanList.filter((item) => {
-      const matchesSearch =
-        item.judulCiptaan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.jenisCiptaan.toLowerCase().includes(searchTerm.toLowerCase());
+      const judul = item.judulCiptaan || item.merekItem || '';
+      const jenis = item.jenisCiptaan || item.jenisItem || '';
 
-      const matchesJenis = filterJenis === 'All' || item.jenisCiptaan === filterJenis;
-      const matchesMasa = filterMasa === 'All' || item.masaBerlaku === filterMasa;
+      const matchesSearch =
+        judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        jenis.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesJenis = filterJenis === 'All' || jenis === filterJenis;
+      const matchesMasa = filterMasa === 'All' || (item.masaBerlaku || '') === filterMasa;
 
       return matchesSearch && matchesJenis && matchesMasa;
     });
