@@ -8,6 +8,7 @@ import MonitoringSertifikasi from './pages/MonitoringSertifikasi';
 import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
+import InformasiLainnya from './pages/InformasiLainnya';
 import Pengaturan from './pages/Pengaturan';
 
 import {
@@ -107,6 +108,8 @@ export default function App() {
         );
       case 'riwayat-perpanjangan':
         return <RiwayatPerpanjangan />;
+      case 'informasi-lainnya':
+        return <InformasiLainnya />;
       case 'pengaturan':
         return <Pengaturan />;
       default:
