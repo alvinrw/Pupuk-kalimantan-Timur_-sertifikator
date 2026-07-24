@@ -83,9 +83,9 @@ export default function InformasiLainnya() {
     },
     {
       step: 3,
-      title: "Pengajuan Audit & Inspeksi Lapangan",
+      title: "Penandaan Fase Status 'Proses Sertifikasi'",
       icon: RotateCcw,
-      desc: "Tim K3 & Legal mengajukan jadwal inspeksi ke instansi penguji (Disnaker Kaltim, UPT Metrologi, Sucofindo, BPJPH, atau KAN)."
+      desc: "Penandaan status dokumen (Warna Kuning / Perpanjang) sebagai indikator bahwa sertifikat sedang dalam fase proses perpanjangan atau pembaruan SK."
     },
     {
       step: 4,
