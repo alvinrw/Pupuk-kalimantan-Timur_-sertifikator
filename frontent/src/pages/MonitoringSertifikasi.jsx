@@ -41,10 +41,9 @@ export default function MonitoringSertifikasi() {
   // Pop-up Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Workflow Modal State
-  const [selectedDoc, setSelectedDoc] = useState(null);
-  const [resertifikasiModalOpen, setResertifikasiModalOpen] = useState(false);
-  const [afkirModalOpen, setAfkirModalOpen] = useState(false);
+  // Modal States for Action & Upload Renewal
+  const [activeModalItem, setActiveModalItem] = useState(null);
+  const [modalMode, setModalMode] = useState('action');
   const [resertifikasiNotes, setResertifikasiNotes] = useState('');
 
   // Upload Form & OCR Simulation States
@@ -287,13 +286,13 @@ export default function MonitoringSertifikasi() {
         item={selectedDetailDoc}
         onBack={() => setSelectedDetailDoc(null)}
         onSaveUpdate={(updatedDoc) => {
-          setCertificateList(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
+          setAllCertificates(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
         }}
         onQuickRenew={(id) => {
-          handleExtendAction(id);
+          handleQuickRenew(id);
         }}
         onQuickDecommission={(id) => {
-          handleDecommissionAction(id);
+          handleQuickDecommission(id);
         }}
       />
     );
