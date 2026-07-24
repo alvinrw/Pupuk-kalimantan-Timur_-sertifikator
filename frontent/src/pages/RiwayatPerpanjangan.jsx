@@ -14,6 +14,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
+import { masterRenewalHistoryLogs } from '../data/masterDataset';
 
 export default function RiwayatPerpanjangan() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,89 +22,8 @@ export default function RiwayatPerpanjangan() {
   const [filterUnit, setFilterUnit] = useState('All');
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
 
-  // Comprehensive Audit Log Dataset for Renewal History
-  const historyData = [
-    {
-      id: "LOG-2026-001",
-      merekItem: "Penyalur Petir Konvensional JT 8 (2896)",
-      jenisItem: "Instalasi Penyalur Petir",
-      unitPabrik: "UBS 6",
-      kategori: "Perizinan Peralatan Pabrik",
-      noSertifikatBaru: "0502/INS-IPP/LFS-IV/2026",
-      noSertifikatLama: "0401/INS-IPP/LFS-IV/2024",
-      tglInspeksi: "2026-04-05",
-      tglTerbit: "2026-04-07",
-      tglExpiredBaru: "2028-04-07",
-      pelaksana: "Disnaker Kaltim / PT. Lentera Fokus Safetindo",
-      status: "Resertifikasi Berhasil",
-      notes: "Tahanan pembumian: 0.53 Ω (Uji grounding memenuhi standar K3).",
-      fileName: "Sertifikat_Penyalur_Petir_2026.pdf"
-    },
-    {
-      id: "LOG-2026-002",
-      merekItem: "Timbangan Elektronik Mettler Toledo IND930",
-      jenisItem: "Timbangan Metrologi",
-      unitPabrik: "Pabrik NPK",
-      kategori: "Perizinan Peralatan Pabrik",
-      noSertifikatBaru: "500.2.3.15 / 034 / UPTMETROLOGI / 2026",
-      noSertifikatLama: "500.2.3.15 / 012 / UPTMETROLOGI / 2025",
-      tglInspeksi: "2026-02-15",
-      tglTerbit: "2026-02-18",
-      tglExpiredBaru: "2027-02-18",
-      pelaksana: "UPT Metrologi Legal Kota Bontang",
-      status: "Tera Ulang Sah",
-      notes: "Tera sah 2026, kalibrasi ulang bobot 60kg akurat.",
-      fileName: "Tera_Sah_Timbangan_2026.pdf"
-    },
-    {
-      id: "LOG-2025-003",
-      merekItem: "Fire Alarm System Notifier SFP-10UD",
-      jenisItem: "Fire Alarm System",
-      unitPabrik: "Diklat B",
-      kategori: "Perizinan Peralatan Pabrik",
-      noSertifikatBaru: "500.15.18.2 / 5674 / DTKT - III",
-      noSertifikatLama: "500.15.18.2 / 4102 / DTKT - II",
-      tglInspeksi: "2025-06-10",
-      tglTerbit: "2025-06-16",
-      tglExpiredBaru: "2026-06-16",
-      pelaksana: "PT. Sucofindo / Disnaker Kaltim",
-      status: "Resertifikasi Berhasil",
-      notes: "Pengujian 40 smoke detector & 21 heat detector siap siaga.",
-      fileName: "Cert_FireAlarm_DiklatB.pdf"
-    },
-    {
-      id: "LOG-2024-004",
-      merekItem: "Primary Reformer Boiler 120 Bar",
-      jenisItem: "Bejana Tekan / Boiler",
-      unitPabrik: "Pabrik 2",
-      kategori: "Perizinan Peralatan Pabrik",
-      noSertifikatBaru: "CERT-7734/DISNAKER-KT/2023",
-      noSertifikatLama: "CERT-5510/DISNAKER-KT/2020",
-      tglInspeksi: "2023-02-20",
-      tglTerbit: "2023-03-01",
-      tglExpiredBaru: "2026-03-01",
-      pelaksana: "Disnaker Kaltim",
-      status: "Resertifikasi Berhasil",
-      notes: "NDT Uji Tekanan Hydrotest 120 Bar lulus kelayakan.",
-      fileName: "Boiler_Reformer_Pabrik2.pdf"
-    },
-    {
-      id: "LOG-2024-005",
-      merekItem: "Overhead Crane 50 Ton SWL",
-      jenisItem: "Pesawat Angkat & Angkut",
-      unitPabrik: "Pabrik 3",
-      kategori: "Perizinan Peralatan Pabrik",
-      noSertifikatBaru: "SUCO-PAA-88219-2024",
-      noSertifikatLama: "SUCO-PAA-66102-2021",
-      tglInspeksi: "2024-05-10",
-      tglTerbit: "2024-05-15",
-      tglExpiredBaru: "2026-05-15",
-      pelaksana: "Sucofindo Inspeksi",
-      status: "Resertifikasi Berhasil",
-      notes: "Pengujian beban SWL 50 Ton & kelayakan rem hoist.",
-      fileName: "Crane_SWL_50T_Pabrik3.pdf"
-    }
-  ];
+  // Connected Master Renewal Audit Logs Dataset
+  const historyData = masterRenewalHistoryLogs;
 
   // Filtering Logic
   const filteredData = useMemo(() => {

@@ -4,6 +4,7 @@ import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import DocumentDetailPage from './DocumentDetailPage';
+import { masterCertificatesData } from '../data/masterDataset';
 
 export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,62 +14,8 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
   const [detailModalItem, setDetailModalItem] = useState(null);
 
-  const [documents, setDocuments] = useState([
-    {
-      id: "DOC-2026-01",
-      code: "PERIZ-ENV-991",
-      title: `Izin Operasional ${categoryName} - Unit 1`,
-      unit: "Pabrik 1A (Amonia)",
-      issuer: "Kementerian LHK RI / Dinas Lingkungan",
-      issueDate: "2023-01-15",
-      expiryDate: "2026-08-15",
-      certificateNo: "CERT-ENV-991-2023",
-      status: "Akan Expired",
-      merekItem: `Izin Operasional ${categoryName} - Unit 1`,
-      jenisPeralatan: categoryName,
-      unitPabrik: "Pabrik 1A (Amonia)",
-      nomorSeri: "PERIZ-ENV-991",
-      berakhir: "2026-08-15",
-      noSertifikat: "CERT-ENV-991-2023",
-      keterangan: "Kementerian LHK RI"
-    },
-    {
-      id: "DOC-2026-02",
-      code: "PERIZ-K3-441",
-      title: `Sertifikat Kepatuhan Standar ${categoryName} Zone B`,
-      unit: "Pabrik 2 (Urea)",
-      issuer: "Disnaker Kaltim",
-      issueDate: "2022-06-10",
-      expiryDate: "2026-09-30",
-      certificateNo: "DISNAKER-K3-441-2022",
-      status: "Akan Expired",
-      merekItem: `Sertifikat Kepatuhan Standar ${categoryName} Zone B`,
-      jenisPeralatan: categoryName,
-      unitPabrik: "Pabrik 2 (Urea)",
-      nomorSeri: "PERIZ-K3-441",
-      berakhir: "2026-09-30",
-      noSertifikat: "DISNAKER-K3-441-2022",
-      keterangan: "Disnaker Kaltim"
-    },
-    {
-      id: "DOC-2026-03",
-      code: "PERIZ-ADM-112",
-      title: `Dokumen Kelayakan Administrasi & Verifikasi Regulasi`,
-      unit: "Pabrik 5 (Utility)",
-      issuer: "Kemenperin RI",
-      issueDate: "2024-03-01",
-      expiryDate: "2029-03-01",
-      certificateNo: "KEMENPERIN-ADM-112",
-      status: "Aktif",
-      merekItem: `Dokumen Kelayakan Administrasi & Verifikasi Regulasi`,
-      jenisPeralatan: categoryName,
-      unitPabrik: "Pabrik 5 (Utility)",
-      nomorSeri: "PERIZ-ADM-112",
-      berakhir: "2029-03-01",
-      noSertifikat: "KEMENPERIN-ADM-112",
-      keterangan: "Kemenperin RI"
-    },
-  ]);
+  // Dynamic Filtering from connected Master Dataset
+  const [documents, setDocuments] = useState(masterCertificatesData);
 
   const filteredDocs = documents.filter(doc =>
     doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||

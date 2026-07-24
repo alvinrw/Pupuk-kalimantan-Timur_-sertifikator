@@ -21,6 +21,7 @@ import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryCiptaanModal from '../components/SingleEntryCiptaanModal';
 import DocumentDetailPage from './DocumentDetailPage';
+import { masterCertificatesData } from '../data/masterDataset';
 
 export default function AdministrasiLainnya() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,57 +91,10 @@ export default function AdministrasiLainnya() {
     return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
   };
 
-  // Mock Data Ciptaan
-  const [ciptaanList, setCiptaanList] = useState([
-    {
-      id: "CIP-01",
-      no: 1,
-      judulCiptaan: "Sistem Informasi Inventory & Kalibrasi Peralatan Amonia",
-      jenisCiptaan: "Program Komputer (Software)",
-      tanggalCiptaan: "2024-03-10",
-      masaBerlaku: "5 Tahun",
-      kapanBerakhir: "2029-03-10",
-      noSertifikat: "EC00202400192",
-      status: "Aktif",
-      hasCertificatePdf: true
-    },
-    {
-      id: "CIP-02",
-      no: 2,
-      judulCiptaan: "Buku Panduan Keselamatan Operasi Kilang Urea-4",
-      jenisCiptaan: "Buku / Karya Tulis",
-      tanggalCiptaan: "2019-08-15",
-      masaBerlaku: "5 Tahun",
-      kapanBerakhir: "2024-01-15",
-      noSertifikat: "EC00201999120",
-      status: "Expired",
-      hasCertificatePdf: true
-    },
-    {
-      id: "CIP-03",
-      no: 3,
-      judulCiptaan: "Desain Layout Control Room Central Ammonia-Urea Pabrik 5",
-      jenisCiptaan: "Desain Layout / Tata Letak",
-      tanggalCiptaan: "2020-01-20",
-      masaBerlaku: "5 Tahun",
-      kapanBerakhir: "2026-08-10",
-      noSertifikat: "EC00202000012",
-      status: "Perpanjang",
-      hasCertificatePdf: false
-    },
-    {
-      id: "CIP-04",
-      no: 4,
-      judulCiptaan: "Modul Prosedur Operasional Legacy 2010 (Decommissioned)",
-      jenisCiptaan: "Buku / Karya Tulis",
-      tanggalCiptaan: "2010-05-12",
-      masaBerlaku: "10 Tahun",
-      kapanBerakhir: "2020-05-12",
-      noSertifikat: "EC0020108821",
-      status: "Afkir",
-      hasCertificatePdf: true
-    }
-  ]);
+  // Connected Master Data Ciptaan
+  const [ciptaanList, setCiptaanList] = useState(
+    masterCertificatesData.filter(d => d.categoryKey === 'administrasi-lainnya')
+  );
 
   // Unique options for dropdown filters
   const uniqueJenis = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.jenisCiptaan))], [ciptaanList]);

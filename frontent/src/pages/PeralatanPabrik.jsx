@@ -21,6 +21,7 @@ import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
 import DocumentDetailPage from './DocumentDetailPage';
+import { masterCertificatesData } from '../data/masterDataset';
 
 export default function PeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -124,99 +125,10 @@ export default function PeralatanPabrik() {
     return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
   };
 
-  // Mock Data
-  const [equipmentList, setEquipmentList] = useState([
-    {
-      id: "EQ-01",
-      no: 1,
-      jenisPeralatan: "Bejana Tekan / Boiler",
-      merekItem: "Primary Reformer Boiler",
-      tipe: "B-201-P2",
-      nomorSeri: "SN-88219-PKT",
-      kapasitas: "120 Bar / 450°C",
-      lokasi: "Pabrik 2 (Area Reformer)",
-      user: "Dept. Operasi Pabrik 2",
-      status: "Aktif",
-      noSertifikat: "CERT-7734/DISNAKER-KT/2023",
-      tanggalInspeksi: "2023-04-10",
-      terbit: "2023-04-15",
-      berakhir: "2026-08-15",
-      keterangan: "Layak Ops — Disnaker Kaltim",
-      hasCertificatePdf: true
-    },
-    {
-      id: "EQ-02",
-      no: 2,
-      jenisPeralatan: "Pesawat Angkat & Angkut",
-      merekItem: "Overhead Crane 50 Ton",
-      tipe: "CR-402-P3",
-      nomorSeri: "SN-CR-9910-TY",
-      kapasitas: "50 Ton SWL",
-      lokasi: "Pabrik 3 (Urea Silo B)",
-      user: "Dept. Bagian Pemeliharaan",
-      status: "Expired",
-      noSertifikat: "SUCO-PAA-88219-2021",
-      tanggalInspeksi: "2021-01-05",
-      terbit: "2021-01-10",
-      berakhir: "2024-01-10",
-      keterangan: "Tenggat Expired Lewat - Perlu Resertifikasi",
-      hasCertificatePdf: true
-    },
-    {
-      id: "EQ-03",
-      no: 3,
-      jenisPeralatan: "Tangki Timbun B3",
-      merekItem: "Ammonia Storage Tank #2",
-      tipe: "ST-501-P5",
-      nomorSeri: "SN-TK-501-AM",
-      kapasitas: "30.000 MT",
-      lokasi: "Pabrik 5 (Dermaga & Offsite)",
-      user: "Dept. Offsite & Port",
-      status: "Perpanjang",
-      noSertifikat: "PERIZ-B3-8891-PKT",
-      tanggalInspeksi: "2021-08-25",
-      terbit: "2021-09-01",
-      berakhir: "2026-08-10",
-      keterangan: "Dalam Proses Inspeksi Perpanjangan Disnaker",
-      hasCertificatePdf: false
-    },
-    {
-      id: "EQ-04",
-      no: 4,
-      jenisPeralatan: "Mesin & Pesawat Tenaga",
-      merekItem: "Syngas Centrifugal Compressor",
-      tipe: "COMP-101-P4",
-      nomorSeri: "SN-C-9941",
-      kapasitas: "18.500 KW",
-      lokasi: "Pabrik 4 (Amuria Loop)",
-      user: "Dept. Utility & Turbin",
-      status: "Afkir",
-      noSertifikat: "LR-SYNGAS-2018-0012",
-      tanggalInspeksi: "2018-05-01",
-      terbit: "2018-05-12",
-      berakhir: "2021-05-12",
-      keterangan: "Peralatan Decommissioned / Afkir Non-Aktif",
-      hasCertificatePdf: true
-    },
-    {
-      id: "EQ-05",
-      no: 5,
-      jenisPeralatan: "Instalasi Listrik & Petir",
-      merekItem: "Main Substation Transformer",
-      tipe: "TR-203-P2",
-      nomorSeri: "SN-PLN-1120-P2",
-      kapasitas: "13.8 kV / 40 MVA",
-      lokasi: "Pabrik 2 (Substation 2B)",
-      user: "Dept. Listrik & Instrument",
-      status: "Aktif",
-      noSertifikat: "SLO-PLN-991204-P2",
-      tanggalInspeksi: "2023-07-20",
-      terbit: "2023-08-01",
-      berakhir: "2028-08-01",
-      keterangan: "Dalam Penggantian Coil",
-      hasCertificatePdf: false
-    }
-  ]);
+  // Master Equipment Data connected from masterDataset
+  const [equipmentList, setEquipmentList] = useState(
+    masterCertificatesData.filter(d => d.categoryKey === 'peralatan-pabrik')
+  );
 
   // Unique options for header dropdowns
   const uniqueJenis = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.jenisPeralatan))], [equipmentList]);
