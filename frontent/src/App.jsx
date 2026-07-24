@@ -9,6 +9,8 @@ import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import Pengaturan from './pages/Pengaturan';
 import PerizinanAset from './pages/PerizinanAset';
+import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
+import InformasiLainnya from './pages/InformasiLainnya';
 
 import {
   mockStats,
@@ -105,6 +107,10 @@ export default function App() {
         );
       case 'pengaturan':
         return <Pengaturan />;
+      case 'riwayat-perpanjangan':
+        return <RiwayatPerpanjangan />;
+      case 'informasi-lainnya':
+        return <InformasiLainnya />;
       default:
         return (
           <Dashboard
