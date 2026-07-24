@@ -31,12 +31,14 @@ export const uploadCsv = async (file, type, categoryKey = '') => {
   }
 };
 
-export const getCsvHistory = async () => {
+export const getCsvHistory = async (categoryKey = '') => {
   if (USE_DUMMY_DATA) {
     return [];
   }
   try {
-    const response = await api.get('/csv-import/history');
+    const params = {};
+    if (categoryKey) params.categoryKey = categoryKey;
+    const response = await api.get('/csv-import/history', { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching CSV history:', error);

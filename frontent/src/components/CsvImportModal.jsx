@@ -53,7 +53,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
   React.useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const logs = await getCsvHistory();
+        const logs = await getCsvHistory(categoryKey);
         if (logs && logs.length > 0) {
           const mappedLogs = logs.map(log => {
             let detail = {};
@@ -71,6 +71,8 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             };
           });
           setUploadHistory(mappedLogs);
+        } else {
+          setUploadHistory([]);
         }
       } catch (err) {
         console.error("Error fetching CSV history:", err);
@@ -80,7 +82,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     if (isOpen) {
       fetchHistory();
     }
-  }, [isOpen]);
+  }, [isOpen, categoryKey]);
 
   React.useEffect(() => {
     try {

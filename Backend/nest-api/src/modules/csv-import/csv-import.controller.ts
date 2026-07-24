@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Delete, Param, UseInterceptors, UploadedFile, HttpException, HttpStatus, Body } from '@nestjs/common';
+import { Controller, Post, Get, Delete, Param, Query, UseInterceptors, UploadedFile, HttpException, HttpStatus, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CsvImportService } from './csv-import.service';
 
@@ -24,8 +24,8 @@ export class CsvImportController {
   }
 
   @Get('history')
-  async getHistory() {
-    return this.csvImportService.getImportHistory();
+  async getHistory(@Query('categoryKey') categoryKey?: string) {
+    return this.csvImportService.getImportHistory(categoryKey);
   }
 
   @Delete('history/:id')

@@ -175,10 +175,22 @@ export class CsvImportService {
     }
   }
 
-  async getImportHistory() {
-    return this.prisma.monitoringLog.findMany({
+  async getImportHistory(categoryKey?: string) {
+    const logs = await this.prisma.monitoringLog.findMany({
       where: { action: 'CSV_IMPORT' },
       orderBy: { createdAt: 'desc' }
+    });
+
+    if (!categoryKey) return logs;
+
+    return logs.filter(log => {
+      if (!log.detail) return true;
+      try {
+        const detailObj = JSON.parse(log.detail);
+        return !detailObj.categoryKey || detailObj.categoryKey === categoryKey;
+      } catch {
+        return true;
+      }
     });
   }
 
