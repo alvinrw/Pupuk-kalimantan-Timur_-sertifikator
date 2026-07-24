@@ -78,9 +78,11 @@ export default function App() {
         );
       case 'perizinan-aset':
         return (
-          <PerizinanAset
+          <PerizinanGeneric
             title="Perizinan Aset & Bangunan Pabrik"
             subtitle="Izin lokasi, sertifikat HGB, kelayakan bangunan, dan AMDAL kawasan pabrik"
+            categoryName="Aset & Bangunan"
+            onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
       case 'administrasi-lainnya':
