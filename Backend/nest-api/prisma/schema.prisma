@@ -24,8 +24,10 @@ model MasterItem {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  // Relasi: 1 MasterItem bisa punya banyak Certificate
-  certificates Certificate[]
+  // Relasi
+  certificates      Certificate[]
+  permits           Permit[]
+  documentHistories DocumentHistory[]
 
   @@map("master_items")
 }
@@ -45,6 +47,58 @@ model Certificate {
 
   // Definisi Relasi
   item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  monitoringLogs  MonitoringLog[]
 
   @@map("certificates")
+}
+
+model Permit {
+  id              String   @id @default(uuid())
+  itemId          String   // Foreign Key
+  jenisIzin       String   // "Izin Lingkungan", "Izin Usaha", dll.
+  noIzin          String?
+  instansi        String?
+  terbit          String?
+  expired         String?
+  status          String   @default("Aktif")
+  keterangan      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Definisi Relasi
+  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("permits")
+}
+
+model DocumentHistory {
+  id              String   @id @default(uuid())
+  itemId          String   // Foreign Key
+  action          String   // "CREATED", "UPDATED", "UPLOADED", "OCR_PROCESSED"
+  description     String   // Deskripsi perubahan
+  changedBy       String?  // Siapa yang ngubah (kalau ada sistem Auth nanti)
+  
+  createdAt       DateTime @default(now())
+
+  // Definisi Relasi
+  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("document_history")
+}
+
+model MonitoringLog {
+  id              String   @id @default(uuid())
+  certificateId   String   // Foreign Key ke Sertifikat spesifik
+  logType         String   // "EXPIRED_WARNING", "RENEWAL_SUBMITTED"
+  message         String
+  isResolved      Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  resolvedAt      DateTime?
+
+  // Definisi Relasi
+  certificate     Certificate @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@map("monitoring_logs")
 }

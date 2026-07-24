@@ -30,12 +30,26 @@ export class MasterItemsService {
     return this.prisma.masterItem.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      include: {
+        certificates: true,
+        permits: true,
+        documentHistories: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
     });
   }
 
   async findOne(id: string) {
     const item = await this.prisma.masterItem.findUnique({
       where: { id },
+      include: {
+        certificates: true,
+        permits: true,
+        documentHistories: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
     });
     if (!item) {
       throw new NotFoundException(`Item with ID ${id} not found`);
