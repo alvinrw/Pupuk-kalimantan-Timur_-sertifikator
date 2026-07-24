@@ -41,6 +41,9 @@ export default function MonitoringSertifikasi() {
   // Pop-up Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
+  // Drawer Sidebar State for Riwayat Perpanjangan
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+
   // Modal States for Action & Upload Renewal
   const [activeModalItem, setActiveModalItem] = useState(null);
   const [modalMode, setModalMode] = useState('action');
