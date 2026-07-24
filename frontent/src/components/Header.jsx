@@ -1,29 +1,5 @@
 import React from 'react';
 
-export default function Header({ activeTab }) {
-  const getTabTitle = () => {
-    switch (activeTab) {
-      case 'dashboard': return 'Dashboard Overview';
-      case 'peralatan-pabrik': return 'Perizinan Peralatan Pabrik';
-      case 'perizinan-aset': return 'Perizinan Aset & Bangunan';
-      case 'administrasi-lainnya': return 'Administrasi & Perizinan Umum (HAKI)';
-      case 'perizinan-proyek': return 'Perizinan Proyek & Konstruksi';
-      case 'perizinan-produk': return 'Perizinan & Sertifikasi Produk';
-      case 'monitoring': return 'Monitoring & Evaluasi Perizinan';
-      case 'riwayat-perpanjangan': return 'Riwayat Perpanjangan & Rekam Jejak Audit';
-      case 'pengaturan': return 'Pengaturan Sistem & Pengguna';
-      default: return 'Sertifikator System';
-    }
-  };
-
-  return (
-    <header className="h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-8 flex items-center justify-between sticky top-0 z-20 font-sans-clean">
-      {/* Page Title Area */}
-      <div className="flex items-center gap-4">
-        <h2 className="text-base font-extrabold text-slate-800 tracking-tight">
-          {getTabTitle()}
-        </h2>
-      </div>
-    </header>
-  );
+export default function Header() {
+  return null;
 }
