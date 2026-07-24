@@ -2,6 +2,7 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import * as csv from 'csv-parser';
 import { Readable } from 'stream';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class CsvImportService {
@@ -49,30 +50,33 @@ export class CsvImportService {
         let successCount = 0;
         let failCount = 0;
 
-        if (newItems.length > 0) {
+        const itemsToInsert = newItems.map((row) => ({
+          id: row.id || randomUUID(),
+          code: row.code || null,
+          title: row.title || row.nama || 'Untitled Item',
+          categoryKey: targetCategoryKey || row.categoryKey || 'peralatan-pabrik',
+          unitLocation: row.unitLocation || row.lokasi || 'Umum',
+          status: row.status || 'Aktif',
+          luasM2: row.luasM2 != null ? String(row.luasM2) : null,
+          luasHa: row.luasHa != null ? String(row.luasHa) : null,
+          peruntukan: row.peruntukan || null,
+          issueDate: row.issueDate || null,
+          expiryDate: row.expiryDate || null,
+          keterangan: row.keterangan || null,
+        }));
+
+        if (itemsToInsert.length > 0) {
           const insertRes = await this.prisma.masterItem.createMany({
-            data: newItems.map((row) => ({
-              id: row.id,
-              code: row.code,
-              title: row.title || row.nama || 'Untitled Item',
-              categoryKey: targetCategoryKey || row.categoryKey || 'peralatan-pabrik',
-              unitLocation: row.unitLocation || row.lokasi || 'Umum',
-              status: row.status || 'Aktif',
-              luasM2: row.luasM2 != null ? String(row.luasM2) : null,
-              luasHa: row.luasHa != null ? String(row.luasHa) : null,
-              peruntukan: row.peruntukan || null,
-              issueDate: row.issueDate || null,
-              expiryDate: row.expiryDate || null,
-              keterangan: row.keterangan || null,
-            })),
+            data: itemsToInsert,
             skipDuplicates: true,
           });
           successCount = insertRes.count;
-          failCount = newItems.length - successCount;
+          failCount = itemsToInsert.length - successCount;
         }
 
-        const importedIds = newItems.map(r => r.id).filter(Boolean);
-        const importedCodes = newItems.map(r => r.code).filter(Boolean);
+        const totalRows = results.length;
+        const importedIds = itemsToInsert.map(r => r.id);
+        const importedCodes = itemsToInsert.map(r => r.code).filter(Boolean);
 
         // Save to MonitoringLog
         await this.prisma.monitoringLog.create({
