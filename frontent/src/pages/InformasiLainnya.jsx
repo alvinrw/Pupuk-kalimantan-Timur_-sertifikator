@@ -497,9 +497,9 @@ export default function InformasiLainnya() {
           </div>
 
           {/* COMPARISON CARD: 2 JENIS MODUL PERIZINAN (CLICKABLE CARDS) */}
-          <div className="space-y-2">
+          <div className="space-y-2 font-sans-clean">
             <p className="text-xs text-slate-500 font-mono-data font-bold">
-              👇 Klik kartu di bawah untuk memilih tutorial alur kerja (Jenis 1 vs Jenis 2):
+              Pilih jenis tutorial alur kerja di bawah ini:
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-mono-data text-xs">
               {/* TYPE 1: MULTI-SERTIFIKAT (CLICKABLE) */}
@@ -507,22 +507,22 @@ export default function InformasiLainnya() {
                 onClick={() => setSelectedJenisTutorial('jenis1')}
                 className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                   selectedJenisTutorial === 'jenis1'
-                    ? 'bg-gradient-to-br from-blue-50 via-emerald-50/40 to-blue-50 border-2 border-[#005ea4] shadow-md ring-2 ring-blue-100'
-                    : 'bg-white border-slate-200 hover:border-blue-300 shadow-2xs hover:bg-slate-50'
+                    ? 'bg-blue-50/70 border-2 border-[#005ea4] shadow-xs'
+                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
                 }`}
               >
-                <div className="flex items-center justify-between border-b border-blue-200 pb-2">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                   <div className="flex items-center gap-2.5 text-[#005ea4] font-bold text-sm">
-                    <Link2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <Link2 className="w-4.5 h-4.5 shrink-0 text-[#005ea4]" />
                     <h4>JENIS 1: Menu Dengan Multi-Sertifikat Terhubung</h4>
                   </div>
                   {selectedJenisTutorial === 'jenis1' ? (
                     <span className="px-2.5 py-0.5 bg-[#005ea4] text-white text-[10px] font-bold rounded-full">
-                      ✓ Sedang Dilihat
+                      Aktif Dilihat
                     </span>
                   ) : (
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
-                      Klik untuk Buka
+                      Pilih Tutorial
                     </span>
                   )}
                 </div>
@@ -531,7 +531,7 @@ export default function InformasiLainnya() {
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
                   <li><b>Karakteristik</b>: 1 Entitas dapat memiliki <b>banyak sertifikat terhubung</b> (PBG, SLF, HGB, Amdal, SNI, Halal).</li>
-                  <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek punya 3 sertifikat = 3 baris di tabel).</li>
+                  <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek dengan 3 sertifikat = 3 baris di tabel).</li>
                 </ul>
               </div>
 
@@ -540,22 +540,22 @@ export default function InformasiLainnya() {
                 onClick={() => setSelectedJenisTutorial('jenis2')}
                 className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
                   selectedJenisTutorial === 'jenis2'
-                    ? 'bg-gradient-to-br from-purple-50 via-slate-50 to-purple-50 border-2 border-purple-600 shadow-md ring-2 ring-purple-100'
-                    : 'bg-white border-slate-200 hover:border-purple-300 shadow-2xs hover:bg-slate-50'
+                    ? 'bg-slate-100 border-2 border-slate-700 shadow-xs'
+                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
                 }`}
               >
-                <div className="flex items-center justify-between border-b border-purple-200 pb-2">
-                  <div className="flex items-center gap-2.5 text-purple-900 font-bold text-sm">
-                    <FileCheck className="w-5 h-5 text-purple-600 shrink-0" />
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <div className="flex items-center gap-2.5 text-slate-900 font-bold text-sm">
+                    <FileCheck className="w-4.5 h-4.5 shrink-0 text-slate-700" />
                     <h4>JENIS 2: Menu Single Sertifikat & Pindah Target</h4>
                   </div>
                   {selectedJenisTutorial === 'jenis2' ? (
-                    <span className="px-2.5 py-0.5 bg-purple-700 text-white text-[10px] font-bold rounded-full">
-                      ✓ Sedang Dilihat
+                    <span className="px-2.5 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded-full">
+                      Aktif Dilihat
                     </span>
                   ) : (
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
-                      Klik untuk Buka
+                      Pilih Tutorial
                     </span>
                   )}
                 </div>
@@ -574,12 +574,13 @@ export default function InformasiLainnya() {
           {selectedJenisTutorial === 'jenis1' && (
             <div className="space-y-6">
               {/* HEADER BANNER JENIS 1 */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between font-mono-data text-xs">
-                <span className="font-bold text-[#005ea4]">
-                  📌 Menampilkan Alur Tutorial JENIS 1 (Perizinan Aset, Proyek & Konstruksi, & Sertifikasi Produk)
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between font-mono-data text-xs">
+                <span className="font-bold text-[#005ea4] flex items-center gap-2">
+                  <Info className="w-4 h-4 text-[#005ea4]" />
+                  <span>Panduan Alur Kerja JENIS 1 (Perizinan Aset, Proyek & Konstruksi, & Sertifikasi Produk)</span>
                 </span>
-                <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 text-[11px]">
-                  Fitur Multi-Sertifikat Terhubung Aktif
+                <span className="text-slate-700 font-bold bg-slate-200 px-2.5 py-0.5 rounded text-[11px]">
+                  Multi-Sertifikat Terhubung
                 </span>
               </div>
 
@@ -700,19 +701,20 @@ export default function InformasiLainnya() {
           {selectedJenisTutorial === 'jenis2' && (
             <div className="space-y-6 font-sans-clean">
               {/* HEADER BANNER JENIS 2 */}
-              <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between font-mono-data text-xs">
-                <span className="font-bold text-purple-900">
-                  📌 Menampilkan Alur Tutorial JENIS 2 (Perizinan Peralatan Pabrik & Administrasi Lainnya / HAKI)
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between font-mono-data text-xs">
+                <span className="font-bold text-slate-900 flex items-center gap-2">
+                  <Info className="w-4 h-4 text-slate-700" />
+                  <span>Panduan Alur Kerja JENIS 2 (Perizinan Peralatan Pabrik & Administrasi Lainnya / HAKI)</span>
                 </span>
-                <span className="text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded border border-purple-300 text-[11px]">
-                  Single Certificate Model + Fitur Pindah Target Sertifikat
+                <span className="text-slate-700 font-bold bg-slate-200 px-2.5 py-0.5 rounded text-[11px]">
+                  Single Certificate Model
                 </span>
               </div>
 
               {/* SECTION A: CARA MENAMBAH ITEM PERALATAN / CIPTAAN BARU */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
                 <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
-                  <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     A
                   </div>
                   <div>
