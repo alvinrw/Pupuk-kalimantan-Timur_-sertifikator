@@ -518,7 +518,7 @@ export default function InformasiLainnya() {
                   </div>
                   {selectedJenisTutorial === 'jenis1' ? (
                     <span className="px-2.5 py-0.5 bg-[#005ea4] text-white text-[10px] font-bold rounded-full">
-                      Aktif Dilihat
+                      Terpilih
                     </span>
                   ) : (
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
@@ -551,7 +551,7 @@ export default function InformasiLainnya() {
                   </div>
                   {selectedJenisTutorial === 'jenis2' ? (
                     <span className="px-2.5 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded-full">
-                      Aktif Dilihat
+                      Terpilih
                     </span>
                   ) : (
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
