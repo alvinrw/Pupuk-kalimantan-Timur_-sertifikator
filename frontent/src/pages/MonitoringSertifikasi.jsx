@@ -24,6 +24,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
+import { masterCertificatesData } from '../data/masterDataset';
 
 export default function MonitoringSertifikasi() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,7 +47,6 @@ export default function MonitoringSertifikasi() {
   // Modal States for Action & Upload Renewal
   const [activeModalItem, setActiveModalItem] = useState(null);
   const [modalMode, setModalMode] = useState('action');
-  const [actionChoice, setActionChoice] = useState('renew');
   const [resertifikasiNotes, setResertifikasiNotes] = useState('');
 
   // Upload Form & OCR Simulation States
@@ -54,208 +54,18 @@ export default function MonitoringSertifikasi() {
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrSuccess, setOcrSuccess] = useState(false);
   
+  // Master List of all Documents connected from masterDataset
+  const [allCertificates, setAllCertificates] = useState(masterCertificatesData);
+  
   // OCR Extracted & Editable Fields
   const [newCertNumber, setNewCertNumber] = useState('');
   const [inspectionDate, setInspectionDate] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [newExpiryDate, setNewExpiryDate] = useState('');
 
-  // Master List of all Documents
-  const [allCertificates, setAllCertificates] = useState([
-    {
-      id: "MON-01",
-      kategoriDokumen: "Perizinan Peralatan Pabrik",
-      jenisItem: "Instalasi Penyalur Petir",
-      unitPabrik: "UBS 6",
-      merekItem: "Penyalur Petir Konvensional JT 8 (2896)",
-      nomorSeriTipe: "JT 8 (2896) UBS 6",
-      certificateNo: "0502/INS-IPP/LFS-IV/2026",
-      inspectionDate: "2024-04-05",
-      issueDate: "2024-04-07",
-      expiryDate: "2026-04-07",
-      sisaHari: 25,
-      expiryCategory: "urgent",
-      statusOperasional: "Aktif",
-      workflowStatus: "in_progress",
-      currentStage: "Proses Perpanjangan",
-      agency: "PT. Lentera Fokus Safetindo / Disnaker Kaltim",
-      notes: "Tahanan Pembumian: 0.53 Ω (Layak)",
-      historyLogs: [
-        {
-          tahun: "2026",
-          jenisTindakan: "Pengajuan Resertifikasi Ke-2",
-          noSertifikat: "0502/INS-IPP/LFS-IV/2026",
-          tglInspeksi: "2026-04-05",
-          tglTerbit: "2026-04-07",
-          tglExpired: "2028-04-07",
-          pelaksana: "Disnaker Kaltim",
-          status: "Berhasil / Active",
-          catatan: "Pengujian ulang tahanan pembumian 0.53 Ω. Kondisi grounding baik.",
-          fileUploaded: "Sertifikat_Penyalur_Petir_2026.pdf"
-        },
-        {
-          tahun: "2024",
-          jenisTindakan: "Perpanjangan Berkala Ke-1",
-          noSertifikat: "0401/INS-IPP/LFS-IV/2024",
-          tglInspeksi: "2024-04-02",
-          tglTerbit: "2024-04-07",
-          tglExpired: "2026-04-07",
-          pelaksana: "PT. Lentera Fokus Safetindo",
-          status: "Expired",
-          catatan: "Pemeriksaan berkala 2 tahunan.",
-          fileUploaded: "SK_Disnaker_Petir_2024.pdf"
-        },
-        {
-          tahun: "2022",
-          jenisTindakan: "Sertifikasi Awal (Penerbitan Pertama)",
-          noSertifikat: "0201/INS-IPP/LFS-IV/2022",
-          tglInspeksi: "2022-04-01",
-          tglTerbit: "2022-04-07",
-          tglExpired: "2024-04-07",
-          pelaksana: "Disnaker Kaltim",
-          status: "Archived",
-          catatan: "Izin kelayakan pertama kali operasional unit UBS 6.",
-          fileUploaded: "Izin_Awal_2022.pdf"
-        }
-      ]
-    },
-    {
-      id: "MON-02",
-      kategoriDokumen: "Perizinan Peralatan Pabrik",
-      jenisItem: "Fire Alarm System",
-      unitPabrik: "Diklat B",
-      merekItem: "Fire Alarm System Notifier SFP-10UD",
-      nomorSeriTipe: "Notifier SFP-10UD (40 Smoke, 21 Heat)",
-      certificateNo: "500.15.18.2 / 5674 / DTKT - III",
-      inspectionDate: "2025-06-10",
-      issueDate: "2025-06-16",
-      expiryDate: "2026-06-16",
-      sisaHari: 55,
-      expiryCategory: "urgent",
-      statusOperasional: "Aktif",
-      workflowStatus: "in_progress",
-      currentStage: "Proses Perpanjangan",
-      agency: "PT. Sucofindo / Disnaker Kaltim",
-      notes: "Pengujian Ulang Berkala Setiap Tahun",
-      historyLogs: [
-        {
-          tahun: "2025",
-          jenisTindakan: "Perpanjangan Tahunan",
-          noSertifikat: "500.15.18.2 / 5674 / DTKT - III",
-          tglInspeksi: "2025-06-10",
-          tglTerbit: "2025-06-16",
-          tglExpired: "2026-06-16",
-          pelaksana: "Sucofindo",
-          status: "Berhasil / Active",
-          catatan: "Testing 40 Smoke detector & 21 Heat detector berfungsi normal.",
-          fileUploaded: "Cert_FireAlarm_DiklatB.pdf"
-        }
-      ]
-    },
-    {
-      id: "MON-03",
-      kategoriDokumen: "Perizinan Peralatan Pabrik",
-      jenisItem: "Timbangan Metrologi",
-      unitPabrik: "Pabrik NPK",
-      merekItem: "Timbangan Elektronik Mettler Toledo IND930",
-      nomorSeriTipe: "SN-C337801041 (Kapasitas 60kg)",
-      certificateNo: "500.2.3.15 / 034 / UPTMETROLOGI / 2026",
-      inspectionDate: "2026-02-15",
-      issueDate: "2026-02-18",
-      expiryDate: "2027-02-18",
-      sisaHari: 210,
-      expiryCategory: "safe",
-      statusOperasional: "Aktif",
-      workflowStatus: "completed",
-      currentStage: "Sertifikat Terbit",
-      agency: "UPT Metrologi Legal Kota Bontang",
-      notes: "Tera Sah 2026 Tera Ulang Feb 2027",
-      historyLogs: [
-        {
-          tahun: "2026",
-          jenisTindakan: "Tera Ulang Sah",
-          noSertifikat: "500.2.3.15 / 034 / UPTMETROLOGI / 2026",
-          tglInspeksi: "2026-02-15",
-          tglTerbit: "2026-02-18",
-          tglExpired: "2027-02-18",
-          pelaksana: "UPT Metrologi Legal",
-          status: "Berhasil / Active",
-          catatan: "Pengujian tera ulang kalibrasi bobot sah.",
-          fileUploaded: "Tera_Sah_Timbangan_2026.pdf"
-        }
-      ]
-    },
-    {
-      id: "MON-04",
-      kategoriDokumen: "Perizinan Peralatan Pabrik",
-      jenisItem: "Bejana Tekan / Boiler",
-      unitPabrik: "Pabrik 2",
-      merekItem: "Primary Reformer Boiler 120 Bar",
-      nomorSeriTipe: "SN-88219-PKT (B-201-P2)",
-      certificateNo: "CERT-7734/DISNAKER-KT/2023",
-      inspectionDate: "2023-02-20",
-      issueDate: "2023-03-01",
-      expiryDate: "2026-03-01",
-      sisaHari: -10,
-      expiryCategory: "expired",
-      statusOperasional: "Repair",
-      workflowStatus: "in_progress",
-      currentStage: "Proses Perpanjangan",
-      agency: "Disnaker Kaltim",
-      notes: "Perbaikan Valve Reformer & NDT Tekanan",
-      historyLogs: [
-        {
-          tahun: "2023",
-          jenisTindakan: "Resertifikasi Bejana Tekan 3 Tahun",
-          noSertifikat: "CERT-7734/DISNAKER-KT/2023",
-          tglInspeksi: "2023-02-20",
-          tglTerbit: "2023-03-01",
-          tglExpired: "2026-03-01",
-          pelaksana: "Disnaker Kaltim",
-          status: "Expired",
-          catatan: "NDT Uji Tekanan Hydrotest 120 Bar.",
-          fileUploaded: "BejanaTekan_Pabrik2.pdf"
-        }
-      ]
-    },
-    {
-      id: "MON-07",
-      kategoriDokumen: "Perizinan Peralatan Pabrik",
-      jenisItem: "Pompa Pemadam Utama",
-      unitPabrik: "Fire Station",
-      merekItem: "Diesel Fire Pump 2500 GPM (Unit Afkir)",
-      nomorSeriTipe: "FP-DIESEL-01",
-      certificateNo: "DISNAKER-FP-9901-2024",
-      inspectionDate: "2024-02-10",
-      issueDate: "2024-02-15",
-      expiryDate: "2026-02-15",
-      sisaHari: -25,
-      expiryCategory: "expired",
-      statusOperasional: "Rusak",
-      workflowStatus: "decommissioned",
-      currentStage: "Aset Afkir",
-      agency: "Disnaker Kaltim",
-      notes: "Dihentikan perpanjangan karena unit diganti baru",
-      historyLogs: [
-        {
-          tahun: "2026",
-          jenisTindakan: "Penghentian / Afkir Aset",
-          noSertifikat: "DISNAKER-FP-9901-2024",
-          tglInspeksi: "2026-02-10",
-          tglTerbit: "-",
-          tglExpired: "-",
-          pelaksana: "Internal PKT Safety",
-          status: "Decommissioned",
-          catatan: "Peralatan di-afkir dan perizinan dihentikan secara resmi.",
-          fileUploaded: "Berita_Acara_Afkir_FirePump.pdf"
-        }
-      ]
-    }
-  ]);
-
   // Dynamic Options for Dropdowns
-  const uniqueKategori = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.kategoriDokumen))], [allCertificates]);
-  const uniqueUnitPabrik = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.unitPabrik))], [allCertificates]);
+  const uniqueKategori = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.kategoriDokumen || i.categoryKey || ''))], [allCertificates]);
+  const uniqueUnitPabrik = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.unitPabrik || i.unit || i.lokasi || ''))], [allCertificates]);
 
   // Count active filters for badge
   const activeFilterCount = useMemo(() => {
@@ -271,17 +81,26 @@ export default function MonitoringSertifikasi() {
   // Filtering Logic
   const filteredCertificates = useMemo(() => {
     return allCertificates.filter((item) => {
-      const matchesSearch =
-        item.merekItem.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.jenisItem.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.nomorSeriTipe.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.kategoriDokumen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.certificateNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.unitPabrik.toLowerCase().includes(searchTerm.toLowerCase());
+      const merekStr = (item.merekItem || item.title || item.judulCiptaan || '');
+      const jenisStr = (item.jenisItem || item.jenisPeralatan || item.jenisCiptaan || '');
+      const seriStr = (item.nomorSeriTipe || item.nomorSeri || item.code || '');
+      const katStr = (item.kategoriDokumen || item.categoryKey || '');
+      const certStr = (item.certificateNo || item.noSertifikat || '');
+      const unitStr = (item.unitPabrik || item.unit || item.lokasi || '');
 
-      const matchesKategori = filterKategori === 'All' || item.kategoriDokumen === filterKategori;
-      const matchesUnitPabrik = filterUnitPabrik === 'All' || item.unitPabrik === filterUnitPabrik;
-      const matchesStatusFisik = filterStatusOperasional === 'All' || item.statusOperasional === filterStatusOperasional;
+      const searchLower = searchTerm.toLowerCase();
+
+      const matchesSearch =
+        merekStr.toLowerCase().includes(searchLower) ||
+        jenisStr.toLowerCase().includes(searchLower) ||
+        seriStr.toLowerCase().includes(searchLower) ||
+        katStr.toLowerCase().includes(searchLower) ||
+        certStr.toLowerCase().includes(searchLower) ||
+        unitStr.toLowerCase().includes(searchLower);
+
+      const matchesKategori = filterKategori === 'All' || katStr === filterKategori;
+      const matchesUnitPabrik = filterUnitPabrik === 'All' || unitStr === filterUnitPabrik;
+      const matchesStatusFisik = filterStatusOperasional === 'All' || item.statusOperasional === filterStatusOperasional || item.status === filterStatusOperasional;
 
       let matchesRentangHari = true;
       if (filterRentangHari === 'expired') {
@@ -470,13 +289,13 @@ export default function MonitoringSertifikasi() {
         item={selectedDetailDoc}
         onBack={() => setSelectedDetailDoc(null)}
         onSaveUpdate={(updatedDoc) => {
-          setCertificateList(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
+          setAllCertificates(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
         }}
         onQuickRenew={(id) => {
-          handleExtendAction(id);
+          handleQuickRenew(id);
         }}
         onQuickDecommission={(id) => {
-          handleDecommissionAction(id);
+          handleQuickDecommission(id);
         }}
       />
     );
@@ -701,18 +520,18 @@ export default function MonitoringSertifikasi() {
 
                       {/* Kategori Dokumen */}
                       <td className={`py-3 px-3 font-bold whitespace-nowrap ${isDecommissioned ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                        {doc.kategoriDokumen}
+                        {doc.kategoriDokumen || doc.kategori || 'Perizinan'}
                       </td>
 
                       {/* Jenis Item */}
                       <td className={`py-3 px-3 font-medium whitespace-nowrap ${isDecommissioned ? 'text-slate-200' : 'text-slate-800'}`}>
-                        {doc.jenisItem}
+                        {doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '-'}
                       </td>
 
                       {/* Unit Pabrik */}
                       <td className="py-3 px-3 font-mono-data font-bold whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded text-[11px] ${isDecommissioned ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
-                          {doc.unitPabrik}
+                          {doc.unitPabrik || doc.unit || doc.lokasi || '-'}
                         </span>
                       </td>
 
@@ -722,22 +541,22 @@ export default function MonitoringSertifikasi() {
                         className={`py-3 px-3 font-bold hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap ${isDecommissioned ? 'text-white' : 'text-slate-900'}`}
                         title="Klik untuk Lihat Detail Penuh"
                       >
-                        {doc.merekItem}
+                        {doc.merekItem || doc.title || doc.judulCiptaan || '-'}
                       </td>
 
                       {/* Nomor Seri / Tipe */}
                       <td className={`py-3 px-3 font-mono-data font-semibold whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-700'}`}>
-                        {doc.nomorSeriTipe}
+                        {doc.nomorSeriTipe || doc.nomorSeri || doc.tipe || doc.code || '-'}
                       </td>
 
                       {/* No Sertifikat */}
                       <td className={`py-3 px-3 font-mono-data whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-800'}`}>
-                        {doc.certificateNo}
+                        {doc.certificateNo || doc.noSertifikat || '-'}
                       </td>
 
                       {/* Tanggal Expiration */}
                       <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-900'}`}>
-                        {doc.expiryDate}
+                        {doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-'}
                         <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
                           ({isDecommissioned ? 'Afkir / Non-Aktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
                         </span>
