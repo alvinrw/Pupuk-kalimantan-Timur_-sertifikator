@@ -4,6 +4,7 @@ import { DocumentHistoryService } from './document-history.service';
 
 @Module({
   controllers: [DocumentHistoryController],
-  providers: [DocumentHistoryService]
+  providers: [DocumentHistoryService],
+  exports: [DocumentHistoryService],
 })
 export class DocumentHistoryModule {}

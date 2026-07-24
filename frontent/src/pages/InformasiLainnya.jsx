@@ -471,10 +471,10 @@ export default function InformasiLainnya() {
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-[#005ea4]" />
+                      <Icon className="w-4 h-4 text-[#005ea4] shrink-0" />
                       <h4 className="font-bold text-sm text-slate-900">{step.title}</h4>
                     </div>
-                    <p className="text-xs text-slate-600 font-mono-data leading-relaxed">
+                    <p className="pl-6 text-xs text-slate-600 font-mono-data leading-relaxed">
                       {step.desc}
                     </p>
                   </div>
@@ -518,7 +518,7 @@ export default function InformasiLainnya() {
                   </div>
                   {selectedJenisTutorial === 'jenis1' ? (
                     <span className="px-2.5 py-0.5 bg-[#005ea4] text-white text-[10px] font-bold rounded-full">
-                      Aktif Dilihat
+                      Terpilih
                     </span>
                   ) : (
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
@@ -526,10 +526,10 @@ export default function InformasiLainnya() {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-700 leading-relaxed text-[11px]">
+                <p className="pl-7 text-slate-700 leading-relaxed text-[11px]">
                   <b>Modul</b>: Perizinan Aset, Perizinan Proyek & Konstruksi, dan Sertifikasi Produk.
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
+                <ul className="ml-7 pl-4 list-disc list-outside space-y-1 text-slate-600 text-[11px]">
                   <li><b>Karakteristik</b>: 1 Entitas dapat memiliki <b>banyak sertifikat terhubung</b> (PBG, SLF, HGB, Amdal, SNI, Halal).</li>
                   <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek dengan 3 sertifikat = 3 baris di tabel).</li>
                 </ul>
@@ -551,7 +551,7 @@ export default function InformasiLainnya() {
                   </div>
                   {selectedJenisTutorial === 'jenis2' ? (
                     <span className="px-2.5 py-0.5 bg-slate-800 text-white text-[10px] font-bold rounded-full">
-                      Aktif Dilihat
+                      Terpilih
                     </span>
                   ) : (
                     <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-full">
@@ -559,10 +559,10 @@ export default function InformasiLainnya() {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-700 leading-relaxed text-[11px]">
+                <p className="pl-7 text-slate-700 leading-relaxed text-[11px]">
                   <b>Modul</b>: Perizinan Peralatan Pabrik dan Administrasi Lainnya / Hak Cipta (HAKI).
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
+                <ul className="ml-7 pl-4 list-disc list-outside space-y-1 text-slate-600 text-[11px]">
                   <li><b>Karakteristik</b>: 1 Peralatan/Ciptaan terikat pada <b>1 Sertifikat/SK</b> (dengan opsi Pindah Target).</li>
                   <li><b>Behavior Tabel Utama</b>: 1 Item peralatan/ciptaan selalu konsisten <b>1 baris</b> pada tabel utama.</li>
                 </ul>
@@ -592,7 +592,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Item / Perizinan Baru (Input 1 Data Manual)</h4>
-                    <p className="text-xs text-slate-500 font-mono-data">Untuk menambahkan entitas baru (Aset, Peralatan, Proyek, atau Produk)</p>
+                    <p className="pl-[16px] text-xs text-slate-500 font-mono-data">Untuk menambahkan entitas baru (Aset, Peralatan, Proyek, atau Produk)</p>
                   </div>
                 </div>
 
@@ -637,7 +637,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">2. Cara Menambahkan Sertifikat Terhubung (Multi-Sertifikat Per Item)</h4>
-                    <p className="text-xs text-slate-500 font-mono-data">Untuk menghubungkan beberapa dokumen sertifikat (PBG, SLF, Amdal, SNI, Halal) ke satu entitas yang sama</p>
+                    <p className="pl-[16px] text-xs text-slate-500 font-mono-data">Untuk menghubungkan beberapa dokumen sertifikat (PBG, SLF, Amdal, SNI, Halal) ke satu entitas yang sama</p>
                   </div>
                 </div>
 
@@ -719,7 +719,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Peralatan Pabrik atau Hak Cipta Baru</h4>
-                    <p className="text-xs text-slate-500">Input registrasi item baru (Bejana Tekan, Crane, Tangki B3, atau Karya Cipta HAKI)</p>
+                    <p className="pl-[16px] text-xs text-slate-500">Input registrasi item baru (Bejana Tekan, Crane, Tangki B3, atau Karya Cipta HAKI)</p>
                   </div>
                 </div>
 
@@ -764,7 +764,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">2. Fitur Pindah Target Sertifikat (Re-assign Certificate)</h4>
-                    <p className="text-xs text-slate-500">Gunakan fitur ini jika nomor SK / berkas PDF ciptaan tertukar antar item</p>
+                    <p className="pl-[16px] text-xs text-slate-500">Gunakan fitur ini jika nomor SK / berkas PDF ciptaan tertukar antar item</p>
                   </div>
                 </div>
 
