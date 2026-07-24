@@ -471,10 +471,10 @@ export default function InformasiLainnya() {
                   </div>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <Icon className="w-4 h-4 text-[#005ea4]" />
+                      <Icon className="w-4 h-4 text-[#005ea4] shrink-0" />
                       <h4 className="font-bold text-sm text-slate-900">{step.title}</h4>
                     </div>
-                    <p className="text-xs text-slate-600 font-mono-data leading-relaxed">
+                    <p className="pl-6 text-xs text-slate-600 font-mono-data leading-relaxed">
                       {step.desc}
                     </p>
                   </div>
