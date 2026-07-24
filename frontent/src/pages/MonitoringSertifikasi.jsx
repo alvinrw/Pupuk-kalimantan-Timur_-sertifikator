@@ -62,8 +62,8 @@ export default function MonitoringSertifikasi() {
   const [newExpiryDate, setNewExpiryDate] = useState('');
 
   // Dynamic Options for Dropdowns
-  const uniqueKategori = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.kategoriDokumen))], [allCertificates]);
-  const uniqueUnitPabrik = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.unitPabrik))], [allCertificates]);
+  const uniqueKategori = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.kategoriDokumen || i.categoryKey || ''))], [allCertificates]);
+  const uniqueUnitPabrik = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.unitPabrik || i.unit || i.lokasi || ''))], [allCertificates]);
 
   // Count active filters for badge
   const activeFilterCount = useMemo(() => {
@@ -79,17 +79,26 @@ export default function MonitoringSertifikasi() {
   // Filtering Logic
   const filteredCertificates = useMemo(() => {
     return allCertificates.filter((item) => {
-      const matchesSearch =
-        item.merekItem.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.jenisItem.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.nomorSeriTipe.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.kategoriDokumen.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.certificateNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.unitPabrik.toLowerCase().includes(searchTerm.toLowerCase());
+      const merekStr = (item.merekItem || item.title || item.judulCiptaan || '');
+      const jenisStr = (item.jenisItem || item.jenisPeralatan || item.jenisCiptaan || '');
+      const seriStr = (item.nomorSeriTipe || item.nomorSeri || item.code || '');
+      const katStr = (item.kategoriDokumen || item.categoryKey || '');
+      const certStr = (item.certificateNo || item.noSertifikat || '');
+      const unitStr = (item.unitPabrik || item.unit || item.lokasi || '');
 
-      const matchesKategori = filterKategori === 'All' || item.kategoriDokumen === filterKategori;
-      const matchesUnitPabrik = filterUnitPabrik === 'All' || item.unitPabrik === filterUnitPabrik;
-      const matchesStatusFisik = filterStatusOperasional === 'All' || item.statusOperasional === filterStatusOperasional;
+      const searchLower = searchTerm.toLowerCase();
+
+      const matchesSearch =
+        merekStr.toLowerCase().includes(searchLower) ||
+        jenisStr.toLowerCase().includes(searchLower) ||
+        seriStr.toLowerCase().includes(searchLower) ||
+        katStr.toLowerCase().includes(searchLower) ||
+        certStr.toLowerCase().includes(searchLower) ||
+        unitStr.toLowerCase().includes(searchLower);
+
+      const matchesKategori = filterKategori === 'All' || katStr === filterKategori;
+      const matchesUnitPabrik = filterUnitPabrik === 'All' || unitStr === filterUnitPabrik;
+      const matchesStatusFisik = filterStatusOperasional === 'All' || item.statusOperasional === filterStatusOperasional || item.status === filterStatusOperasional;
 
       let matchesRentangHari = true;
       if (filterRentangHari === 'expired') {
@@ -509,18 +518,18 @@ export default function MonitoringSertifikasi() {
 
                       {/* Kategori Dokumen */}
                       <td className={`py-3 px-3 font-bold whitespace-nowrap ${isDecommissioned ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                        {doc.kategoriDokumen}
+                        {doc.kategoriDokumen || doc.kategori || 'Perizinan'}
                       </td>
 
                       {/* Jenis Item */}
                       <td className={`py-3 px-3 font-medium whitespace-nowrap ${isDecommissioned ? 'text-slate-200' : 'text-slate-800'}`}>
-                        {doc.jenisItem}
+                        {doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '-'}
                       </td>
 
                       {/* Unit Pabrik */}
                       <td className="py-3 px-3 font-mono-data font-bold whitespace-nowrap">
                         <span className={`px-2 py-0.5 rounded text-[11px] ${isDecommissioned ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
-                          {doc.unitPabrik}
+                          {doc.unitPabrik || doc.unit || doc.lokasi || '-'}
                         </span>
                       </td>
 
@@ -530,22 +539,22 @@ export default function MonitoringSertifikasi() {
                         className={`py-3 px-3 font-bold hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap ${isDecommissioned ? 'text-white' : 'text-slate-900'}`}
                         title="Klik untuk Lihat Detail Penuh"
                       >
-                        {doc.merekItem}
+                        {doc.merekItem || doc.title || doc.judulCiptaan || '-'}
                       </td>
 
                       {/* Nomor Seri / Tipe */}
                       <td className={`py-3 px-3 font-mono-data font-semibold whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-700'}`}>
-                        {doc.nomorSeriTipe}
+                        {doc.nomorSeriTipe || doc.nomorSeri || doc.tipe || doc.code || '-'}
                       </td>
 
                       {/* No Sertifikat */}
                       <td className={`py-3 px-3 font-mono-data whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-800'}`}>
-                        {doc.certificateNo}
+                        {doc.certificateNo || doc.noSertifikat || '-'}
                       </td>
 
                       {/* Tanggal Expiration */}
                       <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-900'}`}>
-                        {doc.expiryDate}
+                        {doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-'}
                         <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
                           ({isDecommissioned ? 'Afkir / Non-Aktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
                         </span>
