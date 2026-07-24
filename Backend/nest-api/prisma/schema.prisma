@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MasterItem {
+  id           String   @id @default(uuid())
+  code         String?  // Kode Perizinan (Opsional)
+  title        String   // Nama Produk / Aset / Proyek
+  categoryKey  String   // 'perizinan-aset', 'perizinan-proyek', 'perizinan-produk', 'peralatan-pabrik'
+  unitLocation String?  // Lokasi / Unit Pabrik
+  status       String   @default("Aktif")
+  luasM2       String?
+  luasHa       String?
+  peruntukan   String?
+  issueDate    String?  // Tanggal terbit
+  expiryDate   String?  // Tanggal expired
+  keterangan   String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relasi: 1 MasterItem bisa punya banyak Certificate
+  certificates Certificate[]
+
+  @@map("master_items")
+}
+
+model Certificate {
+  id              String   @id @default(uuid())
+  itemId          String   // Foreign Key
+  jenisSertifikat String   // "SLF", "AMDAL", "HGB", dll.
+  noSertifikat    String?
+  instansi        String?
+  terbit          String?
+  expired         String?
+  status          String   @default("Aktif")
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Definisi Relasi
+  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("certificates")
+}
