@@ -20,7 +20,9 @@ import CsvImportModal from '../components/CsvImportModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterCertificatesData } from '../data/masterDataset';
+import { getMasterItems, createMasterItem } from '../services/masterItemsService';
+import { uploadCsv } from '../services/csvService';
+import { Loader2 } from 'lucide-react';
 
 export default function PeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -123,10 +125,74 @@ export default function PeralatanPabrik() {
     return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
   };
 
-  // Master Equipment Data connected from masterDataset
-  const [equipmentList, setEquipmentList] = useState(
-    masterCertificatesData.filter(d => d.categoryKey === 'peralatan-pabrik')
-  );
+  // Master Equipment Data connected from Database
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMasterItems('peralatan-pabrik');
+      
+      const flattened = [];
+      data.forEach(item => {
+        const docs = [];
+        if (item.certificates?.length > 0) docs.push(...item.certificates);
+        if (item.permits?.length > 0) docs.push(...item.permits);
+
+        if (docs.length === 0) {
+          flattened.push({
+            id: item.id,
+            MasterId: item.id,
+            categoryKey: item.categoryKey,
+            jenisPeralatan: item.title || 'Unknown',
+            merekItem: '-',
+            tipe: '-',
+            nomorSeri: '-',
+            kapasitas: '-',
+            lokasi: item.unitLocation || 'Umum',
+            user: 'Umum',
+            status: item.status || 'Aktif',
+            noSertifikat: '-',
+            tanggalInspeksi: item.createdAt,
+            terbit: item.createdAt,
+            berakhir: item.expiryDate,
+            keterangan: item.description || '-',
+          });
+        } else {
+          docs.forEach(doc => {
+            flattened.push({
+              id: doc.id,
+              MasterId: item.id,
+              categoryKey: item.categoryKey,
+              jenisPeralatan: item.title || 'Unknown',
+              merekItem: '-',
+              tipe: '-',
+              nomorSeri: '-',
+              kapasitas: '-',
+              lokasi: item.unitLocation || 'Umum',
+              user: 'Umum',
+              status: item.status || 'Aktif',
+              noSertifikat: doc.noSertifikat || doc.noIzin || '-',
+              tanggalInspeksi: doc.terbit || item.createdAt,
+              terbit: doc.terbit || item.createdAt,
+              berakhir: doc.expired || item.expiryDate,
+              keterangan: doc.keterangan || item.description || '-',
+            });
+          });
+        }
+      });
+      setEquipmentList(flattened);
+    } catch (err) {
+      console.error("Failed to fetch PeralatanPabrik:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   // Unique options for header dropdowns
   const uniqueJenis = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.jenisPeralatan))], [equipmentList]);
@@ -190,41 +256,48 @@ export default function PeralatanPabrik() {
     return rows;
   }, [filteredData]);
 
-  // Handlers
-  const handleCsvImported = (newParsed) => {
-    const formatted = newParsed.map((n, i) => ({
-      id: `EQ-CSV-${Date.now()}-${i}`,
-      no: equipmentList.length + i + 1,
-      jenisPeralatan: "Perizinan Peralatan Import",
-      merekItem: n.title,
-      tipe: n.code,
-      nomorSeri: `SN-CSV-${i + 100}`,
-      kapasitas: "Standard",
-      lokasi: n.unit,
-      user: "Dept. Operasi",
-      status: "Aktif",
-      noSertifikat: n.certificateNo,
-      tanggalInspeksi: "2024-01-01",
-      terbit: "2024-01-05",
-      berakhir: n.expiry,
-      keterangan: "Import CSV Master",
-      hasCertificatePdf: true
-    }));
-    setEquipmentList(prev => [...formatted, ...prev]);
+  const handleCsvImported = () => {
+    loadData();
   };
 
-  const handleSingleAdded = (newItem) => {
-    setEquipmentList(prev => [
-      {
-        ...newItem,
-        no: prev.length + 1,
-      },
-      ...prev
-    ]);
+  const handleSingleAdded = async (newItem) => {
+    try {
+      await createMasterItem({
+        title: newItem.merekItem || newItem.equipmentName || 'Unknown Item',
+        code: newItem.nomorSeri || newItem.tagNumber || '-',
+        categoryKey: 'peralatan-pabrik',
+        unitLocation: newItem.lokasi || newItem.plantUnit || 'Umum',
+        status: newItem.status || newItem.statusSertifikasi || 'Aktif',
+        keterangan: newItem.keterangan || '-',
+        issueDate: newItem.terbit || newItem.issueDate || undefined,
+        expiryDate: newItem.berakhir || newItem.expiryDate || undefined,
+      });
+      loadData(); // Refresh table
+    } catch (error) {
+      console.error("Gagal menambahkan data:", error);
+      alert("Gagal menyimpan data ke database!");
+    }
   };
 
-  const handleZipMatched = () => {
-    alert("Berhasil mencocokkan PDF ZIP ke perizinan peralatan pabrik!");
+  const handleZipMatched = async (extractedList) => {
+    try {
+      const successfulItems = extractedList.filter(item => item.statusLabel !== "Gagal Ekstraksi");
+      for (const item of successfulItems) {
+        await createMasterItem({
+          title: item.matchedTitle || item.pdfName,
+          code: item.matchedCode || item.nomorSeri || "-",
+          categoryKey: 'peralatan-pabrik',
+          unitLocation: 'Umum',
+          status: 'Aktif',
+          keterangan: `Diimpor otomatis dari ZIP (${item.pdfName})`,
+        });
+      }
+      loadData();
+      alert(`Berhasil menyimpan ${successfulItems.length} data peralatan dari hasil ZIP OCR!`);
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat menyimpan data Batch ZIP!");
+    }
   };
 
   // Row Delete Confirmation Trigger
@@ -301,7 +374,20 @@ export default function PeralatanPabrik() {
         onQuickDecommission={(id) => {
           alert(`Menandai item ${id} sebagai Aset Afkir.`);
         }}
+        onDeleteSuccess={() => {
+          setDetailModalItem(null);
+          loadData();
+        }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Memuat Tabel Peralatan Pabrik dari Database...</p>
+      </div>
     );
   }
 
@@ -803,6 +889,7 @@ export default function PeralatanPabrik() {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
+        categoryKey="peralatan-pabrik"
       />
 
       <HistoryModal

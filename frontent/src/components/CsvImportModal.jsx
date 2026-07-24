@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   FileSpreadsheet,
@@ -8,70 +8,137 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
+import { uploadCsv, getCsvHistory } from '../services/csvService';
 
-export default function CsvImportModal({ isOpen, onClose, onImportSuccess }) {
+export default function CsvImportModal({ isOpen, onClose, onImportSuccess, importType = 'master_items', categoryKey = '', moduleName = '' }) {
+  const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'history'
   const [step, setStep] = useState('upload'); // upload -> preview -> success
   const [file, setFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadResult, setUploadResult] = useState(null);
 
-  // Upload History State with explicit success, duplicate, fail metrics
-  const [uploadHistory, setUploadHistory] = useState([
-    {
-      id: "CSV-HIST-01",
-      fileName: "master_perizinan_multi_unit_q2_2026.csv",
-      uploadDate: "2026-07-20 14:30",
-      totalRows: 128,
-      successCount: 124,
-      duplicateCount: 3,
-      failCount: 1,
-      status: "Selesai"
-    },
-    {
-      id: "CSV-HIST-02",
-      fileName: "perizinan_bejana_pabrik2_3.csv",
-      uploadDate: "2026-06-15 09:15",
-      totalRows: 64,
-      successCount: 62,
-      duplicateCount: 2,
-      failCount: 0,
-      status: "Selesai"
+  // Compute readable Module Title based on categoryKey
+  const getCategoryLabel = (key) => {
+    if (moduleName) return moduleName;
+    switch (key) {
+      case 'peralatan-pabrik': return 'Peralatan Pabrik';
+      case 'perizinan-aset': return 'Perizinan Aset & Bangunan';
+      case 'perizinan-proyek': return 'Perizinan Proyek & Lingkungan';
+      case 'sertifikat-ciptaan': return 'Sertifikat Hak Cipta & Paten';
+      case 'administrasi-lainnya': return 'Administrasi & Perizinan Lainnya';
+      default: return 'Master Perizinan & Dokumen';
     }
-  ]);
+  };
 
+  const currentCategoryTitle = getCategoryLabel(categoryKey);
+
+  // Upload History State (Strictly real history from API/localStorage)
+  const [uploadHistory, setUploadHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('csv_upload_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(item => !item.id?.startsWith('CSV-HIST-0'));
+        }
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  });
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  React.useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        const logs = await getCsvHistory();
+        if (logs && logs.length > 0) {
+          const mappedLogs = logs.map(log => {
+            let detail = {};
+            try { detail = JSON.parse(log.detail); } catch {}
+            return {
+              id: log.id,
+              fileName: detail.fileName || 'file_impor.csv',
+              targetCategory: getCategoryLabel(detail.categoryKey || categoryKey),
+              uploadDate: new Date(log.createdAt).toISOString().replace('T', ' ').substring(0, 16),
+              totalRows: detail.totalRows ?? detail.importedCount ?? 1,
+              successCount: detail.successCount ?? detail.importedCount ?? 1,
+              duplicateCount: detail.duplicateCount ?? 0,
+              failCount: detail.failCount ?? 0,
+              status: log.status === 'SUCCESS' ? 'Selesai' : 'Gagal'
+            };
+          });
+          setUploadHistory(mappedLogs);
+        }
+      } catch (err) {
+        console.error("Error fetching CSV history:", err);
+      }
+    };
+
+    if (isOpen) {
+      fetchHistory();
+    }
+  }, [isOpen]);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('csv_upload_history', JSON.stringify(uploadHistory));
+    } catch (e) {
+      console.error("Failed to save upload history:", e);
+    }
+  }, [uploadHistory]);
 
   if (!isOpen) return null;
 
-  const mockParsedData = [
-    { code: "PERIZ-P1A-001", title: "Izin Operasional Boiler Pabrik 1A", unit: "Pabrik 1A (Amonia)", certificateNo: "CERT-P1A-2024", expiry: "2026-08-15" },
-    { code: "PERIZ-P2-089", title: "Sertifikat Bejana Tekan Ammonia Receiver", unit: "Pabrik 2 (Urea)", certificateNo: "SUCO-P2-9901", expiry: "2026-09-30" },
-    { code: "PERIZ-P3-112", title: "Izin Lingkungan IPLC Effluent Silo", unit: "Pabrik 3 (Urea)", certificateNo: "KLHK-IPLC-2023", expiry: "2026-07-28" },
-    { code: "PERIZ-P5-442", title: "SKKNI Overhead Crane 50 Ton", unit: "Pabrik 5 (Utility)", certificateNo: "DISNAKER-PAA-881", expiry: "2027-01-10" },
-  ];
-
   const handleFileChange = (e) => {
-    const selected = (e.target.files && e.target.files[0]) || { name: "master_perizinan_multi_unit.csv" };
-    setFile(selected);
-    setStep('preview');
+    const selected = e.target.files && e.target.files[0];
+    if (selected) {
+      setFile(selected);
+      setStep('preview');
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null;
+    }
   };
 
-  const handleConfirmImport = () => {
-    const newHist = {
-      id: `CSV-HIST-${Date.now()}`,
-      fileName: file?.name || "master_perizinan_multi_unit.csv",
-      uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
-      totalRows: 4,
-      successCount: 3,
-      duplicateCount: 1,
-      failCount: 0,
-      status: "Selesai"
-    };
+  const handleConfirmImport = async () => {
+    if (!file) return;
+    
+    try {
+      setIsUploading(true);
+      const res = await uploadCsv(file, importType, categoryKey);
+      
+      // Artificial short delay so user sees the nice loading animation
+      await new Promise(r => setTimeout(r, 800));
 
-    setUploadHistory(prev => [newHist, ...prev]);
-    onImportSuccess(mockParsedData);
-    setStep('upload');
-    setFile(null);
-    onClose();
+      const newHist = {
+        id: `CSV-REAL-${Date.now()}`,
+        fileName: file.name,
+        targetCategory: currentCategoryTitle,
+        uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        totalRows: res.totalRows ?? res.importedCount ?? 1,
+        successCount: res.successCount ?? res.importedCount ?? 1,
+        duplicateCount: res.duplicateCount ?? 0,
+        failCount: res.failCount ?? 0,
+        status: "Selesai"
+      };
+
+      setUploadHistory(prev => [newHist, ...prev]);
+      setUploadResult(res);
+      setStep('upload');
+      setFile(null);
+      if (onImportSuccess) {
+        onImportSuccess(); // trigger table refresh
+      }
+      onClose();
+    } catch (error) {
+      console.error("CSV Upload failed", error);
+      alert("Gagal mengimpor CSV. Silakan periksa format file.");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDeleteHistory = (id) => {
@@ -90,10 +157,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess }) {
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Impor CSV Master Perizinan
+                Impor CSV — <span className="text-[#005ea4]">{currentCategoryTitle}</span>
               </h3>
               <p className="text-xs text-slate-500 font-mono-data">
-                Unggah berkas CSV gabungan dari unit kerja pabrik 1-5
+                Unggah berkas CSV khusus untuk modul perizinan {currentCategoryTitle}
               </p>
             </div>
           </div>
@@ -134,53 +201,51 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess }) {
           {activeTab === 'upload' && (
             <>
               {step === 'upload' && (
-                <div
-                  onClick={() => handleFileChange({})}
-                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-10 flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer transition-colors"
-                >
-                  <FileSpreadsheet className="w-10 h-10 text-[#005ea4] mb-2" />
-                  <p className="text-sm font-bold text-slate-800 mb-1">
-                    Klik atau Tarik Berkas CSV ke Sini
-                  </p>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Format mendukung CSV / Excel gabungan multi-unit
-                  </p>
-                  <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
-                    Pilih Berkas CSV
-                  </span>
-                </div>
+                <>
+                  <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleFileChange} />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-10 flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer transition-colors"
+                  >
+                    <FileSpreadsheet className="w-10 h-10 text-[#005ea4] mb-2" />
+                    <p className="text-sm font-bold text-slate-800 mb-1">
+                      Klik atau Tarik Berkas CSV ke Sini
+                    </p>
+                    <p className="text-xs text-slate-500 mb-4">
+                      Format mendukung CSV / Excel gabungan multi-unit
+                    </p>
+                    <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
+                      Pilih Berkas CSV
+                    </span>
+                  </div>
+                </>
               )}
 
               {step === 'preview' && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-xs font-mono-data bg-slate-50 p-2.5 rounded-lg border border-slate-200">
                     <span className="font-bold text-slate-800">
-                      Terdeteksi {mockParsedData.length} baris data perizinan
+                      Berkas CSV Terpilih
                     </span>
-                    <span className="text-slate-500">{file?.name}</span>
+                    <span className="text-[#005ea4] font-bold">{file?.name}</span>
                   </div>
 
-                  <div className="border border-slate-200 rounded-lg overflow-hidden max-h-[260px] overflow-y-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-100 border-b border-slate-200 text-slate-700 font-bold uppercase font-mono-data text-[10px] sticky top-0">
-                        <tr>
-                          <th className="p-2.5">KODE/TIPE</th>
-                          <th className="p-2.5">NAMA ITEM</th>
-                          <th className="p-2.5">UNIT PABRIK</th>
-                          <th className="p-2.5">NO SERTIFIKAT</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {mockParsedData.map((row, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-2.5 font-bold font-mono-data text-[#005ea4]">{row.code}</td>
-                            <td className="p-2.5 font-medium text-slate-800">{row.title}</td>
-                            <td className="p-2.5 font-mono-data text-slate-600">{row.unit}</td>
-                            <td className="p-2.5 font-mono-data text-slate-700">{row.certificateNo}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="border border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50">
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4] mb-3" />
+                        <p className="font-bold text-slate-800 text-sm">Sedang Mengimpor Data...</p>
+                        <p className="text-xs text-slate-500 mt-1">Harap tunggu, jangan tutup jendela ini.</p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mb-3">
+                           <FileSpreadsheet className="w-6 h-6" />
+                        </div>
+                        <p className="font-bold text-slate-800 text-sm">File Siap Diimpor</p>
+                        <p className="text-xs text-slate-500 mt-1">Klik tombol 'Simpan ke Database' untuk memulai impor.</p>
+                      </>
+                    )}
                   </div>
                 </div>
               )}
@@ -190,22 +255,37 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess }) {
           {/* HISTORY TAB WITH EXPLICIT BERHASIL, DUPLIKAT & GAGAL METRICS */}
           {activeTab === 'history' && (
             <div className="space-y-2 max-h-[320px] overflow-y-auto">
-              {uploadHistory.map((item) => (
-                <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between text-xs">
-                  <div>
-                    <span className="font-bold text-slate-900 font-mono-data block">{item.fileName}</span>
-                    <span className="text-[11px] text-slate-600 font-mono-data">
-                      {item.uploadDate} — Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setConfirmDeleteId(item.id)}
-                    className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+              {uploadHistory.length === 0 ? (
+                <div className="py-12 flex flex-col items-center justify-center text-center text-slate-400">
+                  <History className="w-10 h-10 mb-2 stroke-[1.5] text-slate-300" />
+                  <p className="text-sm font-bold text-slate-700">Belum Ada Riwayat Upload</p>
+                  <p className="text-xs text-slate-500 font-mono-data mt-0.5">Unggah berkas CSV baru untuk mencatat riwayat impor asli</p>
                 </div>
-              ))}
+              ) : (
+                uploadHistory.map((item) => (
+                  <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex items-center justify-between text-xs">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 font-mono-data">{item.fileName}</span>
+                        {item.targetCategory && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-50 text-[#005ea4] border border-blue-200 font-mono-data">
+                            {item.targetCategory}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-600 font-mono-data block">
+                        {item.uploadDate} — Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => setConfirmDeleteId(item.id)}
+                      className="p-1.5 text-slate-400 hover:text-rose-600 rounded transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

@@ -12,29 +12,48 @@ export default function OcrUploadModal({ isOpen, onClose, onAddEquipment }) {
     const selected = e.target.files[0];
     if (selected) {
       setFile(selected);
-      startOcrProcessing(selected.name);
+      startOcrProcessing(selected.name, selected);
     }
   };
 
-  const startOcrProcessing = (fileName) => {
+  const startOcrProcessing = async (fileName, selectedFile) => {
     setStep('processing');
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const response = await fetch('http://localhost:8000/api/v1/ocr/process-pdf', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      const extracted = result.data;
+      
       setExtractedData({
-        fileName: fileName || "Sertifikat_Disnaker_BejanaTekan_2026.pdf",
+        fileName: fileName,
         confidence: 98.4,
-        tagNumber: "B-309-P3",
-        equipmentName: "High Pressure Waste Boiler Unit 3",
-        category: "Bejana Tekan / Boiler",
-        plantUnit: "Pabrik 3 (Urea)",
-        inspectionBody: "Disnaker Kalimantan Timur",
-        certificateNo: `CERT-${Math.floor(1000 + Math.random() * 9000)}/DISNAKER-KT/2026`,
+        tagNumber: extracted["Tag Number"] || "-",
+        equipmentName: extracted["Nama Alat"] || "-",
+        category: extracted["Jenis Pesawat"] || "Peralatan Pabrik",
+        plantUnit: "Umum",
+        inspectionBody: extracted["Tempat"] || "Disnaker Kalimantan Timur",
+        certificateNo: extracted["Nomor Pengesahan"] || `CERT-${Math.floor(1000 + Math.random() * 9000)}/DISNAKER-KT`,
         issueDate: "2026-07-01",
         expiryDate: "2029-07-01",
-        statusKelayakan: "Layak",
+        statusKelayakan: extracted["Memenuhi Persyaratan"] || "Layak",
         statusSertifikasi: "Aktif",
       });
       setStep('result');
-    }, 2000);
+    } catch (error) {
+      console.error("OCR API Error:", error);
+      alert("Gagal mengekstraksi data PDF menggunakan AI OCR. Pastikan Backend FastAPI menyala di port 8000.");
+      setStep('upload');
+    }
   };
 
   const handleSave = () => {

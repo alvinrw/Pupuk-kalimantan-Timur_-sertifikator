@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   FileSpreadsheet,
@@ -8,13 +8,14 @@ import {
   RotateCcw,
   Eye,
   FileCheck,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryGenericModal from '../components/SingleEntryGenericModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterCertificatesData } from '../data/masterDataset';
+import { getMasterItems } from '../services/masterItemsService';
 
 export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,11 +34,58 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
 
-  // Dynamic Filtering from connected Master Dataset
-  const [documents, setDocuments] = useState(masterCertificatesData);
+  const [documents, setDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const isAsetCategory = useMemo(() => {
     return categoryName?.toLowerCase().includes('aset');
+  }, [categoryName]);
+
+  const currentCategoryKey = useMemo(() => {
+    const catLower = (categoryName || title || '').toLowerCase();
+    if (catLower.includes('aset')) return 'perizinan-aset';
+    if (catLower.includes('proyek')) return 'perizinan-proyek';
+    if (catLower.includes('produk')) return 'perizinan-produk';
+    if (catLower.includes('ciptaan')) return 'sertifikat-ciptaan';
+    return '';
+  }, [categoryName, title]);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMasterItems(currentCategoryKey);
+      
+      const mapped = data.map(doc => ({
+        id: doc.id,
+        MasterId: doc.id,
+        categoryKey: doc.categoryKey,
+        kategoriDokumen: doc.categoryKey,
+        jenisItem: doc.title || '-',
+        namaItem: doc.title || '-',
+        code: doc.code || '-',
+        certificateNo: doc.certificateNo || '-',
+        unit: doc.unitLocation || '-',
+        luasM2: doc.areaSqm || "0",
+        luasHa: doc.areaHa || "0",
+        peruntukan: doc.peruntukan || "-",
+        issueDate: doc.createdAt,
+        expiryDate: doc.expiryDate || "-",
+        kondisi: doc.status || "Baik",
+        keterangan: doc.description || "-",
+        status: doc.status || "Aktif",
+        user: "Umum",
+        linkedCertificates: doc.certificates || []
+      }));
+      setDocuments(mapped);
+    } catch (error) {
+      console.error("Failed to load generic permissions", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
   }, [categoryName]);
 
   // Columns Configuration
@@ -86,29 +134,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
 
   // Filtered dataset according to category & search
   const categoryFilteredDocs = useMemo(() => {
-    return documents.filter(doc => {
-      if (categoryName) {
-        const catLower = categoryName.toLowerCase();
-        const docCatKey = (doc.categoryKey || '').toLowerCase();
-        const docKatDoc = (doc.kategoriDokumen || '').toLowerCase();
-        const docJenis = (doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '').toLowerCase();
-
-        // Direct Keyword Category Matching
-        if (catLower.includes('aset') && (docCatKey.includes('aset') || docKatDoc.includes('aset'))) return true;
-        if (catLower.includes('proyek') && (docCatKey.includes('proyek') || docKatDoc.includes('proyek'))) return true;
-        if (catLower.includes('produk') && (docCatKey.includes('produk') || docKatDoc.includes('produk'))) return true;
-
-        const isMatchCategory =
-          docKatDoc.includes(catLower) ||
-          docCatKey.includes(catLower) ||
-          catLower.includes(docKatDoc) ||
-          catLower.includes(docCatKey) ||
-          docJenis.includes(catLower);
-        
-        if (!isMatchCategory && !doc.id?.startsWith('PERIZ-MANUAL') && !doc.id?.startsWith('DOC-CSV')) return false;
-      }
-      return true;
-    });
+    return documents;
   }, [documents, categoryName]);
 
   const uniqueJenis = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.jenisItem || i.jenisPeralatan || i.jenisCiptaan || 'General'))], [categoryFilteredDocs]);
@@ -182,26 +208,8 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
     selectAllColumns();
   };
 
-  const handleCsvImported = (newItems) => {
-    const formatted = newItems.map((item, idx) => ({
-      id: `DOC-CSV-${Date.now()}-${idx}`,
-      code: item.code || `PERIZ-CSV-${idx + 100}`,
-      title: item.title || item.merekItem,
-      unit: item.unit || "Pabrik 1A",
-      user: "Dept. General & Legal",
-      issueDate: "2024-01-01",
-      expiryDate: item.expiry || "2027-12-31",
-      certificateNo: item.certificateNo || `CERT-CSV-${idx}`,
-      status: "Aktif",
-      merekItem: item.title,
-      jenisItem: categoryName || "Generic Perizinan",
-      jenisPeralatan: categoryName,
-      unitPabrik: item.unit || "Pabrik 1A",
-      berakhir: item.expiry,
-      noSertifikat: item.certificateNo,
-      hasCertificatePdf: true
-    }));
-    setDocuments(prev => [...formatted, ...prev]);
+  const handleCsvImported = () => {
+    loadData();
   };
 
   const handleSingleAdded = (newItem) => {
@@ -239,7 +247,20 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         onQuickDecommission={(id) => {
           alert(`Menandai dokumen ${id} sebagai Afkir.`);
         }}
+        onDeleteSuccess={() => {
+          setDetailModalItem(null);
+          loadData();
+        }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Memuat Data Perizinan dari Database...</p>
+      </div>
     );
   }
 
@@ -647,6 +668,8 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
+        categoryKey={currentCategoryKey}
+        moduleName={categoryName || title}
       />
 
       <HistoryModal

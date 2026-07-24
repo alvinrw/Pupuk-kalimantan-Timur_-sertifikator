@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   AlertTriangle,
   FileCheck2,
@@ -10,7 +10,8 @@ import {
   Filter,
   X,
   RotateCcw,
-  Check
+  Check,
+  Loader2
 } from 'lucide-react';
 import {
   BarChart,
@@ -23,6 +24,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { getMasterItems } from '../services/masterItemsService';
 
 export default function Dashboard({ stats }) {
   // Category & Multi-Parameter Filter States
@@ -33,31 +35,60 @@ export default function Dashboard({ stats }) {
   // Pop-up Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Master Data Mock per Kategori untuk Dashboard Interaktif
-  const allDashboardItems = useMemo(() => [
-    // Peralatan Pabrik
-    { id: 1, kategori: "Perizinan Peralatan Pabrik", jenis: "Penyalur Petir", unit: "UBS 6", opStatus: "Aktif", legalStatus: "warning", sisaHari: 25 },
-    { id: 2, kategori: "Perizinan Peralatan Pabrik", jenis: "Fire Alarm System", unit: "Diklat B", opStatus: "Aktif", legalStatus: "warning", sisaHari: 55 },
-    { id: 3, kategori: "Perizinan Peralatan Pabrik", jenis: "Timbangan Metrologi", unit: "Pabrik NPK", opStatus: "Aktif", legalStatus: "valid", sisaHari: 210 },
-    { id: 4, kategori: "Perizinan Peralatan Pabrik", jenis: "Bejana Tekan", unit: "Pabrik 2", opStatus: "Repair", legalStatus: "expired", sisaHari: -10 },
-    { id: 5, kategori: "Perizinan Peralatan Pabrik", jenis: "Crane / PAA", unit: "Pabrik 3", opStatus: "Repair", legalStatus: "warning", sisaHari: 80 },
-    { id: 6, kategori: "Perizinan Peralatan Pabrik", jenis: "Tangki Timbun B3", unit: "Pabrik 5", opStatus: "Aktif", legalStatus: "warning", sisaHari: 68 },
-    { id: 7, kategori: "Perizinan Peralatan Pabrik", jenis: "Diesel Fire Pump", unit: "Pabrik 1A", opStatus: "Rusak", legalStatus: "expired", sisaHari: -25 },
-    { id: 8, kategori: "Perizinan Peralatan Pabrik", jenis: "Boiler Utilitas", unit: "Pabrik 4", opStatus: "Aktif", legalStatus: "valid", sisaHari: 400 },
-    
-    // Perizinan Aset
-    { id: 9, kategori: "Perizinan Aset", jenis: "Sertifikat HGB & Lahan", unit: "Kawasan Industri", opStatus: "Aktif", legalStatus: "valid", sisaHari: 220 },
-    { id: 10, kategori: "Perizinan Aset", jenis: "Izin Dampak Lingkungan (AMDAL)", unit: "Kawasan Utama", opStatus: "Aktif", legalStatus: "valid", sisaHari: 500 },
+  // Data States
+  const [rawItems, setRawItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    // Perizinan Proyek
-    { id: 11, kategori: "Perizinan Proyek", jenis: "Sertifikat Laik Fungsi (SLF)", unit: "Pabrik 6", opStatus: "Aktif", legalStatus: "warning", sisaHari: 18 },
+  // Fetch Data on Component Mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getMasterItems();
+        setRawItems(data);
+      } catch (error) {
+        console.error("Failed to load dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
-    // Perizinan Produk
-    { id: 12, kategori: "Perizinan Produk", jenis: "Sertifikasi SNI Urea", unit: "Pabrik 1A", opStatus: "Aktif", legalStatus: "valid", sisaHari: 660 },
+  // Data Mapping: Convert Backend format to Dashboard UI format
+  const allDashboardItems = useMemo(() => {
+    return rawItems.map(item => {
+      // Calculate sisaHari based on expiryDate
+      let sisaHari = 999;
+      if (item.expiryDate) {
+        const expiry = new Date(item.expiryDate);
+        const today = new Date();
+        const diffTime = expiry - today;
+        sisaHari = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      } else {
+        // Fallback: If no expiryDate on MasterItem, check its certificates/permits if they were populated
+        // This is a simplified fallback
+      }
 
-    // Administrasi Lainnya
-    { id: 13, kategori: "Administrasi Lainnya", jenis: "Ciptaan Program Komputer", unit: "Gedung Utama", opStatus: "Aktif", legalStatus: "valid", sisaHari: 950 }
-  ], []);
+      // Determine legalStatus
+      let legalStatus = 'valid';
+      if (sisaHari < 0) {
+        legalStatus = 'expired';
+      } else if (sisaHari <= 60) {
+        legalStatus = 'warning';
+      }
+
+      return {
+        id: item.id,
+        kategori: item.categoryKey || 'Lainnya', // Will be mapped to proper names in UI
+        jenis: item.title || 'Unknown',
+        unit: item.unitLocation || 'Umum',
+        opStatus: item.status || 'Aktif',
+        legalStatus,
+        sisaHari
+      };
+    });
+  }, [rawItems]);
 
   // Count active non-default filters
   const activeFilterCount = useMemo(() => {
@@ -119,6 +150,15 @@ export default function Dashboard({ stats }) {
     setFilterUnitPabrik('All');
     setFilterStatusOperasional('All');
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Menarik Data dari Database...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 font-sans-clean max-w-7xl mx-auto">

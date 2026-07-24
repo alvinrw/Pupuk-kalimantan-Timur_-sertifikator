@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react';
-import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown, Eye, FileCheck } from 'lucide-react';
+import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown, Eye, FileCheck, Loader2 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryAsetModal from '../components/SingleEntryAsetModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterCertificatesData } from '../data/masterDataset';
+import { getMasterItems, createMasterItem } from '../services/masterItemsService';
 
 export default function PerizinanAset({ title, subtitle }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,84 +16,39 @@ export default function PerizinanAset({ title, subtitle }) {
   
   const [detailModalItem, setDetailModalItem] = useState(null);
 
-  const [documents, setDocuments] = useState(() => {
-    const masterAset = masterCertificatesData.filter(d => d.categoryKey === 'perizinan-aset');
-    return masterAset.length > 0 ? masterAset.map(doc => ({
-      id: doc.id,
-      certificateNo: doc.certificateNo || doc.noSertifikat,
-      location: doc.location || doc.unit || doc.lokasi,
-      areaSqm: doc.luasM2 || doc.areaSqm || "100.000",
-      areaHa: doc.luasHa || doc.areaHa || "10",
-      purpose: doc.peruntukan || doc.merekItem || "Industrial Asset",
-      condition: doc.status || doc.kondisi || "Baik",
-      description: doc.keterangan || doc.description || "-",
-      submissionDate: doc.issueDate || doc.terbit || "2020-01-15",
-      validityPeriod: doc.expiryDate || doc.berakhir || "2050-01-15",
-      merekItem: doc.merekItem || doc.title,
-      linkedCertificates: doc.linkedCertificates || []
-    })) : [
-      {
-        id: "ASET-01",
-        certificateNo: "HGB-12345-2020",
-        location: "Kawasan Industri Kaltim Zone 1",
-        areaSqm: "100000",
-        areaHa: "10",
-        purpose: "Area Pabrik Amonia",
-        condition: "Sangat Baik",
-        description: "Hak Guna Bangunan Pabrik 1A",
-        submissionDate: "2020-01-15",
-        validityPeriod: "2050-01-15",
-        linkedCertificates: [
-          {
-            id: "LC-AST01-A",
-            jenisSertifikat: "PBG (Persetujuan Bangunan Gedung)",
-            noSertifikat: "PBG-64.74/DPMPTSP/2022",
-            instansi: "DPMPTSP Kota Bontang",
-            terbit: "2022-01-15",
-            expired: "2042-01-15",
-            status: "Aktif",
-            hasPdf: true,
-            pdfName: "PBG-Kantor-Pusat-2022.pdf"
-          },
-          {
-            id: "LC-AST01-B",
-            jenisSertifikat: "SLF (Sertifikat Laik Fungsi)",
-            noSertifikat: "SLF-64.74/PUPR-BTG/2023",
-            instansi: "Dinas PUPR Kota Bontang",
-            terbit: "2023-03-01",
-            expired: "2028-03-01",
-            status: "Aktif",
-            hasPdf: true,
-            pdfName: "SLF-Kantor-Pusat-2023.pdf"
-          }
-        ]
-      },
-      {
-        id: "ASET-02",
-        certificateNo: "IMB-9988-2015",
-        location: "Kawasan Industri Kaltim Zone 2",
-        areaSqm: "50000",
-        areaHa: "5",
-        purpose: "Gudang Penyimpanan Urea",
-        condition: "Baik",
-        description: "Izin Mendirikan Bangunan Gudang",
-        submissionDate: "2015-06-10",
-        validityPeriod: "Selamanya",
-      },
-      {
-        id: "ASET-03",
-        certificateNo: "AMDAL-776-2022",
-        location: "Area Pengolahan Limbah",
-        areaSqm: "25000",
-        areaHa: "2.5",
-        purpose: "Fasilitas WWTP",
-        condition: "Dalam Pemeliharaan",
-        description: "Izin Lingkungan IPLC",
-        submissionDate: "2022-03-01",
-        validityPeriod: "2027-03-01",
-      }
-    ];
-  });
+  const [documents, setDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMasterItems('perizinan-aset');
+      const mapped = data.map(doc => ({
+        id: doc.id,
+        MasterId: doc.id,
+        certificateNo: doc.certificateNo || '-',
+        location: doc.unitLocation || '-',
+        areaSqm: doc.areaSqm || "0",
+        areaHa: doc.areaHa || "0",
+        purpose: doc.title || "Industrial Asset",
+        condition: doc.status || "Baik",
+        description: doc.description || "-",
+        submissionDate: doc.createdAt,
+        validityPeriod: doc.expiryDate || "-",
+        merekItem: doc.title,
+        linkedCertificates: doc.certificates || []
+      }));
+      setDocuments(mapped);
+    } catch (error) {
+      console.error("Failed to load PerizinanAset", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   const allColumns = [
     { key: "certificateNo", label: "Nomer Sertifikat" },
@@ -166,16 +121,46 @@ export default function PerizinanAset({ title, subtitle }) {
     return rows;
   }, [filteredDocs]);
 
-  const handleCsvImported = (newItems) => {
-    alert("Fitur Impor CSV berhasil!");
+  const handleCsvImported = () => {
+    loadData();
   };
 
-  const handleZipMatched = () => {
-    alert("Berhasil menghubungkan file PDF ZIP ke baris tabel!");
+  const handleZipMatched = async (extractedList) => {
+    try {
+      const successfulItems = extractedList.filter(item => item.statusLabel !== "Gagal Ekstraksi");
+      for (const item of successfulItems) {
+        await createMasterItem({
+          title: item.matchedTitle || item.pdfName,
+          code: item.matchedCode || item.nomorSeri || "-",
+          categoryKey: 'perizinan-aset',
+          unitLocation: 'Umum',
+          status: 'Aktif',
+          keterangan: `Diimpor otomatis dari ZIP (${item.pdfName})`,
+        });
+      }
+      loadData();
+      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP OCR!`);
+    } catch (err) {
+      console.error(err);
+      alert("Terjadi kesalahan saat menyimpan data Batch ZIP!");
+    }
   };
 
-  const handleSingleAdded = (newItem) => {
-    setDocuments(prev => [newItem, ...prev]);
+  const handleSingleAdded = async (newItem) => {
+    try {
+      await createMasterItem({
+        title: newItem.dokumen || newItem.title || 'Unknown Item',
+        code: newItem.noSertifikat || '-',
+        categoryKey: 'perizinan-aset',
+        unitLocation: newItem.lokasi || 'Umum',
+        status: newItem.status || 'Aktif',
+        keterangan: newItem.keterangan || '-',
+      });
+      loadData();
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menyimpan data ke database!");
+    }
   };
 
   if (detailModalItem) {
@@ -193,7 +178,20 @@ export default function PerizinanAset({ title, subtitle }) {
         onQuickDecommission={(id) => {
           alert(`Menandai aset ${id} sebagai Afkir.`);
         }}
+        onDeleteSuccess={() => {
+          setDetailModalItem(null);
+          loadData();
+        }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Memuat Tabel Perizinan Aset dari Database...</p>
+      </div>
     );
   }
 
@@ -437,6 +435,8 @@ export default function PerizinanAset({ title, subtitle }) {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
+        categoryKey="perizinan-aset"
+        moduleName="Perizinan Aset & Bangunan Pabrik"
       />
 
       <ZipOcrModal

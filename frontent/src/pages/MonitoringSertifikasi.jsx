@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   X,
@@ -24,7 +24,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterCertificatesData } from '../data/masterDataset';
+import { getMasterItems } from '../services/masterItemsService';
 
 export default function MonitoringSertifikasi() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,9 +54,107 @@ export default function MonitoringSertifikasi() {
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrSuccess, setOcrSuccess] = useState(false);
   
-  // Master List of all Documents connected from masterDataset
-  const [allCertificates, setAllCertificates] = useState(masterCertificatesData);
-  
+  // Master List of all Documents
+  const [allCertificates, setAllCertificates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getMasterItems();
+        
+        const flattened = [];
+        data.forEach(item => {
+          const docs = [];
+          if (item.certificates?.length > 0) docs.push(...item.certificates);
+          if (item.permits?.length > 0) docs.push(...item.permits);
+
+          const calcDiff = (dStr) => {
+             if (!dStr) return 999;
+             const expiry = new Date(dStr);
+             const today = new Date();
+             return Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+          };
+
+          const calcStatus = (hari) => {
+             if (hari < 0) return 'expired';
+             if (hari <= 60) return 'urgent';
+             return 'valid';
+          };
+
+          if (docs.length === 0) {
+            const hari = calcDiff(item.expiryDate);
+            flattened.push({
+              id: item.id,
+              MasterId: item.id,
+              no: flattened.length + 1,
+              categoryKey: item.categoryKey || 'Lainnya',
+              kategoriDokumen: item.categoryKey || 'Lainnya',
+              jenisItem: item.categoryKey || 'Peralatan',
+              jenisPeralatan: item.categoryKey || 'Peralatan',
+              merekItem: item.title || '-',
+              tipe: item.categoryKey || '-',
+              code: item.code || item.id,
+              nomorSeri: item.code || '-',
+              nomorSeriTipe: item.code || '-',
+              kapasitas: '-',
+              lokasi: item.unitLocation || 'Umum',
+              unitPabrik: item.unitLocation || 'Umum',
+              statusOperasional: item.status || 'Aktif',
+              tglTerbit: item.createdAt,
+              tglExpired: item.expiryDate || '2030-01-01',
+              sisaHari: hari,
+              statusLegal: calcStatus(hari),
+              nomorSertifikat: item.code || '-',
+              instansiPenerbit: '-',
+              nomorSK: '-',
+              keterangan: item.description || '-',
+              riwayatPerpanjangan: []
+            });
+          } else {
+            docs.forEach(doc => {
+              const hari = calcDiff(doc.expired || item.expiryDate);
+              flattened.push({
+                id: doc.id,
+                MasterId: item.id,
+                no: flattened.length + 1,
+                categoryKey: item.categoryKey || 'Lainnya',
+                kategoriDokumen: item.categoryKey || 'Lainnya',
+                jenisItem: item.categoryKey || 'Peralatan',
+                jenisPeralatan: item.categoryKey || 'Peralatan',
+                merekItem: item.title || '-',
+                tipe: item.categoryKey || '-',
+                code: item.code || item.id,
+                nomorSeri: item.code || '-',
+                nomorSeriTipe: item.code || '-',
+                kapasitas: '-',
+                lokasi: item.unitLocation || 'Umum',
+                unitPabrik: item.unitLocation || 'Umum',
+                statusOperasional: item.status || 'Aktif',
+                tglTerbit: doc.terbit || item.createdAt,
+                tglExpired: doc.expired || item.expiryDate || '2030-01-01',
+                sisaHari: hari,
+                statusLegal: calcStatus(hari),
+                nomorSertifikat: doc.noSertifikat || doc.noIzin || item.code || '-',
+                instansiPenerbit: doc.instansi || '-',
+                nomorSK: '-',
+                keterangan: doc.keterangan || item.description || '-',
+                riwayatPerpanjangan: []
+              });
+            });
+          }
+        });
+        setAllCertificates(flattened);
+      } catch (err) {
+        console.error("Failed to fetch MonitoringSertifikasi:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
   // OCR Extracted & Editable Fields
   const [newCertNumber, setNewCertNumber] = useState('');
   const [inspectionDate, setInspectionDate] = useState('');
@@ -299,6 +397,15 @@ export default function MonitoringSertifikasi() {
           handleQuickDecommission(id);
         }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Memuat Tabel Monitoring dari Database...</p>
+      </div>
     );
   }
 

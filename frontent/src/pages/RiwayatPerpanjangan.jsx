@@ -14,7 +14,8 @@ import {
   RotateCcw
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterRenewalHistoryLogs } from '../data/masterDataset';
+import { getMasterItems } from '../services/masterItemsService';
+import { Loader2 } from 'lucide-react';
 
 export default function RiwayatPerpanjangan() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,8 +23,69 @@ export default function RiwayatPerpanjangan() {
   const [filterUnit, setFilterUnit] = useState('All');
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
 
-  // Connected Master Renewal Audit Logs Dataset
-  const historyData = masterRenewalHistoryLogs;
+  const [historyData, setHistoryData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getMasterItems();
+        
+        const flattened = [];
+        data.forEach(item => {
+          const docs = [];
+          if (item.certificates?.length > 0) docs.push(...item.certificates);
+          if (item.permits?.length > 0) docs.push(...item.permits);
+
+          // We will map all documents as 'history' items. If an item has 0 docs, we use the item info.
+          if (docs.length === 0) {
+            flattened.push({
+              id: item.id,
+              merekItem: item.title || 'Unknown',
+              jenisItem: item.categoryKey || 'Lainnya',
+              unitPabrik: item.unitLocation || 'Umum',
+              noSertifikatBaru: item.code || '-',
+              noSertifikatLama: '-',
+              tglInspeksi: item.issueDate || '-',
+              tglTerbit: item.issueDate || '-',
+              tglKadaluarsa: item.expiryDate || '-',
+              pelaksana: 'Belum ada',
+              statusLabel: 'Peralatan Pabrik',
+              fileExt: 'pdf'
+            });
+          } else {
+            docs.forEach(doc => {
+              flattened.push({
+                id: doc.id,
+                merekItem: item.title || 'Unknown',
+                jenisItem: item.categoryKey || 'Lainnya',
+                unitPabrik: item.unitLocation || 'Umum',
+                noSertifikatBaru: doc.noSertifikat || doc.noIzin || item.code || '-',
+                noSertifikatLama: '-',
+                tglInspeksi: doc.terbit || item.issueDate || '-',
+                tglTerbit: doc.terbit || item.issueDate || '-',
+                tglKadaluarsa: doc.expired || item.expiryDate || '-',
+                pelaksana: doc.instansi || 'Belum ada',
+                statusLabel: doc.jenisSertifikat || doc.jenisIzin || 'Sertifikat',
+                fileExt: 'pdf'
+              });
+            });
+          }
+        });
+        
+        // Sort by tglTerbit descending (newest first)
+        flattened.sort((a, b) => new Date(b.tglTerbit) - new Date(a.tglTerbit));
+        
+        setHistoryData(flattened);
+      } catch (err) {
+        console.error("Failed to load history data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
 
   // Filtering Logic
   const filteredData = useMemo(() => {

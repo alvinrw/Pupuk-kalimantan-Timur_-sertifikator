@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ArrowLeft,
   Edit3,
@@ -27,6 +27,7 @@ import {
   AlertTriangle,
   CheckSquare
 } from 'lucide-react';
+import { getMasterItemById, deleteMasterItem } from '../services/masterItemsService';
 
 export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission }) {
   if (!item) return null;
@@ -35,6 +36,8 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
   const [editingHistoryRow, setEditingHistoryRow] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Multi-Certificate Hub State
   const [linkedCerts, setLinkedCerts] = useState(item.linkedCertificates || []);
@@ -81,42 +84,44 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     keterangan: item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo')
   });
 
-  // History Certificates State
-  const [historyList, setHistoryList] = useState([
-    {
-      id: "HIST-01",
-      periode: "2023 - 2026 (Sekarang)",
-      noSertifikat: formData.noSertifikat || "CERT-7734/DISNAKER-KT/2023",
-      instansi: formData.keterangan || "Disnaker Kaltim / Sucofindo",
-      terbit: formData.terbit || "2023-04-15",
-      expired: formData.berakhir || "2026-08-15",
-      status: "Aktif & Valid",
-      isCurrent: true,
-      pdfName: `${formData.noSertifikat || 'sertifikat'}.pdf`
-    },
-    {
-      id: "HIST-02",
-      periode: "2020 - 2023",
-      noSertifikat: "CERT-HIST-2020-0091",
-      instansi: "Disnaker Kaltim / Sucofindo",
-      terbit: "2020-04-01",
-      expired: "2023-04-01",
-      status: "Expired",
-      isCurrent: false,
-      pdfName: "sertifikat_2020.pdf"
-    },
-    {
-      id: "HIST-03",
-      periode: "2017 - 2020",
-      noSertifikat: "CERT-HIST-2017-0045",
-      instansi: "Disnaker Kaltim (Pemeriksaan Awal)",
-      terbit: "2017-03-01",
-      expired: "2020-03-01",
-      status: "Arsip Perdana",
-      isCurrent: false,
-      pdfName: "sertifikat_2017.pdf"
-    }
-  ]);
+  // History Certificates State (Real Database)
+  const [historyList, setHistoryList] = useState([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      try {
+        setIsLoadingHistory(true);
+        if (item && item.MasterId) {
+          const detail = await getMasterItemById(item.MasterId);
+          if (detail && detail.documentHistories) {
+            const mappedHistory = detail.documentHistories.map(h => ({
+               id: h.id,
+               periode: h.actionType,
+               noSertifikat: h.certificateNo || '-',
+               instansi: h.agency || '-',
+               terbit: h.issueDate ? h.issueDate.split('T')[0] : '-',
+               expired: h.expiryDate ? h.expiryDate.split('T')[0] : '-',
+               status: h.status || 'Selesai',
+               isCurrent: false,
+               pdfName: h.fileUrl || 'sertifikat.pdf',
+               catatan: h.notes || '-'
+            }));
+            setHistoryList(mappedHistory);
+          } else {
+            setHistoryList([]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load history from DB", err);
+        setHistoryList([]);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    fetchHistory();
+  }, [item]);
+
 
   // Form Upload Manual State
   const [uploadData, setUploadData] = useState({
@@ -218,6 +223,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     setEditingHistoryRow(null);
   };
 
+  const handleDeleteMasterItem = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteMasterItem(item.id);
+      setIsDeleteDialogOpen(false);
+      if (onDeleteSuccess) {
+        onDeleteSuccess();
+      } else {
+        onBack();
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="p-8 space-y-6 font-sans-clean max-w-7xl mx-auto animate-in fade-in duration-200">
       {/* Top Navigation & Back Button Header */}
@@ -279,6 +301,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           >
             <Ban className="w-4 h-4 text-slate-300" />
             <span>Afkir</span>
+          </button>
+
+          <button
+            onClick={() => setIsDeleteDialogOpen(true)}
+            className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs ml-2"
+          >
+            <Trash2 className="w-4 h-4 text-rose-600" />
+            <span>Hapus Data</span>
           </button>
         </div>
       </div>
@@ -1407,6 +1437,41 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* DELETE CONFIRMATION MODAL */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center mb-4">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Konfirmasi Hapus Data</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin menghapus seluruh data untuk <br/><strong className="text-slate-800">{formData.merekItem}</strong>?<br/>
+                Tindakan ini tidak dapat dibatalkan.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteDialogOpen(false)}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteMasterItem}
+                  disabled={isDeleting}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isDeleting ? 'Menghapus...' : 'Ya, Hapus Data'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

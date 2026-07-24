@@ -7,8 +7,8 @@ import { Readable } from 'stream';
 export class CsvImportService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async processCsv(file: any, type: string) {
-    const results = [];
+  async processCsv(file: any, type: string, targetCategoryKey?: string) {
+    const results: any[] = [];
 
     // Parse CSV from memory buffer
     await new Promise((resolve, reject) => {
@@ -25,25 +25,78 @@ export class CsvImportService {
 
     try {
       if (type === 'master_items') {
-        // Bulk insert to MasterItem
-        await this.prisma.masterItem.createMany({
-          data: results.map((row) => ({
-            id: row.id,
-            code: row.code,
-            title: row.title,
-            categoryKey: row.categoryKey,
-            unitLocation: row.unitLocation,
-            status: row.status,
-            luasM2: row.luasM2,
-            luasHa: row.luasHa,
-            peruntukan: row.peruntukan,
-            issueDate: row.issueDate,
-            expiryDate: row.expiryDate,
-            keterangan: row.keterangan,
-          })),
-          skipDuplicates: true,
+        const itemIds = results.map(r => r.id).filter(Boolean);
+        const itemCodes = results.map(r => r.code).filter(Boolean);
+
+        const existingItems = await this.prisma.masterItem.findMany({
+          where: {
+            OR: [
+              ...(itemIds.length ? [{ id: { in: itemIds } }] : []),
+              ...(itemCodes.length ? [{ code: { in: itemCodes } }] : [])
+            ]
+          },
+          select: { id: true, code: true }
         });
-        return { message: `Successfully imported ${results.length} master items` };
+
+        const existingSet = new Set([
+          ...existingItems.map(e => e.id),
+          ...existingItems.map(e => e.code).filter(Boolean)
+        ]);
+
+        const newItems = results.filter(row => (!row.id || !existingSet.has(row.id)) && (!row.code || !existingSet.has(row.code)));
+        const duplicateCount = results.length - newItems.length;
+
+        let successCount = 0;
+        let failCount = 0;
+
+        if (newItems.length > 0) {
+          const insertRes = await this.prisma.masterItem.createMany({
+            data: newItems.map((row) => ({
+              id: row.id,
+              code: row.code,
+              title: row.title || row.nama || 'Untitled Item',
+              categoryKey: targetCategoryKey || row.categoryKey || 'peralatan-pabrik',
+              unitLocation: row.unitLocation || row.lokasi || 'Umum',
+              status: row.status || 'Aktif',
+              luasM2: row.luasM2 != null ? String(row.luasM2) : null,
+              luasHa: row.luasHa != null ? String(row.luasHa) : null,
+              peruntukan: row.peruntukan || null,
+              issueDate: row.issueDate || null,
+              expiryDate: row.expiryDate || null,
+              keterangan: row.keterangan || null,
+            })),
+            skipDuplicates: true,
+          });
+          successCount = insertRes.count;
+          failCount = newItems.length - successCount;
+        }
+
+        const totalRows = results.length;
+
+        // Save to MonitoringLog
+        await this.prisma.monitoringLog.create({
+          data: {
+            action: 'CSV_IMPORT',
+            status: 'SUCCESS',
+            detail: JSON.stringify({
+              fileName: file.originalname || 'uploaded_file.csv',
+              totalRows,
+              successCount,
+              duplicateCount,
+              failCount,
+              type: 'master_items',
+              categoryKey: targetCategoryKey || 'peralatan-pabrik'
+            })
+          }
+        });
+
+        return {
+          message: `Impor CSV selesai: ${successCount} Berhasil, ${duplicateCount} Duplikat, ${failCount} Gagal.`,
+          totalRows,
+          successCount,
+          duplicateCount,
+          failCount
+        };
 
       } else if (type === 'certificates') {
         // Bulk insert to Certificate
@@ -59,7 +112,20 @@ export class CsvImportService {
           })),
           skipDuplicates: true,
         });
-        return { message: `Successfully imported ${results.length} certificates` };
+
+        await this.prisma.monitoringLog.create({
+          data: {
+            action: 'CSV_IMPORT',
+            status: 'SUCCESS',
+            detail: JSON.stringify({
+              fileName: file.originalname || 'uploaded_certificates.csv',
+              importedCount: results.length,
+              type: 'certificates'
+            })
+          }
+        });
+
+        return { message: `Successfully imported ${results.length} certificates`, importedCount: results.length };
 
       } else if (type === 'permits') {
         // Bulk insert to Permit
@@ -76,7 +142,20 @@ export class CsvImportService {
           })),
           skipDuplicates: true,
         });
-        return { message: `Successfully imported ${results.length} permits` };
+
+        await this.prisma.monitoringLog.create({
+          data: {
+            action: 'CSV_IMPORT',
+            status: 'SUCCESS',
+            detail: JSON.stringify({
+              fileName: file.originalname || 'uploaded_permits.csv',
+              importedCount: results.length,
+              type: 'permits'
+            })
+          }
+        });
+
+        return { message: `Successfully imported ${results.length} permits`, importedCount: results.length };
         
       } else {
         throw new HttpException('Invalid type', HttpStatus.BAD_REQUEST);
@@ -87,5 +166,12 @@ export class CsvImportService {
         HttpStatus.INTERNAL_SERVER_ERROR,
       );
     }
+  }
+
+  async getImportHistory() {
+    return this.prisma.monitoringLog.findMany({
+      where: { action: 'CSV_IMPORT' },
+      orderBy: { createdAt: 'desc' }
+    });
   }
 }
