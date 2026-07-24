@@ -71,7 +71,8 @@ export class CsvImportService {
           failCount = newItems.length - successCount;
         }
 
-        const totalRows = results.length;
+        const importedIds = newItems.map(r => r.id).filter(Boolean);
+        const importedCodes = newItems.map(r => r.code).filter(Boolean);
 
         // Save to MonitoringLog
         await this.prisma.monitoringLog.create({
@@ -84,6 +85,8 @@ export class CsvImportService {
               successCount,
               duplicateCount,
               failCount,
+              importedIds,
+              importedCodes,
               type: 'master_items',
               categoryKey: targetCategoryKey || 'peralatan-pabrik'
             })
@@ -177,10 +180,33 @@ export class CsvImportService {
 
   async deleteImportHistory(id: string) {
     try {
+      const log = await this.prisma.monitoringLog.findUnique({
+        where: { id }
+      });
+
+      if (log && log.detail) {
+        let detailObj: any = {};
+        try { detailObj = JSON.parse(log.detail); } catch {}
+
+        const idsToDelete = detailObj.importedIds || [];
+        const codesToDelete = detailObj.importedCodes || [];
+
+        if (idsToDelete.length > 0 || codesToDelete.length > 0) {
+          await this.prisma.masterItem.deleteMany({
+            where: {
+              OR: [
+                ...(idsToDelete.length ? [{ id: { in: idsToDelete } }] : []),
+                ...(codesToDelete.length ? [{ code: { in: codesToDelete } }] : [])
+              ]
+            }
+          });
+        }
+      }
+
       await this.prisma.monitoringLog.delete({
         where: { id }
       });
-      return { message: 'History record deleted successfully' };
+      return { message: 'History record and imported data deleted successfully' };
     } catch (e) {
       return { message: 'Record removed' };
     }

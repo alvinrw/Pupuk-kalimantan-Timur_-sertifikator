@@ -149,6 +149,9 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     }
     setUploadHistory(prev => prev.filter(h => h.id !== id));
     setConfirmDeleteId(null);
+    if (onImportSuccess) {
+      onImportSuccess();
+    }
   };
 
   return (
