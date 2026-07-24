@@ -74,6 +74,22 @@ export default function AdministrasiLainnya() {
   const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
   const isVisible = (key) => visibleColumnKeys.includes(key);
 
+  // Helper to determine status color styling for table rows (HITAM = Afkir, MERAH = Expired, KUNING = Perpanjangan)
+  const getRowStatusStyle = (item) => {
+    const statusStr = (item.status || '').toLowerCase();
+    
+    if (statusStr === 'afkir' || statusStr === 'decommissioned') {
+      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
+    }
+    if (statusStr === 'expired') {
+      return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
+    }
+    if (statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses') {
+      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
+    }
+    return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
+  };
+
   // Mock Data Ciptaan
   const [ciptaanList, setCiptaanList] = useState([
     {
@@ -85,6 +101,7 @@ export default function AdministrasiLainnya() {
       masaBerlaku: "5 Tahun",
       kapanBerakhir: "2029-03-10",
       noSertifikat: "EC00202400192",
+      status: "Aktif",
       hasCertificatePdf: true
     },
     {
@@ -92,10 +109,11 @@ export default function AdministrasiLainnya() {
       no: 2,
       judulCiptaan: "Buku Panduan Keselamatan Operasi Kilang Urea-4",
       jenisCiptaan: "Buku / Karya Tulis",
-      tanggalCiptaan: "2023-08-15",
-      masaBerlaku: "Seumur Hidup",
-      kapanBerakhir: "Seumur Hidup + 70 Tahun",
-      noSertifikat: "EC00202399120",
+      tanggalCiptaan: "2019-08-15",
+      masaBerlaku: "5 Tahun",
+      kapanBerakhir: "2024-01-15",
+      noSertifikat: "EC00201999120",
+      status: "Expired",
       hasCertificatePdf: true
     },
     {
@@ -103,11 +121,24 @@ export default function AdministrasiLainnya() {
       no: 3,
       judulCiptaan: "Desain Layout Control Room Central Ammonia-Urea Pabrik 5",
       jenisCiptaan: "Desain Layout / Tata Letak",
-      tanggalCiptaan: "2025-01-20",
-      masaBerlaku: "10 Tahun",
-      kapanBerakhir: "2035-01-20",
-      noSertifikat: "EC00202500012",
+      tanggalCiptaan: "2020-01-20",
+      masaBerlaku: "5 Tahun",
+      kapanBerakhir: "2026-08-10",
+      noSertifikat: "EC00202000012",
+      status: "Perpanjang",
       hasCertificatePdf: false
+    },
+    {
+      id: "CIP-04",
+      no: 4,
+      judulCiptaan: "Modul Prosedur Operasional Legacy 2010 (Decommissioned)",
+      jenisCiptaan: "Buku / Karya Tulis",
+      tanggalCiptaan: "2010-05-12",
+      masaBerlaku: "10 Tahun",
+      kapanBerakhir: "2020-05-12",
+      noSertifikat: "EC0020108821",
+      status: "Afkir",
+      hasCertificatePdf: true
     }
   ]);
 
@@ -435,30 +466,38 @@ export default function AdministrasiLainnya() {
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
               {filteredData.length > 0 ? (
-                filteredData.map((item, index) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    {isVisible("no") && (
-                      <td className="py-3.5 px-4 text-center font-mono-data font-bold text-slate-600 whitespace-nowrap">
-                        {index + 1}
-                      </td>
-                    )}
-                    {isVisible("judulCiptaan") && (
-                      <td
-                        onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
-                        className="py-3.5 px-4 font-bold text-slate-900 hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap"
-                        title="Klik untuk Lihat Detail"
-                      >
-                        <div className="flex items-center gap-2">
-                          <FileCheck className={`w-3.5 h-3.5 ${item.hasCertificatePdf ? 'text-emerald-600' : 'text-slate-300'}`} />
-                          <span>{item.judulCiptaan}</span>
-                        </div>
-                      </td>
-                    )}
-                    {isVisible("jenisCiptaan") && (
-                      <td className="py-3.5 px-4 font-bold text-[#005ea4] whitespace-nowrap">
-                        {item.jenisCiptaan}
-                      </td>
-                    )}
+                filteredData.map((item, index) => {
+                  const rowClass = getRowStatusStyle(item);
+                  const isAfkir = item.status === 'Afkir';
+                  const isExpired = item.status === 'Expired';
+                  const isPerpanjang = item.status === 'Perpanjang' || item.status === 'In Progress';
+
+                  return (
+                    <tr key={item.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                      {isVisible("no") && (
+                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
+                          {index + 1}
+                        </td>
+                      )}
+                      {isVisible("judulCiptaan") && (
+                        <td
+                          onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap ${
+                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                          }`}
+                          title="Klik untuk Lihat Detail"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileCheck className={`w-3.5 h-3.5 ${item.hasCertificatePdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
+                            <span>{item.judulCiptaan}</span>
+                          </div>
+                        </td>
+                      )}
+                      {isVisible("jenisCiptaan") && (
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                          {item.jenisCiptaan}
+                        </td>
+                      )}
                     {isVisible("tanggalCiptaan") && (
                       <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
                         {item.tanggalCiptaan}
@@ -482,11 +521,11 @@ export default function AdministrasiLainnya() {
                         className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>Lihat Detail</span>
                       </button>
                     </td>
                   </tr>
-                ))
+                );
+              })
               ) : (
                 <tr>
                   <td colSpan={visibleColumnKeys.length + 1} className="py-8 text-center text-[#64748B] font-mono-data">

@@ -84,6 +84,46 @@ export default function PeralatanPabrik() {
   const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
   const isVisible = (key) => visibleColumnKeys.includes(key);
 
+  // Helper to determine status color styling for table rows (HITAM = Afkir, MERAH = Expired, KUNING = Perpanjangan)
+  const getRowStatusStyle = (item) => {
+    const statusStr = (item.status || '').toLowerCase();
+    const workflowStr = (item.workflowStatus || '').toLowerCase();
+    
+    // 1. HITAM (BLACK) -> Afkir / Decommissioned
+    if (statusStr === 'afkir' || statusStr === 'decommissioned' || workflowStr === 'decommissioned') {
+      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
+    }
+
+    let isExpired = statusStr === 'expired';
+    let isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'in_progress' || workflowStr === 'in_progress';
+
+    if (item.berakhir) {
+      const today = new Date();
+      const expDate = new Date(item.berakhir);
+      if (!isNaN(expDate.getTime())) {
+        const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) {
+          isExpired = true;
+        } else if (diffDays <= 30) {
+          isPerpanjang = true;
+        }
+      }
+    }
+
+    // 2. MERAH (RED) -> Expired
+    if (isExpired) {
+      return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
+    }
+
+    // 3. KUNING (YELLOW) -> Perpanjangan / In Progress / Urgent
+    if (isPerpanjang) {
+      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
+    }
+
+    // 4. DEFAULT (Clean Normal Row)
+    return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
+  };
+
   // Mock Data
   const [equipmentList, setEquipmentList] = useState([
     {
@@ -114,12 +154,12 @@ export default function PeralatanPabrik() {
       kapasitas: "50 Ton SWL",
       lokasi: "Pabrik 3 (Urea Silo B)",
       user: "Dept. Bagian Pemeliharaan",
-      status: "Aktif",
-      noSertifikat: "SUCO-PAA-88219-2024",
-      tanggalInspeksi: "2024-01-05",
-      terbit: "2024-01-10",
-      berakhir: "2027-01-10",
-      keterangan: "Inspeksi Sucofindo Layak",
+      status: "Expired",
+      noSertifikat: "SUCO-PAA-88219-2021",
+      tanggalInspeksi: "2021-01-05",
+      terbit: "2021-01-10",
+      berakhir: "2024-01-10",
+      keterangan: "Tenggat Expired Lewat - Perlu Resertifikasi",
       hasCertificatePdf: true
     },
     {
@@ -132,12 +172,12 @@ export default function PeralatanPabrik() {
       kapasitas: "30.000 MT",
       lokasi: "Pabrik 5 (Dermaga & Offsite)",
       user: "Dept. Offsite & Port",
-      status: "Spare",
+      status: "Perpanjang",
       noSertifikat: "PERIZ-B3-8891-PKT",
       tanggalInspeksi: "2021-08-25",
       terbit: "2021-09-01",
-      berakhir: "2026-06-30",
-      keterangan: "Memerlukan Maintenance Valve",
+      berakhir: "2026-08-10",
+      keterangan: "Dalam Proses Inspeksi Perpanjangan Disnaker",
       hasCertificatePdf: false
     },
     {
@@ -150,12 +190,12 @@ export default function PeralatanPabrik() {
       kapasitas: "18.500 KW",
       lokasi: "Pabrik 4 (Amuria Loop)",
       user: "Dept. Utility & Turbin",
-      status: "Aktif",
-      noSertifikat: "LR-SYNGAS-2024-0012",
-      tanggalInspeksi: "2024-05-01",
-      terbit: "2024-05-12",
-      berakhir: "2027-05-12",
-      keterangan: "Lloyd's Register Verified",
+      status: "Afkir",
+      noSertifikat: "LR-SYNGAS-2018-0012",
+      tanggalInspeksi: "2018-05-01",
+      terbit: "2018-05-12",
+      berakhir: "2021-05-12",
+      keterangan: "Peralatan Decommissioned / Afkir Non-Aktif",
       hasCertificatePdf: true
     },
     {
@@ -168,7 +208,7 @@ export default function PeralatanPabrik() {
       kapasitas: "13.8 kV / 40 MVA",
       lokasi: "Pabrik 2 (Substation 2B)",
       user: "Dept. Listrik & Instrument",
-      status: "Rusak",
+      status: "Aktif",
       noSertifikat: "SLO-PLN-991204-P2",
       tanggalInspeksi: "2023-07-20",
       terbit: "2023-08-01",
@@ -567,65 +607,75 @@ export default function PeralatanPabrik() {
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
               {filteredData.length > 0 ? (
-                filteredData.map((item, index) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    {isVisible("no") && (
-                      <td className="py-3.5 px-4 text-center font-mono-data font-bold text-slate-600 whitespace-nowrap">
-                        {index + 1}
-                      </td>
-                    )}
-                    {isVisible("jenisPeralatan") && (
-                      <td className="py-3.5 px-4 font-bold text-[#005ea4] whitespace-nowrap">
-                        {item.jenisPeralatan}
-                      </td>
-                    )}
-                    {isVisible("merekItem") && (
-                      <td
-                        onClick={() => setDetailModalItem(item)}
-                        className="py-3.5 px-4 font-bold text-slate-900 hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap"
-                        title="Klik untuk Lihat Detail"
-                      >
-                        {item.merekItem}
-                      </td>
-                    )}
-                    {isVisible("tipe") && (
-                      <td className="py-3.5 px-4 font-mono-data font-semibold text-slate-700 whitespace-nowrap">
-                        {item.tipe}
-                      </td>
-                    )}
-                    {isVisible("nomorSeri") && (
-                      <td className="py-3.5 px-4 font-mono-data text-slate-800 whitespace-nowrap">
-                        {item.nomorSeri}
-                      </td>
-                    )}
-                    {isVisible("kapasitas") && (
-                      <td className="py-3.5 px-4 font-mono-data font-medium text-slate-800 whitespace-nowrap">
-                        {item.kapasitas}
-                      </td>
-                    )}
-                    {isVisible("lokasi") && (
-                      <td className="py-3.5 px-4 font-medium text-slate-800 whitespace-nowrap">
-                        {item.lokasi}
-                      </td>
-                    )}
-                    {isVisible("user") && (
-                      <td className="py-3.5 px-4 text-slate-700 whitespace-nowrap">
-                        {item.user}
-                      </td>
-                    )}
-                    {isVisible("status") && (
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <span className={`inline-block px-2.5 py-0.5 text-[11px] font-mono-data font-bold rounded-full ${
-                          item.status === 'Aktif'
-                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                            : item.status === 'Spare'
-                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                            : 'bg-rose-100 text-rose-900 border border-rose-300'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                    )}
+                filteredData.map((item, index) => {
+                  const rowClass = getRowStatusStyle(item);
+                  const isAfkir = item.status === 'Afkir' || item.status === 'Decommissioned';
+                  const isExpired = item.status === 'Expired';
+                  const isPerpanjang = item.status === 'Perpanjang' || item.status === 'In Progress';
+
+                  return (
+                    <tr key={item.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                      {isVisible("no") && (
+                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
+                          {index + 1}
+                        </td>
+                      )}
+                      {isVisible("jenisPeralatan") && (
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                          {item.jenisPeralatan}
+                        </td>
+                      )}
+                      {isVisible("merekItem") && (
+                        <td
+                          onClick={() => setDetailModalItem(item)}
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap ${
+                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                          }`}
+                          title="Klik untuk Lihat Detail"
+                        >
+                          {item.merekItem}
+                        </td>
+                      )}
+                      {isVisible("tipe") && (
+                        <td className="py-3.5 px-4 font-semibold whitespace-nowrap">
+                          {item.tipe}
+                        </td>
+                      )}
+                      {isVisible("nomorSeri") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {item.nomorSeri}
+                        </td>
+                      )}
+                      {isVisible("kapasitas") && (
+                        <td className="py-3.5 px-4 font-medium whitespace-nowrap">
+                          {item.kapasitas}
+                        </td>
+                      )}
+                      {isVisible("lokasi") && (
+                        <td className="py-3.5 px-4 font-medium whitespace-nowrap">
+                          {item.lokasi}
+                        </td>
+                      )}
+                      {isVisible("user") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap">
+                          {item.user}
+                        </td>
+                      )}
+                      {isVisible("status") && (
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
+                            isAfkir
+                              ? 'bg-slate-800 text-white border-slate-600'
+                              : isExpired
+                              ? 'bg-rose-100 text-rose-900 border-rose-300'
+                              : isPerpanjang
+                              ? 'bg-amber-100 text-amber-900 border-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                      )}
                     {isVisible("noSertifikat") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center gap-1.5">
                         <FileCheck className={`w-3.5 h-3.5 ${item.hasCertificatePdf ? 'text-emerald-600' : 'text-slate-300'}`} />
@@ -664,7 +714,8 @@ export default function PeralatanPabrik() {
                       </button>
                     </td>
                   </tr>
-                ))
+                );
+              })
               ) : (
                 <tr>
                   <td colSpan={visibleColumnKeys.length + 1} className="py-8 text-center text-[#64748B] font-mono-data">

@@ -180,33 +180,52 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs font-mono-data">
             {filteredDocs.map((doc) => {
+              const statusStr = (doc.status || '').toLowerCase();
+              const isAfkir = statusStr === 'afkir' || statusStr === 'decommissioned';
+              const isExpired = statusStr === 'expired';
+              const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
+
+              const rowClass = isAfkir
+                ? 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700'
+                : isExpired
+                ? 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200'
+                : isPerpanjang
+                ? 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200'
+                : 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
+
               return (
-                <tr key={doc.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="py-3 px-4 font-bold text-[#005ea4]">
+                <tr key={doc.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                  <td className={`py-3 px-4 font-bold ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                     {doc.code}
                   </td>
                   {/* Clickable Document Name */}
                   <td
                     onClick={() => setDetailModalItem(doc)}
-                    className="py-3 px-4 font-bold text-slate-900 hover:text-[#005ea4] cursor-pointer hover:underline font-sans"
+                    className={`py-3 px-4 font-bold cursor-pointer hover:underline font-sans ${
+                      isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                    }`}
                     title="Klik untuk Lihat Detail"
                   >
                     {doc.title}
                   </td>
-                  <td className="py-3 px-4 text-slate-700">
+                  <td className="py-3 px-4">
                     {doc.unit}
                   </td>
-                  <td className="py-3 px-4 font-bold text-slate-900">
+                  <td className="py-3 px-4 font-bold">
                     {doc.certificateNo}
                   </td>
-                  <td className="py-3 px-4 font-bold text-rose-700">
+                  <td className={`py-3 px-4 font-bold ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
                     {doc.expiryDate}
                   </td>
                   <td className="py-3 px-4 text-center">
-                    <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full ${
-                      doc.status === 'Aktif'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-amber-100 text-amber-900 border border-amber-300'
+                    <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
+                      isAfkir
+                        ? 'bg-slate-800 text-white border-slate-600'
+                        : isExpired
+                        ? 'bg-rose-100 text-rose-900 border-rose-300'
+                        : isPerpanjang
+                        ? 'bg-amber-100 text-amber-900 border-amber-300'
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                     }`}>
                       {doc.status}
                     </span>
