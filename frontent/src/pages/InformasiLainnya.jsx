@@ -169,16 +169,15 @@ export default function InformasiLainnya() {
   return (
     <div className="p-8 space-y-8 font-sans-clean max-w-7xl mx-auto">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-[#005ea4] to-slate-900 rounded-2xl p-8 text-white shadow-xl relative overflow-hidden">
+      <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-2xs relative overflow-hidden">
         <div className="relative z-10 space-y-2 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-xs font-mono-data font-bold border border-white/20">
-            <HelpCircle className="w-4 h-4 text-amber-400" />
-            <span>Pusat Informasi & Panduan Penggunaan</span>
-          </div>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Panduan Lengkap SERTIFIKATOR System
+          <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none">
+            SERTIFIKATOR
+          </h1>
+          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">
+            Panduan Lengkap Sistem
           </h2>
-          <p className="text-xs md:text-sm text-slate-200 font-mono-data leading-relaxed">
+          <p className="text-xs md:text-sm text-slate-600 font-mono-data leading-relaxed">
             Sistem Informasi Pengelolaan, Pemantauan Masa Berlaku, dan Resertifikasi Perizinan Peralatan Pabrik, Aset, Proyek, Produk, dan HAKI Terpadu.
           </p>
         </div>
