@@ -1,5 +1,8 @@
 # 📦 Modul: Master Items (`master-items`)
 
+> **STATUS: ✅ 100% SELESAI (COMPLETE)**
+> Modul ini sudah rampung. Tabel di database sudah terbuat dan seluruh API CRUD (GET, POST, PUT, DELETE) sudah berfungsi normal. Tidak ada lagi tanggungan kodingan di folder ini.
+
 > **Fokus Utama**: Modul ini bertanggung jawab mengelola **Data Induk (Master Data)** Perizinan Aset, Proyek, Produk, dan Peralatan Pabrik. 
 > **Catatan Penting**: Modul ini **TIDAK MENGURUS FILE PDF / MINIO**. Modul ini murni hanya operasi CRUD (Create, Read, Update, Delete) ke Database PostgreSQL.
 
@@ -49,16 +52,16 @@ NestJS punya fitur "Auto-Generate" kodingan. Jalankan command ini di terminal (`
 ### STEP 4: Koding Endpoint (API)
 Sekarang buka file `master-items.controller.ts` dan `master-items.service.ts` yang baru saja terbuat, dan buat 5 endpoint berikut:
 
-- [ ] **`GET /api/master-items`**
+- [x] **`GET /api/master-items`**
   - **Tugas**: Ambil semua data dari database. 
   - **Query Filter**: Harus bisa memfilter data. Contoh kalau frontend memanggil `/api/master-items?categoryKey=perizinan-aset`, maka backend hanya membalas data Aset.
-- [ ] **`GET /api/master-items/:id`**
+- [x] **`GET /api/master-items/:id`**
   - **Tugas**: Ambil 1 baris data secara spesifik berdasarkan ID.
-- [ ] **`POST /api/master-items`**
+- [x] **`POST /api/master-items`**
   - **Tugas**: Terima JSON dari frontend (Body) lalu `prisma.masterItem.create()` ke database.
-- [ ] **`PUT /api/master-items/:id`**
+- [x] **`PUT /api/master-items/:id`**
   - **Tugas**: Update data (contoh: mengganti status dari Aktif ke Afkir).
-- [ ] **`DELETE /api/master-items/:id`**
+- [x] **`DELETE /api/master-items/:id`**
   - **Tugas**: Hapus data dari tabel.
 
 ---
