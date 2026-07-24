@@ -161,15 +161,16 @@ export default function InformasiLainnya() {
       icon: Building2,
       columns: [
         { key: "no", name: "NO.", desc: "Nomor urut registrasi data perizinan aset." },
-        { key: "code", name: "KODE PERIZINAN ASET", desc: "Kode dokumen legal aset (contoh: PBG-KP-01, HGB-LHN-04, TERSUS-D02)." },
-        { key: "merekItem", name: "NAMA ASET / FABRIKASI", desc: "Nama bangunan/lahan/fasilitas (PBG Gedung Kantor Pusat, Sertifikat HGB Lahan Silo)." },
-        { key: "jenisItem", name: "KLASIFIKASI ASET", desc: "Jenis perizinan aset (PBG Gedung, Pelabuhan/Tersus, HGB Lahan, Lab B3, WWTP)." },
-        { key: "unitPabrik", name: "LOKASI / KAWASAN", desc: "Kawasan lokasi fisik aset (Kawasan Industri Loktuan, Dermaga 2, Kantor Pusat)." },
-        { key: "user", name: "INSTANSI PENERBIT", desc: "Dinas/Lembaga penerbit izin (DPMPTSP, BPN, KSOP KPLP, KLHK RI)." },
-        { key: "noSertifikat", name: "NO. SK / SERTIFIKAT", desc: "Nomor SK perizinan legal aset." },
-        { key: "terbit", name: "TGL. TERBIT", desc: "Tanggal pengesahan izin aset." },
-        { key: "berakhir", name: "TGL. EXPIRED", desc: "Masa berlaku izin (jangka panjang 5-30 tahun)." },
-        { key: "status", name: "STATUS PERIZINAN", desc: "Status kelayakan (Aktif, Perpanjang, Expired, Afkir)." }
+        { key: "certificateNo", name: "NOMOR SERTIFIKAT", desc: "Nomor SK/Sertifikat perizinan legal aset (contoh: PBG-64.74/DPMPTSP/2022, HGB-04.12.00.12/BPN-BTG/2019)." },
+        { key: "unit", name: "LOKASI", desc: "Lokasi fisik kawasan aset (contoh: Kantor Pusat, Dermaga 2, Kawasan Industri Loktuan)." },
+        { key: "luasM2", name: "LUAS (M²)", desc: "Ukuran luas aset bangunan/lahan dalam meter persegi (m²)." },
+        { key: "luasHa", name: "LUAS (HA)", desc: "Ukuran luas kawasan aset dalam Hektar (Ha)." },
+        { key: "peruntukan", name: "PERUNTUKAN", desc: "Fungsi operasional penggunaan aset (Gedung Perkantoran, Dermaga Export, Area Silo Urea)." },
+        { key: "tanggalAwalPengajuan", name: "TANGGAL AWAL PENGAJUAN", desc: "Tanggal pertama kali berkas perizinan diajukan ke instansi terkait." },
+        { key: "masaBerlaku", name: "MASA BERLAKU PRODUK", desc: "Tanggal batas kadaluarsa / akhir masa berlaku legalitas aset." },
+        { key: "kondisi", name: "KONDISI", desc: "Status fisik & kelayakan operasional aset (Baik & Layak Huni, Perlu Re-sertifikasi, Afkir)." },
+        { key: "keterangan", name: "KETERANGAN", desc: "Catatan penjelas & instansi pengesah perizinan (DPMPTSP, BPN, KPLP, KAN)." },
+        { key: "status", name: "STATUS", desc: "Status kelayakan legalitas (Aktif, Perpanjang, Expired, Afkir)." }
       ]
     },
     proyek: {
@@ -237,9 +238,9 @@ export default function InformasiLainnya() {
       fileName: "Template_Impor_Perizinan_Aset_PKT.csv",
       title: "Templat CSV Perizinan Aset & Bangunan",
       rows: [
-        "code,title,jenisItem,unitPabrik,user,certificateNo,issueDate,expiryDate,status",
-        "PBG-KP-01,PBG Gedung Kantor Pusat PT Pupuk Kaltim,Perizinan Bangunan & Gedung,Kantor Pusat,DPMPTSP Kota Bontang,PBG-64.74/DPMPTSP/2022,2022-01-15,2042-01-15,Aktif",
-        "HGB-LHN-04,Sertifikat HGB Lahan Silo Urea Pabrik 3 & 4,Sertifikat Lahan & HGB,Pabrik 3 & 4,BPN Kota Bontang,HGB-04.12.00.12/BPN-BTG/2019,2019-05-20,2049-05-20,Aktif"
+        "certificateNo,unit,luasM2,luasHa,peruntukan,tanggalAwalPengajuan,expiryDate,kondisi,keterangan,status",
+        "PBG-64.74/DPMPTSP/2022,Kantor Pusat (Kawasan Industri Bontang),12.000 m²,1.2 Ha,Gedung Perkantoran & Admin,2021-11-10,2042-01-15,Baik & Layak Huni,DPMPTSP Kota Bontang - Masa Berlaku 20 Tahun,Aktif",
+        "HGB-04.12.00.12/BPN-BTG/2019,Kawasan Industri Loktuan (Pabrik 3 & 4),45.000 m²,4.5 Ha,Area Silo & Gudang Urea,2019-03-10,2049-05-20,Aktif / Hak Tanah Sah,BPN Kota Bontang - Hak Guna Bangunan 30 Tahun,Aktif"
       ]
     },
     proyek: {

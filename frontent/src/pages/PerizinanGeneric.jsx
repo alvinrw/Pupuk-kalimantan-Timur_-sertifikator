@@ -36,8 +36,12 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   // Dynamic Filtering from connected Master Dataset
   const [documents, setDocuments] = useState(masterCertificatesData);
 
+  const isAsetCategory = useMemo(() => {
+    return categoryName?.toLowerCase().includes('aset');
+  }, [categoryName]);
+
   // Columns Configuration
-  const allColumns = [
+  const defaultColumns = [
     { key: "no", label: "No." },
     { key: "code", label: "Kode / Tag Perizinan" },
     { key: "title", label: "Nama Dokumen / Item" },
@@ -49,6 +53,22 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "expiryDate", label: "Expired" },
     { key: "status", label: "Status" }
   ];
+
+  const asetColumns = [
+    { key: "no", label: "NO." },
+    { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
+    { key: "unit", label: "LOKASI" },
+    { key: "luasM2", label: "LUAS (M²)" },
+    { key: "luasHa", label: "LUAS (HA)" },
+    { key: "peruntukan", label: "PERUNTUKAN" },
+    { key: "issueDate", label: "TANGGAL AWAL PENGAJUAN" },
+    { key: "expiryDate", label: "MASA BERLAKU PRODUK" },
+    { key: "kondisi", label: "KONDISI" },
+    { key: "keterangan", label: "KETERANGAN" },
+    { key: "status", label: "STATUS" }
+  ];
+
+  const allColumns = isAsetCategory ? asetColumns : defaultColumns;
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
 
@@ -312,11 +332,12 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider">
                 {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap">NO.</th>}
-                {isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">KODE PERIZINAN</th>}
-                {isVisible("title") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA DOKUMEN / ITEM</th>}
+                
+                {!isAsetCategory && isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">KODE PERIZINAN</th>}
+                {!isAsetCategory && isVisible("title") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA DOKUMEN / ITEM</th>}
 
-                {/* JENIS PERIZINAN FILTER */}
-                {isVisible("jenisItem") && (
+                {/* JENIS PERIZINAN FILTER (non-aset) */}
+                {!isAsetCategory && isVisible("jenisItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center gap-1.5">
                       <span>JENIS PERIZINAN</span>
@@ -334,11 +355,14 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                   </th>
                 )}
 
+                {/* NO. SERTIFIKAT (First for Aset) */}
+                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">NOMOR SERTIFIKAT</th>}
+
                 {/* LOKASI / UNIT FILTER */}
                 {isVisible("unit") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center gap-1.5">
-                      <span>UNIT / LOKASI</span>
+                      <span>LOKASI</span>
                       <select
                         value={filterLokasi}
                         onChange={(e) => setFilterLokasi(e.target.value)}
@@ -353,10 +377,18 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                   </th>
                 )}
 
-                {isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">INSTANSI / USER</th>}
-                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NO. SERTIFIKAT</th>}
-                {isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TERBIT</th>}
-                {isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">EXPIRED</th>}
+                {/* ASET SPECIFIC HEADERS */}
+                {isAsetCategory && isVisible("luasM2") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (M²)</th>}
+                {isAsetCategory && isVisible("luasHa") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (HA)</th>}
+                {isAsetCategory && isVisible("peruntukan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">PERUNTUKAN</th>}
+
+                {!isAsetCategory && isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">INSTANSI / USER</th>}
+                
+                {isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{isAsetCategory ? "TANGGAL AWAL PENGAJUAN" : "TERBIT"}</th>}
+                {isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{isAsetCategory ? "MASA BERLAKU PRODUK" : "EXPIRED"}</th>}
+
+                {isAsetCategory && isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KONDISI</th>}
+                {isAsetCategory && isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
 
                 {/* STATUS FILTER */}
                 {isVisible("status") && (
@@ -396,7 +428,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                   const docExpiry = doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-';
                   const docJenis = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || categoryName || 'Generic';
                   const docUser = doc.user || doc.issuer || doc.keterangan || 'Dept. General';
-                  const docIssue = doc.issueDate || doc.terbit || doc.tanggalCiptaan || '-';
+                  const docIssue = doc.tanggalAwalPengajuan || doc.issueDate || doc.terbit || doc.tanggalCiptaan || '-';
 
                   return (
                     <tr key={doc.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
@@ -405,12 +437,14 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           {index + 1}
                         </td>
                       )}
-                      {isVisible("code") && (
+                      
+                      {!isAsetCategory && isVisible("code") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {docCode}
                         </td>
                       )}
-                      {isVisible("title") && (
+
+                      {!isAsetCategory && isVisible("title") && (
                         <td
                           onClick={() => setDetailModalItem(doc)}
                           className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans whitespace-nowrap ${
@@ -424,36 +458,84 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           </div>
                         </td>
                       )}
-                      {isVisible("jenisItem") && (
+
+                      {!isAsetCategory && isVisible("jenisItem") && (
                         <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {docJenis}
                         </td>
                       )}
+
+                      {/* NO. SERTIFIKAT */}
+                      {isVisible("certificateNo") && (
+                        <td
+                          onClick={() => setDetailModalItem(doc)}
+                          className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline ${
+                            isAfkir ? 'text-slate-200' : 'text-[#005ea4]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <FileCheck className={`w-3.5 h-3.5 ${doc.hasCertificatePdf !== false ? 'text-emerald-600' : 'text-slate-400'}`} />
+                            <span>{docCert}</span>
+                          </div>
+                        </td>
+                      )}
+
+                      {/* LOKASI */}
                       {isVisible("unit") && (
                         <td className="py-3.5 px-4 whitespace-nowrap font-semibold">
                           {docUnit}
                         </td>
                       )}
-                      {isVisible("user") && (
+
+                      {/* ASET SPECIFIC VALUES */}
+                      {isAsetCategory && isVisible("luasM2") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">
+                          {doc.luasM2 || doc.kapasitas || '12.000 m²'}
+                        </td>
+                      )}
+
+                      {isAsetCategory && isVisible("luasHa") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">
+                          {doc.luasHa || '1,2 Ha'}
+                        </td>
+                      )}
+
+                      {isAsetCategory && isVisible("peruntukan") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
+                          {doc.peruntukan || doc.title || doc.merekItem || 'Fasilitas Industrial'}
+                        </td>
+                      )}
+
+                      {!isAsetCategory && isVisible("user") && (
                         <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
                           {docUser}
                         </td>
                       )}
-                      {isVisible("certificateNo") && (
-                        <td className="py-3.5 px-4 font-bold whitespace-nowrap">
-                          {docCert}
-                        </td>
-                      )}
+
                       {isVisible("issueDate") && (
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {docIssue}
                         </td>
                       )}
+
                       {isVisible("expiryDate") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
                           {docExpiry}
                         </td>
                       )}
+
+                      {isAsetCategory && isVisible("kondisi") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">
+                          {doc.kondisi || (isAfkir ? 'Afkir / Non-Aktif' : isExpired ? 'Perlu Re-sertifikasi' : 'Baik & Layak')}
+                        </td>
+                      )}
+
+                      {isAsetCategory && isVisible("keterangan") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px]">
+                          {doc.keterangan || doc.user || 'DPMPTSP / BPN Kota Bontang'}
+                        </td>
+                      )}
+
                       {isVisible("status") && (
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
@@ -469,6 +551,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           </span>
                         </td>
                       )}
+
                       {/* LIHAT DETAIL BUTTON */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
                         <button
