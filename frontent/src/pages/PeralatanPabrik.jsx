@@ -293,6 +293,7 @@ export default function PeralatanPabrik() {
         onBack={() => setDetailModalItem(null)}
         onSaveUpdate={(updatedItem) => {
           setEquipmentList(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
+          setDetailModalItem(prev => (prev && prev.id === updatedItem.id ? { ...prev, ...updatedItem } : prev));
         }}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan Sertifikat untuk item ${id}. Menuju menu Monitoring.`);

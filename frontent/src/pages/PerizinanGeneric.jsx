@@ -231,6 +231,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         onBack={() => setDetailModalItem(null)}
         onSaveUpdate={(updatedDoc) => {
           setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc, title: updatedDoc.merekItem || d.title } : d));
+          setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
         }}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan untuk dokumen ${id}. Menuju menu Monitoring.`);

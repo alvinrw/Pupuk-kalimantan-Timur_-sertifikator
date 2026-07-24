@@ -31,7 +31,31 @@ export const masterCertificatesData = [
     expiryDate: "2026-08-15",
     keterangan: "Disnaker Kaltim / Sucofindo",
     sisaHari: 752,
-    hasCertificatePdf: true
+    hasCertificatePdf: true,
+    linkedCertificates: [
+      {
+        id: "LC-EQ01-A",
+        jenisSertifikat: "Izin Operasi Disnaker K3 Bejana Tekan",
+        noSertifikat: "CERT-7734/DISNAKER-KT/2023",
+        instansi: "Disnaker Kaltim / UPT Pengawasan K3",
+        terbit: "2023-04-15",
+        expired: "2026-08-15",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "Izin-Disnaker-Boiler-2023.pdf"
+      },
+      {
+        id: "LC-EQ01-B",
+        jenisSertifikat: "Laporan Hasil Uji (LHU) Pressure Test",
+        noSertifikat: "LHU-SUCO-BT201-2023",
+        instansi: "PT Sucofindo (Persero)",
+        terbit: "2023-04-10",
+        expired: "2026-04-10",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "LHU-PressureTest-Boiler-2023.pdf"
+      }
+    ]
   },
   {
     id: "EQ-02",
