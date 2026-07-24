@@ -1,0 +1,15 @@
+{
+  "kategori_template": "FIRE_ALARM_SYSTEM",
+  "file_name": "Fire Alarm System Gedung Arsip Teknik.pdf",
+  "nomor_surat": "500.15.18.2 / S / 8S / DTKT - III",
+  "raw_ocr_nomor_surat": "500.15.18.2/S/8S / DTKT - 1II",
+  "jenis_objek": "FIREALARM SYSTEM",
+  "merek_model": "Hooseki/AN-5L",
+  "jumlah_detector": "27Smoke&3MCP",
+  "tanggal_terbit": "2025-06-00",
+  "tanggal_terbit_raw": "0 Juni 2025",
+  "tanggal_expired": null,
+  "keterangan_expired": "Masa berlaku otomatis +1 tahun dari Tanggal Terbit",
+  "status_kelayakan": "Layak",
+  "confidence_score": 98.5
+}

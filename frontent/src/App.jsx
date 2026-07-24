@@ -7,7 +7,7 @@ import PeralatanPabrik from './pages/PeralatanPabrik';
 import MonitoringSertifikasi from './pages/MonitoringSertifikasi';
 import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
-import PerizinanAset from './pages/PerizinanAset';
+import Pengaturan from './pages/Pengaturan';
 
 import {
   mockStats,
@@ -102,6 +102,8 @@ export default function App() {
             onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
+      case 'pengaturan':
+        return <Pengaturan />;
       default:
         return (
           <Dashboard

@@ -1,0 +1,30 @@
+# 🚫 IMPORTANT: DO NOT COMMIT REAL CERTIFICATE SAMPLE PDF FILES
+*.pdf
+Testing_ocr/**/*.pdf
+Testing_ocr/penangkal petir/
+Testing_ocr/Surat Keterangan/
+Testing_ocr/Timbangan/
+Testing_ocr/IPP PT PUPUK KALIMANTAN TIMUR/
+
+# Node & NestJS Dependencies
+node_modules/
+dist/
+build/
+.next/
+
+# Environment Variables
+.env
+.env.local
+
+# Python & OCR Cache / Temp Images
+__pycache__/
+*.pyc
+temp_*.png
+temp_*.txt
+*.tmp
+
+# OS & IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

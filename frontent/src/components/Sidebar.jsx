@@ -6,7 +6,10 @@ import {
   FileSpreadsheet,
   FolderKanban,
   PackageCheck,
-  Activity
+  Activity,
+  History,
+  HelpCircle,
+  Settings
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -31,27 +34,20 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
+        { id: "riwayat-perpanjangan", label: "Riwayat Perpanjangan", icon: History },
+        { id: "informasi-lainnya", label: "Informasi Lainnya", icon: HelpCircle },
+        { id: "pengaturan", label: "Pengaturan", icon: Settings },
       ]
     }
   ];
 
   return (
     <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 h-screen sticky top-0 z-30 font-sans-clean border-r border-slate-200 shadow-xs">
-      {/* Brand Header with Sutasoma logo */}
-      <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[#005ea4] text-white flex items-center justify-center font-bold font-logo-sutasoma text-xl shadow-xs">
-            S
-          </div>
-          <div>
-            <h1 className="font-logo-sutasoma text-xl font-bold tracking-tight text-[#005ea4]">
-              Sertifikator
-            </h1>
-            <span className="text-[10px] font-sans-clean uppercase tracking-wider text-slate-500 block -mt-1 font-bold">
-              PT Pupuk Kaltim
-            </span>
-          </div>
-        </div>
+      {/* Brand Header: CLEAN TULISAN SERTIFIKATOR (TANPA KOTAK S, TANPA LOGO SAMPING, TANPA SUBTITLE PT PUPUK KALTIM) */}
+      <div className="h-16 px-6 flex items-center border-b border-slate-200 bg-slate-50/50">
+        <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none">
+          SERTIFIKATOR
+        </h1>
       </div>
 
       {/* Navigation List */}
@@ -85,7 +81,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         ))}
       </div>
 
-      {/* User Footer */}
+      {/* User Account Footer */}
       <div className="p-3 border-t border-slate-200 bg-slate-50">
         <div className="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200 shadow-xs">
           <img
