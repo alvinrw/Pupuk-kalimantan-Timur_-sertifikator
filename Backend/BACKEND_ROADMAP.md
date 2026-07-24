@@ -12,8 +12,8 @@ Lokasi Folder: `Backend/fastapi-ocr/`
 | :--- | :---: | :--- |
 | **Setup Arsitektur & Routes** | ✅ Selesai | Endpoint `POST /api/v1/ocr/process-pdf` sudah jalan. |
 | **Extractor: Fire Alarm** | ✅ Selesai | Script OCR sudah jalan, regex berhasil nge-dapetin tanggal & nomor. |
-| **Extractor: Penyalur Petir** | ❌ Belum | (TANGGUNGAN) Memindahkan logika PoC penyalur petir dari `Testing_ocr`. |
-| **Autodetect Jenis Sertifikat** | ❌ Belum | (TANGGUNGAN) AI harus bisa otomatis nebak apakah PDF yang dikirim itu SLF, AMDAL, atau Fire Alarm. Saat ini baru di-*hardcode* ke Fire Alarm. |
+| **Extractor: Penyalur Petir** | ⏸️ ON HOLD | Pengembangannya ditunda sementara sesuai instruksi |
+| **Autodetect Jenis Sertifikat** | ⏸️ ON HOLD | AI cerdas untuk deteksi Fire Alarm vs Penyalur Petir ditunda |
 
 ---
 
