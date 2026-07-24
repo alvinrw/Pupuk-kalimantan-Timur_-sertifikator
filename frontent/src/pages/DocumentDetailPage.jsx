@@ -259,13 +259,11 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         </div>
       </div>
 
-      {/* PROMINENT STATUS & COUNTDOWN BANNER */}
+      {/* CLEAN NEUTRAL STATUS & SISA HARI INFO */}
       {(() => {
         const currentStatus = formData.status || item.status || 'Aktif';
         const statusLower = currentStatus.toLowerCase();
         const isAfkir = statusLower === 'afkir' || statusLower === 'decommissioned';
-        const isExpired = statusLower === 'expired';
-        const isPerpanjang = statusLower === 'perpanjang' || statusLower === 'perpanjangan' || statusLower === 'in progress' || statusLower === 'proses';
 
         let sisaHariCalc = item.sisaHari;
         if (sisaHariCalc === undefined || sisaHariCalc === null) {
@@ -279,64 +277,29 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           }
         }
 
+        const formattedExpiry = formData.berakhir || item.berakhir || item.expiryDate || '-';
+
         return (
-          <div
-            className={`p-5 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 font-mono-data shadow-2xs ${
-              isAfkir
-                ? 'bg-[#0f172a] text-white border-slate-700'
-                : isExpired || sisaHariCalc <= 0
-                ? 'bg-rose-50 border-rose-300 text-rose-950'
-                : isPerpanjang || (sisaHariCalc > 0 && sisaHariCalc <= 30)
-                ? 'bg-amber-50 border-amber-300 text-amber-950'
-                : 'bg-emerald-50 border-emerald-300 text-emerald-950'
-            }`}
-          >
-            <div className="flex items-start md:items-center gap-3.5">
-              <div className="p-2.5 rounded-xl bg-white/30 backdrop-blur-md shrink-0">
-                {isAfkir ? (
-                  <Ban className="w-6 h-6 text-slate-200" />
-                ) : isExpired || sisaHariCalc <= 0 ? (
-                  <ShieldAlert className="w-6 h-6 text-rose-600" />
-                ) : isPerpanjang || (sisaHariCalc > 0 && sisaHariCalc <= 30) ? (
-                  <Clock className="w-6 h-6 text-amber-600" />
-                ) : (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600" />
-                )}
+          <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 font-mono-data text-xs">
+            <div className="flex items-center gap-6">
+              <div>
+                <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">Status Dokumen</span>
+                <span className="font-bold text-sm text-slate-900">{currentStatus}</span>
               </div>
 
-              <div className="space-y-0.5 font-sans">
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-sm uppercase tracking-tight">
-                    STATUS DOKUMEN: {currentStatus}
-                  </span>
-                </div>
-                <p className="text-xs font-mono-data opacity-90">
-                  {isAfkir
-                    ? '⛔ Berkas / Aset telah dinonaktifkan (Afkir). Tidak memerlukan perpanjangan sertifikat.'
-                    : isExpired || sisaHariCalc <= 0
-                    ? `⚠️ PERINGATAN KADALUARSA: Sertifikat telah expired ${Math.abs(sisaHariCalc)} hari yang lalu (Expired: ${formData.berakhir || item.berakhir || '-'}). Segera lakukan resertifikasi!`
-                    : isPerpanjang || (sisaHariCalc > 0 && sisaHariCalc <= 30)
-                    ? `⏳ PERPANJANGAN URGENT: Masa berlaku tersisa ${sisaHariCalc} hari lagi (Expired: ${formData.berakhir || item.berakhir || '-'}). Tahap audit resertifikasi sedang berlangsung.`
-                    : `✅ MASA BERLAKU AMAN: Tersisa ${sisaHariCalc.toLocaleString()} hari lagi s.d. tanggal expired (${formData.berakhir || item.berakhir || '-'}).`}
-                </p>
+              <div className="h-8 w-px bg-slate-200 hidden sm:block" />
+
+              <div>
+                <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">Sisa Masa Berlaku</span>
+                <span className="font-bold text-sm text-slate-900">
+                  {isAfkir ? 'Afkir / Non-Aktif' : sisaHariCalc <= 0 ? `Expired (${Math.abs(sisaHariCalc)} hari lalu)` : `${sisaHariCalc.toLocaleString()} Hari`}
+                </span>
               </div>
             </div>
 
-            <div className="shrink-0 flex items-center gap-2">
-              <div className={`px-4 py-2 rounded-xl text-center border font-bold text-xs ${
-                isAfkir
-                  ? 'bg-slate-800 text-slate-200 border-slate-700'
-                  : isExpired || sisaHariCalc <= 0
-                  ? 'bg-rose-100 text-rose-900 border-rose-300'
-                  : isPerpanjang || (sisaHariCalc > 0 && sisaHariCalc <= 30)
-                  ? 'bg-amber-100 text-amber-900 border-amber-300'
-                  : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-              }`}>
-                <span className="block text-[10px] opacity-75 font-normal uppercase">Hitungan Sisa Hari</span>
-                <span className="text-sm font-extrabold">
-                  {isAfkir ? 'AFKIR' : sisaHariCalc <= 0 ? `${sisaHariCalc} HARI (EXPIRED)` : `${sisaHariCalc} HARI LAGI`}
-                </span>
-              </div>
+            <div className="text-left sm:text-right font-mono-data">
+              <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">Tanggal Expired</span>
+              <span className="font-bold text-xs text-slate-700">{formattedExpiry}</span>
             </div>
           </div>
         );
