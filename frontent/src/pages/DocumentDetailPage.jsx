@@ -831,14 +831,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Tujuan Upload Berkas PDF Ini</label>
+                <label className="font-bold text-slate-800 block mb-1">Tipe Perubahan Berkas</label>
                 <select
                   value={uploadData.target}
                   onChange={(e) => setUploadData({ ...uploadData, target: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
                 >
-                  <option value="current">Gantikan Sertifikat Aktif Saat Ini (Koreksi Salah Upload/OCR)</option>
-                  <option value="archive">Tambahkan Sebagai Arsip Sertifikat Histori Tambahan</option>
+                  <option value="current">Sertifikat Utama / Berkas Aktif (Koreksi)</option>
+                  <option value="archive">Simpan Sebagai Arsip Histori Pendukung</option>
                 </select>
               </div>
 
