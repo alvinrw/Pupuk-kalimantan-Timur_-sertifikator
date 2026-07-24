@@ -53,8 +53,9 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
   // Dynamic Document Type Detection
   const isHaki = Boolean(item.categoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
-  const isEquipment = Boolean(item.categoryKey === 'peralatan-pabrik' || (!isHaki && item.nomorSeri && !item.code?.startsWith('PBG') && !item.code?.startsWith('HGB') && !item.code?.startsWith('SNI') && !item.code?.startsWith('SLF') && !item.code?.startsWith('TERSUS') && !item.code?.startsWith('LAB') && !item.code?.startsWith('WWTP') && !item.code?.startsWith('HALAL') && !item.code?.startsWith('GREEN') && !item.code?.startsWith('EXP') && !item.code?.startsWith('PRD') && !item.code?.startsWith('K3') && !item.code?.startsWith('PIPE')));
+  const isEquipment = Boolean(item.categoryKey === 'peralatan-pabrik' || (item.nomorSeri && !isHaki && !item.linkedCertificates));
   const isMultiCertItem = Boolean(
+    item.linkedCertificates ||
     item.categoryKey === 'perizinan-aset' ||
     item.categoryKey === 'perizinan-proyek' ||
     item.categoryKey === 'perizinan-produk'

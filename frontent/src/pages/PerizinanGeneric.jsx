@@ -43,12 +43,12 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   // Columns Configuration
   const defaultColumns = [
     { key: "no", label: "No." },
+    { key: "namaItem", label: "Nama Produk / Proyek" },
     { key: "code", label: "Kode / Tag Perizinan" },
-    { key: "title", label: "Nama Dokumen / Item" },
     { key: "jenisItem", label: "Jenis Perizinan" },
+    { key: "certificateNo", label: "No. Sertifikat" },
     { key: "unit", label: "Unit Pabrik / Lokasi" },
     { key: "user", label: "User / Instansi" },
-    { key: "certificateNo", label: "No. Sertifikat" },
     { key: "issueDate", label: "Terbit" },
     { key: "expiryDate", label: "Expired" },
     { key: "status", label: "Status" }
@@ -56,6 +56,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
 
   const asetColumns = [
     { key: "no", label: "NO." },
+    { key: "namaItem", label: "NAMA ASET" },
     { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
     { key: "unit", label: "LOKASI" },
     { key: "luasM2", label: "LUAS (M²)" },
@@ -332,9 +333,19 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider">
                 {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap">NO.</th>}
-                
+
+                {/* NAMA PRODUK / ASET / PROYEK — selalu tampil */}
+                {isVisible("namaItem") && (
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900">
+                    {isAsetCategory
+                      ? 'NAMA ASET'
+                      : categoryName?.toLowerCase().includes('proyek')
+                      ? 'NAMA PROYEK'
+                      : 'NAMA PRODUK'}
+                  </th>
+                )}
+
                 {!isAsetCategory && isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">KODE PERIZINAN</th>}
-                {!isAsetCategory && isVisible("title") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA DOKUMEN / ITEM</th>}
 
                 {/* JENIS PERIZINAN FILTER (non-aset) */}
                 {!isAsetCategory && isVisible("jenisItem") && (
@@ -421,7 +432,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                   const isExpired = statusStr === 'expired';
                   const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
 
-                  const docTitle = doc.title || doc.merekItem || doc.judulCiptaan || '-';
+                   const docTitle = doc.title || doc.merekItem || doc.judulCiptaan || '-';
                   const docCode = doc.code || doc.id || doc.noSertifikat || '-';
                   const docUnit = doc.unit || doc.unitPabrik || doc.lokasi || '-';
                   const docCert = doc.certificateNo || doc.noSertifikat || '-';
@@ -429,6 +440,14 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                   const docJenis = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || categoryName || 'Generic';
                   const docUser = doc.user || doc.issuer || doc.keterangan || 'Dept. General';
                   const docIssue = doc.tanggalAwalPengajuan || doc.issueDate || doc.terbit || doc.tanggalCiptaan || '-';
+                  // Short item name: prefer merekItem, fallback to title
+                  const docNamaItem = doc.merekItem || doc.title || doc.judulCiptaan || '-';
+                  // Column label adapts by category
+                  const namaItemLabel = categoryName?.toLowerCase().includes('aset')
+                    ? 'Nama Aset'
+                    : categoryName?.toLowerCase().includes('proyek')
+                    ? 'Nama Proyek'
+                    : 'Nama Produk';
 
                   return (
                     <tr key={doc.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
@@ -437,25 +456,26 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           {index + 1}
                         </td>
                       )}
-                      
-                      {!isAsetCategory && isVisible("code") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {docCode}
+
+                      {/* NAMA PRODUK / ASET / PROYEK */}
+                      {isVisible("namaItem") && (
+                        <td
+                          onClick={() => setDetailModalItem(doc)}
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans ${
+                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                          }`}
+                          title={`Klik untuk Lihat Detail — ${namaItemLabel}`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileCheck className={`w-3.5 h-3.5 shrink-0 ${doc.hasCertificatePdf !== false ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
+                            <span className="max-w-[220px] truncate block">{docNamaItem}</span>
+                          </div>
                         </td>
                       )}
 
-                      {!isAsetCategory && isVisible("title") && (
-                        <td
-                          onClick={() => setDetailModalItem(doc)}
-                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans whitespace-nowrap ${
-                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
-                          }`}
-                          title="Klik untuk Lihat Detail Penuh"
-                        >
-                          <div className="flex items-center gap-2">
-                            <FileCheck className={`w-3.5 h-3.5 ${doc.hasCertificatePdf !== false ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
-                            <span>{docTitle}</span>
-                          </div>
+                      {!isAsetCategory && isVisible("code") && (
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                          {docCode}
                         </td>
                       )}
 
