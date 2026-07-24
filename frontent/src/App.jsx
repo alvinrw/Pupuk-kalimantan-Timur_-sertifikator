@@ -7,6 +7,7 @@ import PeralatanPabrik from './pages/PeralatanPabrik';
 import MonitoringSertifikasi from './pages/MonitoringSertifikasi';
 import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
+import PerizinanAset from './pages/PerizinanAset';
 
 import {
   mockStats,
@@ -74,11 +75,9 @@ export default function App() {
         );
       case 'perizinan-aset':
         return (
-          <PerizinanGeneric
+          <PerizinanAset
             title="Perizinan Aset & Bangunan Pabrik"
             subtitle="Izin lokasi, sertifikat HGB, kelayakan bangunan, dan AMDAL kawasan pabrik"
-            categoryName="Aset & Bangunan"
-            onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
       case 'administrasi-lainnya':

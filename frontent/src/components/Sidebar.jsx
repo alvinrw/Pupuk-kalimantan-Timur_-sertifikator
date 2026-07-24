@@ -94,8 +94,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             className="w-8 h-8 rounded-full object-cover border border-slate-300"
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate">Bambang Hermawan</p>
-            <p className="text-[11px] text-slate-500 truncate font-medium">Admin Compliance K3LH</p>
+            <p className="text-xs font-bold text-slate-900 truncate" title="Rihmid Pribidi">Rihmid Pribidi</p>
+            <p className="text-[11px] text-slate-500 truncate font-medium" title="Admin">Admin</p>
           </div>
         </div>
       </div>
