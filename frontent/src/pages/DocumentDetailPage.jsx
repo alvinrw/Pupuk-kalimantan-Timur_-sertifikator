@@ -672,7 +672,16 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {historyList.map((row) => {
+                  {historyList
+                    .slice()
+                    .sort((a, b) => {
+                      if (a.isCurrent && !b.isCurrent) return -1;
+                      if (!a.isCurrent && b.isCurrent) return 1;
+                      const dateA = new Date(a.expired || a.terbit || '1970-01-01').getTime();
+                      const dateB = new Date(b.expired || b.terbit || '1970-01-01').getTime();
+                      return dateB - dateA;
+                    })
+                    .map((row) => {
                     return (
                       <tr
                         key={row.id}
