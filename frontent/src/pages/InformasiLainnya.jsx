@@ -21,7 +21,10 @@ import {
   FileCheck,
   Download,
   Check,
-  Info
+  Info,
+  PlusCircle,
+  Link2,
+  Upload
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
 import { masterCertificatesData } from '../data/masterDataset';
@@ -356,6 +359,18 @@ export default function InformasiLainnya() {
         </button>
 
         <button
+          onClick={() => setActiveGuideTab('multicert')}
+          className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+            activeGuideTab === 'multicert'
+              ? 'bg-[#005ea4] text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <PlusCircle className="w-4 h-4" />
+          <span>4. Panduan Tambah Item & Sertifikat Terhubung</span>
+        </button>
+
+        <button
           onClick={() => setActiveGuideTab('columns')}
           className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
             activeGuideTab === 'columns'
@@ -364,7 +379,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>4. Struktur Kolom & Templat Impor CSV</span>
+          <span>5. Struktur Kolom & Templat Impor CSV</span>
         </button>
       </div>
 
@@ -468,7 +483,133 @@ export default function InformasiLainnya() {
         </div>
       )}
 
-      {/* TAB 4: PENJELASAN STRUKTUR KOLOM TABEL & TEMPLAT CSV MASTER */}
+      {/* TAB 4: PANDUAN TAMBAH ITEM & SERTIFIKAT TERHUBUNG */}
+      {activeGuideTab === 'multicert' && (
+        <div className="space-y-8 font-sans-clean">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+              <PlusCircle className="w-5 h-5 text-[#005ea4]" />
+              <span>Panduan Tutorial: Cara Menambahkan Item & Sertifikat Terhubung</span>
+            </h3>
+            <span className="text-xs font-mono-data text-[#005ea4] font-bold">Panduan Langkah demi Langkah</span>
+          </div>
+
+          {/* SECTION A: CARA MENAMBAHKAN ITEM BARU */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-[#005ea4] text-white flex items-center justify-center font-bold text-lg font-mono-data shadow-xs">
+                A
+              </div>
+              <div>
+                <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Item / Perizinan Baru (Input 1 Data Manual)</h4>
+                <p className="text-xs text-slate-500 font-mono-data">Untuk menambahkan entitas baru (Aset, Peralatan, Proyek, atau Produk)</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 font-mono-data text-xs">
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                  <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">1</span>
+                  <span>Buka Halaman Perizinan</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed">
+                  Pilih menu perizinan yang sesuai dari Sidebar kiri (misal: <b>Perizinan Aset</b>, <b>Perizinan Peralatan Pabrik</b>, <b>Perizinan Proyek</b>, atau <b>Sertifikasi Produk</b>).
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                  <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">2</span>
+                  <span>Klik Tombol "+ Kelola / Impor"</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed">
+                  Pada pojok kanan atas tabel, klik tombol biru <b>+ Kelola / Impor Dokumen</b> lalu pilih opsi <b>+ Input 1 Data Manual</b> (atau + Tambah Single Perizinan Baru).
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                  <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">3</span>
+                  <span>Isi Formulir & Simpan</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed">
+                  Lengkapi formulir spesifikasi item (Merek/Nama Item, Tipe, Nomor Seri, Lokasi, No. Sertifikat SK, Tanggal Terbit & Expired). Klik <b>Simpan Data</b> untuk menampilkan item ke tabel.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION B: CARA MENAMBAHKAN SERTIFIKAT TERHUBUNG (MULTI-SERTIFIKAT) */}
+          <div className="bg-white rounded-2xl border border-blue-200 bg-blue-50/20 shadow-2xs p-6 space-y-5">
+            <div className="flex items-center gap-3 border-b border-blue-200 pb-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg font-mono-data shadow-xs">
+                B
+              </div>
+              <div>
+                <h4 className="font-bold text-base text-slate-900">2. Cara Menambahkan Sertifikat Terhubung (Multi-Sertifikat Per Item)</h4>
+                <p className="text-xs text-slate-500 font-mono-data">Untuk menghubungkan beberapa dokumen sertifikat (PBG, SLF, Amdal, SNI, Halal) ke satu entitas yang sama</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono-data text-xs">
+              <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                  <Eye className="w-4 h-4 text-emerald-600" />
+                  <span>Langkah 1: Lihat Detail</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11px]">
+                  Cari baris item pada tabel utama, lalu klik tombol <b>Lihat Detail</b> (atau klik nama item/nomor sertifikat) untuk membuka halaman Detail Dokumen.
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                  <Link2 className="w-4 h-4 text-emerald-600" />
+                  <span>Langkah 2: Tambah Sertifikat</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11px]">
+                  Pada halaman Detail, gulir ke bagian <b>Sertifikat Terhubung</b> dan klik tombol biru <b>+ Tambah Sertifikat Terhubung</b>.
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                  <Upload className="w-4 h-4 text-emerald-600" />
+                  <span>Langkah 3: Form & Upload PDF</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11px]">
+                  Isi Jenis Sertifikat (misal: PBG, SLF, Amdal, SNI), No. SK, Instansi Penerbit, Tanggal Terbit/Expired, dan klik <b>Pilih Berkas PDF</b> untuk mengunggah PDF sertifikat.
+                </p>
+              </div>
+
+              <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-700 font-bold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <span>Langkah 4: Otomatis Tambah Baris</span>
+                </div>
+                <p className="text-slate-600 leading-relaxed text-[11px]">
+                  Klik <b>Simpan Sertifikat</b>. Sertifikat baru akan muncul di Halaman Detail dan <b>Tabel Utama otomatis menampilkan 1 baris tambahan</b> untuk sertifikat tersebut!
+                </p>
+              </div>
+            </div>
+
+            {/* MEKANISME TABEL UTAMA EXPLANATION BOX */}
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 font-mono-data text-xs text-emerald-950">
+              <div className="flex items-center gap-2 font-bold text-emerald-900">
+                <Info className="w-4 h-4 text-emerald-700" />
+                <span>Prinsip Kerja Multi-Sertifikat Per Baris Tabel Utama:</span>
+              </div>
+              <ul className="list-disc list-inside space-y-1 text-[11px] text-emerald-900/90">
+                <li><b>Data Utama Tetap 1 Entitas</b>: Menambahkan sertifikat terhubung tidak akan membuat aset/peralatan/proyek/produk baru, melainkan menambahkan dokumen sertifikat baru di bawah entitas yang sama.</li>
+                <li><b>Tabel Utama Menampilkan Per Sertifikat</b>: Setiap sertifikat yang dimiliki oleh sebuah entitas akan memiliki 1 baris khusus pada tabel utama yang menampilkan Nomor SK, Terbit, Expired, dan Status hukum dari sertifikat tersebut.</li>
+                <li><b>Contoh</b>: Aset A awalnya memiliki 1 sertifikat (tabel menampilkan 1 baris). Setelah ditambahkan 2 sertifikat terhubung (SLF & AMDAL), total menjadi 3 sertifikat (tabel otomatis menampilkan 3 baris untuk Aset A).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: PENJELASAN STRUKTUR KOLOM TABEL & TEMPLAT CSV MASTER */}
       {activeGuideTab === 'columns' && (
         <div className="space-y-8 font-sans-clean">
           {/* DYNAMIC CATEGORY DOWNLOAD TEMPLATE BANNER */}
