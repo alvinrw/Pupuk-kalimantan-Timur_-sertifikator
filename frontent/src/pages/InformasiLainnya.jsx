@@ -18,11 +18,16 @@ import {
   ArrowRight,
   Database,
   Layers,
-  FileCheck
+  FileCheck,
+  Eye,
+  Award
 } from 'lucide-react';
+import DocumentDetailPage from './DocumentDetailPage';
+import { masterCertificatesData } from '../data/masterDataset';
 
 export default function InformasiLainnya() {
-  const [activeGuideTab, setActiveGuideTab] = useState('overview'); // 'overview' | 'status' | 'workflow' | 'columns'
+  const [activeGuideTab, setActiveGuideTab] = useState('overview'); // 'overview' | 'status' | 'workflow' | 'columns' | 'certificates'
+  const [selectedDocDetail, setSelectedDocDetail] = useState(null);
 
   const statusColorsGuide = [
     {
@@ -143,6 +148,24 @@ export default function InformasiLainnya() {
     { name: "AKSI", desc: "Tombol 'Lihat Detail' untuk membuka berkas sertifikat PDF, mengedit data, dan mengunduh berkas." }
   ];
 
+  if (selectedDocDetail) {
+    return (
+      <DocumentDetailPage
+        item={selectedDocDetail}
+        onBack={() => setSelectedDocDetail(null)}
+        onSaveUpdate={(updatedDoc) => {
+          alert(`Sertifikat ${updatedDoc.id} berhasil diperbarui.`);
+        }}
+        onQuickRenew={(id) => {
+          alert(`Inisiasi perpanjangan untuk sertifikat ${id}.`);
+        }}
+        onQuickDecommission={(id) => {
+          alert(`Status sertifikat ${id} ditandai sebagai Afkir.`);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="p-8 space-y-8 font-sans-clean max-w-7xl mx-auto">
       {/* Header Banner */}
@@ -153,7 +176,7 @@ export default function InformasiLainnya() {
             <span>Pusat Informasi & Panduan Penggunaan</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            Panduan Lengkap SERTIFIKATOR PT Pupuk Kaltim
+            Panduan Lengkap SERTIFIKATOR System
           </h2>
           <p className="text-xs md:text-sm text-slate-200 font-mono-data leading-relaxed">
             Sistem Informasi Pengelolaan, Pemantauan Masa Berlaku, dan Resertifikasi Perizinan Peralatan Pabrik, Aset, Proyek, Produk, dan HAKI Terpadu.
@@ -172,7 +195,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span>1. Cakupan Modul Aplikasi</span>
+          <span>1. Modul Aplikasi</span>
         </button>
 
         <button
@@ -184,7 +207,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <ShieldAlert className="w-4 h-4" />
-          <span>2. Arti Warna Status Dokumen</span>
+          <span>2. Warna Status Dokumen</span>
         </button>
 
         <button
@@ -196,7 +219,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <RotateCcw className="w-4 h-4" />
-          <span>3. Alur Kerja Resertifikasi & AI OCR</span>
+          <span>3. Alur Kerja & AI OCR</span>
         </button>
 
         <button
@@ -208,7 +231,19 @@ export default function InformasiLainnya() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>4. Penjelasan Struktur Kolom Tabel</span>
+          <span>4. Penjelasan Kolom Tabel</span>
+        </button>
+
+        <button
+          onClick={() => setActiveGuideTab('certificates')}
+          className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all cursor-pointer ${
+            activeGuideTab === 'certificates'
+              ? 'bg-[#005ea4] text-white shadow-xs'
+              : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+          }`}
+        >
+          <Award className="w-4 h-4" />
+          <span>5. Berkas Sertifikat & Preview PDF</span>
         </button>
       </div>
 
@@ -344,6 +379,84 @@ export default function InformasiLainnya() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: BERKAS SERTIFIKAT & PREVIEW DOKUMEN */}
+      {activeGuideTab === 'certificates' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+            <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+              <Award className="w-5 h-5 text-[#005ea4]" />
+              <span>Daftar & Pratinjau Berkas Sertifikat Resmi</span>
+            </h3>
+            <span className="text-xs font-mono-data text-slate-500 font-bold">
+              Total {masterCertificatesData.length} Berkas Sertifikat Terhubung
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 font-mono-data">
+            {masterCertificatesData.map((doc) => {
+              const statusStr = (doc.status || '').toLowerCase();
+              const isAfkir = statusStr === 'afkir' || statusStr === 'decommissioned';
+              const isExpired = statusStr === 'expired';
+              const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
+
+              return (
+                <div
+                  key={doc.id}
+                  className={`p-5 rounded-2xl border transition-all flex flex-col justify-between space-y-4 ${
+                    isAfkir
+                      ? 'bg-[#0f172a] text-white border-slate-800'
+                      : isExpired
+                      ? 'bg-rose-50/90 border-rose-200 text-rose-950'
+                      : isPerpanjang
+                      ? 'bg-amber-50/90 border-amber-200 text-amber-950'
+                      : 'bg-white border-slate-200 text-slate-800 hover:border-[#005ea4] shadow-2xs'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                        isAfkir ? 'bg-slate-800 text-slate-200 border-slate-700' : 'bg-blue-50 text-[#005ea4] border-blue-200'
+                      }`}>
+                        {doc.kategoriDokumen || 'Perizinan'}
+                      </span>
+                      <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                        isAfkir
+                          ? 'bg-slate-800 text-white border-slate-600'
+                          : isExpired
+                          ? 'bg-rose-100 text-rose-900 border-rose-300'
+                          : isPerpanjang
+                          ? 'bg-amber-100 text-amber-900 border-amber-300'
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      }`}>
+                        {doc.status || 'Aktif'}
+                      </span>
+                    </div>
+
+                    <h4 className="font-bold text-xs line-clamp-2 font-sans pt-1">
+                      {doc.merekItem || doc.title || doc.judulCiptaan}
+                    </h4>
+
+                    <div className="text-[11px] space-y-1 opacity-90 pt-1 border-t border-slate-200/50">
+                      <div>No. SK: <span className="font-bold">{doc.noSertifikat || doc.certificateNo}</span></div>
+                      <div>Unit: <span className="font-bold">{doc.unitPabrik || doc.unit || doc.lokasi}</span></div>
+                      <div>Expired: <span className="font-bold">{doc.berakhir || doc.expiryDate}</span></div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setSelectedDocDetail(doc)}
+                    className="w-full py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Eye className="w-4 h-4 text-white" />
+                    <span>Lihat & Pratinjau Berkas PDF</span>
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
