@@ -19,15 +19,17 @@ import {
   Database,
   Layers,
   FileCheck,
-  Eye,
-  Award
+  Download,
+  Check,
+  Info
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
 import { masterCertificatesData } from '../data/masterDataset';
 
 export default function InformasiLainnya() {
-  const [activeGuideTab, setActiveGuideTab] = useState('overview'); // 'overview' | 'status' | 'workflow' | 'columns' | 'certificates'
+  const [activeGuideTab, setActiveGuideTab] = useState('overview'); // 'overview' | 'status' | 'workflow' | 'columns'
   const [selectedDocDetail, setSelectedDocDetail] = useState(null);
+  const [activeCategoryTab, setActiveCategoryTab] = useState('peralatan');
 
   const statusColorsGuide = [
     {
@@ -134,19 +136,112 @@ export default function InformasiLainnya() {
     }
   ];
 
-  const tableColumnsExplanation = [
-    { name: "NO.", desc: "Nomor urut registrasi data perizinan di dalam tabel." },
-    { name: "KODE / TAG PERIZINAN", desc: "Kode identifikasi unik peralatan atau perizinan (contoh: EQ-B201P2, PBG-KP-01, SLF-PRJ-01)." },
-    { name: "NAMA DOKUMEN / ITEM", desc: "Nama lengkap perizinan atau merek peralatan pabrik. Klik untuk membuka Halaman Detail Penuh." },
-    { name: "JENIS PERIZINAN", desc: "Sub-kategori atau klaster teknis perizinan (contoh: Bejana Tekan, PBG, SLF, Halal BPJPH, Software HAKI)." },
-    { name: "UNIT PABRIK / LOKASI", desc: "Lokasi spesifik fisik peralatan atau aset (contoh: Pabrik 2 Area Reformer, Dermaga 2, Kantor Pusat, Pabrik NPK)." },
-    { name: "USER / INSTANSI", desc: "Departemen penanggung jawab internal ATAU instansi penguji penerbit perizinan (Disnaker, Sucofindo, PUPR, BPN, Kemenkumham)." },
-    { name: "NO. SERTIFIKAT", desc: "Nomor resmi SK / Sertifikat yang terbit dari instansi berwenang." },
-    { name: "TERBIT", desc: "Tanggal pertama kali sertifikat diterbitkan atau disahkan." },
-    { name: "EXPIRED", desc: "Tanggal batas akhir masa berlaku sertifikat. Menjadi acuan perhitungan sisa hari." },
-    { name: "STATUS", desc: "Status kelayakan & alur kerja perizinan (Aktif, Perpanjang, Expired, atau Afkir)." },
-    { name: "AKSI", desc: "Tombol 'Lihat Detail' untuk membuka berkas sertifikat PDF, mengedit data, dan mengunduh berkas." }
-  ];
+  // Specific Columns Description per 5 Categories
+  const categoryColumnsDetail = {
+    peralatan: {
+      categoryTitle: "1. Perizinan Peralatan Pabrik",
+      icon: Factory,
+      columns: [
+        { key: "no", name: "NO.", desc: "Nomor urut registrasi data peralatan." },
+        { key: "code", name: "NOMOR TAG / KODE ALAT", desc: "Kode identifikasi unik peralatan pabrik (contoh: EQ-B201P2, EQ-JT82896)." },
+        { key: "merekItem", name: "JENIS & MEREK PERALATAN", desc: "Nama peralatan & spesifikasi merek (contoh: Primary Reformer Boiler, Overhead Crane 50T)." },
+        { key: "jenisItem", name: "SUB-KATEGORI K3", desc: "Klasifikasi K3 (Bejana Tekan, Pesawat Angkat, Tangki B3, Listrik/Petir, Metrologi, Fire Alarm)." },
+        { key: "unitPabrik", name: "UNIT PABRIK / LOKASI", desc: "Unit area pabrik tempat alat berada (Pabrik 1, Pabrik 2, Pabrik 3, UBS 6, Dermaga)." },
+        { key: "user", name: "DEPT. PENANGGUNG JAWAB", desc: "Departemen pemilik operasional alat (Dept. Pemeliharaan, Dept. Utility, Dept. K3)." },
+        { key: "noSertifikat", name: "NO. SERTIFIKAT K3", desc: "Nomor SK/Sertifikat pengujian dari Disnaker / Sucofindo / UPT Metrologi." },
+        { key: "tanggalInspeksi", name: "TGL. INSPEKSI", desc: "Tanggal pelaksanaan uji riksa kelayakan di lapangan." },
+        { key: "terbit", name: "TGL. TERBIT", desc: "Tanggal sertifikat resmi disahkan." },
+        { key: "berakhir", name: "TGL. EXPIRED", desc: "Tanggal batas kadaluarsa sertifikat K3." },
+        { key: "status", name: "STATUS KELAYAKAN", desc: "Status visual (Aktif, Perpanjang, Expired, Afkir)." },
+        { key: "aksi", name: "AKSI", desc: "Tombol 'Lihat Detail' untuk membuka pratinjau berkas PDF sertifikat." }
+      ]
+    },
+    aset: {
+      categoryTitle: "2. Perizinan Aset & Bangunan",
+      icon: Building2,
+      columns: [
+        { key: "no", name: "NO.", desc: "Nomor urut registrasi data perizinan aset." },
+        { key: "code", name: "KODE PERIZINAN ASET", desc: "Kode dokumen legal aset (contoh: PBG-KP-01, HGB-LHN-04, TERSUS-D02)." },
+        { key: "merekItem", name: "NAMA ASET / FABRIKASI", desc: "Nama bangunan/lahan/fasilitas (PBG Gedung Kantor Pusat, Sertifikat HGB Lahan Silo)." },
+        { key: "jenisItem", name: "KLASIFIKASI ASET", desc: "Jenis perizinan aset (PBG Gedung, Pelabuhan/Tersus, HGB Lahan, Lab B3, WWTP)." },
+        { key: "unitPabrik", name: "LOKASI / KAWASAN", desc: "Kawasan lokasi fisik aset (Kawasan Industri Loktuan, Dermaga 2, Kantor Pusat)." },
+        { key: "user", name: "INSTANSI PENERBIT", desc: "Dinas/Lembaga penerbit izin (DPMPTSP, BPN, KSOP KPLP, KLHK RI)." },
+        { key: "noSertifikat", name: "NO. SK / SERTIFIKAT", desc: "Nomor SK perizinan legal aset." },
+        { key: "terbit", name: "TGL. TERBIT", desc: "Tanggal pengesahan izin aset." },
+        { key: "berakhir", name: "TGL. EXPIRED", desc: "Masa berlaku izin (jangka panjang 5-30 tahun)." },
+        { key: "status", name: "STATUS PERIZINAN", desc: "Status kelayakan (Aktif, Perpanjang, Expired, Afkir)." }
+      ]
+    },
+    proyek: {
+      categoryTitle: "3. Perizinan Proyek & Konstruksi",
+      icon: FolderKanban,
+      columns: [
+        { key: "no", name: "NO.", desc: "Nomor urut data perizinan proyek." },
+        { key: "code", name: "KODE PROYEK", desc: "Kode unik proyek ekspansi (contoh: SLF-PRJ-01, PBG-PRJ-04)." },
+        { key: "merekItem", name: "NAMA PROYEK / BANGUNAN", desc: "Judul fasilitas proyek (SLF Pabrik Amuria-2, PBG Expansion Jetty 4)." },
+        { key: "jenisItem", name: "JENIS IZIN KONSTRUKSI", desc: "Kategori perizinan (SLF Sertifikat Laik Fungsi, PBG Ekspansi, K3 Lifting Project)." },
+        { key: "unitPabrik", name: "UNIT AREA PROYEK", desc: "Lokasi site proyek (Pabrik 4, Dermaga 4, Area NPK 2)." },
+        { key: "user", name: "KONTRAKTOR / DEPT", desc: "Tim manajemen proyek atau kontraktor pelaksana." },
+        { key: "noSertifikat", name: "NO. SLF / PBG", desc: "Nomor sertifikat laik fungsi / izin konstruksi." },
+        { key: "terbit", name: "TGL. TERBIT", desc: "Tanggal terbit SLF/PBG." },
+        { key: "berakhir", name: "TGL. EXPIRED", desc: "Tanggal berakhir masa berlaku SLF/PBG." },
+        { key: "status", name: "STATUS PROYEK", desc: "Status kelayakan fungsi proyek (Aktif, Perpanjang, Expired, Afkir)." }
+      ]
+    },
+    produk: {
+      categoryTitle: "4. Perizinan & Sertifikasi Produk",
+      icon: PackageCheck,
+      columns: [
+        { key: "no", name: "NO.", desc: "Nomor urut registrasi produk." },
+        { key: "code", name: "KODE REGISTRASI", desc: "Kode unik sertifikasi produk (SNI-UREA-PKT, HALAL-NPK-02)." },
+        { key: "merekItem", name: "NAMA PRODUK / BRAND", desc: "Nama komoditas fertilizer (Urea Prill/Granular, NPK Pelangi, Amonia Industri)." },
+        { key: "jenisItem", name: "JENIS SERTIFIKASI", desc: "Standardisasi mutu (Sertifikat SNI, Sertifikat Halal BPJPH, Industri Hijau Level 5)." },
+        { key: "unitPabrik", name: "UNIT PRODUKSI", desc: "Unit pabrik produsen (All Plant Units, Pabrik NPK, Kompleks Industri)." },
+        { key: "user", name: "LEMBAGA SERTIFIKASI", desc: "Lembaga sertuji (LSPro Kemenperin, BPJPH Kemenag, Sucofindo Export)." },
+        { key: "noSertifikat", name: "NO. SERTIFIKAT RESMI", desc: "Nomor sertifikat mutu / edar produk." },
+        { key: "terbit", name: "TGL. TERBIT", desc: "Tanggal penerbitan lisensi mutu." },
+        { key: "berakhir", name: "MUKIM EXPIRED", desc: "Batas waktu pembaruan sertifikat produk." },
+        { key: "status", name: "STATUS REGULASI", desc: "Status lisensi (Aktif, Perpanjang, Expired, Afkir)." }
+      ]
+    },
+    haki: {
+      categoryTitle: "5. Administrasi Lainnya / Hak Cipta (HAKI)",
+      icon: FileSpreadsheet,
+      columns: [
+        { key: "no", name: "NO.", desc: "Nomor urut registrasi HAKI." },
+        { key: "code", name: "KODE HAKI / EC", desc: "Nomor pendaftaran Ditjen KI (contoh: EC00202400192, EC00201999120)." },
+        { key: "merekItem", name: "JUDUL CIPTAAN / KARYA", desc: "Judul karya cipta (Sistem Sertifikator AI, Buku Panduan K3 Kilang, Layout Control Room)." },
+        { key: "jenisItem", name: "JENIS CIPTAAN", desc: "Kategori HAKI (Program Komputer / Software, Buku Karya Tulis, Desain Layout)." },
+        { key: "unitPabrik", name: "UNIT OWNER", desc: "Unit/Departemen pencipta karya (Dept. IT Central, Dept. K3, Dept. Enjiniring)." },
+        { key: "user", name: "PENCIPTA / PENERBIT", desc: "Pencipta ciptaan / Kementerian Hukum & HAM RI." },
+        { key: "noSertifikat", name: "NO. SURAT PENCATATAN", desc: "Nomor sertifikat Hak Cipta Kemenkumham RI." },
+        { key: "terbit", name: "TGL. CIPTAAN", desc: "Tanggal pertama kali ciptaan diumumkan." },
+        { key: "berakhir", name: "MASA LISENSI", desc: "Masa berlaku perlindungan Hak Cipta." },
+        { key: "status", name: "STATUS HAK CIPTA", desc: "Status perlindungan (Aktif, Perpanjang, Expired, Afkir)." }
+      ]
+    }
+  };
+
+  // Dynamic Generator & Auto Download CSV Master Template
+  const handleDownloadCsvTemplate = () => {
+    const csvRows = [
+      "code,title,category,unit,certificateNo,issueDate,expiryDate,status",
+      "EQ-B201P2,Primary Reformer Boiler B-201-P2,Bejana Tekan / Boiler,Pabrik 2,CERT-7734/DISNAKER-KT/2023,2023-04-15,2026-08-15,Aktif",
+      "PBG-KP-01,PBG Gedung Kantor Pusat,Perizinan Bangunan & Gedung,Kantor Pusat,PBG-64.74/DPMPTSP/2022,2022-01-15,2042-01-15,Aktif",
+      "SLF-PRJ-01,SLF Proyek Ekosistem Amuria-2,SLF (Sertifikat Laik Fungsi),Pabrik 4,SLF-64.74/PUPR-BTG/2023,2023-11-12,2028-11-12,Aktif",
+      "SNI-UREA-PKT,Sertifikat SNI Pupuk Urea Prill & Granular,Sertifikat SNI Produk,All Plant Units,LSPro-004-IDN/SNI/2024,2024-02-18,2028-02-18,Aktif",
+      "EC00202400192,Sistem Informasi Sertifikator Inventory AI PKT,Program Komputer (Software),IT Central,EC00202400192,2024-03-10,2029-03-10,Aktif"
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Template_Impor_Master_Perizinan_PKT.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (selectedDocDetail) {
     return (
@@ -230,7 +325,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <FileText className="w-4 h-4" />
-          <span>4. Penjelasan Kolom Tabel</span>
+          <span>4. Struktur Kolom & Templat Impor CSV</span>
         </button>
       </div>
 
@@ -334,37 +429,141 @@ export default function InformasiLainnya() {
         </div>
       )}
 
-      {/* TAB 4: PENJELASAN STRUKTUR KOLOM TABEL */}
+      {/* TAB 4: PENJELASAN STRUKTUR KOLOM TABEL & TEMPLAT CSV MASTER */}
       {activeGuideTab === 'columns' && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-            <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#005ea4]" />
-              <span>Penjelasan Struktur Kolom Data Tabel Perizinan</span>
-            </h3>
+        <div className="space-y-8 font-sans-clean">
+          {/* DOWNLOAD TEMPLATE BANNER */}
+          <div className="p-6 bg-gradient-to-r from-blue-50 via-slate-50 to-blue-50 border border-blue-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Download className="w-5 h-5 text-[#005ea4]" />
+                <h4 className="font-bold text-base text-slate-900">Unduh Templat Impor CSV Master Perizinan</h4>
+              </div>
+              <p className="text-xs text-slate-600 font-mono-data">
+                Gunakan templat standar ini untuk mengunggah puluhan data perizinan sekaligus via menu <b>Impor CSV Master</b>.
+              </p>
+            </div>
+
+            <button
+              onClick={handleDownloadCsvTemplate}
+              className="px-5 py-2.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md transition-all font-mono-data cursor-pointer shrink-0"
+            >
+              <Download className="w-4 h-4 text-white" />
+              <span>Download Templat CSV Master (.csv)</span>
+            </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-            <table className="w-full text-left border-collapse font-mono-data text-xs">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase tracking-wider text-[11px]">
-                  <th className="py-3.5 px-4 font-bold w-1/4">NAMA KOLOM</th>
-                  <th className="py-3.5 px-4 font-bold">DESKRIPSI & FUNGSI DATA</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {tableColumnsExplanation.map((col, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-[#005ea4] whitespace-nowrap">
-                      {col.name}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-700">
-                      {col.desc}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* SUB-TABS UNTUK 5 KATEGORI PERIZINAN */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-[#005ea4]" />
+                <span>Rincian Struktur Kolom per 5 Kategori Perizinan</span>
+              </h3>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 font-mono-data">
+              <button
+                onClick={() => setActiveCategoryTab('peralatan')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeCategoryTab === 'peralatan'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                1. Peralatan Pabrik
+              </button>
+
+              <button
+                onClick={() => setActiveCategoryTab('aset')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeCategoryTab === 'aset'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                2. Perizinan Aset
+              </button>
+
+              <button
+                onClick={() => setActiveCategoryTab('proyek')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeCategoryTab === 'proyek'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                3. Perizinan Proyek
+              </button>
+
+              <button
+                onClick={() => setActiveCategoryTab('produk')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeCategoryTab === 'produk'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                4. Sertifikasi Produk
+              </button>
+
+              <button
+                onClick={() => setActiveCategoryTab('haki')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  activeCategoryTab === 'haki'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
+              >
+                5. Administrasi / HAKI
+              </button>
+            </div>
+
+            {/* TABEL PENJELASAN KOLOM KATEGORI AKTIF */}
+            {categoryColumnsDetail[activeCategoryTab] && (
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+                <div className="px-5 py-3 bg-slate-900 text-white font-bold text-xs flex items-center justify-between font-mono-data">
+                  <span>{categoryColumnsDetail[activeCategoryTab].categoryTitle}</span>
+                  <span className="text-[11px] text-slate-400 font-normal">
+                    Total {categoryColumnsDetail[activeCategoryTab].columns.length} Kolom Data
+                  </span>
+                </div>
+                <table className="w-full text-left border-collapse font-mono-data text-xs">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 uppercase tracking-wider text-[11px]">
+                      <th className="py-3.5 px-4 font-bold w-1/4">NAMA KOLOM TABEL</th>
+                      <th className="py-3.5 px-4 font-bold">DESKRIPSI & FUNGSI ISIAN DATA</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {categoryColumnsDetail[activeCategoryTab].columns.map((col, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-[#005ea4] whitespace-nowrap">
+                          {col.name}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-700">
+                          {col.desc}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* ATURAN FORMAT PENGISIAN DATAFRAME CSV */}
+          <div className="p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 font-mono-data text-xs">
+            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+              <Info className="w-4 h-4 text-[#005ea4]" />
+              <span>Petunjuk Format Pengisian CSV Master yang Valid</span>
+            </h4>
+            <ul className="space-y-1.5 text-slate-600 list-disc list-inside">
+              <li><b>Encoding File</b>: Gunakan format penyimpan file <b>CSV (Comma Delimited) (*.csv)</b> dengan encoding <b>UTF-8</b>.</li>
+              <li><b>Header Kolom Wajib</b>: `code`, `title`, `category`, `unit`, `certificateNo`, `issueDate`, `expiryDate`, `status`.</li>
+              <li><b>Format Tanggal</b>: Gunakan format ISO standar <b>YYYY-MM-DD</b> (contoh: 2026-08-15).</li>
+              <li><b>Pencocokan Otomatis</b>: Setelah CSV diunggah, data akan langsung dipetakan ke modul yang bersangkutan dan dihitung sisa harinya secara otomatis di menu Monitoring.</li>
+            </ul>
           </div>
         </div>
       )}
