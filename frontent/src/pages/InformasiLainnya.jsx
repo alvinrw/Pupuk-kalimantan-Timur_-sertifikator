@@ -24,7 +24,8 @@ import {
   Info,
   PlusCircle,
   Link2,
-  Upload
+  Upload,
+  Eye
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
 import { masterCertificatesData } from '../data/masterDataset';
