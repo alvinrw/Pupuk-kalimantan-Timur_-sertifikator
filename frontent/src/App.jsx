@@ -8,6 +8,7 @@ import MonitoringSertifikasi from './pages/MonitoringSertifikasi';
 import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import Pengaturan from './pages/Pengaturan';
+import PerizinanAset from './pages/PerizinanAset';
 
 import {
   mockStats,
