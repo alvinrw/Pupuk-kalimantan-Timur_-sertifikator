@@ -526,10 +526,10 @@ export default function InformasiLainnya() {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-700 leading-relaxed text-[11px]">
+                <p className="pl-7 text-slate-700 leading-relaxed text-[11px]">
                   <b>Modul</b>: Perizinan Aset, Perizinan Proyek & Konstruksi, dan Sertifikasi Produk.
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
+                <ul className="pl-7 list-disc list-inside space-y-1 text-slate-600 text-[11px]">
                   <li><b>Karakteristik</b>: 1 Entitas dapat memiliki <b>banyak sertifikat terhubung</b> (PBG, SLF, HGB, Amdal, SNI, Halal).</li>
                   <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek dengan 3 sertifikat = 3 baris di tabel).</li>
                 </ul>
@@ -559,10 +559,10 @@ export default function InformasiLainnya() {
                     </span>
                   )}
                 </div>
-                <p className="text-slate-700 leading-relaxed text-[11px]">
+                <p className="pl-7 text-slate-700 leading-relaxed text-[11px]">
                   <b>Modul</b>: Perizinan Peralatan Pabrik dan Administrasi Lainnya / Hak Cipta (HAKI).
                 </p>
-                <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
+                <ul className="pl-7 list-disc list-inside space-y-1 text-slate-600 text-[11px]">
                   <li><b>Karakteristik</b>: 1 Peralatan/Ciptaan terikat pada <b>1 Sertifikat/SK</b> (dengan opsi Pindah Target).</li>
                   <li><b>Behavior Tabel Utama</b>: 1 Item peralatan/ciptaan selalu konsisten <b>1 baris</b> pada tabel utama.</li>
                 </ul>
