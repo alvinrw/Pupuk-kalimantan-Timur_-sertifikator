@@ -7,7 +7,9 @@ import {
   ShieldAlert,
   Calendar,
   Layers,
-  Edit3
+  Edit3,
+  Upload,
+  FileText
 } from 'lucide-react';
 
 export default function MonitoringSertifikasi() {
@@ -21,8 +23,11 @@ export default function MonitoringSertifikasi() {
 
   // Modal States
   const [activeModalItem, setActiveModalItem] = useState(null);
-  const [selectedStage, setSelectedStage] = useState('');
-  const [resertifikasiNotes, setResertifikasiNotes] = useState('');
+  const [tanggalTerbit, setTanggalTerbit] = useState('');
+  const [tanggalExpired, setTanggalExpired] = useState('');
+  const [tanggalInspeksi, setTanggalInspeksi] = useState('');
+  const [statusPerbaikan, setStatusPerbaikan] = useState('Selesai');
+  const [attachedFileName, setAttachedFileName] = useState('');
 
   // Master List of all Documents across all 5 Perizinan categories
   const [allCertificates, setAllCertificates] = useState([
@@ -34,7 +39,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "SN-88219-PKT (B-201-P2)",
       certificateNo: "CERT-7734/DISNAKER-KT/2023",
       validityPeriod: "3 Tahun",
+      issueDate: "2023-08-15",
       expiryDate: "2026-08-15",
+      inspectionDate: "2026-07-28",
+      statusPerbaikan: "Sedang Diproses",
+      pdfFile: "Sertifikat_Boiler_2023.pdf",
       expiryCategory: "critical30",
       workflowStatus: "in_progress",
       currentStage: "Tahap 3: Inspeksi Lapangan & Uji Beban",
@@ -49,7 +58,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "SN-CR-9910-TY (CR-402-P3)",
       certificateNo: "SUCO-PAA-88219-2024",
       validityPeriod: "3 Tahun",
+      issueDate: "2024-01-10",
       expiryDate: "2027-01-10",
+      inspectionDate: "2024-01-05",
+      statusPerbaikan: "Selesai",
+      pdfFile: "Sertifikat_OverheadCrane_2024.pdf",
       expiryCategory: "safe",
       workflowStatus: "not_started",
       currentStage: "-",
@@ -64,7 +77,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "SN-TK-501-AM (ST-501-P5)",
       certificateNo: "PERIZ-B3-8891-PKT",
       validityPeriod: "5 Tahun",
+      issueDate: "2021-06-30",
       expiryDate: "2026-06-30",
+      inspectionDate: "2026-06-15",
+      statusPerbaikan: "Sedang Diproses",
+      pdfFile: "",
       expiryCategory: "expired",
       workflowStatus: "in_progress",
       currentStage: "Tahap 2: Pengajuan Berkas ke Instansi",
@@ -79,7 +96,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "HGB-PABRIK-04",
       certificateNo: "BPN-HGB-88192-2017",
       validityPeriod: "10 Tahun",
+      issueDate: "2017-03-01",
       expiryDate: "2027-03-01",
+      inspectionDate: "2017-02-20",
+      statusPerbaikan: "Selesai",
+      pdfFile: "Sertifikat_HGB_Pabrik4.pdf",
       expiryCategory: "warning1yr",
       workflowStatus: "not_started",
       currentStage: "-",
@@ -94,7 +115,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "CIP-SOFTWARE-01",
       certificateNo: "EC00202400192",
       validityPeriod: "5 Tahun",
+      issueDate: "2024-03-10",
       expiryDate: "2029-03-10",
+      inspectionDate: "2024-03-01",
+      statusPerbaikan: "Selesai",
+      pdfFile: "HAKI_Software_System.pdf",
       expiryCategory: "safe",
       workflowStatus: "not_started",
       currentStage: "-",
@@ -109,7 +134,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "SLF-PROYEK-P6",
       certificateNo: "PUPR-SLF-2023-0012",
       validityPeriod: "3 Tahun",
+      issueDate: "2023-08-01",
       expiryDate: "2026-08-01",
+      inspectionDate: "2026-07-15",
+      statusPerbaikan: "Sedang Diproses",
+      pdfFile: "",
       expiryCategory: "critical30",
       workflowStatus: "in_progress",
       currentStage: "Tahap 4: Review Draft SK Menteri",
@@ -124,7 +153,11 @@ export default function MonitoringSertifikasi() {
       nomorSeriTipe: "SNI-UREA-2024",
       certificateNo: "BSN-SNI-9921-2024",
       validityPeriod: "4 Tahun",
+      issueDate: "2024-05-20",
       expiryDate: "2028-05-20",
+      inspectionDate: "2024-05-10",
+      statusPerbaikan: "Selesai",
+      pdfFile: "Sertifikat_SNI_Urea_2024.pdf",
       expiryCategory: "safe",
       workflowStatus: "not_started",
       currentStage: "-",
@@ -136,15 +169,6 @@ export default function MonitoringSertifikasi() {
   // Unique options for header dropdown filters
   const uniqueKategori = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.kategoriDokumen))], [allCertificates]);
   const uniqueJenis = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.jenisItem))], [allCertificates]);
-
-  // Standard 5-Step Resertifikasi Workflow Stages
-  const WORKFLOW_STAGES = [
-    "Tahap 1: Verifikasi & Audit Dokumen Internal",
-    "Tahap 2: Pengajuan Berkas ke Instansi",
-    "Tahap 3: Inspeksi Lapangan & Uji Beban",
-    "Tahap 4: Review Draft SK / LPT",
-    "Tahap 5: Penerbitan Sertifikat Baru (Selesai)"
-  ];
 
   // Filtering Logic
   const filteredCertificates = useMemo(() => {
@@ -178,24 +202,37 @@ export default function MonitoringSertifikasi() {
   // Open Modal
   const openProcessModal = (item) => {
     setActiveModalItem(item);
-    setSelectedStage(item.currentStage !== '-' ? item.currentStage : WORKFLOW_STAGES[0]);
-    setResertifikasiNotes(item.notes || '');
+    setTanggalTerbit(item.issueDate || '2026-07-24');
+    setTanggalExpired(item.expiryDate || '2029-07-24');
+    setTanggalInspeksi(item.inspectionDate || '2026-07-20');
+    setStatusPerbaikan(item.statusPerbaikan || 'Selesai');
+    setAttachedFileName(item.pdfFile || '');
   };
 
-  // Confirm Stage Change
-  const handleSaveStageChange = (e) => {
+  // Handle PDF file selection
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setAttachedFileName(file.name);
+    }
+  };
+
+  // Confirm Renewal Dates & Document Change
+  const handleSaveRenewal = (e) => {
     e.preventDefault();
     if (!activeModalItem) return;
 
     setAllCertificates(prev =>
       prev.map(item => {
         if (item.id === activeModalItem.id) {
-          const isDone = selectedStage.includes("Tahap 5");
           return {
             ...item,
-            workflowStatus: isDone ? "completed" : "in_progress",
-            currentStage: selectedStage,
-            notes: resertifikasiNotes
+            issueDate: tanggalTerbit,
+            expiryDate: tanggalExpired,
+            inspectionDate: tanggalInspeksi,
+            statusPerbaikan: statusPerbaikan,
+            pdfFile: attachedFileName || item.pdfFile || `Sertifikat_${item.id}.pdf`,
+            expiryCategory: "safe"
           };
         }
         return item;
@@ -439,8 +476,8 @@ export default function MonitoringSertifikasi() {
                   </div>
                 </th>
 
-                <th className="py-3 px-4 font-bold whitespace-nowrap">TAHAP WORKFLOW</th>
-                <th className="py-3 px-4 font-bold text-right whitespace-nowrap">AKSI</th>
+                <th className="py-3 px-4 font-bold text-center whitespace-nowrap">STATUS</th>
+                <th className="py-3 px-4 font-bold text-center whitespace-nowrap">RIWAYAT</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -509,25 +546,28 @@ export default function MonitoringSertifikasi() {
                         )}
                       </td>
 
-                      {/* Tahap Workflow */}
-                      <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-800">
-                        {isInProgress ? (
-                          <span className="font-bold text-slate-900">{doc.currentStage}</span>
-                        ) : isCompleted ? (
-                          <span className="text-emerald-700 font-bold">Selesai (Terbit)</span>
-                        ) : (
-                          <span className="text-slate-400 font-mono-data">-</span>
+                      {/* Status Perpanjangan */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {doc.statusPerbaikan === 'Selesai' && (
+                          <span className="px-2.5 py-1 text-[11px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md">
+                            Selesai
+                          </span>
+                        )}
+                        {doc.statusPerbaikan === 'Sedang Diproses' && (
+                          <span className="px-2.5 py-1 text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 rounded-md">
+                            Sedang Diproses
+                          </span>
                         )}
                       </td>
 
-                      {/* Action Button */}
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                      {/* Action Button / Riwayat */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <button
                           onClick={() => openProcessModal(doc)}
-                          className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs inline-flex items-center gap-1 transition-colors"
+                          className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs inline-flex items-center gap-1 transition-colors whitespace-nowrap"
                         >
                           <Edit3 className="w-3.5 h-3.5 text-[#005ea4]" />
-                          <span>{isInProgress ? "Update Progress" : "Kelola Perpanjangan"}</span>
+                          <span>Kelola Perpanjangan</span>
                         </button>
                       </td>
                     </tr>
@@ -545,15 +585,15 @@ export default function MonitoringSertifikasi() {
         </div>
       </div>
 
-      {/* PROCESS MODAL */}
+      {/* KELOLA PERPANJANGAN MODAL */}
       {activeModalItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 font-sans-clean">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
             {/* Modal Header */}
             <div className="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
               <div>
-                <h4 className="font-bold text-sm">Kelola Tahap Perpanjangan Sertifikat</h4>
-                <p className="text-[11px] text-slate-400 font-mono-data">{activeModalItem.merekItem}</p>
+                <h4 className="font-bold text-sm">Kelola Perpanjangan Sertifikat</h4>
+                <p className="text-[11px] text-slate-400 font-mono-data">{activeModalItem.merekItem} • {activeModalItem.certificateNo}</p>
               </div>
               <button onClick={() => setActiveModalItem(null)} className="text-slate-400 hover:text-white">
                 <X className="w-4 h-4" />
@@ -561,31 +601,95 @@ export default function MonitoringSertifikasi() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSaveStageChange} className="p-5 space-y-4 text-xs">
+            <form onSubmit={handleSaveRenewal} className="p-5 space-y-4 text-xs">
+              {/* Status Perbaikan */}
               <div>
-                <label className="font-bold text-slate-900 block mb-1">Tahap Progress Sertifikasi</label>
+                <label className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-[#005ea4]" />
+                  <span>Status Perbaikan / Hasil Inspeksi</span>
+                </label>
                 <select
-                  value={selectedStage}
-                  onChange={(e) => setSelectedStage(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-bold text-slate-900 text-xs"
+                  value={statusPerbaikan}
+                  onChange={(e) => setStatusPerbaikan(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-semibold text-slate-900 text-xs"
                 >
-                  {WORKFLOW_STAGES.map((stage, idx) => (
-                    <option key={idx} value={stage}>
-                      {stage}
-                    </option>
-                  ))}
+                  <option value="Selesai">Selesai (Laik Operasi)</option>
+                  <option value="Sedang Diproses">Sedang Diproses</option>
                 </select>
               </div>
 
+              {/* Tanggal Inspeksi Baru */}
               <div>
-                <label className="font-bold text-slate-900 block mb-1">Catatan Progress Lapangan</label>
-                <textarea
-                  value={resertifikasiNotes}
-                  onChange={(e) => setResertifikasiNotes(e.target.value)}
-                  placeholder="Catatan perkembangan berkas atau jadwal pengujian..."
-                  rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none text-xs"
+                <label className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#005ea4]" />
+                  <span>Tanggal Inspeksi Baru</span>
+                </label>
+                <input
+                  type="date"
+                  value={tanggalInspeksi}
+                  onChange={(e) => setTanggalInspeksi(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-semibold text-slate-900 text-xs"
+                  required
                 />
+              </div>
+
+              {/* Tanggal Terbit Baru */}
+              <div>
+                <label className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#005ea4]" />
+                  <span>Tanggal Terbit Baru</span>
+                </label>
+                <input
+                  type="date"
+                  value={tanggalTerbit}
+                  onChange={(e) => setTanggalTerbit(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-semibold text-slate-900 text-xs"
+                  required
+                />
+              </div>
+
+              {/* Tanggal Expired Baru */}
+              <div>
+                <label className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-[#005ea4]" />
+                  <span>Tanggal Expired Baru</span>
+                </label>
+                <input
+                  type="date"
+                  value={tanggalExpired}
+                  onChange={(e) => setTanggalExpired(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-semibold text-slate-900 text-xs"
+                  required
+                />
+              </div>
+
+              {/* Unggah Berkas PDF Sertifikat Baru */}
+              <div>
+                <label className="font-bold text-slate-900 block mb-1 flex items-center gap-1.5">
+                  <Upload className="w-3.5 h-3.5 text-[#005ea4]" />
+                  <span>Unggah Berkas PDF Sertifikat Baru</span>
+                </label>
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-3 bg-slate-50/50 hover:bg-slate-50 text-center transition-colors relative cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileSelect}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                  />
+                  {attachedFileName ? (
+                    <div className="flex items-center justify-center gap-2 text-emerald-700 font-bold text-xs py-1">
+                      <FileText className="w-4 h-4 text-rose-600" />
+                      <span className="truncate max-w-[200px]">{attachedFileName}</span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono-data">Terlampir</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1 py-1">
+                      <Upload className="w-5 h-5 text-slate-400 mx-auto" />
+                      <p className="text-slate-600 font-medium text-xs">Klik atau seret berkas PDF sertifikat di sini</p>
+                      <p className="text-[10px] text-slate-400 font-mono-data">Maksimal 10 MB (Format PDF)</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
@@ -601,7 +705,7 @@ export default function MonitoringSertifikasi() {
                   className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5"
                 >
                   <Save className="w-4 h-4" />
-                  <span>Simpan Progress</span>
+                  <span>Simpan Perpanjangan</span>
                 </button>
               </div>
             </form>
