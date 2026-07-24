@@ -592,7 +592,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Item / Perizinan Baru (Input 1 Data Manual)</h4>
-                    <p className="text-xs text-slate-500 font-mono-data">Untuk menambahkan entitas baru (Aset, Peralatan, Proyek, atau Produk)</p>
+                    <p className="pl-[22px] text-xs text-slate-500 font-mono-data">Untuk menambahkan entitas baru (Aset, Peralatan, Proyek, atau Produk)</p>
                   </div>
                 </div>
 
@@ -637,7 +637,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">2. Cara Menambahkan Sertifikat Terhubung (Multi-Sertifikat Per Item)</h4>
-                    <p className="text-xs text-slate-500 font-mono-data">Untuk menghubungkan beberapa dokumen sertifikat (PBG, SLF, Amdal, SNI, Halal) ke satu entitas yang sama</p>
+                    <p className="pl-[22px] text-xs text-slate-500 font-mono-data">Untuk menghubungkan beberapa dokumen sertifikat (PBG, SLF, Amdal, SNI, Halal) ke satu entitas yang sama</p>
                   </div>
                 </div>
 
@@ -719,7 +719,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Peralatan Pabrik atau Hak Cipta Baru</h4>
-                    <p className="text-xs text-slate-500">Input registrasi item baru (Bejana Tekan, Crane, Tangki B3, atau Karya Cipta HAKI)</p>
+                    <p className="pl-[22px] text-xs text-slate-500">Input registrasi item baru (Bejana Tekan, Crane, Tangki B3, atau Karya Cipta HAKI)</p>
                   </div>
                 </div>
 
@@ -764,7 +764,7 @@ export default function InformasiLainnya() {
                   </div>
                   <div>
                     <h4 className="font-bold text-base text-slate-900">2. Fitur Pindah Target Sertifikat (Re-assign Certificate)</h4>
-                    <p className="text-xs text-slate-500">Gunakan fitur ini jika nomor SK / berkas PDF ciptaan tertukar antar item</p>
+                    <p className="pl-[22px] text-xs text-slate-500">Gunakan fitur ini jika nomor SK / berkas PDF ciptaan tertukar antar item</p>
                   </div>
                 </div>
 
