@@ -495,6 +495,41 @@ export default function InformasiLainnya() {
             <span className="text-xs font-mono-data text-[#005ea4] font-bold">Panduan Langkah demi Langkah</span>
           </div>
 
+          {/* COMPARISON CARD: 2 JENIS MODUL PERIZINAN */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 font-mono-data text-xs">
+            {/* TYPE 1: MULTI-SERTIFIKAT */}
+            <div className="bg-gradient-to-br from-blue-50 to-emerald-50/50 p-5 rounded-2xl border border-blue-200 shadow-2xs space-y-3">
+              <div className="flex items-center gap-2.5 text-[#005ea4] font-bold text-sm border-b border-blue-200 pb-2">
+                <Link2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <h4>JENIS 1: Menu Dengan Multi-Sertifikat Terhubung</h4>
+              </div>
+              <p className="text-slate-700 leading-relaxed text-[11px]">
+                <b>Modul</b>: Perizinan Aset, Peralatan Pabrik, Proyek & Konstruksi, dan Sertifikasi Produk.
+              </p>
+              <ul className="list-disc list-inside space-y-1.5 text-slate-600 text-[11px]">
+                <li><b>Karakteristik</b>: 1 Entitas (Aset/Alat/Proyek/Produk) dapat memiliki <b>multiple dokumen sertifikat</b> (contoh: PBG, SLF, HGB, Amdal, SNI, Halal).</li>
+                <li><b>Behavior Tabel Utama</b>: Menampilkan <b>1 baris per sertifikat</b>. Jika 1 aset punya 3 sertifikat, tabel utama menampilkan 3 baris.</li>
+                <li><b>Fitur Tambah</b>: Menggunakan tombol <b>+ Tambah Sertifikat Terhubung</b> pada halaman Detail.</li>
+              </ul>
+            </div>
+
+            {/* TYPE 2: SINGLE SERTIFIKAT */}
+            <div className="bg-gradient-to-br from-slate-50 to-purple-50/40 p-5 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+              <div className="flex items-center gap-2.5 text-slate-900 font-bold text-sm border-b border-slate-200 pb-2">
+                <FileCheck className="w-5 h-5 text-purple-600 shrink-0" />
+                <h4>JENIS 2: Menu Tanpa Multi-Sertifikat (Single)</h4>
+              </div>
+              <p className="text-slate-700 leading-relaxed text-[11px]">
+                <b>Modul</b>: Administrasi Lainnya / Hak Cipta (HAKI).
+              </p>
+              <ul className="list-disc list-inside space-y-1.5 text-slate-600 text-[11px]">
+                <li><b>Karakteristik</b>: 1 Karya cipta / HAKI hanya terikat pada <b>1 Surat Pencatatan Ciptaan (EC)</b> resmi dari Kemenkumham RI.</li>
+                <li><b>Behavior Tabel Utama</b>: 1 Item ciptaan selalu tampil tepat <b>1 baris</b> pada tabel utama.</li>
+                <li><b>Penanganan Sertifikat</b>: Menggunakan fitur <b>Input Data Ciptaan</b> atau <b>Pindah Target Sertifikat</b>.</li>
+              </ul>
+            </div>
+          </div>
+
           {/* SECTION A: CARA MENAMBAHKAN ITEM BARU */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
             <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
