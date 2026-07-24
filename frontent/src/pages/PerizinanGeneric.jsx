@@ -68,10 +68,21 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
     return documents.filter(doc => {
       if (categoryName) {
         const catLower = categoryName.toLowerCase();
+        const docCatKey = (doc.categoryKey || '').toLowerCase();
+        const docKatDoc = (doc.kategoriDokumen || '').toLowerCase();
+        const docJenis = (doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '').toLowerCase();
+
+        // Direct Keyword Category Matching
+        if (catLower.includes('aset') && (docCatKey.includes('aset') || docKatDoc.includes('aset'))) return true;
+        if (catLower.includes('proyek') && (docCatKey.includes('proyek') || docKatDoc.includes('proyek'))) return true;
+        if (catLower.includes('produk') && (docCatKey.includes('produk') || docKatDoc.includes('produk'))) return true;
+
         const isMatchCategory =
-          (doc.kategoriDokumen || '').toLowerCase().includes(catLower) ||
-          (doc.categoryKey || '').toLowerCase().includes(catLower) ||
-          (doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '').toLowerCase().includes(catLower);
+          docKatDoc.includes(catLower) ||
+          docCatKey.includes(catLower) ||
+          catLower.includes(docKatDoc) ||
+          catLower.includes(docCatKey) ||
+          docJenis.includes(catLower);
         
         if (!isMatchCategory && !doc.id?.startsWith('PERIZ-MANUAL') && !doc.id?.startsWith('DOC-CSV')) return false;
       }
