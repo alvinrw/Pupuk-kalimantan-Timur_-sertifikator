@@ -8,7 +8,7 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
-import { uploadCsv, getCsvHistory } from '../services/csvService';
+import { uploadCsv, getCsvHistory, deleteCsvHistory } from '../services/csvService';
 
 export default function CsvImportModal({ isOpen, onClose, onImportSuccess, importType = 'master_items', categoryKey = '', moduleName = '' }) {
   const fileInputRef = useRef(null);
@@ -141,7 +141,12 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     }
   };
 
-  const handleDeleteHistory = (id) => {
+  const handleDeleteHistory = async (id) => {
+    try {
+      await deleteCsvHistory(id);
+    } catch (e) {
+      console.error("Failed to delete history log from backend:", e);
+    }
     setUploadHistory(prev => prev.filter(h => h.id !== id));
     setConfirmDeleteId(null);
   };

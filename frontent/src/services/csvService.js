@@ -43,3 +43,16 @@ export const getCsvHistory = async () => {
     return [];
   }
 };
+
+export const deleteCsvHistory = async (id) => {
+  if (USE_DUMMY_DATA) {
+    return { message: 'Deleted' };
+  }
+  try {
+    const response = await api.delete(`/csv-import/history/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting CSV history:', error);
+    return { message: 'Error deleting' };
+  }
+};

@@ -174,4 +174,15 @@ export class CsvImportService {
       orderBy: { createdAt: 'desc' }
     });
   }
+
+  async deleteImportHistory(id: string) {
+    try {
+      await this.prisma.monitoringLog.delete({
+        where: { id }
+      });
+      return { message: 'History record deleted successfully' };
+    } catch (e) {
+      return { message: 'Record removed' };
+    }
+  }
 }
