@@ -1,51 +1,34 @@
 # 🗺️ ROADMAP & ARSITEKTUR BACKEND (SERTIFIKATOR PKT)
 
-Sistem Backend dikembangkan menggunakan **NestJS (Node.js + TypeScript)** dengan arsitektur **Modular/Feature-Based**.
+Sistem Backend dikembangkan menggunakan **NestJS (Node.js + TypeScript)** dengan arsitektur **Modular / Feature-Based**.
 
 ---
 
-## 📂 Struktur Folder Global (`Backend/nest-api/src/`)
+## 📂 Panduan Modul (`Backend/nest-api/src/modules/`)
+
+Setiap modul berdiri sendiri dan memiliki file `README.md` tersendiri di dalam foldernya yang berisi spesifikasi API & checklist tugas.
 
 ```text
-src/
-├── config/                     # Konfigurasi DB, Environment Variables
-├── database/                   # Seeders & Migrations
-├── modules/
-│   ├── auth/                   # Authentication (Login/JWT)
-│   ├── master-items/           # [DEV 1] CRUD Aset, Proyek, Produk, Peralatan
-│   ├── csv-import/             # [DEV 1] Bulk Upload Data via CSV
-│   ├── certificates/           # [DEV 2] Multi-Certificates Hub & Linked Certs
-│   ├── monitoring/             # [DEV 2] Dynamic Expiry Calculation & Dashboard Stats
-│   ├── document-history/       # [DEV 2] Upload PDF & History Logs
-│   ├── equipment/              # Peralatan Pabrik (Existing)
-│   └── ocr/                    # Integration Bridge ke FastAPI OCR Service
-├── app.module.ts
-└── main.ts
+src/modules/
+├── master-items/           # CRUD Data Utama (Aset, Proyek, Produk, Peralatan)
+├── certificates/           # Multi-Certificates Hub & Sertifikat Terhubung
+├── monitoring/             # Hitung Sisa Hari Expired Dinamis & Alerting
+├── document-history/       # Upload PDF SK & Log Histori Berkas
+├── csv-import/             # Bulk Import Data via CSV / Excel
+├── equipment/              # Modul Peralatan Pabrik
+├── ocr/                    # Integration Bridge ke FastAPI OCR Service
+├── auth/                   # Modul Authentication & User Management
+└── storage/                # Handler File Storage / Multer
 ```
 
 ---
 
-## 👥 Pembagian Tugas & File Checklist
+## 🔀 Git & Workflow Kerjasama Tim
 
-| Pengembang | Modul Utama | File Task / Guide |
-| :--- | :--- | :--- |
-| **Developer 1** | `master-items`, `csv-import`, `database/` | [`TASK_DEV1.md`](file:///c:/Users/alvin/Documents/Coolyeah/PKT/Inventor/Backend/TASK_DEV1.md) |
-| **Developer 2** | `certificates`, `monitoring`, `document-history` | [`TASK_DEV2.md`](file:///c:/Users/alvin/Documents/Coolyeah/PKT/Inventor/Backend/TASK_DEV2.md) |
-
----
-
-## 🔀 Git Workflow untuk 2 Developer
-
-1. **Checkout Branch Masing-masing**:
-   - Dev 1: `git checkout -b feature/backend-master-items`
-   - Dev 2: `git checkout -b feature/backend-certificates`
-2. **Commit & Push per Modul**:
-   - Hanya edit file di dalam folder modul milik masing-masing!
-3. **Merge ke Branch Utama**:
-   - Setelah modul selesai & dites di Postman, buka Pull Request (PR) ke `baru_fixUI` / `main`.
-
----
-
-## 🔗 Panduan Integrasi Frontend - Backend
-
-Setelah API siap, ganti koneksi data di frontend dari `masterDataset.js` menggunakan Fetch/Axios ke URL Backend: `http://localhost:3000/api/...`.
+1. **Pilih Modul**: Setiap anggota tim dapat mengambil modul yang mau dikerjakan (misal: Anggota A mengerjakan `master-items`, Anggota B mengerjakan `certificates`).
+2. **Buat Branch**: Buat branch sesuai nama modul yang dikerjakan:
+   - `feature/modul-master-items`
+   - `feature/modul-certificates`
+   - `feature/modul-monitoring`
+3. **Fokus Folder**: Kerjakan file di dalam folder modul masing-masing untuk menghindari konflik *git merge*.
+4. **Merge**: Setelah selesai dan dites via Postman/Swagger, lakukan Pull Request ke branch utama.
