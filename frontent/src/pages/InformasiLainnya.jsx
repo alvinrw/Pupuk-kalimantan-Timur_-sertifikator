@@ -527,11 +527,11 @@ export default function InformasiLainnya() {
                   )}
                 </div>
                 <p className="text-slate-700 leading-relaxed text-[11px]">
-                  <b>Modul</b>: Perizinan Aset, Peralatan Pabrik, Proyek & Konstruksi, dan Sertifikasi Produk.
+                  <b>Modul</b>: Perizinan Aset, Perizinan Proyek & Konstruksi, dan Sertifikasi Produk.
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
                   <li><b>Karakteristik</b>: 1 Entitas dapat memiliki <b>banyak sertifikat terhubung</b> (PBG, SLF, HGB, Amdal, SNI, Halal).</li>
-                  <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset punya 3 sertifikat = 3 baris di tabel).</li>
+                  <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek punya 3 sertifikat = 3 baris di tabel).</li>
                 </ul>
               </div>
 
@@ -547,7 +547,7 @@ export default function InformasiLainnya() {
                 <div className="flex items-center justify-between border-b border-purple-200 pb-2">
                   <div className="flex items-center gap-2.5 text-purple-900 font-bold text-sm">
                     <FileCheck className="w-5 h-5 text-purple-600 shrink-0" />
-                    <h4>JENIS 2: Menu Tanpa Multi-Sertifikat (Single)</h4>
+                    <h4>JENIS 2: Menu Single Sertifikat & Pindah Target</h4>
                   </div>
                   {selectedJenisTutorial === 'jenis2' ? (
                     <span className="px-2.5 py-0.5 bg-purple-700 text-white text-[10px] font-bold rounded-full">
@@ -560,11 +560,11 @@ export default function InformasiLainnya() {
                   )}
                 </div>
                 <p className="text-slate-700 leading-relaxed text-[11px]">
-                  <b>Modul</b>: Administrasi Lainnya / Hak Cipta (HAKI).
+                  <b>Modul</b>: Perizinan Peralatan Pabrik dan Administrasi Lainnya / Hak Cipta (HAKI).
                 </p>
                 <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
-                  <li><b>Karakteristik</b>: 1 Karya cipta hanya terikat pada <b>1 Surat Pencatatan Ciptaan (EC)</b> Kemenkumham RI.</li>
-                  <li><b>Behavior Tabel Utama</b>: 1 Item ciptaan selalu konsisten <b>1 baris</b> pada tabel utama.</li>
+                  <li><b>Karakteristik</b>: 1 Peralatan/Ciptaan terikat pada <b>1 Sertifikat/SK</b> (dengan opsi Pindah Target).</li>
+                  <li><b>Behavior Tabel Utama</b>: 1 Item peralatan/ciptaan selalu konsisten <b>1 baris</b> pada tabel utama.</li>
                 </ul>
               </div>
             </div>
@@ -576,10 +576,10 @@ export default function InformasiLainnya() {
               {/* HEADER BANNER JENIS 1 */}
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between font-mono-data text-xs">
                 <span className="font-bold text-[#005ea4]">
-                  📌 Menampilkan Alur Tutorial JENIS 1 (Perizinan Aset, Peralatan Pabrik, Proyek, & Produk)
+                  📌 Menampilkan Alur Tutorial JENIS 1 (Perizinan Aset, Proyek & Konstruksi, & Sertifikasi Produk)
                 </span>
                 <span className="text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300 text-[11px]">
-                  Fitur Multi-Sertifikat Aktif
+                  Fitur Multi-Sertifikat Terhubung Aktif
                 </span>
               </div>
 
@@ -702,22 +702,22 @@ export default function InformasiLainnya() {
               {/* HEADER BANNER JENIS 2 */}
               <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between font-mono-data text-xs">
                 <span className="font-bold text-purple-900">
-                  📌 Menampilkan Alur Tutorial JENIS 2 (Administrasi Lainnya / Hak Cipta - HAKI)
+                  📌 Menampilkan Alur Tutorial JENIS 2 (Perizinan Peralatan Pabrik & Administrasi Lainnya / HAKI)
                 </span>
                 <span className="text-purple-700 font-bold bg-purple-100 px-2 py-0.5 rounded border border-purple-300 text-[11px]">
-                  Single Certificate Model (1 Ciptaan = 1 Surat EC)
+                  Single Certificate Model + Fitur Pindah Target Sertifikat
                 </span>
               </div>
 
-              {/* SECTION A: CARA MENAMBAH CIPTAAN HAKI BARU */}
+              {/* SECTION A: CARA MENAMBAH ITEM PERALATAN / CIPTAAN BARU */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
                 <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
                   <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     A
                   </div>
                   <div>
-                    <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Hak Cipta / HAKI Baru</h4>
-                    <p className="text-xs text-slate-500">Input registrasi ciptaan karya baru (Program Komputer, Buku K3, Layout Control Room)</p>
+                    <h4 className="font-bold text-base text-slate-900">1. Cara Menambahkan Data Peralatan Pabrik atau Hak Cipta Baru</h4>
+                    <p className="text-xs text-slate-500">Input registrasi item baru (Bejana Tekan, Crane, Tangki B3, atau Karya Cipta HAKI)</p>
                   </div>
                 </div>
 
@@ -725,30 +725,30 @@ export default function InformasiLainnya() {
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                     <div className="flex items-center gap-2 text-purple-800 font-bold">
                       <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">1</span>
-                      <span>Buka Menu Administrasi Lainnya</span>
+                      <span>Buka Menu Peralatan / Administrasi</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed">
-                      Pilih menu <b>Administrasi Lainnya</b> dari Sidebar kiri pada kelompok Perizinan & Dokumen.
+                      Pilih menu <b>Perizinan Peralatan Pabrik</b> atau <b>Administrasi Lainnya</b> dari Sidebar kiri.
                     </p>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                     <div className="flex items-center gap-2 text-purple-800 font-bold">
                       <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">2</span>
-                      <span>Klik "+ Input Data Ciptaan"</span>
+                      <span>Klik "+ Input Data Manual"</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed">
-                      Klik tombol <b>+ Kelola / Impor</b> lalu pilih opsi <b>+ Input Data Ciptaan</b> untuk membuka modal formulir HAKI.
+                      Klik tombol <b>+ Kelola / Impor</b> lalu pilih opsi <b>+ Input 1 Data Manual</b> untuk membuka formulir registrasi.
                     </p>
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                     <div className="flex items-center gap-2 text-purple-800 font-bold">
                       <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">3</span>
-                      <span>Isi Nomor Surat EC & Simpan</span>
+                      <span>Isi Spesifikasi & Simpan</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed">
-                      Lengkapi Judul Ciptaan, Jenis Ciptaan (Software/Buku), Tanggal Ciptaan, dan Nomor Surat Pencatatan EC Kemenkumham RI. Klik <b>Simpan Data Ciptaan</b>.
+                      Isi Kode Tag / Judul Ciptaan, Merek / Jenis, No. Sertifikat SK Disnaker/Kemenkumham, Tanggal Terbit/Expired, lalu klik <b>Simpan Data</b>.
                     </p>
                   </div>
                 </div>
