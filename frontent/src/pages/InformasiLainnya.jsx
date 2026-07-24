@@ -586,7 +586,7 @@ export default function InformasiLainnya() {
 
               {/* SECTION A: CARA MENAMBAHKAN ITEM BARU */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
-                <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
+                <div className="flex items-start gap-3 border-b border-slate-200 pb-3">
                   <div className="w-10 h-10 rounded-xl bg-[#005ea4] text-white flex items-center justify-center font-bold text-lg font-mono-data shadow-xs">
                     A
                   </div>
@@ -602,7 +602,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">1</span>
                       <span>Buka Halaman Perizinan</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="pl-8 text-slate-600 leading-relaxed">
                       Pilih menu perizinan dari Sidebar kiri (misal: <b>Perizinan Aset</b>, <b>Perizinan Peralatan Pabrik</b>, <b>Perizinan Proyek</b>, atau <b>Sertifikasi Produk</b>).
                     </p>
                   </div>
@@ -612,7 +612,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">2</span>
                       <span>Klik "+ Kelola / Impor"</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="pl-8 text-slate-600 leading-relaxed">
                       Pada kanan atas tabel, klik tombol <b>+ Kelola / Impor Dokumen</b> lalu pilih opsi <b>+ Input 1 Data Manual</b>.
                     </p>
                   </div>
@@ -622,7 +622,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">3</span>
                       <span>Isi Formulir & Simpan</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="pl-8 text-slate-600 leading-relaxed">
                       Isi spesifikasi item (Merek/Nama Item, Tipe, Nomor Seri, Lokasi, No. SK, Tgl Terbit/Expired). Klik <b>Simpan Data</b> untuk menampilkan ke tabel.
                     </p>
                   </div>
@@ -631,7 +631,7 @@ export default function InformasiLainnya() {
 
               {/* SECTION B: CARA MENAMBAHKAN SERTIFIKAT TERHUBUNG (MULTI-SERTIFIKAT) */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
-                <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
+                <div className="flex items-start gap-3 border-b border-slate-200 pb-3 font-mono-data">
                   <div className="w-10 h-10 rounded-xl bg-[#005ea4] text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     B
                   </div>
@@ -647,7 +647,7 @@ export default function InformasiLainnya() {
                       <Eye className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 1: Lihat Detail</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-6 text-slate-600 leading-relaxed text-[11px]">
                       Klik <b>Lihat Detail</b> (atau klik nama item/no sertifikat) pada baris tabel utama untuk membuka Halaman Detail.
                     </p>
                   </div>
@@ -657,7 +657,7 @@ export default function InformasiLainnya() {
                       <Link2 className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 2: Tambah Sertifikat</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-6 text-slate-600 leading-relaxed text-[11px]">
                       Di Halaman Detail, gulir ke bagian <b>Sertifikat Terhubung</b> dan klik tombol <b>+ Tambah Sertifikat Terhubung</b>.
                     </p>
                   </div>
@@ -667,7 +667,7 @@ export default function InformasiLainnya() {
                       <Upload className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 3: Form & Upload PDF</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-6 text-slate-600 leading-relaxed text-[11px]">
                       Isi Jenis Sertifikat (PBG, SLF, Amdal, SNI), No. SK, Instansi, Tgl Terbit/Expired, lalu klik <b>Pilih Berkas PDF</b> untuk mengunggah sertifikat.
                     </p>
                   </div>
@@ -677,7 +677,7 @@ export default function InformasiLainnya() {
                       <CheckCircle2 className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 4: Otomatis Tambah Baris</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-6 text-slate-600 leading-relaxed text-[11px]">
                       Klik <b>Simpan Sertifikat</b>. Sertifikat baru tersimpan di Detail dan <b>Tabel Utama otomatis menampilkan 1 baris tambahan</b>!
                     </p>
                   </div>
@@ -713,7 +713,7 @@ export default function InformasiLainnya() {
 
               {/* SECTION A: CARA MENAMBAH ITEM PERALATAN / CIPTAAN BARU */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
-                <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
+                <div className="flex items-start gap-3 border-b border-slate-200 pb-3 font-mono-data">
                   <div className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     A
                   </div>
@@ -729,7 +729,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">1</span>
                       <span>Buka Menu Peralatan / Administrasi</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="pl-8 text-slate-600 leading-relaxed">
                       Pilih menu <b>Perizinan Peralatan Pabrik</b> atau <b>Administrasi Lainnya</b> dari Sidebar kiri.
                     </p>
                   </div>
@@ -739,7 +739,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">2</span>
                       <span>Klik "+ Input Data Manual"</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="pl-8 text-slate-600 leading-relaxed">
                       Klik tombol <b>+ Kelola / Impor</b> lalu pilih opsi <b>+ Input 1 Data Manual</b> untuk membuka formulir registrasi.
                     </p>
                   </div>
@@ -749,7 +749,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">3</span>
                       <span>Isi Spesifikasi & Simpan</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed">
+                    <p className="pl-8 text-slate-600 leading-relaxed">
                       Isi Kode Tag / Judul Ciptaan, Merek / Jenis, No. Sertifikat SK Disnaker/Kemenkumham, Tanggal Terbit/Expired, lalu klik <b>Simpan Data</b>.
                     </p>
                   </div>
@@ -758,7 +758,7 @@ export default function InformasiLainnya() {
 
               {/* SECTION B: CARA PINDAH TARGET SERTIFIKAT */}
               <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
-                <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
+                <div className="flex items-start gap-3 border-b border-slate-200 pb-3 font-mono-data">
                   <div className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     B
                   </div>
@@ -774,7 +774,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">1</span>
                       <span>Klik Menu Aksi Baris</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-8 text-slate-600 leading-relaxed text-[11px]">
                       Pada kolom paling kanan baris ciptaan, klik tombol titik tiga <b>Aksi (...)</b> lalu pilih <b>Pindah Target Sertifikat</b>.
                     </p>
                   </div>
@@ -784,7 +784,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">2</span>
                       <span>Pilih Karya Cipta Tujuan</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-8 text-slate-600 leading-relaxed text-[11px]">
                       Cari dan pilih judul ciptaan penerima yang sesuai pada daftar modal pemindahan target sertifikat.
                     </p>
                   </div>
@@ -794,7 +794,7 @@ export default function InformasiLainnya() {
                       <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">3</span>
                       <span>Konfirmasi Pemindahan</span>
                     </div>
-                    <p className="text-slate-600 leading-relaxed text-[11px]">
+                    <p className="pl-8 text-slate-600 leading-relaxed text-[11px]">
                       Klik <b>Pindahkan Sertifikat</b>. Sertifikat beserta berkas PDF otomatis berpindah target ke karya cipta yang baru secara instan.
                     </p>
                   </div>
