@@ -14,7 +14,7 @@ export class Equipment {
   statusKelayakan: StatusKelayakan;
   statusSertifikasi: StatusSertifikasi;
   confidenceScore: number;
-  lastInspectedBy: string;
+  lastInspectedBy?: string;
   pdfFileName?: string;
   createdAt: Date;
   updatedAt: Date;
