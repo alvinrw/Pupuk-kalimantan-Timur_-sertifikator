@@ -560,14 +560,7 @@ export default function PeralatanPabrik() {
                       )}
                       {isVisible("jenisPeralatan") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          <div className="flex items-center gap-1.5">
-                            <span>{row.jenisPeralatan}</span>
-                            {row.isLinked && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 text-[#005ea4] text-[9px] font-bold rounded border border-blue-200">
-                                Terhubung
-                              </span>
-                            )}
-                          </div>
+                          <span>{row.jenisPeralatan}</span>
                         </td>
                       )}
                       {isVisible("merekItem") && (

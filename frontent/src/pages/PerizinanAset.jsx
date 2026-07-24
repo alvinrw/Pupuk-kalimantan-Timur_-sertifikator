@@ -357,14 +357,7 @@ export default function PerizinanAset({ title, subtitle }) {
                         onClick={() => setDetailModalItem(doc)}
                         className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline"
                       >
-                        <div className="flex items-center gap-1.5">
-                          <span>{row.certificateNo}</span>
-                          {row.isLinked && (
-                            <span className="px-1.5 py-0.5 bg-blue-100 text-[#005ea4] text-[9px] font-bold rounded border border-blue-200">
-                              Terhubung
-                            </span>
-                          )}
-                        </div>
+                        <span>{row.certificateNo}</span>
                       </td>
                     )}
                     {isVisible("location") && (

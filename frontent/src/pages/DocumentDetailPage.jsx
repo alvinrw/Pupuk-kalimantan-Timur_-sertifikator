@@ -1052,6 +1052,44 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 </select>
               </div>
 
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">Unggah Berkas PDF Sertifikat</label>
+                <div className="border border-dashed border-slate-300 hover:border-[#005ea4] rounded-lg p-3 text-center bg-slate-50 transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setNewCertData(prev => ({
+                          ...prev,
+                          hasPdf: true,
+                          pdfName: file.name
+                        }));
+                      }
+                    }}
+                    className="hidden"
+                    id="add-linked-cert-pdf-input"
+                  />
+                  <label
+                    htmlFor="add-linked-cert-pdf-input"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-lg cursor-pointer text-xs transition-colors"
+                  >
+                    <Upload className="w-3.5 h-3.5 text-[#005ea4]" />
+                    <span>Pilih Berkas PDF</span>
+                  </label>
+                  {newCertData.pdfName ? (
+                    <span className="block text-emerald-700 font-bold text-[11px] mt-1.5">
+                      ✓ Terpilih: {newCertData.pdfName}
+                    </span>
+                  ) : (
+                    <span className="block text-slate-400 text-[10px] mt-1">
+                      Format: PDF (Opsional)
+                    </span>
+                  )}
+                </div>
+              </div>
+
               <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
                 <button
                   type="button"

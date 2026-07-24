@@ -504,11 +504,6 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           <div className="flex items-center gap-2">
                             <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.hasPdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
                             <span className="max-w-[220px] truncate block">{docNamaItem}</span>
-                            {row.isLinked && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 text-[#005ea4] text-[9px] font-bold rounded border border-blue-200">
-                                Terhubung
-                              </span>
-                            )}
                           </div>
                         </td>
                       )}
