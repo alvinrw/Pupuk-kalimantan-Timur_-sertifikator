@@ -52,9 +52,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
 
   // Dynamic Document Type Detection
-  const isHaki = Boolean(item.judulCiptaan || item.jenisCiptaan || item.masaBerlaku);
-  const isGenericDoc = Boolean(item.code && item.unit && !item.nomorSeri);
-  const isEquipment = !isHaki && !isGenericDoc;
+  const isHaki = Boolean(item.categoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
+  const isEquipment = Boolean(item.categoryKey === 'peralatan-pabrik' || (!isHaki && item.nomorSeri && !item.code?.startsWith('PBG') && !item.code?.startsWith('HGB') && !item.code?.startsWith('SNI') && !item.code?.startsWith('SLF') && !item.code?.startsWith('TERSUS') && !item.code?.startsWith('LAB') && !item.code?.startsWith('WWTP') && !item.code?.startsWith('HALAL') && !item.code?.startsWith('GREEN') && !item.code?.startsWith('EXP') && !item.code?.startsWith('PRD') && !item.code?.startsWith('K3') && !item.code?.startsWith('PIPE')));
+  const isMultiCertItem = Boolean(
+    item.categoryKey === 'perizinan-aset' ||
+    item.categoryKey === 'perizinan-proyek' ||
+    item.categoryKey === 'perizinan-produk'
+  );
+  const isGenericDoc = !isHaki && !isEquipment;
 
   // Form State for Editing
   const [formData, setFormData] = useState({
@@ -810,7 +815,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
       )}
 
       {/* MULTI-CERTIFICATE HUB SECTION */}
-      {!isEditing && !isHaki && !isEquipment && (
+      {!isEditing && isMultiCertItem && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
