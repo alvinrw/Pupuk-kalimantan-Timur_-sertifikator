@@ -630,9 +630,9 @@ export default function InformasiLainnya() {
               </div>
 
               {/* SECTION B: CARA MENAMBAHKAN SERTIFIKAT TERHUBUNG (MULTI-SERTIFIKAT) */}
-              <div className="bg-white rounded-2xl border border-blue-200 bg-blue-50/20 shadow-2xs p-6 space-y-5">
-                <div className="flex items-center gap-3 border-b border-blue-200 pb-3">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg font-mono-data shadow-xs">
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+                <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
+                  <div className="w-10 h-10 rounded-xl bg-[#005ea4] text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     B
                   </div>
                   <div>
@@ -642,9 +642,9 @@ export default function InformasiLainnya() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 font-mono-data text-xs">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                      <Eye className="w-4 h-4 text-emerald-600" />
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                      <Eye className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 1: Lihat Detail</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -652,9 +652,9 @@ export default function InformasiLainnya() {
                     </p>
                   </div>
 
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                      <Link2 className="w-4 h-4 text-emerald-600" />
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                      <Link2 className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 2: Tambah Sertifikat</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -662,9 +662,9 @@ export default function InformasiLainnya() {
                     </p>
                   </div>
 
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                      <Upload className="w-4 h-4 text-emerald-600" />
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                      <Upload className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 3: Form & Upload PDF</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -672,9 +672,9 @@ export default function InformasiLainnya() {
                     </p>
                   </div>
 
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-emerald-700 font-bold">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold">
+                      <CheckCircle2 className="w-4 h-4 text-[#005ea4]" />
                       <span>Langkah 4: Otomatis Tambah Baris</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -684,12 +684,12 @@ export default function InformasiLainnya() {
                 </div>
 
                 {/* MEKANISME TABEL UTAMA EXPLANATION BOX */}
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 font-mono-data text-xs text-emerald-950">
-                  <div className="flex items-center gap-2 font-bold text-emerald-900">
-                    <Info className="w-4 h-4 text-emerald-700" />
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 font-mono-data text-xs text-slate-800">
+                  <div className="flex items-center gap-2 font-bold text-slate-900">
+                    <Info className="w-4 h-4 text-[#005ea4]" />
                     <span>Prinsip Kerja Multi-Sertifikat Per Baris Tabel Utama:</span>
                   </div>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-emerald-900/90">
+                  <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
                     <li><b>Data Utama Tetap 1 Entitas</b>: Menambahkan sertifikat terhubung tidak membuat aset/alat baru, melainkan menambahkan sertifikat di bawah entitas yang sama.</li>
                     <li><b>Tabel Utama Menampilkan Per Sertifikat</b>: Jika 1 aset punya 3 sertifikat terhubung, tabel utama menampilkan 3 baris terpisah untuk sertifikat tersebut.</li>
                   </ul>
@@ -725,8 +725,8 @@ export default function InformasiLainnya() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5 font-mono-data text-xs">
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-800 font-bold">
-                      <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">1</span>
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">1</span>
                       <span>Buka Menu Peralatan / Administrasi</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed">
@@ -735,8 +735,8 @@ export default function InformasiLainnya() {
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-800 font-bold">
-                      <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">2</span>
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">2</span>
                       <span>Klik "+ Input Data Manual"</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed">
@@ -745,8 +745,8 @@ export default function InformasiLainnya() {
                   </div>
 
                   <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-800 font-bold">
-                      <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">3</span>
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">3</span>
                       <span>Isi Spesifikasi & Simpan</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed">
@@ -756,10 +756,10 @@ export default function InformasiLainnya() {
                 </div>
               </div>
 
-              {/* SECTION B: CARA PINDAM TARGET SERTIFIKAT */}
-              <div className="bg-white rounded-2xl border border-purple-200 bg-purple-50/20 shadow-2xs p-6 space-y-5">
-                <div className="flex items-center gap-3 border-b border-purple-200 pb-3 font-mono-data">
-                  <div className="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+              {/* SECTION B: CARA PINDAH TARGET SERTIFIKAT */}
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+                <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
+                  <div className="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center font-bold text-lg shadow-xs">
                     B
                   </div>
                   <div>
@@ -769,9 +769,9 @@ export default function InformasiLainnya() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono-data text-xs">
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-800 font-bold">
-                      <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">1</span>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">1</span>
                       <span>Klik Menu Aksi Baris</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -779,9 +779,9 @@ export default function InformasiLainnya() {
                     </p>
                   </div>
 
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-800 font-bold">
-                      <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">2</span>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">2</span>
                       <span>Pilih Karya Cipta Tujuan</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -789,9 +789,9 @@ export default function InformasiLainnya() {
                     </p>
                   </div>
 
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 space-y-2">
-                    <div className="flex items-center gap-2 text-purple-800 font-bold">
-                      <span className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-xs">3</span>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-slate-800 font-bold">
+                      <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">3</span>
                       <span>Konfirmasi Pemindahan</span>
                     </div>
                     <p className="text-slate-600 leading-relaxed text-[11px]">
@@ -801,14 +801,14 @@ export default function InformasiLainnya() {
                 </div>
 
                 {/* PRINSIP KERJA SINGLE CERTIFICATE BOX */}
-                <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl space-y-2 font-mono-data text-xs text-purple-950">
-                  <div className="flex items-center gap-2 font-bold text-purple-900">
-                    <Info className="w-4 h-4 text-purple-700" />
-                    <span>Prinsip Kerja Model Single Sertifikat (Administrasi Lainnya / HAKI):</span>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 font-mono-data text-xs text-slate-800">
+                  <div className="flex items-center gap-2 font-bold text-slate-900">
+                    <Info className="w-4 h-4 text-slate-700" />
+                    <span>Prinsip Kerja Model Single Sertifikat:</span>
                   </div>
-                  <ul className="list-disc list-inside space-y-1 text-[11px] text-purple-900/90">
-                    <li><b>Model 1-to-1 Strictly</b>: 1 Karya Cipta hanya diwakili oleh 1 Surat Pencatatan resmi dari Kementerian Hukum & HAM RI.</li>
-                    <li><b>Konsistensi Baris Tabel</b>: Jumlah baris pada tabel utama akan selalu tepat sama dengan jumlah karya cipta yang terdaftar di dalam sistem.</li>
+                  <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
+                    <li><b>Model 1-to-1 Strictly</b>: 1 Peralatan/Ciptaan diwakili oleh 1 Surat SK/Pencatatan resmi.</li>
+                    <li><b>Konsistensi Baris Tabel</b>: Jumlah baris pada tabel utama selalu tepat sama dengan jumlah entitas yang terdaftar.</li>
                   </ul>
                 </div>
               </div>
