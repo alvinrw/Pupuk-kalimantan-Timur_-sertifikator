@@ -138,6 +138,42 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
     });
   }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus]);
 
+  const expandedRows = useMemo(() => {
+    const rows = [];
+    filteredDocs.forEach((doc) => {
+      rows.push({
+        rowId: `${doc.id}-primary`,
+        parentDoc: doc,
+        isLinked: false,
+        certNo: doc.certificateNo || doc.noSertifikat || '-',
+        jenisCert: doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || categoryName || 'Generic',
+        issuer: doc.user || doc.issuer || doc.keterangan || 'Dept. General',
+        issueDate: doc.tanggalAwalPengajuan || doc.issueDate || doc.terbit || doc.tanggalCiptaan || '-',
+        expiryDate: doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-',
+        status: doc.status || 'Aktif',
+        hasPdf: doc.hasCertificatePdf !== false
+      });
+
+      if (doc.linkedCertificates && Array.isArray(doc.linkedCertificates)) {
+        doc.linkedCertificates.forEach((lc, idx) => {
+          rows.push({
+            rowId: `${doc.id}-linked-${lc.id || idx}`,
+            parentDoc: doc,
+            isLinked: true,
+            certNo: lc.noSertifikat || '-',
+            jenisCert: lc.jenisSertifikat || 'Sertifikat Terhubung',
+            issuer: lc.instansi || doc.user || 'Instansi Terkait',
+            issueDate: lc.terbit || '-',
+            expiryDate: lc.expired || '-',
+            status: lc.status || 'Aktif',
+            hasPdf: lc.hasPdf !== false
+          });
+        });
+      }
+    });
+    return rows;
+  }, [filteredDocs, categoryName]);
+
   const resetFilters = () => {
     setSearchTerm('');
     setFilterJenis('All');
@@ -424,25 +460,24 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {filteredDocs.length > 0 ? (
-                filteredDocs.map((doc, index) => {
-                  const rowClass = getRowStatusStyle(doc);
-                  const statusStr = (doc.status || '').toLowerCase();
+              {expandedRows.length > 0 ? (
+                expandedRows.map((row, index) => {
+                  const doc = row.parentDoc;
+                  const rowClass = getRowStatusStyle({ status: row.status });
+                  const statusStr = (row.status || '').toLowerCase();
                   const isAfkir = statusStr === 'afkir' || statusStr === 'decommissioned';
                   const isExpired = statusStr === 'expired';
                   const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
 
-                   const docTitle = doc.title || doc.merekItem || doc.judulCiptaan || '-';
-                  const docCode = doc.code || doc.id || doc.noSertifikat || '-';
+                  const docCode = doc.code || doc.id || '-';
                   const docUnit = doc.unit || doc.unitPabrik || doc.lokasi || '-';
-                  const docCert = doc.certificateNo || doc.noSertifikat || '-';
-                  const docExpiry = doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-';
-                  const docJenis = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || categoryName || 'Generic';
-                  const docUser = doc.user || doc.issuer || doc.keterangan || 'Dept. General';
-                  const docIssue = doc.tanggalAwalPengajuan || doc.issueDate || doc.terbit || doc.tanggalCiptaan || '-';
-                  // Short item name: prefer merekItem, fallback to title
+                  const docCert = row.certNo;
+                  const docExpiry = row.expiryDate;
+                  const docJenis = row.jenisCert;
+                  const docUser = row.issuer;
+                  const docIssue = row.issueDate;
                   const docNamaItem = doc.merekItem || doc.title || doc.judulCiptaan || '-';
-                  // Column label adapts by category
+
                   const namaItemLabel = categoryName?.toLowerCase().includes('aset')
                     ? 'Nama Aset'
                     : categoryName?.toLowerCase().includes('proyek')
@@ -450,7 +485,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                     : 'Nama Produk';
 
                   return (
-                    <tr key={doc.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                    <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
                       {isVisible("no") && (
                         <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
                           {index + 1}
@@ -467,8 +502,13 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           title={`Klik untuk Lihat Detail — ${namaItemLabel}`}
                         >
                           <div className="flex items-center gap-2">
-                            <FileCheck className={`w-3.5 h-3.5 shrink-0 ${doc.hasCertificatePdf !== false ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
+                            <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.hasPdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
                             <span className="max-w-[220px] truncate block">{docNamaItem}</span>
+                            {row.isLinked && (
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-[#005ea4] text-[9px] font-bold rounded border border-blue-200">
+                                Terhubung
+                              </span>
+                            )}
                           </div>
                         </td>
                       )}
@@ -494,14 +534,9 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                           }`}
                         >
                           <div className="flex items-start gap-1.5">
-                            <FileCheck className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${doc.hasCertificatePdf !== false ? 'text-emerald-600' : 'text-slate-400'}`} />
+                            <FileCheck className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${row.hasPdf ? 'text-emerald-600' : 'text-slate-400'}`} />
                             <div>
                               <span className="block">{docCert}</span>
-                              {doc.linkedCertificates?.length > 0 && (
-                                <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-[#005ea4]/10 text-[#005ea4] border border-[#005ea4]/25 rounded text-[10px] font-bold whitespace-nowrap">
-                                  +{doc.linkedCertificates.length} Sertifikat Lainnya
-                                </span>
-                              )}
                             </div>
                           </div>
                         </td>
@@ -574,7 +609,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                               ? 'bg-amber-100 text-amber-900 border-amber-300'
                               : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           }`}>
-                            {doc.status || 'Aktif'}
+                            {row.status}
                           </span>
                         </td>
                       )}

@@ -972,7 +972,11 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               onSubmit={(e) => {
                 e.preventDefault();
                 const newId = `LC-${item.id}-${Date.now()}`;
-                setLinkedCerts(prev => [...prev, { ...newCertData, id: newId }]);
+                const updatedCerts = [...linkedCerts, { ...newCertData, id: newId }];
+                setLinkedCerts(updatedCerts);
+                if (onSaveUpdate) {
+                  onSaveUpdate({ ...item, linkedCertificates: updatedCerts });
+                }
                 setNewCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: '' });
                 setIsAddCertModalOpen(false);
               }}
@@ -1092,7 +1096,11 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 <button
                   type="button"
                   onClick={() => {
-                    setLinkedCerts(prev => prev.filter(c => c.id !== deletingLinkedCertId));
+                    const updatedCerts = linkedCerts.filter(c => c.id !== deletingLinkedCertId);
+                    setLinkedCerts(updatedCerts);
+                    if (onSaveUpdate) {
+                      onSaveUpdate({ ...item, linkedCertificates: updatedCerts });
+                    }
                     setDeletingLinkedCertId(null);
                   }}
                   className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs cursor-pointer"

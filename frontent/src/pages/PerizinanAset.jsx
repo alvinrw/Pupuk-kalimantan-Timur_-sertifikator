@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
-import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown, Eye, FileCheck } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryAsetModal from '../components/SingleEntryAsetModal';
+import DocumentDetailPage from './DocumentDetailPage';
+import { masterCertificatesData } from '../data/masterDataset';
 
 export default function PerizinanAset({ title, subtitle }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -12,49 +14,86 @@ export default function PerizinanAset({ title, subtitle }) {
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   
-  const [historyTargetItem, setHistoryTargetItem] = useState(null);
+  const [detailModalItem, setDetailModalItem] = useState(null);
 
-  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
-  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
-
-  const [documents, setDocuments] = useState([
-    {
-      id: "ASET-01",
-      certificateNo: "HGB-12345-2020",
-      location: "Kawasan Industri Kaltim Zone 1",
-      areaSqm: "100000",
-      areaHa: "10",
-      purpose: "Area Pabrik Amonia",
-      condition: "Sangat Baik",
-      description: "Hak Guna Bangunan Pabrik 1A",
-      submissionDate: "2020-01-15",
-      validityPeriod: "2050-01-15",
-    },
-    {
-      id: "ASET-02",
-      certificateNo: "IMB-9988-2015",
-      location: "Kawasan Industri Kaltim Zone 2",
-      areaSqm: "50000",
-      areaHa: "5",
-      purpose: "Gudang Penyimpanan Urea",
-      condition: "Baik",
-      description: "Izin Mendirikan Bangunan Gudang",
-      submissionDate: "2015-06-10",
-      validityPeriod: "Selamanya",
-    },
-    {
-      id: "ASET-03",
-      certificateNo: "AMDAL-776-2022",
-      location: "Area Pengolahan Limbah",
-      areaSqm: "25000",
-      areaHa: "2.5",
-      purpose: "Fasilitas WWTP",
-      condition: "Dalam Pemeliharaan",
-      description: "Izin Lingkungan IPLC",
-      submissionDate: "2022-03-01",
-      validityPeriod: "2027-03-01",
-    }
-  ]);
+  const [documents, setDocuments] = useState(() => {
+    const masterAset = masterCertificatesData.filter(d => d.categoryKey === 'perizinan-aset');
+    return masterAset.length > 0 ? masterAset.map(doc => ({
+      id: doc.id,
+      certificateNo: doc.certificateNo || doc.noSertifikat,
+      location: doc.location || doc.unit || doc.lokasi,
+      areaSqm: doc.luasM2 || doc.areaSqm || "100.000",
+      areaHa: doc.luasHa || doc.areaHa || "10",
+      purpose: doc.peruntukan || doc.merekItem || "Industrial Asset",
+      condition: doc.status || doc.kondisi || "Baik",
+      description: doc.keterangan || doc.description || "-",
+      submissionDate: doc.issueDate || doc.terbit || "2020-01-15",
+      validityPeriod: doc.expiryDate || doc.berakhir || "2050-01-15",
+      merekItem: doc.merekItem || doc.title,
+      linkedCertificates: doc.linkedCertificates || []
+    })) : [
+      {
+        id: "ASET-01",
+        certificateNo: "HGB-12345-2020",
+        location: "Kawasan Industri Kaltim Zone 1",
+        areaSqm: "100000",
+        areaHa: "10",
+        purpose: "Area Pabrik Amonia",
+        condition: "Sangat Baik",
+        description: "Hak Guna Bangunan Pabrik 1A",
+        submissionDate: "2020-01-15",
+        validityPeriod: "2050-01-15",
+        linkedCertificates: [
+          {
+            id: "LC-AST01-A",
+            jenisSertifikat: "PBG (Persetujuan Bangunan Gedung)",
+            noSertifikat: "PBG-64.74/DPMPTSP/2022",
+            instansi: "DPMPTSP Kota Bontang",
+            terbit: "2022-01-15",
+            expired: "2042-01-15",
+            status: "Aktif",
+            hasPdf: true,
+            pdfName: "PBG-Kantor-Pusat-2022.pdf"
+          },
+          {
+            id: "LC-AST01-B",
+            jenisSertifikat: "SLF (Sertifikat Laik Fungsi)",
+            noSertifikat: "SLF-64.74/PUPR-BTG/2023",
+            instansi: "Dinas PUPR Kota Bontang",
+            terbit: "2023-03-01",
+            expired: "2028-03-01",
+            status: "Aktif",
+            hasPdf: true,
+            pdfName: "SLF-Kantor-Pusat-2023.pdf"
+          }
+        ]
+      },
+      {
+        id: "ASET-02",
+        certificateNo: "IMB-9988-2015",
+        location: "Kawasan Industri Kaltim Zone 2",
+        areaSqm: "50000",
+        areaHa: "5",
+        purpose: "Gudang Penyimpanan Urea",
+        condition: "Baik",
+        description: "Izin Mendirikan Bangunan Gudang",
+        submissionDate: "2015-06-10",
+        validityPeriod: "Selamanya",
+      },
+      {
+        id: "ASET-03",
+        certificateNo: "AMDAL-776-2022",
+        location: "Area Pengolahan Limbah",
+        areaSqm: "25000",
+        areaHa: "2.5",
+        purpose: "Fasilitas WWTP",
+        condition: "Dalam Pemeliharaan",
+        description: "Izin Lingkungan IPLC",
+        submissionDate: "2022-03-01",
+        validityPeriod: "2027-03-01",
+      }
+    ];
+  });
 
   const allColumns = [
     { key: "certificateNo", label: "Nomer Sertifikat" },
@@ -82,9 +121,50 @@ export default function PerizinanAset({ title, subtitle }) {
   const isVisible = (key) => visibleColumnKeys.includes(key);
 
   const filteredDocs = documents.filter(doc =>
-    doc.certificateNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.location.toLowerCase().includes(searchTerm.toLowerCase())
+    (doc.certificateNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc.location || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc.purpose || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const expandedRows = useMemo(() => {
+    const rows = [];
+    filteredDocs.forEach((doc) => {
+      rows.push({
+        rowId: `${doc.id}-primary`,
+        parentDoc: doc,
+        isLinked: false,
+        certificateNo: doc.certificateNo || doc.noSertifikat || '-',
+        location: doc.location || doc.unit || '-',
+        areaSqm: doc.areaSqm || doc.luasM2 || '-',
+        areaHa: doc.areaHa || doc.luasHa || '-',
+        purpose: doc.purpose || doc.peruntukan || doc.merekItem || '-',
+        submissionDate: doc.submissionDate || doc.issueDate || doc.terbit || '-',
+        validityPeriod: doc.validityPeriod || doc.expiryDate || doc.berakhir || '-',
+        condition: doc.condition || doc.status || 'Baik',
+        description: doc.description || doc.keterangan || '-'
+      });
+
+      if (doc.linkedCertificates && Array.isArray(doc.linkedCertificates)) {
+        doc.linkedCertificates.forEach((lc, idx) => {
+          rows.push({
+            rowId: `${doc.id}-linked-${lc.id || idx}`,
+            parentDoc: doc,
+            isLinked: true,
+            certificateNo: lc.noSertifikat || '-',
+            location: doc.location || doc.unit || '-',
+            areaSqm: doc.areaSqm || doc.luasM2 || '-',
+            areaHa: doc.areaHa || doc.luasHa || '-',
+            purpose: lc.jenisSertifikat || doc.purpose || doc.peruntukan || '-',
+            submissionDate: lc.terbit || '-',
+            validityPeriod: lc.expired || '-',
+            condition: lc.status || 'Aktif',
+            description: lc.instansi || doc.description || '-'
+          });
+        });
+      }
+    });
+    return rows;
+  }, [filteredDocs]);
 
   const handleCsvImported = (newItems) => {
     alert("Fitur Impor CSV berhasil!");
@@ -97,6 +177,25 @@ export default function PerizinanAset({ title, subtitle }) {
   const handleSingleAdded = (newItem) => {
     setDocuments(prev => [newItem, ...prev]);
   };
+
+  if (detailModalItem) {
+    return (
+      <DocumentDetailPage
+        item={detailModalItem}
+        onBack={() => setDetailModalItem(null)}
+        onSaveUpdate={(updatedDoc) => {
+          setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
+          setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+        }}
+        onQuickRenew={(id) => {
+          alert(`Inisiasi Perpanjangan untuk aset ${id}.`);
+        }}
+        onQuickDecommission={(id) => {
+          alert(`Menandai aset ${id} sebagai Afkir.`);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 font-sans-clean">
@@ -249,58 +348,80 @@ export default function PerizinanAset({ title, subtitle }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {filteredDocs.map((doc) => {
+              {expandedRows.map((row, index) => {
+                const doc = row.parentDoc;
                 return (
-                  <tr key={doc.id} className="hover:bg-slate-50/80 transition-colors">
+                  <tr key={row.rowId} className="hover:bg-slate-50/80 transition-colors font-mono-data">
                     {isVisible("certificateNo") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4]">
-                        {doc.certificateNo}
+                      <td
+                        onClick={() => setDetailModalItem(doc)}
+                        className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline"
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>{row.certificateNo}</span>
+                          {row.isLinked && (
+                            <span className="px-1.5 py-0.5 bg-blue-100 text-[#005ea4] text-[9px] font-bold rounded border border-blue-200">
+                              Terhubung
+                            </span>
+                          )}
+                        </div>
                       </td>
                     )}
                     {isVisible("location") && (
                       <td className="py-3.5 px-4 font-bold text-slate-900">
-                        {doc.location}
+                        {row.location}
                       </td>
                     )}
                     {isVisible("areaSqm") && (
                       <td className="py-3.5 px-4 font-mono-data text-right text-slate-700">
-                        {Number(doc.areaSqm).toLocaleString('id-ID')}
+                        {row.areaSqm}
                       </td>
                     )}
                     {isVisible("areaHa") && (
                       <td className="py-3.5 px-4 font-mono-data text-right text-slate-700">
-                        {Number(doc.areaHa).toLocaleString('id-ID')}
+                        {row.areaHa}
                       </td>
                     )}
                     {isVisible("purpose") && (
                       <td className="py-3.5 px-4 text-slate-700">
-                        {doc.purpose}
+                        {row.purpose}
                       </td>
                     )}
                     {isVisible("submissionDate") && (
                       <td className="py-3.5 px-4 font-mono-data text-slate-700">
-                        {doc.submissionDate}
+                        {row.submissionDate}
                       </td>
                     )}
                     {isVisible("validityPeriod") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700">
-                        {doc.validityPeriod}
+                        {row.validityPeriod}
                       </td>
                     )}
                     {isVisible("condition") && (
                       <td className="py-3.5 px-4 text-slate-700">
-                        {doc.condition}
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          {row.condition}
+                        </span>
                       </td>
                     )}
                     {isVisible("description") && (
-                      <td className="py-3.5 px-4 text-slate-700 truncate max-w-[150px]" title={doc.description}>
-                        {doc.description}
+                      <td className="py-3.5 px-4 text-slate-700 truncate max-w-[150px]" title={row.description}>
+                        {row.description}
                       </td>
                     )}
+                    <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
+                      <button
+                        onClick={() => setDetailModalItem(doc)}
+                        className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span>Lihat Detail</span>
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
-              {filteredDocs.length === 0 && (
+              {expandedRows.length === 0 && (
                 <tr>
                   <td colSpan={visibleColumnKeys.length} className="py-8 text-center text-slate-500 font-mono-data">
                     Data tidak ditemukan.

@@ -152,6 +152,44 @@ export default function PeralatanPabrik() {
     });
   }, [equipmentList, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus]);
 
+  const expandedRows = useMemo(() => {
+    const rows = [];
+    filteredData.forEach((item) => {
+      rows.push({
+        rowId: `${item.id}-primary`,
+        parentItem: item,
+        isLinked: false,
+        noSertifikat: item.noSertifikat || item.certificateNo || '-',
+        jenisPeralatan: item.jenisPeralatan || item.jenisItem || 'Peralatan Pabrik',
+        tanggalInspeksi: item.tanggalInspeksi || item.issueDate || '-',
+        terbit: item.terbit || item.issueDate || '-',
+        berakhir: item.berakhir || item.expiryDate || '-',
+        keterangan: item.keterangan || item.user || 'Instansi Terkait',
+        status: item.status || 'Aktif',
+        hasPdf: item.hasCertificatePdf !== false
+      });
+
+      if (item.linkedCertificates && Array.isArray(item.linkedCertificates)) {
+        item.linkedCertificates.forEach((lc, idx) => {
+          rows.push({
+            rowId: `${item.id}-linked-${lc.id || idx}`,
+            parentItem: item,
+            isLinked: true,
+            noSertifikat: lc.noSertifikat || '-',
+            jenisPeralatan: lc.jenisSertifikat || item.jenisPeralatan,
+            tanggalInspeksi: lc.terbit || '-',
+            terbit: lc.terbit || '-',
+            berakhir: lc.expired || '-',
+            keterangan: lc.instansi || item.keterangan,
+            status: lc.status || 'Aktif',
+            hasPdf: lc.hasPdf !== false
+          });
+        });
+      }
+    });
+    return rows;
+  }, [filteredData]);
+
   // Handlers
   const handleCsvImported = (newParsed) => {
     const formatted = newParsed.map((n, i) => ({
@@ -505,15 +543,16 @@ export default function PeralatanPabrik() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {filteredData.length > 0 ? (
-                filteredData.map((item, index) => {
-                  const rowClass = getRowStatusStyle(item);
-                  const isAfkir = item.status === 'Afkir' || item.status === 'Decommissioned';
-                  const isExpired = item.status === 'Expired';
-                  const isPerpanjang = item.status === 'Perpanjang' || item.status === 'In Progress';
+              {expandedRows.length > 0 ? (
+                expandedRows.map((row, index) => {
+                  const item = row.parentItem;
+                  const rowClass = getRowStatusStyle({ status: row.status, berakhir: row.berakhir });
+                  const isAfkir = row.status === 'Afkir' || row.status === 'Decommissioned' || row.status === 'afkir';
+                  const isExpired = row.status === 'Expired' || row.status === 'expired';
+                  const isPerpanjang = row.status === 'Perpanjang' || row.status === 'In Progress' || row.status === 'perpanjang';
 
                   return (
-                    <tr key={item.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                    <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
                       {isVisible("no") && (
                         <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
                           {index + 1}
@@ -521,7 +560,14 @@ export default function PeralatanPabrik() {
                       )}
                       {isVisible("jenisPeralatan") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {item.jenisPeralatan}
+                          <div className="flex items-center gap-1.5">
+                            <span>{row.jenisPeralatan}</span>
+                            {row.isLinked && (
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-[#005ea4] text-[9px] font-bold rounded border border-blue-200">
+                                Terhubung
+                              </span>
+                            )}
+                          </div>
                         </td>
                       )}
                       {isVisible("merekItem") && (
@@ -571,34 +617,34 @@ export default function PeralatanPabrik() {
                               ? 'bg-amber-100 text-amber-900 border-amber-300'
                               : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           }`}>
-                            {item.status}
+                            {row.status}
                           </span>
                         </td>
                       )}
                     {isVisible("noSertifikat") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center gap-1.5">
-                        <FileCheck className={`w-3.5 h-3.5 ${item.hasCertificatePdf ? 'text-emerald-600' : 'text-slate-300'}`} />
-                        <span>{item.noSertifikat}</span>
+                        <FileCheck className={`w-3.5 h-3.5 ${row.hasPdf ? 'text-emerald-600' : 'text-slate-300'}`} />
+                        <span>{row.noSertifikat}</span>
                       </td>
                     )}
                     {isVisible("tanggalInspeksi") && (
                       <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
-                        {item.tanggalInspeksi}
+                        {row.tanggalInspeksi}
                       </td>
                     )}
                     {isVisible("terbit") && (
                       <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
-                        {item.terbit}
+                        {row.terbit}
                       </td>
                     )}
                     {isVisible("berakhir") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap">
-                        {item.berakhir}
+                        {row.berakhir}
                       </td>
                     )}
                     {isVisible("keterangan") && (
                       <td className="py-3.5 px-4 text-slate-700 font-medium whitespace-nowrap">
-                        {item.keterangan}
+                        {row.keterangan}
                       </td>
                     )}
 

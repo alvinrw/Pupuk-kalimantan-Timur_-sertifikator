@@ -290,6 +290,7 @@ export default function MonitoringSertifikasi() {
         onBack={() => setSelectedDetailDoc(null)}
         onSaveUpdate={(updatedDoc) => {
           setAllCertificates(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
+          setSelectedDetailDoc(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
         }}
         onQuickRenew={(id) => {
           handleQuickRenew(id);
