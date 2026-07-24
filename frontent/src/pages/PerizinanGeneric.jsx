@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Search, FileSpreadsheet, FileArchive, History, Eye } from 'lucide-react';
+import { Search, FileSpreadsheet, History, Eye } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
-import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import DocumentDetailPage from './DocumentDetailPage';
 import { masterCertificatesData } from '../data/masterDataset';
@@ -10,7 +9,6 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
   
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-  const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
   const [detailModalItem, setDetailModalItem] = useState(null);
 
@@ -105,14 +103,6 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
           >
             <FileSpreadsheet className="w-4 h-4" />
             <span>Impor CSV Master</span>
-          </button>
-
-          <button
-            onClick={() => setIsZipModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
-          >
-            <FileArchive className="w-4 h-4" />
-            <span>Bulk Upload ZIP PDF (AI)</span>
           </button>
         </div>
       </div>
@@ -219,12 +209,6 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
-      />
-
-      <ZipOcrModal
-        isOpen={isZipModalOpen}
-        onClose={() => setIsZipModalOpen(false)}
-        onMatchSuccess={handleZipMatched}
       />
 
       <HistoryModal

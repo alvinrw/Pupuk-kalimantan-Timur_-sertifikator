@@ -17,7 +17,6 @@ import {
   Eye
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
-import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
 import DocumentDetailPage from './DocumentDetailPage';
@@ -34,7 +33,6 @@ export default function PeralatanPabrik() {
 
   // Modals & Popovers
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-  const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
   const [detailModalItem, setDetailModalItem] = useState(null);
@@ -314,17 +312,6 @@ export default function PeralatanPabrik() {
                 <div>
                   <span className="block">Impor CSV Master</span>
                   <span className="text-[10px] text-slate-500 font-normal font-mono-data">Muat CSV gabungan multi-unit</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => { setIsZipModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800"
-              >
-                <FileArchive className="w-4 h-4 text-[#005ea4]" />
-                <div>
-                  <span className="block">Bulk Upload ZIP PDF (AI)</span>
-                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Ekstraksi ribuan sertifikat ZIP</span>
                 </div>
               </button>
             </div>
@@ -776,12 +763,6 @@ export default function PeralatanPabrik() {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
-      />
-
-      <ZipOcrModal
-        isOpen={isZipModalOpen}
-        onClose={() => setIsZipModalOpen(false)}
-        onMatchSuccess={handleZipMatched}
       />
 
       <HistoryModal
