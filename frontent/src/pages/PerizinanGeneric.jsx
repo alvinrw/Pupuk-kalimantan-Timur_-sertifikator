@@ -17,10 +17,30 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   // Dynamic Filtering from connected Master Dataset
   const [documents, setDocuments] = useState(masterCertificatesData);
 
-  const filteredDocs = documents.filter(doc =>
-    doc.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    doc.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDocs = documents.filter(doc => {
+    // Filter by Category if categoryKey or categoryName matches
+    if (categoryName) {
+      const catLower = categoryName.toLowerCase();
+      const isMatchCategory =
+        (doc.kategoriDokumen || '').toLowerCase().includes(catLower) ||
+        (doc.categoryKey || '').toLowerCase().includes(catLower) ||
+        (doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '').toLowerCase().includes(catLower);
+      
+      if (!isMatchCategory && !doc.id?.startsWith('DOC-CSV')) return false;
+    }
+
+    const titleStr = doc.title || doc.merekItem || doc.judulCiptaan || '';
+    const codeStr = doc.code || doc.id || doc.noSertifikat || '';
+    const unitStr = doc.unit || doc.unitPabrik || doc.lokasi || '';
+    const certStr = doc.certificateNo || doc.noSertifikat || '';
+
+    return (
+      titleStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      codeStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      unitStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      certStr.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
   const handleCsvImported = (newItems) => {
     const formatted = newItems.map((item, idx) => ({
@@ -143,7 +163,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
               return (
                 <tr key={doc.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
                   <td className={`py-3 px-4 font-bold ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                    {doc.code}
+                    {doc.code || doc.id || doc.noSertifikat}
                   </td>
                   {/* Clickable Document Name */}
                   <td
@@ -153,16 +173,16 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                     }`}
                     title="Klik untuk Lihat Detail"
                   >
-                    {doc.title}
+                    {doc.title || doc.merekItem || doc.judulCiptaan}
                   </td>
                   <td className="py-3 px-4">
-                    {doc.unit}
+                    {doc.unit || doc.unitPabrik || doc.lokasi}
                   </td>
                   <td className="py-3 px-4 font-bold">
-                    {doc.certificateNo}
+                    {doc.certificateNo || doc.noSertifikat}
                   </td>
                   <td className={`py-3 px-4 font-bold ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
-                    {doc.expiryDate}
+                    {doc.expiryDate || doc.berakhir}
                   </td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
