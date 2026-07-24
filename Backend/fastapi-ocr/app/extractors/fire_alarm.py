@@ -1,7 +1,7 @@
 import os
 import re
 import json
-import pymupdf
+import fitz
 from datetime import datetime
 from rapidocr_onnxruntime import RapidOCR
 
@@ -62,7 +62,7 @@ def extract_fire_alarm_cert(pdf_path: str, original_filename: str) -> dict:
     Fungsi ini dieksekusi oleh API Route.
     Menerima file PDF sementara (temp path) dan mengembalikan JSON.
     """
-    doc = pymupdf.open(pdf_path)
+    doc = fitz.open(pdf_path)
     page = doc[0]
     pix = page.get_pixmap(dpi=200)
     temp_img = f"temp_fire_{os.getpid()}.png"
