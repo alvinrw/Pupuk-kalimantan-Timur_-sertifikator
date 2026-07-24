@@ -307,12 +307,9 @@ export default function InformasiLainnya() {
       {/* Header Banner */}
       <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-2xs relative overflow-hidden">
         <div className="relative z-10 space-y-2 max-w-3xl">
-          <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none">
+          <h1 className="font-logo-sutasoma text-2xl md:text-3xl font-bold tracking-tight text-[#005ea4] select-none">
             SERTIFIKATOR
           </h1>
-          <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">
-            Panduan Lengkap Sistem
-          </h2>
           <p className="text-xs md:text-sm text-slate-600 font-mono-data leading-relaxed">
             Sistem Informasi Pengelolaan, Pemantauan Masa Berlaku, dan Resertifikasi Perizinan Peralatan Pabrik, Aset, Proyek, Produk, dan HAKI Terpadu.
           </p>
