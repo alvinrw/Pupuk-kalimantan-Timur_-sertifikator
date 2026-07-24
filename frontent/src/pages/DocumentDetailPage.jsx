@@ -22,7 +22,10 @@ import {
   RefreshCw,
   PlusCircle,
   X,
-  Upload
+  Upload,
+  Link2,
+  AlertTriangle,
+  CheckSquare
 } from 'lucide-react';
 
 export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission }) {
@@ -32,6 +35,21 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
   const [editingHistoryRow, setEditingHistoryRow] = useState(null);
+
+  // Multi-Certificate Hub State
+  const [linkedCerts, setLinkedCerts] = useState(item.linkedCertificates || []);
+  const [isAddCertModalOpen, setIsAddCertModalOpen] = useState(false);
+  const [newCertData, setNewCertData] = useState({
+    jenisSertifikat: '',
+    noSertifikat: '',
+    instansi: '',
+    terbit: '',
+    expired: '',
+    status: 'Aktif',
+    hasPdf: false,
+    pdfName: ''
+  });
+  const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
 
   // Dynamic Document Type Detection
   const isHaki = Boolean(item.judulCiptaan || item.jenisCiptaan || item.masaBerlaku);
@@ -785,6 +803,296 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MULTI-CERTIFICATE HUB SECTION */}
+      {!isEditing && !isHaki && !isEquipment && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+          {/* Section Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+            <div>
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-[#005ea4]" />
+                <span>Sertifikat Terhubung ({linkedCerts.length} Dokumen)</span>
+              </h4>
+              <p className="text-xs text-slate-500 font-mono-data mt-0.5">
+                Daftar semua jenis perizinan / sertifikat yang berlaku untuk aset / proyek / produk ini
+              </p>
+            </div>
+            <button
+              onClick={() => setIsAddCertModalOpen(true)}
+              className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data shrink-0"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Tambah Sertifikat Terhubung</span>
+            </button>
+          </div>
+
+          {linkedCerts.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 font-mono-data text-xs">
+              <Link2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <p>Belum ada sertifikat terhubung.</p>
+              <p className="text-[11px] mt-1 text-slate-300">Klik &ldquo;+ Tambah Sertifikat Terhubung&rdquo; untuk mulai menambahkan.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {linkedCerts.map((cert) => {
+                const certStatusLower = (cert.status || '').toLowerCase();
+                const certIsExpired = certStatusLower === 'expired';
+                const certIsPerpanjang = certStatusLower === 'perpanjang' || certStatusLower === 'perpanjangan';
+                const certIsAfkir = certStatusLower === 'afkir';
+
+                // Compute sisa hari for this linked cert
+                let certSisaHari = null;
+                if (cert.expired) {
+                  const d = new Date(cert.expired);
+                  const today = new Date();
+                  certSisaHari = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+                }
+
+                return (
+                  <div
+                    key={cert.id}
+                    className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 font-mono-data text-xs relative group hover:border-slate-300 transition-colors"
+                  >
+                    {/* Delete button */}
+                    <button
+                      onClick={() => setDeletingLinkedCertId(cert.id)}
+                      className="absolute top-3 right-3 p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                      title="Hapus Sertifikat Terhubung"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Jenis Sertifikat Header */}
+                    <div className="pr-6">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Jenis Sertifikat</span>
+                      <span className="font-bold text-slate-900 text-[13px] leading-tight block mt-0.5">{cert.jenisSertifikat}</span>
+                    </div>
+
+                    {/* No. SK */}
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">No. SK / Sertifikat</span>
+                      <span className="font-bold text-[#005ea4] text-xs block mt-0.5">{cert.noSertifikat}</span>
+                    </div>
+
+                    {/* Instansi */}
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Instansi Penerbit</span>
+                      <span className="text-slate-700 font-sans text-xs block mt-0.5">{cert.instansi}</span>
+                    </div>
+
+                    {/* Dates row */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Terbit</span>
+                        <span className="text-slate-700 text-xs block mt-0.5">{cert.terbit || '-'}</span>
+                      </div>
+                      <div className="h-8 w-px bg-slate-200" />
+                      <div className="flex-1">
+                        <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Expired</span>
+                        <span className={`text-xs font-bold block mt-0.5 ${certIsExpired || (certSisaHari !== null && certSisaHari <= 0) ? 'text-rose-700' : 'text-slate-700'}`}>
+                          {cert.expired || '-'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sisa hari + status row */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        certIsAfkir
+                          ? 'bg-slate-800 text-white border-slate-600'
+                          : certIsExpired || (certSisaHari !== null && certSisaHari <= 0)
+                          ? 'bg-rose-100 text-rose-800 border-rose-300'
+                          : certIsPerpanjang || (certSisaHari !== null && certSisaHari > 0 && certSisaHari <= 30)
+                          ? 'bg-amber-100 text-amber-800 border-amber-300'
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                      }`}>
+                        {cert.status || 'Aktif'}
+                      </span>
+
+                      {certSisaHari !== null && !certIsAfkir && (
+                        <span className="text-[10px] text-slate-500 font-bold">
+                          {certSisaHari <= 0 ? `${Math.abs(certSisaHari)}h lalu` : `${certSisaHari.toLocaleString()} hr lagi`}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* PDF action */}
+                    <button
+                      onClick={() => alert(`Membuka PDF: ${cert.pdfName}`)}
+                      className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                        cert.hasPdf
+                          ? 'bg-[#005ea4]/10 hover:bg-[#005ea4]/15 text-[#005ea4] border border-[#005ea4]/20'
+                          : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                      }`}
+                      disabled={!cert.hasPdf}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>{cert.hasPdf ? `Buka PDF: ${cert.pdfName}` : 'Belum Ada Berkas PDF'}</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* MODAL: TAMBAH SERTIFIKAT TERHUBUNG */}
+      {isAddCertModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#005ea4] flex items-center justify-center">
+                  <Link2 className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm">Tambah Sertifikat Terhubung</h4>
+                  <p className="text-[11px] text-blue-300 font-mono-data">Hubungkan jenis perizinan / sertifikat baru ke item ini</p>
+                </div>
+              </div>
+              <button onClick={() => setIsAddCertModalOpen(false)} className="text-slate-400 hover:text-white p-1 rounded-lg cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const newId = `LC-${item.id}-${Date.now()}`;
+                setLinkedCerts(prev => [...prev, { ...newCertData, id: newId }]);
+                setNewCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: '' });
+                setIsAddCertModalOpen(false);
+              }}
+              className="p-6 space-y-4 text-xs font-mono-data"
+            >
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">Jenis / Nama Sertifikat <span className="text-rose-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  value={newCertData.jenisSertifikat}
+                  onChange={(e) => setNewCertData({ ...newCertData, jenisSertifikat: e.target.value })}
+                  placeholder="Contoh: PBG, SLF, HGB, Amdal, SNI, Halal BPJPH"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">No. SK / Sertifikat <span className="text-rose-500">*</span></label>
+                <input
+                  type="text"
+                  required
+                  value={newCertData.noSertifikat}
+                  onChange={(e) => setNewCertData({ ...newCertData, noSertifikat: e.target.value })}
+                  placeholder="Contoh: PBG-64.74/DPMPTSP/2024"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs text-[#005ea4]"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">Instansi Penerbit</label>
+                <input
+                  type="text"
+                  value={newCertData.instansi}
+                  onChange={(e) => setNewCertData({ ...newCertData, instansi: e.target.value })}
+                  placeholder="Contoh: DPMPTSP Kota Bontang, BPN, KLHK RI"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1">Tgl Terbit</label>
+                  <input
+                    type="date"
+                    value={newCertData.terbit}
+                    onChange={(e) => setNewCertData({ ...newCertData, terbit: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1 text-rose-700">Tgl Expired</label>
+                  <input
+                    type="date"
+                    value={newCertData.expired}
+                    onChange={(e) => setNewCertData({ ...newCertData, expired: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">Status</label>
+                <select
+                  value={newCertData.status}
+                  onChange={(e) => setNewCertData({ ...newCertData, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
+                >
+                  <option value="Aktif">Aktif</option>
+                  <option value="Perpanjang">Perpanjang</option>
+                  <option value="Expired">Expired</option>
+                  <option value="Afkir">Afkir</option>
+                </select>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCertModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
+                >
+                  <CheckSquare className="w-4 h-4" />
+                  <span>Simpan Sertifikat</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: KONFIRMASI HAPUS SERTIFIKAT TERHUBUNG */}
+      {deletingLinkedCertId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
+            <div className="p-5 text-center space-y-3 font-mono-data">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900 font-sans">Hapus Sertifikat Terhubung?</h4>
+              <p className="text-xs text-slate-600 font-medium font-sans">
+                Sertifikat ini akan dihapus dari daftar. Data lainnya tidak terpengaruh.
+              </p>
+              <div className="flex justify-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeletingLinkedCertId(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLinkedCerts(prev => prev.filter(c => c.id !== deletingLinkedCertId));
+                    setDeletingLinkedCertId(null);
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs cursor-pointer"
+                >
+                  Ya, Hapus
+                </button>
               </div>
             </div>
           </div>

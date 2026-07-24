@@ -473,9 +473,16 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                             isAfkir ? 'text-slate-200' : 'text-[#005ea4]'
                           }`}
                         >
-                          <div className="flex items-center gap-1.5">
-                            <FileCheck className={`w-3.5 h-3.5 ${doc.hasCertificatePdf !== false ? 'text-emerald-600' : 'text-slate-400'}`} />
-                            <span>{docCert}</span>
+                          <div className="flex items-start gap-1.5">
+                            <FileCheck className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${doc.hasCertificatePdf !== false ? 'text-emerald-600' : 'text-slate-400'}`} />
+                            <div>
+                              <span className="block">{docCert}</span>
+                              {doc.linkedCertificates?.length > 0 && (
+                                <span className="inline-block mt-0.5 px-1.5 py-0.5 bg-[#005ea4]/10 text-[#005ea4] border border-[#005ea4]/25 rounded text-[10px] font-bold whitespace-nowrap">
+                                  +{doc.linkedCertificates.length} Sertifikat Lainnya
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                       )}

@@ -247,7 +247,42 @@ export const masterCertificatesData = [
     kondisi: "Baik & Layak Huni",
     keterangan: "DPMPTSP Kota Bontang - Masa Berlaku 20 Tahun",
     sisaHari: 5650,
-    hasCertificatePdf: true
+    hasCertificatePdf: true,
+    linkedCertificates: [
+      {
+        id: "LC-AST01-A",
+        jenisSertifikat: "PBG (Persetujuan Bangunan Gedung)",
+        noSertifikat: "PBG-64.74/DPMPTSP/2022",
+        instansi: "DPMPTSP Kota Bontang",
+        terbit: "2022-01-15",
+        expired: "2042-01-15",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "PBG-Kantor-Pusat-2022.pdf"
+      },
+      {
+        id: "LC-AST01-B",
+        jenisSertifikat: "SLF (Sertifikat Laik Fungsi)",
+        noSertifikat: "SLF-64.74/PUPR-BTG/2023",
+        instansi: "Dinas PUPR Kota Bontang",
+        terbit: "2023-03-01",
+        expired: "2028-03-01",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "SLF-Kantor-Pusat-2023.pdf"
+      },
+      {
+        id: "LC-AST01-C",
+        jenisSertifikat: "SIMBG (Sistem Informasi Manajemen Bangunan Gedung)",
+        noSertifikat: "SIMBG-8821-KP-PKT/2023",
+        instansi: "DPMPTSP Kota Bontang / Kemen PUPR",
+        terbit: "2023-06-10",
+        expired: "2028-06-10",
+        status: "Aktif",
+        hasPdf: false,
+        pdfName: "SIMBG-Kantor-Pusat-2023.pdf"
+      }
+    ]
   },
   {
     id: "AST-02",
@@ -349,7 +384,31 @@ export const masterCertificatesData = [
     kondisi: "Aktif / Hak Tanah Sah",
     keterangan: "BPN Kota Bontang - Hak Guna Bangunan Industri 30 Tahun",
     sisaHari: 8300,
-    hasCertificatePdf: true
+    hasCertificatePdf: true,
+    linkedCertificates: [
+      {
+        id: "LC-AST04-A",
+        jenisSertifikat: "HGB (Hak Guna Bangunan)",
+        noSertifikat: "HGB-04.12.00.12/BPN-BTG/2019",
+        instansi: "BPN Kota Bontang",
+        terbit: "2019-05-20",
+        expired: "2049-05-20",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "HGB-Lahan-Silo-2019.pdf"
+      },
+      {
+        id: "LC-AST04-B",
+        jenisSertifikat: "IPPKH (Izin Pinjam Pakai Kawasan Hutan)",
+        noSertifikat: "IPPKH-KLHK-P.12/2018",
+        instansi: "KLHK RI - Dirjen Planologi",
+        terbit: "2018-09-01",
+        expired: "2033-09-01",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "IPPKH-Kawasan-Industri-2018.pdf"
+      }
+    ]
   },
   {
     id: "AST-05",
@@ -415,7 +474,42 @@ export const masterCertificatesData = [
     expiryDate: "2028-11-12",
     keterangan: "Dinas PUPR Kota Bontang - Sertifikat Laik Fungsi Gedung & Kilang",
     sisaHari: 1570,
-    hasCertificatePdf: true
+    hasCertificatePdf: true,
+    linkedCertificates: [
+      {
+        id: "LC-PRJ01-A",
+        jenisSertifikat: "SLF (Sertifikat Laik Fungsi)",
+        noSertifikat: "SLF-64.74/PUPR-BTG/2023",
+        instansi: "Dinas PUPR Kota Bontang",
+        terbit: "2023-11-12",
+        expired: "2028-11-12",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "SLF-Amuria2-2023.pdf"
+      },
+      {
+        id: "LC-PRJ01-B",
+        jenisSertifikat: "PBG (Persetujuan Bangunan Gedung)",
+        noSertifikat: "PBG-PROYEK-9921-PUPR/2021",
+        instansi: "DPMPTSP Kota Bontang",
+        terbit: "2021-05-10",
+        expired: "2026-05-10",
+        status: "Perpanjang",
+        hasPdf: true,
+        pdfName: "PBG-Amuria2-Proyek.pdf"
+      },
+      {
+        id: "LC-PRJ01-C",
+        jenisSertifikat: "Amdal & Izin Lingkungan",
+        noSertifikat: "KLHK-AMDAL-PKT/A2/2020",
+        instansi: "KLHK RI - Ditjen PPKL",
+        terbit: "2020-08-01",
+        expired: "2030-08-01",
+        status: "Aktif",
+        hasPdf: false,
+        pdfName: "AMDAL-Amuria2-2020.pdf"
+      }
+    ]
   },
   {
     id: "PRJ-02",
@@ -567,7 +661,42 @@ export const masterCertificatesData = [
     expiryDate: "2028-02-18",
     keterangan: "Balai Riset & Standardisasi Industri (LSPro Kemenperin)",
     sisaHari: 1300,
-    hasCertificatePdf: true
+    hasCertificatePdf: true,
+    linkedCertificates: [
+      {
+        id: "LC-PRD01-A",
+        jenisSertifikat: "SNI (Sertifikat Nasional Indonesia)",
+        noSertifikat: "LSPro-004-IDN/SNI/2024",
+        instansi: "LSPro Kemenperin (Balai Riset)",
+        terbit: "2024-02-18",
+        expired: "2028-02-18",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "SNI-Urea-PKT-2024.pdf"
+      },
+      {
+        id: "LC-PRD01-B",
+        jenisSertifikat: "Sertifikat Halal BPJPH",
+        noSertifikat: "ID6411000045210923",
+        instansi: "BPJPH Kemenag RI",
+        terbit: "2023-08-15",
+        expired: "2026-08-14",
+        status: "Perpanjang",
+        hasPdf: true,
+        pdfName: "Halal-Urea-PKT-2023.pdf"
+      },
+      {
+        id: "LC-PRD01-C",
+        jenisSertifikat: "Sertifikat Industri Hijau Level 5",
+        noSertifikat: "SIH-002/KEMENPERIN/2023",
+        instansi: "Kementerian Perindustrian RI",
+        terbit: "2023-10-15",
+        expired: "2027-10-15",
+        status: "Aktif",
+        hasPdf: true,
+        pdfName: "GreenIndustry-PKT-2023.pdf"
+      }
+    ]
   },
   {
     id: "PRD-02",
