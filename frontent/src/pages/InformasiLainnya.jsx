@@ -222,22 +222,63 @@ export default function InformasiLainnya() {
     }
   };
 
-  // Dynamic Generator & Auto Download CSV Master Template
-  const handleDownloadCsvTemplate = () => {
-    const csvRows = [
-      "code,title,category,unit,certificateNo,issueDate,expiryDate,status",
-      "EQ-B201P2,Primary Reformer Boiler B-201-P2,Bejana Tekan / Boiler,Pabrik 2,CERT-7734/DISNAKER-KT/2023,2023-04-15,2026-08-15,Aktif",
-      "PBG-KP-01,PBG Gedung Kantor Pusat,Perizinan Bangunan & Gedung,Kantor Pusat,PBG-64.74/DPMPTSP/2022,2022-01-15,2042-01-15,Aktif",
-      "SLF-PRJ-01,SLF Proyek Ekosistem Amuria-2,SLF (Sertifikat Laik Fungsi),Pabrik 4,SLF-64.74/PUPR-BTG/2023,2023-11-12,2028-11-12,Aktif",
-      "SNI-UREA-PKT,Sertifikat SNI Pupuk Urea Prill & Granular,Sertifikat SNI Produk,All Plant Units,LSPro-004-IDN/SNI/2024,2024-02-18,2028-02-18,Aktif",
-      "EC00202400192,Sistem Informasi Sertifikator Inventory AI PKT,Program Komputer (Software),IT Central,EC00202400192,2024-03-10,2029-03-10,Aktif"
-    ];
+  // Specific CSV Templates per 5 Categories
+  const categoryTemplates = {
+    peralatan: {
+      fileName: "Template_Impor_Peralatan_Pabrik_PKT.csv",
+      title: "Templat CSV Peralatan Pabrik",
+      rows: [
+        "code,merekItem,jenisPeralatan,unitPabrik,lokasi,user,noSertifikat,tanggalInspeksi,terbit,berakhir,status",
+        "EQ-B201P2,Primary Reformer Boiler B-201-P2,Bejana Tekan / Boiler,Pabrik 2,Pabrik 2 (Area Reformer),Dept. Operasi Pabrik 2,CERT-7734/DISNAKER-KT/2023,2023-04-10,2023-04-15,2026-08-15,Aktif",
+        "EQ-CR402P3,Overhead Crane 50 Ton SWL,Pesawat Angkat & Angkut,Pabrik 3,Pabrik 3 (Urea Silo B),Dept. Pemeliharaan,SUCO-PAA-88219-2021,2021-01-05,2021-01-10,2024-01-10,Expired"
+      ]
+    },
+    aset: {
+      fileName: "Template_Impor_Perizinan_Aset_PKT.csv",
+      title: "Templat CSV Perizinan Aset & Bangunan",
+      rows: [
+        "code,title,jenisItem,unitPabrik,user,certificateNo,issueDate,expiryDate,status",
+        "PBG-KP-01,PBG Gedung Kantor Pusat PT Pupuk Kaltim,Perizinan Bangunan & Gedung,Kantor Pusat,DPMPTSP Kota Bontang,PBG-64.74/DPMPTSP/2022,2022-01-15,2042-01-15,Aktif",
+        "HGB-LHN-04,Sertifikat HGB Lahan Silo Urea Pabrik 3 & 4,Sertifikat Lahan & HGB,Pabrik 3 & 4,BPN Kota Bontang,HGB-04.12.00.12/BPN-BTG/2019,2019-05-20,2049-05-20,Aktif"
+      ]
+    },
+    proyek: {
+      fileName: "Template_Impor_Perizinan_Proyek_PKT.csv",
+      title: "Templat CSV Perizinan Proyek & Konstruksi",
+      rows: [
+        "code,title,jenisItem,unitPabrik,user,certificateNo,issueDate,expiryDate,status",
+        "SLF-PRJ-01,SLF Proyek Ekosistem Pabrik Amuria-2,SLF (Sertifikat Laik Fungsi),Pabrik 4,Dinas PUPR Kota Bontang,SLF-64.74/PUPR-BTG/2023,2023-11-12,2028-11-12,Aktif",
+        "PBG-PRJ-04,PBG Proyek Expansion Jetty 4,PBG Proyek Expansion,Dermaga 4,Dinas PUPR Bontang,PBG-PROYEK-8812-PUPR,2021-08-10,2026-08-06,Perpanjang"
+      ]
+    },
+    produk: {
+      fileName: "Template_Impor_Sertifikasi_Produk_PKT.csv",
+      title: "Templat CSV Sertifikasi & Regulasi Produk",
+      rows: [
+        "code,title,jenisItem,unitPabrik,user,certificateNo,issueDate,expiryDate,status",
+        "SNI-UREA-PKT,Sertifikat SNI Pupuk Urea Prill & Granular,Sertifikat SNI Produk,All Plant Units,LSPro Kemenperin,LSPro-004-IDN/SNI/2024,2024-02-18,2028-02-18,Aktif",
+        "HALAL-NPK-02,Sertifikat Halal NPK Pelangi & Amonia,Sertifikat Halal MUI & BPJPH,Pabrik NPK,BPJPH Kemenag RI,ID6411000045210923,2023-08-15,2026-08-14,Perpanjang"
+      ]
+    },
+    haki: {
+      fileName: "Template_Impor_Administrasi_HAKI_PKT.csv",
+      title: "Templat CSV Administrasi HAKI & Hak Cipta",
+      rows: [
+        "code,title,jenisCiptaan,unitPabrik,user,certificateNo,issueDate,expiryDate,status",
+        "EC00202400192,Sistem Informasi Sertifikator Inventory AI PKT,Program Komputer (Software),IT Central,Dirjen Kekayaan Intelektual,EC00202400192,2024-03-10,2029-03-10,Aktif",
+        "EC00201999120,Buku Panduan Keselamatan Operasi Kilang Amonia-4,Buku / Karya Tulis,Pabrik 4,Dirjen KI Kemenkumham RI,EC00201999120,2019-08-15,2024-01-15,Expired"
+      ]
+    }
+  };
 
-    const blob = new Blob([csvRows.join("\n")], { type: 'text/csv;charset=utf-8;' });
+  // Dynamic Generator & Auto Download CSV Master Template per Selected Category
+  const handleDownloadSelectedCsv = (catKey) => {
+    const target = categoryTemplates[catKey || activeCategoryTab] || categoryTemplates.peralatan;
+    const blob = new Blob([target.rows.join("\n")], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "Template_Impor_Master_Perizinan_PKT.csv");
+    link.setAttribute("download", target.fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -432,24 +473,26 @@ export default function InformasiLainnya() {
       {/* TAB 4: PENJELASAN STRUKTUR KOLOM TABEL & TEMPLAT CSV MASTER */}
       {activeGuideTab === 'columns' && (
         <div className="space-y-8 font-sans-clean">
-          {/* DOWNLOAD TEMPLATE BANNER */}
+          {/* DYNAMIC CATEGORY DOWNLOAD TEMPLATE BANNER */}
           <div className="p-6 bg-gradient-to-r from-blue-50 via-slate-50 to-blue-50 border border-blue-200 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
                 <Download className="w-5 h-5 text-[#005ea4]" />
-                <h4 className="font-bold text-base text-slate-900">Unduh Templat Impor CSV Master Perizinan</h4>
+                <h4 className="font-bold text-base text-slate-900">
+                  Unduh {categoryTemplates[activeCategoryTab]?.title || 'Templat CSV Master'}
+                </h4>
               </div>
               <p className="text-xs text-slate-600 font-mono-data">
-                Gunakan templat standar ini untuk mengunggah puluhan data perizinan sekaligus via menu <b>Impor CSV Master</b>.
+                Gunakan templat CSV spesifik ini untuk mengunggah data <b>{categoryColumnsDetail[activeCategoryTab]?.categoryTitle}</b> sekaligus.
               </p>
             </div>
 
             <button
-              onClick={handleDownloadCsvTemplate}
+              onClick={() => handleDownloadSelectedCsv(activeCategoryTab)}
               className="px-5 py-2.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md transition-all font-mono-data cursor-pointer shrink-0"
             >
               <Download className="w-4 h-4 text-white" />
-              <span>Download Templat CSV Master (.csv)</span>
+              <span>Download CSV {categoryTemplates[activeCategoryTab]?.fileName}</span>
             </button>
           </div>
 
