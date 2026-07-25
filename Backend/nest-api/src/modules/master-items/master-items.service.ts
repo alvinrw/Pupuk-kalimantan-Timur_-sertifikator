@@ -71,5 +71,16 @@ export class MasterItemsService {
       where: { id },
     });
   }
+
+  async resolveExemption(id: string, note: string) {
+    await this.findOne(id);
+    return this.prisma.masterItem.update({
+      where: { id },
+      data: {
+        documentStatus: 'EXEMPT',
+        exemptionNote: note || 'Tidak memerlukan sertifikat',
+      },
+    });
+  }
 }
 

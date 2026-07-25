@@ -19,10 +19,11 @@ import {
 import CsvImportModal from '../components/CsvImportModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
+import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
 import { getMasterItems, createMasterItem } from '../services/masterItemsService';
 import { uploadCsv } from '../services/csvService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert, FileWarning } from 'lucide-react';
 
 export default function PeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -38,6 +39,8 @@ export default function PeralatanPabrik() {
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
   const [detailModalItem, setDetailModalItem] = useState(null);
+  const [resolveTargetItem, setResolveTargetItem] = useState(null);
+  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
 
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
@@ -121,7 +124,12 @@ export default function PeralatanPabrik() {
       return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
     }
 
-    // 4. DEFAULT (Clean Normal Row)
+    // 4. INDIGO (PURPLE) -> Tanpa Sertifikat (EXEMPT)
+    if (item.documentStatus === 'EXEMPT') {
+      return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
+    }
+
+    // 5. DEFAULT (Clean Normal Row)
     return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
   };
 
@@ -146,17 +154,19 @@ export default function PeralatanPabrik() {
             MasterId: item.id,
             categoryKey: item.categoryKey,
             jenisPeralatan: item.title || 'Unknown',
-            merekItem: '-',
+            merekItem: item.code || '-',
             tipe: '-',
             nomorSeri: '-',
             kapasitas: '-',
             lokasi: item.unitLocation || 'Umum',
             user: 'Umum',
             status: item.status || 'Aktif',
+            documentStatus: item.documentStatus || 'COMPLETED',
+            exemptionNote: item.exemptionNote || null,
             noSertifikat: '-',
-            tanggalInspeksi: item.createdAt,
-            terbit: item.createdAt,
-            berakhir: item.expiryDate,
+            tanggalInspeksi: item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
+            terbit: item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
+            berakhir: item.expiryDate || '-',
             keterangan: item.description || '-',
           });
         } else {
@@ -166,17 +176,19 @@ export default function PeralatanPabrik() {
               MasterId: item.id,
               categoryKey: item.categoryKey,
               jenisPeralatan: item.title || 'Unknown',
-              merekItem: '-',
+              merekItem: item.code || '-',
               tipe: '-',
               nomorSeri: '-',
               kapasitas: '-',
               lokasi: item.unitLocation || 'Umum',
               user: 'Umum',
               status: item.status || 'Aktif',
+              documentStatus: item.documentStatus === 'EXEMPT' ? 'EXEMPT' : 'COMPLETED',
+              exemptionNote: item.exemptionNote || null,
               noSertifikat: doc.noSertifikat || doc.noIzin || '-',
-              tanggalInspeksi: doc.terbit || item.createdAt,
-              terbit: doc.terbit || item.createdAt,
-              berakhir: doc.expired || item.expiryDate,
+              tanggalInspeksi: doc.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
+              terbit: doc.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
+              berakhir: doc.expired || item.expiryDate || '-',
               keterangan: doc.keterangan || item.description || '-',
             });
           });
@@ -199,24 +211,33 @@ export default function PeralatanPabrik() {
   const uniqueLokasi = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.lokasi))], [equipmentList]);
   const uniqueUser = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.user))], [equipmentList]);
 
+  const pendingCount = useMemo(() => {
+    return equipmentList.filter(i => i.documentStatus === 'PENDING_DOC').length;
+  }, [equipmentList]);
+
   // Process Search & Category Filtering
   const filteredData = useMemo(() => {
     return equipmentList.filter((item) => {
+      const matchesTab = activeMainTab === 'staging'
+        ? item.documentStatus === 'PENDING_DOC'
+        : item.documentStatus !== 'PENDING_DOC';
+
+      const searchLower = (searchTerm || '').toLowerCase();
       const matchesSearch =
-        item.jenisPeralatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.merekItem.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.tipe.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.nomorSeri.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.noSertifikat.toLowerCase().includes(searchTerm.toLowerCase());
+        (item.jenisPeralatan || '').toLowerCase().includes(searchLower) ||
+        (item.merekItem || '').toLowerCase().includes(searchLower) ||
+        (item.tipe || '').toLowerCase().includes(searchLower) ||
+        (item.nomorSeri || '').toLowerCase().includes(searchLower) ||
+        (item.noSertifikat || '').toLowerCase().includes(searchLower);
 
       const matchesJenis = filterJenis === 'All' || item.jenisPeralatan === filterJenis;
       const matchesLokasi = filterLokasi === 'All' || item.lokasi === filterLokasi;
       const matchesUser = filterUser === 'All' || item.user === filterUser;
       const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
 
-      return matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus;
+      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus;
     });
-  }, [equipmentList, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus]);
+  }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
@@ -232,6 +253,8 @@ export default function PeralatanPabrik() {
         berakhir: item.berakhir || item.expiryDate || '-',
         keterangan: item.keterangan || item.user || 'Instansi Terkait',
         status: item.status || 'Aktif',
+        documentStatus: item.documentStatus,
+        exemptionNote: item.exemptionNote,
         hasPdf: item.hasCertificatePdf !== false
       });
 
@@ -351,12 +374,13 @@ export default function PeralatanPabrik() {
     setReassignCertRowItem(null);
   };
 
+  const targetSearchLower = (searchTargetItemTerm || '').toLowerCase();
   const filteredTargetEquipmentList = equipmentList.filter(eq =>
     eq.id !== reassignCertRowItem?.id &&
-    (eq.tipe.toLowerCase().includes(searchTargetItemTerm.toLowerCase()) ||
-     eq.merekItem.toLowerCase().includes(searchTargetItemTerm.toLowerCase()) ||
-     eq.jenisPeralatan.toLowerCase().includes(searchTargetItemTerm.toLowerCase()) ||
-     eq.lokasi.toLowerCase().includes(searchTargetItemTerm.toLowerCase()))
+    ((eq.tipe || '').toLowerCase().includes(targetSearchLower) ||
+     (eq.merekItem || '').toLowerCase().includes(targetSearchLower) ||
+     (eq.jenisPeralatan || '').toLowerCase().includes(targetSearchLower) ||
+     (eq.lokasi || '').toLowerCase().includes(targetSearchLower))
   );
 
   if (detailModalItem) {
@@ -442,6 +466,38 @@ export default function PeralatanPabrik() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* TAB SWITCHER: DATA UTAMA VS STAGING */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+        <button
+          onClick={() => setActiveMainTab('main')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeMainTab === 'main'
+              ? 'bg-[#005ea4] text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Data Utama</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab('staging')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
+            activeMainTab === 'staging'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+          }`}
+        >
+          <FileWarning className="w-4 h-4 text-amber-500" />
+          <span>Menunggu Dokumen (Staging)</span>
+          {pendingCount > 0 && (
+            <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">
+              {pendingCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Search, Reset Filters, & Column Selector */}
@@ -633,7 +689,7 @@ export default function PeralatanPabrik() {
               {expandedRows.length > 0 ? (
                 expandedRows.map((row, index) => {
                   const item = row.parentItem;
-                  const rowClass = getRowStatusStyle({ status: row.status, berakhir: row.berakhir });
+                  const rowClass = getRowStatusStyle({ status: row.status, berakhir: row.berakhir, documentStatus: row.documentStatus });
                   const isAfkir = row.status === 'Afkir' || row.status === 'Decommissioned' || row.status === 'afkir';
                   const isExpired = row.status === 'Expired' || row.status === 'expired';
                   const isPerpanjang = row.status === 'Perpanjang' || row.status === 'In Progress' || row.status === 'perpanjang';
@@ -689,24 +745,41 @@ export default function PeralatanPabrik() {
                       {isVisible("status") && (
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
                           <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
-                            isAfkir
-                              ? 'bg-slate-800 text-white border-slate-600'
-                              : isExpired
-                              ? 'bg-rose-100 text-rose-900 border-rose-300'
-                              : isPerpanjang
-                              ? 'bg-amber-100 text-amber-900 border-amber-300'
-                              : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                          }`}>
-                            {row.status}
-                          </span>
+                              isAfkir
+                                ? 'bg-slate-800 text-white border-slate-600'
+                                : isExpired
+                                ? 'bg-rose-100 text-rose-900 border-rose-300'
+                                : isPerpanjang
+                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}>
+                              {row.status}
+                            </span>
+                          </td>
+                        )}
+                      {isVisible("noSertifikat") && (
+                        <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center gap-1.5">
+                          {row.documentStatus === 'PENDING_DOC' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <FileWarning className="w-3 h-3 text-amber-500" />
+                              Belum Upload PDF
+                            </span>
+                          ) : row.documentStatus === 'EXEMPT' ? (
+                            <span
+                              title={`Catatan Alasan: ${row.exemptionNote || 'Tanpa Sertifikat'}`}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100/80 text-indigo-800 border border-indigo-300 shadow-2xs cursor-help"
+                            >
+                              <ShieldAlert className="w-3.5 h-3.5 text-indigo-600" />
+                              <span>Tanpa Sertifikat</span>
+                            </span>
+                          ) : (
+                            <>
+                              <FileCheck className="w-3.5 h-3.5 text-slate-400" />
+                              <span>{row.noSertifikat}</span>
+                            </>
+                          )}
                         </td>
                       )}
-                    {isVisible("noSertifikat") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center gap-1.5">
-                        <FileCheck className={`w-3.5 h-3.5 ${row.hasPdf ? 'text-emerald-600' : 'text-slate-300'}`} />
-                        <span>{row.noSertifikat}</span>
-                      </td>
-                    )}
                     {isVisible("tanggalInspeksi") && (
                       <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
                         {row.tanggalInspeksi}
@@ -728,23 +801,45 @@ export default function PeralatanPabrik() {
                       </td>
                     )}
 
-                    {/* LIHAT DETAIL BUTTON ON ROW */}
+                    {/* LIHAT DETAIL / PERBAIKI BUTTON ON ROW */}
                     <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
-                      <button
-                        onClick={() => setDetailModalItem(item)}
-                        className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Lihat Detail</span>
-                      </button>
+                      {row.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
+                        <button
+                          onClick={() => setResolveTargetItem(item)}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <FileWarning className="w-3.5 h-3.5" />
+                          <span>Perbaiki / Lengkapi</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDetailModalItem(item)}
+                          className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Lihat Detail</span>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
               })
               ) : (
                 <tr>
-                  <td colSpan={visibleColumnKeys.length + 1} className="py-8 text-center text-[#64748B] font-mono-data">
-                    Tidak ada peralatan yang sesuai dengan filter pencarian.
+                  <td colSpan={visibleColumnKeys.length + 1} className="py-12 text-center text-[#64748B]">
+                    {activeMainTab === 'staging' ? (
+                      <div className="max-w-sm mx-auto space-y-2 py-4">
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
+                          <Check className="w-6 h-6" />
+                        </div>
+                        <h4 className="font-bold text-sm text-slate-900 font-sans-clean">Semua Dokumen Lengkap!</h4>
+                        <p className="text-xs text-slate-500 font-sans-clean">
+                          Tidak ada data baru yang membutuhkan tindakan. Semua aset di modul ini sudah terverifikasi atau telah diberikan catatan penanganan.
+                        </p>
+                      </div>
+                    ) : (
+                      <span className="font-mono-data">Tidak ada peralatan yang sesuai dengan filter pencarian.</span>
+                    )}
                   </td>
                 </tr>
               )}
@@ -896,6 +991,13 @@ export default function PeralatanPabrik() {
         isOpen={!!historyTargetItem}
         onClose={() => setHistoryTargetItem(null)}
         documentItem={historyTargetItem}
+      />
+      {/* RESOLVE DOCUMENT STAGING MODAL */}
+      <ResolveDocumentModal
+        isOpen={!!resolveTargetItem}
+        onClose={() => setResolveTargetItem(null)}
+        item={resolveTargetItem}
+        onSuccess={loadData}
       />
     </div>
   );

@@ -34,5 +34,13 @@ export class MasterItemsController {
   remove(@Param('id') id: string) {
     return this.masterItemsService.remove(id);
   }
+
+  @Patch(':id/resolve-exemption')
+  resolveExemption(
+    @Param('id') id: string,
+    @Body('note') note: string,
+  ) {
+    return this.masterItemsService.resolveExemption(id, note);
+  }
 }
 

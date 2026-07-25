@@ -8,9 +8,18 @@ export class CertificatesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createCertificateDto: CreateCertificateDto) {
-    return this.prisma.certificate.create({
+    const cert = await this.prisma.certificate.create({
       data: createCertificateDto,
     });
+
+    if (createCertificateDto.itemId) {
+      await this.prisma.masterItem.update({
+        where: { id: createCertificateDto.itemId },
+        data: { documentStatus: 'COMPLETED' },
+      }).catch(() => {});
+    }
+
+    return cert;
   }
 
   async findByItemId(itemId: string) {

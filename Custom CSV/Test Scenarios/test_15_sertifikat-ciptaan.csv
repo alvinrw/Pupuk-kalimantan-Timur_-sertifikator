@@ -1,0 +1,16 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+CRT-TEST-1,CODE-CRT-1,Testing Item CRT 1,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-2,CODE-CRT-2,Testing Item CRT 2,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-3,CODE-CRT-3,Testing Item CRT 3,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-4,CODE-CRT-4,Testing Item CRT 4,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-5,CODE-CRT-5,Testing Item CRT 5,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-6,CODE-CRT-6,Testing Item CRT 6,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-7,CODE-CRT-7,Testing Item CRT 7,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-8,CODE-CRT-8,Testing Item CRT 8,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-9,CODE-CRT-9,Testing Item CRT 9,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-10,CODE-CRT-10,Testing Item CRT 10,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-11,CODE-CRT-11,Testing Item CRT 11,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-12,CODE-CRT-12,Testing Item CRT 12,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-13,CODE-CRT-13,Testing Item CRT 13 (ERROR) - Akan Gagal,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-14,CODE-CRT-14,Testing Item CRT 14 (ERROR) - Akan Gagal,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+CRT-TEST-15,CODE-CRT-15,Testing Item CRT 15 (ERROR) - Akan Gagal,sertifikat-ciptaan,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing

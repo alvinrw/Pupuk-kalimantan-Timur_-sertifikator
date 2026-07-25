@@ -66,6 +66,21 @@ export const deleteMasterItem = async (id) => {
 };
 
 /**
+ * Resolve exemption with mandatory note
+ */
+export const resolveMasterItemExemption = async (id, note) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Resolving Exemption for ${id}...`);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    return { message: 'Exemption resolved (Dummy)', documentStatus: 'EXEMPT', exemptionNote: note };
+  }
+
+  console.log(`[REAL API] Resolving Exemption for ${id}...`);
+  const response = await api.patch(`/master-items/${id}/resolve-exemption`, { note });
+  return response.data;
+};
+
+/**
  * Create a new master item
  */
 export const createMasterItem = async (data) => {
@@ -76,6 +91,20 @@ export const createMasterItem = async (data) => {
   }
   console.log('[REAL API] Creating Master Item...');
   const response = await api.post('/master-items', data);
+  return response.data;
+};
+
+/**
+ * Create a certificate attached to a master item
+ */
+export const createCertificateForMasterItem = async (certificateData) => {
+  if (USE_DUMMY_DATA) {
+    console.log('[DUMMY MODE] Creating Certificate...', certificateData);
+    await new Promise(res => setTimeout(res, 300));
+    return { id: `CERT-${Date.now()}`, ...certificateData };
+  }
+  console.log('[REAL API] Creating Certificate...');
+  const response = await api.post('/certificates', certificateData);
   return response.data;
 };
 

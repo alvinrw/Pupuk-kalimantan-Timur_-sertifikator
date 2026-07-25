@@ -21,6 +21,10 @@ model MasterItem {
   expiryDate   String?  // Tanggal expired
   keterangan   String?
   
+  // Status kelengkapan dokumen (PENDING_DOC, COMPLETED, EXEMPT)
+  documentStatus String   @default("PENDING_DOC")
+  exemptionNote  String?  // Catatan alasan jika tidak ada sertifikat
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 

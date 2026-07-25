@@ -14,7 +14,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
   const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'history'
   const [step, setStep] = useState('upload'); // upload -> preview -> success
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
 
@@ -49,6 +49,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     }
   });
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+  const [viewFailedRows, setViewFailedRows] = useState(null);
 
   React.useEffect(() => {
     const fetchHistory = async () => {
@@ -62,11 +63,12 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               id: log.id,
               fileName: detail.fileName || 'file_impor.csv',
               targetCategory: getCategoryLabel(detail.categoryKey || categoryKey),
-              uploadDate: new Date(log.createdAt).toISOString().replace('T', ' ').substring(0, 16),
+              uploadDate: new Date(log.createdAt).toISOString().replace('T', ' ').substring(0, 19),
               totalRows: detail.totalRows ?? detail.importedCount ?? 1,
               successCount: detail.successCount ?? detail.importedCount ?? 1,
               duplicateCount: detail.duplicateCount ?? 0,
               failCount: detail.failCount ?? 0,
+              failedRows: detail.failedRows || [],
               status: log.status === 'SUCCESS' ? 'Selesai' : 'Gagal'
             };
           });
@@ -95,9 +97,9 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
-    const selected = e.target.files && e.target.files[0];
-    if (selected) {
-      setFile(selected);
+    const selected = Array.from(e.target.files || []);
+    if (selected.length > 0) {
+      setFiles(prev => [...prev, ...selected]);
       setStep('preview');
     }
     if (fileInputRef.current) {
@@ -105,39 +107,68 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     }
   };
 
+  const handleRemoveFile = (indexToRemove) => {
+    setFiles(prev => {
+      const updated = prev.filter((_, i) => i !== indexToRemove);
+      if (updated.length === 0) setStep('upload');
+      return updated;
+    });
+  };
+
   const handleConfirmImport = async () => {
-    if (!file) return;
+    if (files.length === 0) return;
     
     try {
       setIsUploading(true);
-      const res = await uploadCsv(file, importType, categoryKey);
       
-      // Artificial short delay so user sees the nice loading animation
+      const newHistories = [];
+      let anySuccess = false;
+      
+      for (const f of files) {
+        try {
+          const res = await uploadCsv(f, importType, categoryKey);
+          newHistories.push({
+            id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fileName: f.name,
+            targetCategory: currentCategoryTitle,
+            uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            totalRows: res.totalRows ?? res.importedCount ?? 1,
+            successCount: res.successCount ?? res.importedCount ?? 1,
+            duplicateCount: res.duplicateCount ?? 0,
+            failCount: res.failCount ?? 0,
+            failedRows: res.failedRows || [],
+            status: "Selesai"
+          });
+          anySuccess = true;
+        } catch (err) {
+          console.error(`Gagal upload ${f.name}`, err);
+          newHistories.push({
+            id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            fileName: f.name,
+            targetCategory: currentCategoryTitle,
+            uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
+            totalRows: 0,
+            successCount: 0,
+            duplicateCount: 0,
+            failCount: 1,
+            failedRows: [{ title: f.name, reason: err.message || 'Server error' }],
+            status: "Gagal"
+          });
+        }
+      }
+      
       await new Promise(r => setTimeout(r, 800));
 
-      const newHist = {
-        id: `CSV-REAL-${Date.now()}`,
-        fileName: file.name,
-        targetCategory: currentCategoryTitle,
-        uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        totalRows: res.totalRows ?? res.importedCount ?? 1,
-        successCount: res.successCount ?? res.importedCount ?? 1,
-        duplicateCount: res.duplicateCount ?? 0,
-        failCount: res.failCount ?? 0,
-        status: "Selesai"
-      };
-
-      setUploadHistory(prev => [newHist, ...prev]);
-      setUploadResult(res);
+      setUploadHistory(prev => [...newHistories.reverse(), ...prev]);
       setStep('upload');
-      setFile(null);
-      if (onImportSuccess) {
-        onImportSuccess(); // trigger table refresh
+      setFiles([]);
+      if (anySuccess && onImportSuccess) {
+        onImportSuccess();
       }
       onClose();
     } catch (error) {
-      console.error("CSV Upload failed", error);
-      alert("Gagal mengimpor CSV. Silakan periksa format file.");
+      console.error("CSV Batch Upload failed", error);
+      alert("Terjadi kesalahan sistem saat mengimpor.");
     } finally {
       setIsUploading(false);
     }
@@ -210,9 +241,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
         <div className="p-6">
           {activeTab === 'upload' && (
             <>
+              <input type="file" ref={fileInputRef} accept=".csv" multiple className="hidden" onChange={handleFileChange} />
+              
               {step === 'upload' && (
                 <>
-                  <input type="file" ref={fileInputRef} accept=".csv" className="hidden" onChange={handleFileChange} />
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-10 flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer transition-colors"
@@ -233,11 +265,29 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
               {step === 'preview' && (
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs font-mono-data bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                    <span className="font-bold text-slate-800">
-                      Berkas CSV Terpilih
+                  <div className="space-y-2">
+                    <span className="font-bold text-slate-800 text-xs font-mono-data block">
+                      Berkas CSV Terpilih ({files.length})
                     </span>
-                    <span className="text-[#005ea4] font-bold">{file?.name}</span>
+                    <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1">
+                      {files.map((f, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs font-mono-data bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                          <span className="text-[#005ea4] font-bold truncate">{f.name}</span>
+                          <button onClick={() => handleRemoveFile(i)} className="text-slate-400 hover:text-rose-600 transition-colors ml-2 flex-shrink-0">
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {!isUploading && (
+                      <button 
+                        onClick={() => fileInputRef.current?.click()} 
+                        className="w-full mt-2 py-2 border border-dashed border-[#005ea4] text-[#005ea4] rounded-lg text-xs font-bold hover:bg-[#005ea4]/5 transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Upload className="w-3.5 h-3.5" /> Tambah Berkas Lainnya
+                      </button>
+                    )}
                   </div>
 
                   <div className="border border-slate-200 rounded-lg p-6 flex flex-col items-center justify-center bg-slate-50">
@@ -283,9 +333,17 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] text-slate-600 font-mono-data block">
-                        {item.uploadDate} — Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                      <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
+                        {item.uploadDate} — Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
                       </span>
+                      {item.failCount > 0 && item.failedRows?.length > 0 && (
+                        <button 
+                          onClick={() => setViewFailedRows(item.failedRows)} 
+                          className="mt-1 text-[10px] text-rose-600 hover:text-rose-800 font-bold underline bg-rose-50 px-2 py-0.5 rounded-full inline-block"
+                        >
+                          Lihat Detail Gagal
+                        </button>
+                      )}
                     </div>
                     <button
                       onClick={() => setConfirmDeleteId(item.id)}
@@ -328,6 +386,43 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               </button>
               <button onClick={() => handleDeleteHistory(confirmDeleteId)} className="px-3 py-1.5 bg-rose-600 text-white text-xs font-bold rounded-lg">
                 Ya, Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Failed Rows Modal */}
+      {viewFailedRows && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh]">
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                Rincian Baris Gagal ({viewFailedRows.length})
+              </h4>
+              <button onClick={() => setViewFailedRows(null)} className="text-slate-400 hover:text-slate-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 overflow-y-auto bg-slate-50">
+              <div className="space-y-2">
+                {viewFailedRows.map((fr, idx) => (
+                  <div key={idx} className="bg-white border border-slate-200 p-3 rounded-lg text-xs">
+                    <div className="font-bold text-slate-800 font-mono-data mb-1 flex justify-between">
+                      <span>{fr.title}</span>
+                      <span className="text-slate-500 font-normal">Baris: {fr.rowNumber || '-'}</span>
+                    </div>
+                    <div className="text-rose-600 font-mono-data">
+                      {fr.reason}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-slate-200 bg-white flex justify-end">
+              <button onClick={() => setViewFailedRows(null)} className="px-4 py-2 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200">
+                Tutup
               </button>
             </div>
           </div>

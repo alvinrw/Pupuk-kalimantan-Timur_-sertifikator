@@ -1,0 +1,16 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+ADM-TEST-1,CODE-ADM-1,Testing Item ADM 1,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-2,CODE-ADM-2,Testing Item ADM 2,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-3,CODE-ADM-3,Testing Item ADM 3,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-4,CODE-ADM-4,Testing Item ADM 4,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-5,CODE-ADM-5,Testing Item ADM 5,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-6,CODE-ADM-6,Testing Item ADM 6,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-7,CODE-ADM-7,Testing Item ADM 7,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-8,CODE-ADM-8,Testing Item ADM 8,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-9,CODE-ADM-9,Testing Item ADM 9,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-10,CODE-ADM-10,Testing Item ADM 10,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-11,CODE-ADM-11,Testing Item ADM 11,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-12,CODE-ADM-12,Testing Item ADM 12,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-13,CODE-ADM-13,Testing Item ADM 13 (ERROR) - Akan Gagal,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-14,CODE-ADM-14,Testing Item ADM 14 (ERROR) - Akan Gagal,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+ADM-TEST-15,CODE-ADM-15,Testing Item ADM 15 (ERROR) - Akan Gagal,administrasi-lainnya,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing

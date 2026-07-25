@@ -39,56 +39,101 @@ export class CsvImportService {
           select: { id: true, code: true }
         });
 
-        const existingSet = new Set([
-          ...existingItems.map(e => e.id),
-          ...existingItems.map(e => e.code).filter(Boolean)
-        ]);
-
-        const newItems = results.filter(row => (!row.id || !existingSet.has(row.id)) && (!row.code || !existingSet.has(row.code)));
-        const duplicateCount = results.length - newItems.length;
+        const existingById = new Map(existingItems.filter(e => e.id).map(e => [e.id, e]));
+        const existingByCode = new Map(existingItems.filter(e => e.code).map(e => [e.code, e]));
 
         let successCount = 0;
         let failCount = 0;
+        let duplicateCount = 0;
+        const failedRows = [];
+        const importedIds = [];
+        const importedCodes = [];
 
-        const itemsToInsert = newItems.map((row) => ({
-          id: row.id || randomUUID(),
-          code: row.code || null,
-          title: row.title || row.nama || 'Untitled Item',
-          categoryKey: targetCategoryKey || row.categoryKey || 'peralatan-pabrik',
-          unitLocation: row.unitLocation || row.lokasi || 'Umum',
-          status: row.status || 'Aktif',
-          luasM2: row.luasM2 != null ? String(row.luasM2) : null,
-          luasHa: row.luasHa != null ? String(row.luasHa) : null,
-          peruntukan: row.peruntukan || null,
-          issueDate: row.issueDate || null,
-          expiryDate: row.expiryDate || null,
-          keterangan: row.keterangan || null,
-        }));
+        for (let i = 0; i < results.length; i++) {
+          const row = results[i];
+          try {
+            let existing = null;
+            if (row.id && existingById.has(row.id)) {
+              existing = existingById.get(row.id);
+            } else if (row.code && existingByCode.has(row.code)) {
+              existing = existingByCode.get(row.code);
+            }
 
-        if (itemsToInsert.length > 0) {
-          const insertRes = await this.prisma.masterItem.createMany({
-            data: itemsToInsert,
-            skipDuplicates: true,
-          });
-          successCount = insertRes.count;
-          failCount = itemsToInsert.length - successCount;
+            const isDuplicate = !!existing;
+            if (isDuplicate) duplicateCount++;
+
+            const rawTitle = (row.title || row.nama || row.jenisPeralatan || '').trim();
+            if (!rawTitle || rawTitle === '-') {
+              throw new Error('Validasi Gagal: Nama/Jenis Peralatan tidak boleh kosong atau hanya berisi "-"');
+            }
+
+            const rawCode = (row.code || row.merek || row.kode || '').trim();
+            if (!rawCode || rawCode === '-') {
+              throw new Error('Validasi Gagal: Kode/Merek Item tidak boleh kosong atau hanya berisi "-"');
+            }
+
+            const idToUse = existing ? existing.id : (row.id || randomUUID());
+
+            const dataToSave = {
+              code: rawCode,
+              title: rawTitle,
+              categoryKey: targetCategoryKey || row.categoryKey || 'peralatan-pabrik',
+              unitLocation: row.unitLocation || row.lokasi || 'Umum',
+              status: row.status || 'Aktif',
+              luasM2: row.luasM2 != null ? String(row.luasM2) : null,
+              luasHa: row.luasHa != null ? String(row.luasHa) : null,
+              peruntukan: row.peruntukan || null,
+              issueDate: row.issueDate || null,
+              expiryDate: row.expiryDate || null,
+              keterangan: row.keterangan || null,
+              documentStatus: 'PENDING_DOC',
+            };
+
+            if (existing) {
+              await this.prisma.masterItem.update({
+                where: { id: existing.id },
+                data: dataToSave
+              });
+            } else {
+              await this.prisma.masterItem.create({
+                data: {
+                  id: idToUse,
+                  ...dataToSave
+                }
+              });
+            }
+            
+            if (!isDuplicate) {
+              successCount++;
+            }
+            
+            importedIds.push(idToUse);
+            if (dataToSave.code) importedCodes.push(dataToSave.code);
+
+          } catch (err) {
+            failCount++;
+            failedRows.push({
+              rowNumber: i + 1,
+              title: row.title || row.nama || row.code || `Baris ${i + 1}`,
+              reason: err.message || 'Validation error'
+            });
+          }
         }
 
         const totalRows = results.length;
-        const importedIds = itemsToInsert.map(r => r.id);
-        const importedCodes = itemsToInsert.map(r => r.code).filter(Boolean);
 
         // Save to MonitoringLog
         await this.prisma.monitoringLog.create({
           data: {
             action: 'CSV_IMPORT',
-            status: 'SUCCESS',
+            status: failCount === totalRows ? 'FAILED' : 'SUCCESS',
             detail: JSON.stringify({
               fileName: file.originalname || 'uploaded_file.csv',
               totalRows,
               successCount,
-              duplicateCount,
+              duplicateCount, // Duplicate count here means "Updated records"
               failCount,
+              failedRows,
               importedIds,
               importedCodes,
               type: 'master_items',

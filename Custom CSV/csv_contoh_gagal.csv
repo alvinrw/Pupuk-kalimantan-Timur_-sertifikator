@@ -1,0 +1,4 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+EQ-CONTOH-1,C-001,Mesin Penggiling Normal,peralatan-pabrik,Pabrik 1,Aktif,,,Uji Coba,2024-01-01,2025-01-01,Data normal
+EQ-CONTOH-2,C-002,,peralatan-pabrik,Pabrik 1,Aktif,,,Uji Coba,2024-01-01,2025-01-01,Baris ini akan gagal karena title kosong!
+EQ-CONTOH-3,C-003,Mesin Pemotong Normal,peralatan-pabrik,Pabrik 1,Aktif,,,Uji Coba,2024-01-01,2025-01-01,Data normal
