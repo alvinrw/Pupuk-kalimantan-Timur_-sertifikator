@@ -121,3 +121,31 @@ export const createCertificate = async (data) => {
   const response = await api.post('/certificates', data);
   return response.data;
 };
+
+/**
+ * Update an existing certificate by ID
+ */
+export const updateCertificate = async (id, data) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Updating Certificate ${id}...`, data);
+    await new Promise(res => setTimeout(res, 300));
+    return { id, ...data };
+  }
+  console.log(`[REAL API] Updating Certificate ${id}...`);
+  const response = await api.put(`/certificates/${id}`, data);
+  return response.data;
+};
+
+/**
+ * Delete a certificate by ID
+ */
+export const deleteCertificate = async (id) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Deleting Certificate ${id}...`);
+    await new Promise(res => setTimeout(res, 300));
+    return { message: 'Deleted (Dummy)' };
+  }
+  console.log(`[REAL API] Deleting Certificate ${id}...`);
+  const response = await api.delete(`/certificates/${id}`);
+  return response.data;
+};

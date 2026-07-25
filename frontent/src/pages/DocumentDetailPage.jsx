@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Edit3,
@@ -27,15 +27,18 @@ import {
   AlertTriangle,
   CheckSquare
 } from 'lucide-react';
-import { getMasterItemById, deleteMasterItem } from '../services/masterItemsService';
+import { getMasterItemById, deleteMasterItem, createCertificateForMasterItem, updateCertificate, deleteCertificate } from '../services/masterItemsService';
 
 export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission }) {
   if (!item) return null;
 
   const [isEditing, setIsEditing] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const manualFileInputRef = useRef(null);
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
   const [editingHistoryRow, setEditingHistoryRow] = useState(null);
+  const [selectedHistoryFile, setSelectedHistoryFile] = useState(null);
+  const editHistoryFileInputRef = useRef(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -88,37 +91,51 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [historyList, setHistoryList] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
-  useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        setIsLoadingHistory(true);
-        if (item && item.MasterId) {
-          const detail = await getMasterItemById(item.MasterId);
-          if (detail && detail.documentHistories) {
-            const mappedHistory = detail.documentHistories.map(h => ({
-               id: h.id,
-               periode: h.actionType,
-               noSertifikat: h.certificateNo || '-',
-               instansi: h.agency || '-',
-               terbit: h.issueDate ? h.issueDate.split('T')[0] : '-',
-               expired: h.expiryDate ? h.expiryDate.split('T')[0] : '-',
-               status: h.status || 'Selesai',
-               isCurrent: false,
-               pdfName: h.fileUrl || 'sertifikat.pdf',
-               catatan: h.notes || '-'
+  const fetchHistory = async () => {
+    try {
+      setIsLoadingHistory(true);
+      const targetId = item?.MasterId || item?.id;
+      if (targetId) {
+        const detail = await getMasterItemById(targetId);
+        if (detail && detail.certificates && detail.certificates.length > 0) {
+          const mappedCerts = detail.certificates.map(c => ({
+            id: c.id,
+            periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} - ${c.expired.substring(0, 4)}` : 'Periode SK',
+            noSertifikat: c.noSertifikat || '-',
+            terbit: c.terbit || '-',
+            expired: c.expired || '-',
+            status: c.status || 'Aktif',
+            fileUrl: c.fileUrl || null,
+            pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
+            rawCert: c
+          }));
+          setHistoryList(mappedCerts);
+
+          const latestCert = mappedCerts[0];
+          if (latestCert) {
+            setFormData(prev => ({
+              ...prev,
+              noSertifikat: latestCert.noSertifikat,
+              terbit: latestCert.terbit,
+              berakhir: latestCert.expired,
             }));
-            setHistoryList(mappedHistory);
-          } else {
-            setHistoryList([]);
+            if (latestCert.fileUrl) {
+              item.fileUrl = latestCert.fileUrl;
+            }
           }
+        } else {
+          setHistoryList([]);
         }
-      } catch (err) {
-        console.error("Failed to load history from DB", err);
-        setHistoryList([]);
-      } finally {
-        setIsLoadingHistory(false);
       }
-    };
+    } catch (err) {
+      console.error("Failed to load history from DB", err);
+      setHistoryList([]);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
+
+  useEffect(() => {
     fetchHistory();
   }, [item]);
 
@@ -144,56 +161,43 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     setIsEditing(false);
   };
 
-  const handleUploadSubmit = (e) => {
+  const [selectedUploadFile, setSelectedUploadFile] = useState(null);
+
+  const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    const newCertNo = uploadData.noSertifikat.trim() || `CERT-MANUAL-${Date.now()}`;
-    const newFileName = uploadData.fileName || `${newCertNo}.pdf`;
+    try {
+      let fileUrl = null;
+      if (selectedUploadFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', selectedUploadFile);
+        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+          method: 'POST',
+          body: formDataUpload
+        });
+        if (uploadRes.ok) {
+          const uploadJson = await uploadRes.json();
+          fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
+        }
+      }
 
-    if (uploadData.target === 'current') {
-      // Update Current Active Cert
-      setFormData(prev => ({
-        ...prev,
-        noSertifikat: newCertNo,
-        terbit: uploadData.terbit,
-        berakhir: uploadData.expired,
-        keterangan: uploadData.instansi
-      }));
+      const certPayload = {
+        itemId: item.MasterId || item.id,
+        jenisSertifikat: 'Riksa Uji Disnaker',
+        noSertifikat: uploadData.noSertifikat.trim() || `CERT-${Date.now()}`,
+        status: 'Aktif',
+      };
+      if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
+      if (uploadData.expired) certPayload.expired = uploadData.expired;
+      if (fileUrl) certPayload.fileUrl = fileUrl;
 
-      // Update history list top row
-      setHistoryList(prev => [
-        {
-          id: `HIST-NEW-${Date.now()}`,
-          periode: `${uploadData.terbit.substring(0,4)} - ${uploadData.expired.substring(0,4)} (Sekarang)`,
-          noSertifikat: newCertNo,
-          instansi: uploadData.instansi,
-          terbit: uploadData.terbit,
-          expired: uploadData.expired,
-          status: "Aktif & Valid",
-          isCurrent: true,
-          pdfName: newFileName
-        },
-        ...prev.map(row => ({ ...row, isCurrent: false, status: row.status === 'Aktif & Valid' ? 'Expired' : row.status }))
-      ]);
-    } else {
-      // Add as Historical Archive
-      setHistoryList(prev => [
-        {
-          id: `HIST-ARCH-${Date.now()}`,
-          periode: `${uploadData.terbit.substring(0,4)} - ${uploadData.expired.substring(0,4)}`,
-          noSertifikat: newCertNo,
-          instansi: uploadData.instansi,
-          terbit: uploadData.terbit,
-          expired: uploadData.expired,
-          status: "Arsip Manual",
-          isCurrent: false,
-          pdfName: newFileName
-        },
-        ...prev
-      ]);
+      await createCertificateForMasterItem(certPayload);
+      await fetchHistory();
+      setIsUploadModalOpen(false);
+      setSelectedUploadFile(null);
+    } catch (err) {
+      console.error("Failed to upload manual certificate:", err);
+      alert("Gagal mengunggah sertifikat: " + (err.message || 'Error'));
     }
-
-    setIsUploadModalOpen(false);
-    alert(`Berhasil mengunggah sertifikat manual: ${newCertNo}`);
   };
 
   const handleDeleteHistoryRow = (id) => {
@@ -201,26 +205,41 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     setSelectedHistoryToDelete(null);
   };
 
-  const handleSaveHistoryRowEdit = (e) => {
+  const handleSaveHistoryRowEdit = async (e) => {
     e.preventDefault();
     if (!editingHistoryRow) return;
 
-    setHistoryList(prev =>
-      prev.map(row => (row.id === editingHistoryRow.id ? editingHistoryRow : row))
-    );
+    try {
+      let fileUrl = editingHistoryRow.fileUrl;
+      if (selectedHistoryFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', selectedHistoryFile);
+        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+          method: 'POST',
+          body: formDataUpload
+        });
+        if (uploadRes.ok) {
+          const uploadJson = await uploadRes.json();
+          fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || fileUrl;
+        }
+      }
 
-    // Sync main form data if current active cert is edited
-    if (editingHistoryRow.isCurrent) {
-      setFormData(prev => ({
-        ...prev,
+      const updatePayload = {
         noSertifikat: editingHistoryRow.noSertifikat,
-        terbit: editingHistoryRow.terbit,
-        berakhir: editingHistoryRow.expired,
-        keterangan: editingHistoryRow.instansi
-      }));
-    }
+        status: editingHistoryRow.status || 'Aktif',
+      };
+      if (editingHistoryRow.terbit) updatePayload.terbit = editingHistoryRow.terbit;
+      if (editingHistoryRow.expired) updatePayload.expired = editingHistoryRow.expired;
+      if (fileUrl) updatePayload.fileUrl = fileUrl;
 
-    setEditingHistoryRow(null);
+      await updateCertificate(editingHistoryRow.id, updatePayload);
+      await fetchHistory();
+      setEditingHistoryRow(null);
+      setSelectedHistoryFile(null);
+    } catch (err) {
+      console.error("Failed to update certificate:", err);
+      alert("Gagal memperbarui sertifikat: " + (err.message || 'Error'));
+    }
   };
 
   const handleDeleteMasterItem = async () => {
@@ -553,8 +572,8 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 {isHaki
                   ? 'Spesifikasi & Identitas Hak Cipta (HAKI)'
                   : isEquipment
-                  ? 'Spesifikasi Utama & Identitas Aset Peralatan'
-                  : 'Spesifikasi Dokumen Perizinan'}
+                    ? 'Spesifikasi Utama & Identitas Aset Peralatan'
+                    : 'Spesifikasi Dokumen Perizinan'}
               </span>
             </h4>
 
@@ -655,7 +674,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
             </h4>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
+            <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
               <div>
                 <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
                 <span className="font-bold text-[#005ea4] text-base">{formData.noSertifikat}</span>
@@ -665,25 +684,36 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
                 <span className="font-bold text-rose-700 text-base">{formData.berakhir}</span>
               </div>
-
-              <div>
-                <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Instansi / Penguji</span>
-                <span className="font-bold text-slate-800 font-sans">{formData.keterangan || 'Disnaker Kaltim / Sucofindo'}</span>
-              </div>
             </div>
 
             <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
               <div className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-[#005ea4]" />
-                <span className="font-bold text-slate-800">Dokumen Digital SK (PDF Terlampir)</span>
+                <span className="font-bold text-slate-800">
+                  {item.fileUrl || item.pdfUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+                </span>
               </div>
-              <button
-                onClick={() => alert(`Membuka PDF Sertifikat: ${formData.noSertifikat}.pdf`)}
-                className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-              >
-                <span>Buka File PDF</span>
-                <ExternalLink className="w-3.5 h-3.5 text-white" />
-              </button>
+              {item.fileUrl || item.pdfUrl ? (
+                <button
+                  onClick={() => {
+                    const targetUrl = item.fileUrl || item.pdfUrl;
+                    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
+                    window.open(fullUrl, '_blank');
+                  }}
+                  className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                >
+                  <span>Buka File PDF</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-white" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsUploadModalOpen(true)}
+                  className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                >
+                  <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                  <span>+ Unggah File PDF</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -718,7 +748,6 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   <tr className="bg-slate-100 border-b border-slate-200 text-[11px] text-slate-700 uppercase tracking-wider">
                     <th className="py-2.5 px-3 font-bold">PERIODE SK</th>
                     <th className="py-2.5 px-3 font-bold">NO. SERTIFIKAT / SK</th>
-                    <th className="py-2.5 px-3 font-bold">INSTANSI PENGUJI</th>
                     <th className="py-2.5 px-3 font-bold">TGL TERBIT</th>
                     <th className="py-2.5 px-3 font-bold">TGL EXPIRED</th>
                     <th className="py-2.5 px-3 font-bold text-center">STATUS HUKUM</th>
@@ -736,70 +765,78 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                       return dateB - dateA;
                     })
                     .map((row) => {
-                    return (
-                      <tr
-                        key={row.id}
-                        className={`transition-colors ${
-                          row.isCurrent ? 'bg-emerald-50/60 hover:bg-emerald-50' : 'hover:bg-slate-50'
-                        }`}
-                      >
-                        <td className="py-3 px-3 font-bold text-slate-900">
-                          {row.periode}
-                        </td>
-                        <td className="py-3 px-3 font-bold text-[#005ea4]">
-                          {row.noSertifikat}
-                        </td>
-                        <td className="py-3 px-3 font-sans text-slate-800">
-                          {row.instansi}
-                        </td>
-                        <td className="py-3 px-3 text-slate-700">
-                          {row.terbit}
-                        </td>
-                        <td className="py-3 px-3 font-bold text-rose-700">
-                          {row.expired}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                              row.isCurrent
+                      return (
+                        <tr
+                          key={row.id}
+                          className={`transition-colors ${row.isCurrent ? 'bg-emerald-50/60 hover:bg-emerald-50' : 'hover:bg-slate-50'
+                            }`}
+                        >
+                          <td className="py-3 px-3 font-bold text-slate-900">
+                            {row.periode}
+                          </td>
+                          <td className="py-3 px-3 font-bold text-[#005ea4]">
+                            {row.noSertifikat}
+                          </td>
+                          <td className="py-3 px-3 text-slate-700">
+                            {row.terbit}
+                          </td>
+                          <td className="py-3 px-3 font-bold text-rose-700">
+                            {row.expired}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${row.isCurrent
                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                                 : 'bg-slate-200 text-slate-700 border-slate-300'
-                            }`}
-                          >
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => alert(`Mengunduh berkas: ${row.pdfName}`)}
-                              className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors cursor-pointer"
-                              title="Unduh Berkas PDF"
+                                }`}
                             >
-                              <FileText className="w-3.5 h-3.5" />
-                              <span>Unduh PDF</span>
-                            </button>
+                              {row.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                onClick={() => {
+                                  const targetUrl = row.fileUrl || row.pdfName;
+                                  if (targetUrl && (targetUrl.startsWith('http') || targetUrl.startsWith('/'))) {
+                                    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
+                                    window.open(fullUrl, '_blank');
+                                  } else {
+                                    alert(`Berkas PDF ${row.pdfName || ''} belum tersedia.`);
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Buka / Unduh Berkas PDF"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>Liat PDF</span>
+                              </button>
 
-                            <button
-                              onClick={() => setEditingHistoryRow({ ...row })}
-                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer"
-                              title="Edit Baris Sertifikat Ini"
-                            >
-                              <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                            </button>
+                              <button
+                                onClick={() => setEditingHistoryRow({ ...row })}
+                                className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer"
+                                title="Edit Baris Sertifikat Ini"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                              </button>
 
-                            <button
-                              onClick={() => setSelectedHistoryToDelete(row)}
-                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-lg transition-colors cursor-pointer"
-                              title="Hapus Sertifikat Ini"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                              <button
+                                onClick={async () => {
+                                  if (window.confirm(`Hapus sertifikat ${row.noSertifikat}?`)) {
+                                    await deleteCertificate(row.id);
+                                    await fetchHistory();
+                                  }
+                                }}
+                                className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Sertifikat Ini"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
@@ -815,19 +852,17 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 {historyList.map((row, idx) => (
                   <div key={row.id} className="relative">
                     <span
-                      className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-white ${
-                        row.isCurrent ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-400'
-                      }`}
+                      className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-white ${row.isCurrent ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-400'
+                        }`}
                     />
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                       <div className="flex justify-between font-bold text-slate-900">
                         <span>{row.periode} — No. SK: {row.noSertifikat}</span>
                         <span
-                          className={`px-2.5 py-0.5 rounded-lg text-[10px] border ${
-                            row.isCurrent
-                              ? 'text-emerald-700 bg-emerald-50 border-emerald-200 font-bold'
-                              : 'text-slate-500 bg-slate-100 border-slate-200'
-                          }`}
+                          className={`px-2.5 py-0.5 rounded-lg text-[10px] border ${row.isCurrent
+                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200 font-bold'
+                            : 'text-slate-500 bg-slate-100 border-slate-200'
+                            }`}
                         >
                           {row.status}
                         </span>
@@ -939,15 +974,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
                     {/* Sisa hari + status row */}
                     <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        certIsAfkir
-                          ? 'bg-slate-800 text-white border-slate-600'
-                          : certIsExpired || (certSisaHari !== null && certSisaHari <= 0)
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${certIsAfkir
+                        ? 'bg-slate-800 text-white border-slate-600'
+                        : certIsExpired || (certSisaHari !== null && certSisaHari <= 0)
                           ? 'bg-rose-100 text-rose-800 border-rose-300'
                           : certIsPerpanjang || (certSisaHari !== null && certSisaHari > 0 && certSisaHari <= 30)
-                          ? 'bg-amber-100 text-amber-800 border-amber-300'
-                          : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                      }`}>
+                            ? 'bg-amber-100 text-amber-800 border-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                        }`}>
                         {cert.status || 'Aktif'}
                       </span>
 
@@ -960,16 +994,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
                     {/* PDF action */}
                     <button
-                      onClick={() => alert(`Membuka PDF: ${cert.pdfName}`)}
-                      className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
-                        cert.hasPdf
-                          ? 'bg-[#005ea4]/10 hover:bg-[#005ea4]/15 text-[#005ea4] border border-[#005ea4]/20'
-                          : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
-                      }`}
-                      disabled={!cert.hasPdf}
+                      onClick={() => {
+                        const targetUrl = cert.fileUrl || cert.pdfName;
+                        if (targetUrl && (targetUrl.startsWith('http') || targetUrl.startsWith('/'))) {
+                          const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
+                          window.open(fullUrl, '_blank');
+                        } else {
+                          alert(`Berkas PDF ${cert.pdfName || ''} belum tersedia di storage.`);
+                        }
+                      }}
+                      className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${cert.hasPdf || cert.fileUrl
+                        ? 'bg-[#005ea4]/10 hover:bg-[#005ea4]/15 text-[#005ea4] border border-[#005ea4]/20'
+                        : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'
+                        }`}
+                      disabled={!cert.hasPdf && !cert.fileUrl}
                     >
                       <FileText className="w-3.5 h-3.5" />
-                      <span>{cert.hasPdf ? `Buka PDF: ${cert.pdfName}` : 'Belum Ada Berkas PDF'}</span>
+                      <span>{cert.hasPdf || cert.fileUrl ? `Buka PDF: ${cert.pdfName || 'Terlampir'}` : 'Belum Ada Berkas PDF'}</span>
                     </button>
                   </div>
                 );
@@ -1208,25 +1249,42 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             <form onSubmit={handleUploadSubmit} className="p-6 space-y-4 text-xs font-mono-data">
               <div>
                 <label className="font-bold text-slate-800 block mb-1.5">1. Pilih Berkas PDF Sertifikat Baru</label>
-                <div className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center bg-slate-50 transition-colors cursor-pointer">
-                  <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
-                  <span className="font-bold text-slate-800 block">Klik atau Seret Berkas PDF ke Sini</span>
-                  <span className="text-[10px] text-slate-500">Format: PDF (Maksimal 15MB)</span>
+                <div
+                  onClick={() => manualFileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files[0];
+                    if (file) {
+                      setSelectedUploadFile(file);
+                      setUploadData(prev => ({ ...prev, fileName: file.name }));
+                    }
+                  }}
+                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-5 text-center bg-slate-50 hover:bg-blue-50/50 transition-all cursor-pointer group"
+                >
+                  <Upload className="w-7 h-7 text-[#005ea4] mx-auto mb-1 group-hover:scale-110 transition-transform" />
+                  <span className="font-bold text-slate-800 block text-xs">Klik atau Seret Berkas PDF ke Sini</span>
+                  <span className="text-[10px] text-slate-500">Format: PDF, PNG, JPG (Maksimal 15MB)</span>
                   <input
+                    ref={manualFileInputRef}
                     type="file"
-                    accept=".pdf"
-                    onChange={(e) => setUploadData({ ...uploadData, fileName: e.target.files[0]?.name || '' })}
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        setSelectedUploadFile(file);
+                        setUploadData(prev => ({ ...prev, fileName: file.name }));
+                      }
+                    }}
                     className="hidden"
-                    id="manual-pdf-upload-input"
                   />
-                  <label
-                    htmlFor="manual-pdf-upload-input"
-                    className="mt-2 inline-block px-3 py-1 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-lg cursor-pointer"
-                  >
-                    Pilih Berkas PDF
-                  </label>
+                  <div className="mt-2.5">
+                    <span className="px-3.5 py-1.5 bg-[#005ea4] text-white font-bold text-xs rounded-lg shadow-xs group-hover:bg-[#004881] transition-colors inline-block">
+                      Pilih Berkas PDF
+                    </span>
+                  </div>
                   {uploadData.fileName && (
-                    <span className="block text-emerald-700 font-bold mt-2">
+                    <span className="block text-emerald-700 font-bold mt-2 text-xs">
                       ✓ Terpilih: {uploadData.fileName}
                     </span>
                   )}
@@ -1358,17 +1416,6 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
             <form onSubmit={handleSaveHistoryRowEdit} className="p-5 space-y-3.5 text-xs font-mono-data">
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Periode SK</label>
-                <input
-                  type="text"
-                  required
-                  value={editingHistoryRow.periode}
-                  onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, periode: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-                />
-              </div>
-
-              <div>
                 <label className="font-bold text-slate-800 block mb-1">No. Sertifikat / SK</label>
                 <input
                   type="text"
@@ -1376,16 +1423,6 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   value={editingHistoryRow.noSertifikat}
                   onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, noSertifikat: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Instansi / Penguji</label>
-                <input
-                  type="text"
-                  value={editingHistoryRow.instansi}
-                  onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, instansi: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
                 />
               </div>
 
@@ -1411,13 +1448,25 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Status Hukum / Keterangan</label>
-                <input
-                  type="text"
-                  value={editingHistoryRow.status}
-                  onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
-                />
+                <label className="font-bold text-slate-800 block mb-1">Upload / Ganti File PDF Sertifikat</label>
+                <div
+                  onClick={() => editHistoryFileInputRef.current?.click()}
+                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-3 text-center bg-slate-50 hover:bg-blue-50/50 cursor-pointer"
+                >
+                  <input
+                    ref={editHistoryFileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) setSelectedHistoryFile(file);
+                    }}
+                    className="hidden"
+                  />
+                  <span className="text-xs font-bold text-[#005ea4] block">
+                    {selectedHistoryFile ? `✓ File Baru: ${selectedHistoryFile.name}` : (editingHistoryRow.fileUrl ? '✓ Ada Berkas PDF (Klik untuk ganti)' : 'Klik untuk Unggah PDF')}
+                  </span>
+                </div>
               </div>
 
               <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
@@ -1450,7 +1499,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               </div>
               <h4 className="font-bold text-base text-slate-900">Konfirmasi Hapus Data</h4>
               <p className="text-xs text-slate-600 font-medium pb-2">
-                Apakah Anda yakin ingin menghapus seluruh data untuk <br/><strong className="text-slate-800">{formData.merekItem}</strong>?<br/>
+                Apakah Anda yakin ingin menghapus seluruh data untuk <br /><strong className="text-slate-800">{formData.merekItem}</strong>?<br />
                 Tindakan ini tidak dapat dibatalkan.
               </p>
               <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">

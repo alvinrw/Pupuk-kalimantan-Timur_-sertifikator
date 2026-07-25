@@ -45,6 +45,7 @@ model Certificate {
   terbit          String?
   expired         String?
   status          String   @default("Aktif")
+  fileUrl         String?  // URL/Path file PDF di MinIO Storage
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

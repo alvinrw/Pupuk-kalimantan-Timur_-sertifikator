@@ -190,6 +190,8 @@ export default function PeralatanPabrik() {
               terbit: doc.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
               berakhir: doc.expired || item.expiryDate || '-',
               keterangan: doc.keterangan || item.description || '-',
+              fileUrl: doc.fileUrl || null,
+              hasPdf: !!doc.fileUrl || doc.hasPdf !== false,
             });
           });
         }

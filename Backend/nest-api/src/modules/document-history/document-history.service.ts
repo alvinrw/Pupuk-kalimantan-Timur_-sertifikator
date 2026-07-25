@@ -30,25 +30,26 @@ export class DocumentHistoryService implements OnModuleInit {
       if (!exists) {
         await this.minioClient.makeBucket(this.bucketName, 'us-east-1');
         this.logger.log(`Bucket '${this.bucketName}' created successfully.`);
-        
-        // Mengatur policy agar file bisa diakses publik secara baca
-        const policy = {
-          Version: '2012-10-17',
-          Statement: [
-            {
-              Effect: 'Allow',
-              Principal: { AWS: ['*'] },
-              Action: ['s3:GetObject'],
-              Resource: [`arn:aws:s3:::${this.bucketName}/*`],
-            },
-          ],
-        };
-        await this.minioClient.setBucketPolicy(this.bucketName, JSON.stringify(policy));
       } else {
         this.logger.log(`Bucket '${this.bucketName}' ready.`);
       }
+
+      // Selalu pastikan policy diset ke Public Read agar file PDF bisa dibuka tanpa AccessDenied
+      const policy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.bucketName}/*`],
+          },
+        ],
+      };
+      await this.minioClient.setBucketPolicy(this.bucketName, JSON.stringify(policy));
+      this.logger.log(`🔓 Bucket policy '${this.bucketName}' diset ke Public Read.`);
     } catch (error) {
-      this.logger.warn(`MinIO connection warning (ignorable if minio is offline): ${error.message}`);
+      this.logger.warn(`MinIO connection warning: ${error.message}`);
     }
   }
 

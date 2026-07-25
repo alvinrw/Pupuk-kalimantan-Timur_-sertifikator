@@ -28,4 +28,8 @@ export class CreateCertificateDto {
   @IsString()
   @IsOptional()
   status?: string;
+
+  @IsString()
+  @IsOptional()
+  fileUrl?: string;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { X, Upload, FileCheck, FileWarning, AlertTriangle, ShieldAlert, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
 
@@ -13,6 +13,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
   const [terbit, setTerbit] = useState('');
   const [expired, setExpired] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   // Form State Opsi B (Exempt + Catatan Alasan)
   const [exemptionNote, setExemptionNote] = useState('');
@@ -54,14 +55,35 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
     try {
       setIsSubmitting(true);
       setErrorMessage('');
-      await createCertificateForMasterItem({
+
+      let fileUrl = null;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+
+        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadJson = await uploadRes.json();
+          fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
+        }
+      }
+
+      const payload = {
         itemId: targetItemId,
-        jenisSertifikat,
+        jenisSertifikat: 'Riksa Uji Disnaker',
         noSertifikat: noSertifikat.trim(),
-        terbit: terbit || null,
-        expired: expired || null,
-        status: 'Aktif'
-      });
+        status: 'Aktif',
+      };
+      if (terbit) payload.terbit = terbit;
+      if (expired) payload.expired = expired;
+      if (fileUrl) payload.fileUrl = fileUrl;
+
+      await createCertificateForMasterItem(payload);
+
       setIsSubmitting(false);
       onSuccess?.();
       onClose();
@@ -143,22 +165,6 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Jenis Sertifikat / Izin</label>
-                <select
-                  value={jenisSertifikat}
-                  onChange={(e) => setJenisSertifikat(e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] bg-white font-medium"
-                >
-                  <option value="Riksa Uji Disnaker">Riksa Uji Disnaker</option>
-                  <option value="SLF (Sertifikat Laik Fungsi)">SLF (Sertifikat Laik Fungsi)</option>
-                  <option value="Lisensi K3 Depnaker">Lisensi K3 Depnaker</option>
-                  <option value="Izin Lingkungan / AMDAL">Izin Lingkungan / AMDAL</option>
-                  <option value="Sertifikat Hak Cipta">Sertifikat Hak Cipta</option>
-                  <option value="Lainnya">Lainnya</option>
-                </select>
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">Tanggal Terbit</label>
@@ -182,21 +188,27 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
 
               <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Opsional)</label>
-                <div className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50">
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
+                  }}
+                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50"
+                >
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept=".pdf,.png,.jpg,.jpeg"
                     onChange={(e) => setSelectedFile(e.target.files[0])}
                     className="hidden"
-                    id="resolve-pdf-file"
                   />
-                  <label htmlFor="resolve-pdf-file" className="cursor-pointer block">
-                    <Upload className="w-6 h-6 mx-auto text-slate-400 mb-1" />
-                    <span className="text-xs font-bold text-[#005ea4] block">
-                      {selectedFile ? selectedFile.name : 'Pilih File PDF atau Gambar'}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-mono-data">Maksimal 10MB</span>
-                  </label>
+                  <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
+                  <span className="text-xs font-bold text-[#005ea4] block">
+                    {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
                 </div>
               </div>
 
