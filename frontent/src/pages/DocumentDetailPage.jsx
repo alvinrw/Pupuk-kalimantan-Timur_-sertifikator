@@ -1175,7 +1175,15 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             <div>
               <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                 <Link2 className="w-5 h-5 text-[#005ea4]" />
-                <span>Sertifikat Terhubung ({linkedCerts.length} Dokumen)</span>
+                {(() => {
+                  const groupedCerts = Object.values(linkedCerts.reduce((acc, cert) => {
+                    const jenis = cert.jenisSertifikat || 'Generic';
+                    if (!acc[jenis]) acc[jenis] = [];
+                    acc[jenis].push(cert);
+                    return acc;
+                  }, {}));
+                  return <span>Sertifikat Terhubung ({groupedCerts.length} Dokumen)</span>;
+                })()}
               </h4>
               <p className="text-xs text-slate-500 font-mono-data mt-0.5">
                 Daftar semua jenis perizinan / sertifikat yang berlaku untuk aset / proyek / produk ini
@@ -1198,7 +1206,20 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {linkedCerts.map((cert) => {
+              {Object.values(linkedCerts.reduce((acc, cert) => {
+                const jenis = cert.jenisSertifikat || 'Generic';
+                if (!acc[jenis]) acc[jenis] = [];
+                acc[jenis].push(cert);
+                return acc;
+              }, {})).map(group => {
+                return group.sort((a, b) => {
+                  if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
+                  if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
+                  const dateA = new Date(a.createdAt || a.terbit || 0);
+                  const dateB = new Date(b.createdAt || b.terbit || 0);
+                  return dateB - dateA;
+                })[0];
+              }).map((cert) => {
                 const certStatusLower = (cert.status || '').toLowerCase();
                 const certIsExpired = certStatusLower === 'expired';
                 const certIsPerpanjang = certStatusLower === 'perpanjang' || certStatusLower === 'perpanjangan';
