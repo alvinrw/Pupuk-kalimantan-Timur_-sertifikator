@@ -25,7 +25,8 @@ import {
   Upload,
   Link2,
   AlertTriangle,
-  CheckSquare
+  CheckSquare,
+  Eye
 } from 'lucide-react';
 import { getMasterItemById, deleteMasterItem, createCertificateForMasterItem, updateCertificate, deleteCertificate, updateMasterItem } from '../services/masterItemsService';
 
@@ -72,7 +73,16 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen] = useState(false);
   const [isCancelingHeader, setIsCancelingHeader] = useState(false);
 
-  const targetCert = item?.currentCert || item?.cert || null;
+  const [activeCertId, setActiveCertId] = useState(item?.currentCert?.id || item?.cert?.id || null);
+
+  useEffect(() => {
+    setActiveCertId(item?.currentCert?.id || item?.cert?.id || null);
+  }, [item]);
+
+  const rawTargetCert = item?.currentCert || item?.cert || null;
+  const targetCert = activeCertId 
+    ? (linkedCerts.find(c => c.id === activeCertId) || rawTargetCert)
+    : rawTargetCert;
   const parentDoc = item?.parentDoc || item;
   const effectiveCategoryKey = parentDoc.categoryKey || item.categoryKey || '';
   const isSingleCertScope = Boolean(
@@ -120,6 +130,24 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     keterangan: targetCert?.instansi || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
     fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || '')
   });
+
+  useEffect(() => {
+    if (isSingleCertScope && targetCert) {
+      setFormData(prev => ({
+        ...prev,
+        jenisPeralatan: targetCert.jenisSertifikat || prev.jenisPeralatan,
+        tipe: targetCert.noSertifikat || prev.tipe,
+        user: targetCert.instansi || prev.user,
+        status: targetCert.status || 'Aktif',
+        noSertifikat: targetCert.noSertifikat || '',
+        tanggalInspeksi: targetCert.terbit || prev.tanggalInspeksi,
+        terbit: targetCert.terbit || '',
+        berakhir: targetCert.expired || '',
+        keterangan: targetCert.instansi || prev.keterangan,
+        fileUrl: targetCert.fileUrl || ''
+      }));
+    }
+  }, [targetCert, isSingleCertScope]);
 
   // History Certificates State (Real Database)
   const [historyList, setHistoryList] = useState([]);
@@ -208,7 +236,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
   useEffect(() => {
     fetchHistory();
-  }, [item]);
+  }, [item, activeCertId]);
 
 
   // Form Upload Manual State
@@ -1233,11 +1261,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   certSisaHari = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
                 }
 
+                const isActive = activeCertId === cert.id;
+                
                 return (
                   <div
                     key={cert.id}
-                    className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 font-mono-data text-xs relative group hover:border-slate-300 transition-colors"
+                    onClick={() => setActiveCertId(cert.id)}
+                    className={`rounded-xl p-4 space-y-3 font-mono-data text-xs relative group transition-colors cursor-pointer ${isActive 
+                      ? 'bg-blue-50/50 border-2 border-[#005ea4] shadow-md' 
+                      : 'bg-slate-50 border border-slate-200 hover:border-[#005ea4]/50 hover:bg-slate-100'}`}
                   >
+                    {isActive && (
+                      <div className="absolute -top-3 -right-3">
+                        <span className="bg-[#005ea4] text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                          <Eye className="w-3 h-3" /> Aktif Dilihat
+                        </span>
+                      </div>
+                    )}
                     {/* Delete button */}
                     <button
                       onClick={() => setDeletingLinkedCertId(cert.id)}
