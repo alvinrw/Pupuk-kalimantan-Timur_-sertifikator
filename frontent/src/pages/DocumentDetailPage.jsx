@@ -72,35 +72,53 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen] = useState(false);
   const [isCancelingHeader, setIsCancelingHeader] = useState(false);
 
-  // Dynamic Document Type Detection
-  const isHaki = Boolean(item.categoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
-  const isEquipment = Boolean(item.categoryKey === 'peralatan-pabrik' || (item.nomorSeri && !isHaki && !item.linkedCertificates));
+  const targetCert = item?.currentCert || item?.cert || null;
+  const parentDoc = item?.parentDoc || item;
+  const effectiveCategoryKey = parentDoc.categoryKey || item.categoryKey || '';
+  const isSingleCertScope = Boolean(
+    targetCert?.id &&
+    (effectiveCategoryKey === 'perizinan-aset' ||
+     effectiveCategoryKey === 'perizinan-proyek' ||
+     effectiveCategoryKey === 'perizinan-produk')
+  );
+
+  const isHaki = Boolean(effectiveCategoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
+  const isEquipment = Boolean(effectiveCategoryKey === 'peralatan-pabrik' || (item.nomorSeri && !isHaki && !item.linkedCertificates));
   const isMultiCertItem = Boolean(
     item.linkedCertificates ||
-    item.categoryKey === 'perizinan-aset' ||
-    item.categoryKey === 'perizinan-proyek' ||
-    item.categoryKey === 'perizinan-produk'
+    effectiveCategoryKey === 'perizinan-aset' ||
+    effectiveCategoryKey === 'perizinan-proyek' ||
+    effectiveCategoryKey === 'perizinan-produk'
   );
   const isGenericDoc = !isHaki && !isEquipment;
 
   // Form State for Editing
+  // When isSingleCertScope: init from targetCert fields; else fallback to item fields
   const [formData, setFormData] = useState({
-    merekItem: item.merekItem || item.title || item.judulCiptaan || '',
-    jenisPeralatan: item.jenisPeralatan || item.kategoriDokumen || item.jenisCiptaan || '',
-    tipe: item.tipe || item.code || '',
+    merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
+    jenisPeralatan: isSingleCertScope
+      ? (targetCert?.jenisSertifikat || parentDoc.title || '')
+      : (item.jenisPeralatan || item.jenisCert || item.kategoriDokumen || item.jenisCiptaan || item.title || ''),
+    tipe: isSingleCertScope
+      ? (targetCert?.noSertifikat || parentDoc.code || '')
+      : (item.tipe || item.code || ''),
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
-    lokasi: item.lokasi || item.unitPabrik || item.unit || '',
-    user: item.user || '',
-    status: item.status || 'Aktif',
-    noSertifikat: item.noSertifikat || item.certificateNo || '',
-    tanggalInspeksi: item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || '',
+    lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
+    user: targetCert?.instansi || item.user || item.issuer || 'Umum',
+    status: isSingleCertScope ? (targetCert?.status || 'Aktif') : (item.status || 'Aktif'),
+    noSertifikat: isSingleCertScope
+      ? (targetCert?.noSertifikat || '')
+      : (item.noSertifikat || item.certNo || item.certificateNo || ''),
+    tanggalInspeksi: isSingleCertScope
+      ? (targetCert?.terbit || parentDoc.createdAt || '')
+      : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
     tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
     masaBerlaku: item.masaBerlaku || '5 Tahun',
-    terbit: item.terbit || item.issueDate || item.tanggalCiptaan || '',
-    berakhir: item.berakhir || item.expiryDate || item.kapanBerakhir || '',
-    keterangan: item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
-    fileUrl: item.fileUrl || item.pdfUrl || ''
+    terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
+    berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
+    keterangan: targetCert?.instansi || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
+    fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || '')
   });
 
   // History Certificates State (Real Database)
@@ -110,53 +128,73 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const fetchHistory = async () => {
     try {
       setIsLoadingHistory(true);
-      const targetId = item?.MasterId || item?.id;
-      if (targetId) {
-        const detail = await getMasterItemById(targetId);
-        if (detail && detail.certificates && detail.certificates.length > 0) {
-          const mappedCerts = detail.certificates.map(c => ({
-            id: c.id,
-            periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} - ${c.expired.substring(0, 4)}` : 'Periode SK',
-            noSertifikat: c.noSertifikat || '-',
-            terbit: c.terbit || '-',
-            expired: c.expired || '-',
-            status: c.status || 'Aktif',
-            fileUrl: c.fileUrl || null,
-            pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
-            rawCert: c
-          }));
+      const masterItemId = parentDoc?.MasterId || parentDoc?.id || item?.MasterId || item?.id;
+      if (!masterItemId) { setHistoryList([]); return; }
 
-          setHistoryList(mappedCerts);
+      const detail = await getMasterItemById(masterItemId);
+      if (!detail || !detail.certificates || detail.certificates.length === 0) {
+        setHistoryList([]);
+        return;
+      }
 
-          // Find active certificates
-          const activeCerts = mappedCerts.filter(c => c.status === 'Aktif' || c.status === 'Active');
+      let certList = detail.certificates;
 
-          let primaryCert = null;
-          if (activeCerts.length > 0) {
-            // Sort active certificates by expired date DESCENDING (furthest/latest expiry date first)
-            primaryCert = activeCerts.slice().sort((a, b) => {
-              const dateA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-              const dateB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-              return dateB - dateA;
-            })[0];
-          } else if (mappedCerts.length > 0) {
-            primaryCert = mappedCerts[0];
-          }
-
-          if (primaryCert) {
-            setFormData(prev => ({
-              ...prev,
-              noSertifikat: primaryCert.noSertifikat,
-              terbit: primaryCert.terbit,
-              berakhir: primaryCert.expired,
-              fileUrl: primaryCert.fileUrl || prev.fileUrl
-            }));
-            if (primaryCert.fileUrl) {
-              item.fileUrl = primaryCert.fileUrl;
-            }
-          }
+      // When scoped to a specific cert (Perizinan Proyek/Aset/Produk):
+      // Show ALL certs with the same jenisSertifikat as the selected cert.
+      // This allows perpanjangan (renewals) of the same cert type to appear in history.
+      // Primary anchor: find jenisSertifikat from targetCert.id match, then filter by jenisSertifikat.
+      if (isSingleCertScope && targetCert?.id) {
+        const anchorCert = certList.find(c => c.id === targetCert.id);
+        const scopedJenis = anchorCert?.jenisSertifikat || targetCert?.jenisSertifikat;
+        if (scopedJenis) {
+          // Show all certs with same jenisSertifikat (includes renewals)
+          certList = certList.filter(c => c.jenisSertifikat === scopedJenis);
         } else {
-          setHistoryList([]);
+          // Fallback: exact ID only
+          certList = certList.filter(c => c.id === targetCert.id);
+        }
+      }
+
+      const mappedCerts = certList.map(c => ({
+        id: c.id,
+        periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} – ${c.expired.substring(0, 4)}` : 'Periode SK',
+        noSertifikat: c.noSertifikat || '-',
+        jenisSertifikat: c.jenisSertifikat || '-',
+        instansi: c.instansi || '-',
+        terbit: c.terbit || '-',
+        expired: c.expired || '-',
+        status: c.status || 'Aktif',
+        fileUrl: c.fileUrl || null,
+        pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
+        rawCert: c
+      }));
+
+      setHistoryList(mappedCerts);
+
+      // Only update formData from DB if NOT scoped — when scoped, formData is already
+      // correctly set from targetCert in useState initialization
+      if (!isSingleCertScope) {
+        const activeCerts = mappedCerts.filter(c => c.status === 'Aktif' || c.status === 'Active');
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dateA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dateB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            return dateB - dateA;
+          })[0];
+        } else if (mappedCerts.length > 0) {
+          primaryCert = mappedCerts[0];
+        }
+        if (primaryCert) {
+          setFormData(prev => ({
+            ...prev,
+            noSertifikat: primaryCert.noSertifikat,
+            jenisPeralatan: primaryCert.rawCert?.jenisSertifikat || prev.jenisPeralatan,
+            terbit: primaryCert.terbit,
+            berakhir: primaryCert.expired,
+            status: primaryCert.status,
+            fileUrl: primaryCert.fileUrl || prev.fileUrl
+          }));
         }
       }
     } catch (err) {
@@ -287,21 +325,41 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         if (uploadRes.ok) {
           const uploadJson = await uploadRes.json();
           fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
+        } else {
+          const errText = await uploadRes.text();
+          throw new Error(`Upload file gagal (${uploadRes.status}): ${errText}`);
         }
       }
 
-      const certPayload = {
-        itemId: item.MasterId || item.id,
-        jenisSertifikat: 'Riksa Uji Disnaker',
-        noSertifikat: uploadData.noSertifikat.trim() || `CERT-${Date.now()}`,
-        status: 'Aktif',
-      };
-      if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
-      if (uploadData.expired) certPayload.expired = uploadData.expired;
-      if (fileUrl) certPayload.fileUrl = fileUrl;
+      const masterItemId = parentDoc.MasterId || parentDoc.id || item.MasterId || item.id;
+      const targetIsUpdate = uploadData.target === 'current' && isSingleCertScope && targetCert?.id;
 
-      // Always create a new certificate history for this item
-      await createCertificateForMasterItem(certPayload);
+      if (targetIsUpdate) {
+        // UPDATE cert yang ada — koreksi file/no sertifikat, tidak buat row baru
+        const updatePayload = {
+          noSertifikat: uploadData.noSertifikat.trim() || targetCert.noSertifikat,
+          status: 'Aktif',
+        };
+        if (uploadData.terbit) updatePayload.terbit = uploadData.terbit;
+        if (uploadData.expired) updatePayload.expired = uploadData.expired;
+        if (uploadData.instansi) updatePayload.instansi = uploadData.instansi;
+        if (fileUrl) updatePayload.fileUrl = fileUrl;
+        await updateCertificate(targetCert.id, updatePayload);
+      } else {
+        // CREATE sertifikat baru — perpanjangan atau tambah histori
+        // Jika isSingleCertScope, gunakan jenisSertifikat yang sama supaya relevan
+        const certPayload = {
+          itemId: masterItemId,
+          jenisSertifikat: targetCert?.jenisSertifikat || item.jenisPeralatan || item.title || 'Riksa Uji Disnaker',
+          noSertifikat: uploadData.noSertifikat.trim() || `CERT-${Date.now()}`,
+          status: 'Aktif',
+        };
+        if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
+        if (uploadData.expired) certPayload.expired = uploadData.expired;
+        if (uploadData.instansi) certPayload.instansi = uploadData.instansi;
+        if (fileUrl) certPayload.fileUrl = fileUrl;
+        await createCertificateForMasterItem(certPayload);
+      }
 
       await fetchHistory();
       setIsUploadModalOpen(false);
@@ -399,14 +457,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
-                {formData.merekItem}
+                {isSingleCertScope
+                  ? (targetCert?.jenisSertifikat || formData.jenisPeralatan || formData.merekItem)
+                  : formData.merekItem}
               </h2>
+              {isSingleCertScope && (
+                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold font-mono-data">
+                  {targetCert?.noSertifikat || formData.noSertifikat || 'Sertifikat'}
+                </span>
+              )}
               <span className="px-2.5 py-0.5 bg-blue-50 text-[#005ea4] border border-blue-200 rounded-lg text-xs font-bold font-mono-data">
-                ID: {item.id}
+                {isSingleCertScope ? `Entity: ${parentDoc.id || item.id}` : `ID: ${item.id}`}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-              Detail Spesifikasi, Legalitas Sertifikat, dan Rekam Jejak Audit Dokumen
+              {isSingleCertScope
+                ? `Entitas: ${formData.merekItem} · Detail & Riwayat Sertifikat Terpilih`
+                : 'Detail Spesifikasi, Legalitas Sertifikat, dan Rekam Jejak Audit Dokumen'}
             </p>
           </div>
         </div>
@@ -854,55 +921,74 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </div>
           ) : (
             <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-6 space-y-4 font-mono-data">
-              <h4 className="font-bold text-sm text-slate-900 border-b border-blue-200 pb-3 flex items-center justify-between font-sans">
-                <span className="flex items-center gap-2">
-                  <FileCheck className="w-5 h-5 text-[#005ea4]" />
-                  <span>Status Legalitas Sertifikat Active</span>
-                </span>
-                <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
-              </h4>
+              {/* Compute active primary cert with furthest expiry from historyList */}
+              {(() => {
+                const activeCerts = historyList.filter(c => (c.status || '').toLowerCase() === 'aktif' || (c.status || '').toLowerCase() === 'active');
+                const primaryCert = activeCerts.length > 0
+                  ? activeCerts.slice().sort((a, b) => {
+                      const dateA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+                      const dateB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+                      return dateB - dateA; // descending → furthest expiry first
+                    })[0]
+                  : (historyList.length > 0 ? historyList[0] : null);
 
-              <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
-                <div>
-                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
-                  <span className="font-bold text-[#005ea4] text-base">{formData.noSertifikat}</span>
-                </div>
+                const displayNoSert = primaryCert?.noSertifikat || formData.noSertifikat || '-';
+                const displayExpired = primaryCert?.expired || formData.berakhir || '-';
+                const displayFileUrl = primaryCert?.fileUrl || formData.fileUrl || null;
 
-                <div>
-                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
-                  <span className="font-bold text-rose-700 text-base">{formData.berakhir}</span>
-                </div>
-              </div>
+                return (
+                  <>
+                    <h4 className="font-bold text-sm text-slate-900 border-b border-blue-200 pb-3 flex items-center justify-between font-sans">
+                      <span className="flex items-center gap-2">
+                        <FileCheck className="w-5 h-5 text-[#005ea4]" />
+                        <span>Status Legalitas Sertifikat Active</span>
+                      </span>
+                      <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
+                    </h4>
 
-              <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#005ea4]" />
-                  <span className="font-bold text-slate-800">
-                    {formData.fileUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
-                  </span>
-                </div>
-                {formData.fileUrl ? (
-                  <button
-                    onClick={() => {
-                      const targetUrl = formData.fileUrl;
-                      const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
-                      window.open(fullUrl, '_blank');
-                    }}
-                    className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                  >
-                    <span>Buka File PDF</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-white" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => openUploadModal('current')}
-                    className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
-                    <span>+ Unggah File PDF</span>
-                  </button>
-                )}
-              </div>
+                    <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
+                        <span className="font-bold text-[#005ea4] text-base">{displayNoSert}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
+                        <span className="font-bold text-rose-700 text-base">{displayExpired}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#005ea4]" />
+                        <span className="font-bold text-slate-800">
+                          {displayFileUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+                        </span>
+                      </div>
+                      {displayFileUrl ? (
+                        <button
+                          onClick={() => {
+                            const fullUrl = displayFileUrl.startsWith('http') ? displayFileUrl : `http://localhost:3000${displayFileUrl}`;
+                            window.open(fullUrl, '_blank');
+                          }}
+                          className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <span>Buka File PDF</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-white" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openUploadModal('current')}
+                          className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                          <span>+ Unggah File PDF</span>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -986,19 +1072,22 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => {
-                                  const targetUrl = row.fileUrl || row.pdfName;
-                                  if (targetUrl && (targetUrl.startsWith('http') || targetUrl.startsWith('/'))) {
-                                    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
+                                  if (row.fileUrl) {
+                                    const fullUrl = row.fileUrl.startsWith('http') ? row.fileUrl : `http://localhost:3000${row.fileUrl}`;
                                     window.open(fullUrl, '_blank');
                                   } else {
-                                    alert(`Berkas PDF ${row.pdfName || ''} belum tersedia.`);
+                                    alert('Berkas PDF belum diunggah untuk sertifikat ini. Gunakan tombol "+ Unggah / Koreksi Berkas PDF Manual" untuk menambahkan file.');
                                   }
                                 }}
-                                className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors cursor-pointer"
-                                title="Buka / Unduh Berkas PDF"
+                                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors ${
+                                  row.fileUrl
+                                    ? 'bg-[#005ea4] hover:bg-[#004881] text-white cursor-pointer'
+                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                }`}
+                                title={row.fileUrl ? 'Buka / Unduh Berkas PDF' : 'Belum ada berkas PDF'}
                               >
                                 <FileText className="w-3.5 h-3.5" />
-                                <span>Liat PDF</span>
+                                <span>{row.fileUrl ? 'Liat PDF' : 'Belum Ada'}</span>
                               </button>
 
                               <button
@@ -1224,16 +1313,57 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const newId = `LC-${item.id}-${Date.now()}`;
-                const updatedCerts = [...linkedCerts, { ...newCertData, id: newId }];
-                setLinkedCerts(updatedCerts);
-                if (onSaveUpdate) {
-                  onSaveUpdate({ ...item, linkedCertificates: updatedCerts });
+                try {
+                  // Upload PDF file first if selected
+                  let fileUrl = null;
+                  const pdfInput = document.getElementById('add-linked-cert-pdf-input');
+                  const pdfFile = pdfInput?.files?.[0];
+                  if (pdfFile) {
+                    const formDataUpload = new FormData();
+                    formDataUpload.append('file', pdfFile);
+                    const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+                      method: 'POST',
+                      body: formDataUpload
+                    });
+                    if (uploadRes.ok) {
+                      const uploadJson = await uploadRes.json();
+                      fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
+                    }
+                  }
+
+                  // Save certificate to database
+                  const masterItemId = parentDoc.MasterId || parentDoc.id || item.MasterId || item.id;
+                  const certPayload = {
+                    itemId: masterItemId,
+                    jenisSertifikat: newCertData.jenisSertifikat,
+                    noSertifikat: newCertData.noSertifikat,
+                    instansi: newCertData.instansi || null,
+                    status: newCertData.status || 'Aktif',
+                  };
+                  if (newCertData.terbit) certPayload.terbit = newCertData.terbit;
+                  if (newCertData.expired) certPayload.expired = newCertData.expired;
+                  if (fileUrl) certPayload.fileUrl = fileUrl;
+
+                  const saved = await createCertificateForMasterItem(certPayload);
+
+                  // Update local linked certs state with the DB-saved cert (has real UUID id)
+                  const updatedCerts = [...linkedCerts, saved];
+                  setLinkedCerts(updatedCerts);
+
+                  // Refresh history table
+                  await fetchHistory();
+
+                  // Notify parent to refresh main table
+                  if (onRefreshRequired) onRefreshRequired();
+
+                  setNewCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: '' });
+                  setIsAddCertModalOpen(false);
+                } catch (err) {
+                  console.error('Failed to save linked certificate:', err);
+                  alert('Gagal menyimpan sertifikat terhubung: ' + (err.message || 'Error'));
                 }
-                setNewCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: '' });
-                setIsAddCertModalOpen(false);
               }}
               className="p-6 space-y-4 text-xs font-mono-data"
             >
@@ -1479,10 +1609,9 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 <label className="font-bold text-slate-800 block mb-1">2. No. Sertifikat / SK Baru (Koreksi)</label>
                 <input
                   type="text"
-                  required
                   value={uploadData.noSertifikat}
                   onChange={(e) => setUploadData({ ...uploadData, noSertifikat: e.target.value })}
-                  placeholder="Contoh: CERT-8891/DISNAKER/2026"
+                  placeholder="Contoh: CERT-8891/DISNAKER/2026 (opsional, auto-generate jika kosong)"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
                 />
               </div>
