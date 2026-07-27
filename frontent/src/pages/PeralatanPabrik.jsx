@@ -101,32 +101,40 @@ export default function PeralatanPabrik() {
     let isExpired = statusStr === 'expired';
     let isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'in_progress' || workflowStr === 'in_progress';
 
-    if (item.berakhir) {
+    // 3. KUNING (YELLOW) -> Perpanjangan / In Progress
+    if (isPerpanjang) {
+      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
+    }
+
+    // Jika STAGING (PENDING_DOC) atau EXEMPT, biarkan netral / indigo
+    if (item.documentStatus === 'PENDING_DOC' || item.documentStatus === 'EXEMPT') {
+      if (item.documentStatus === 'EXEMPT') {
+        return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
+      }
+      return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
+    }
+
+    if (item.berakhir && item.berakhir !== '-') {
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const expDate = new Date(item.berakhir);
+      expDate.setHours(0, 0, 0, 0);
+
       if (!isNaN(expDate.getTime())) {
-        const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
+        const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays <= 0) {
           isExpired = true;
-        } else if (diffDays <= 30) {
-          isPerpanjang = true;
         }
+      }
+    } else {
+      if (statusStr === 'aktif' || statusStr === '') {
+        isExpired = false;
       }
     }
 
     // 2. MERAH (RED) -> Expired
     if (isExpired) {
       return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
-    }
-
-    // 3. KUNING (YELLOW) -> Perpanjangan / In Progress / Urgent
-    if (isPerpanjang) {
-      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
-    }
-
-    // 4. INDIGO (PURPLE) -> Tanpa Sertifikat (EXEMPT)
-    if (item.documentStatus === 'EXEMPT') {
-      return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
     }
 
     // 5. DEFAULT (Clean Normal Row)
@@ -161,9 +169,9 @@ export default function PeralatanPabrik() {
             lokasi: item.unitLocation || 'Umum',
             user: 'Umum',
             status: item.status || 'Aktif',
-            documentStatus: item.documentStatus || 'COMPLETED',
+            documentStatus: item.documentStatus || 'EXEMPT',
             exemptionNote: item.exemptionNote || null,
-            noSertifikat: '-',
+            noSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-',
             tanggalInspeksi: item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
             terbit: item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
             berakhir: item.expiryDate || '-',
@@ -183,7 +191,7 @@ export default function PeralatanPabrik() {
               lokasi: item.unitLocation || 'Umum',
               user: 'Umum',
               status: item.status || 'Aktif',
-              documentStatus: item.documentStatus === 'EXEMPT' ? 'EXEMPT' : 'COMPLETED',
+              documentStatus: item.documentStatus || 'COMPLETED',
               exemptionNote: item.exemptionNote || null,
               noSertifikat: doc.noSertifikat || doc.noIzin || '-',
               tanggalInspeksi: doc.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
@@ -391,8 +399,15 @@ export default function PeralatanPabrik() {
         item={detailModalItem}
         onBack={() => setDetailModalItem(null)}
         onSaveUpdate={(updatedItem) => {
-          setEquipmentList(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i));
-          setDetailModalItem(prev => (prev && prev.id === updatedItem.id ? { ...prev, ...updatedItem } : prev));
+          setEquipmentList(prev => prev.map(i => {
+            const isMatch = i.MasterId === updatedItem.MasterId || (i.id === updatedItem.id && !i.MasterId);
+            return isMatch ? { ...i, ...updatedItem, id: i.id } : i;
+          }));
+          setDetailModalItem(prev => {
+            if (!prev) return prev;
+            const isMatch = prev.MasterId === updatedItem.MasterId || (prev.id === updatedItem.id && !prev.MasterId);
+            return isMatch ? { ...prev, ...updatedItem, id: prev.id } : prev;
+          });
         }}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan Sertifikat untuk item ${id}. Menuju menu Monitoring.`);
@@ -402,6 +417,9 @@ export default function PeralatanPabrik() {
         }}
         onDeleteSuccess={() => {
           setDetailModalItem(null);
+          loadData();
+        }}
+        onRefreshRequired={() => {
           loadData();
         }}
       />

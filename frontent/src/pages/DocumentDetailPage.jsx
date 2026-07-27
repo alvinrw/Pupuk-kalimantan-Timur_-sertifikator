@@ -27,9 +27,9 @@ import {
   AlertTriangle,
   CheckSquare
 } from 'lucide-react';
-import { getMasterItemById, deleteMasterItem, createCertificateForMasterItem, updateCertificate, deleteCertificate } from '../services/masterItemsService';
+import { getMasterItemById, deleteMasterItem, createCertificateForMasterItem, updateCertificate, deleteCertificate, updateMasterItem } from '../services/masterItemsService';
 
-export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission }) {
+export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission, onDeleteSuccess, onRefreshRequired }) {
   if (!item) return null;
 
   const [isEditing, setIsEditing] = useState(false);
@@ -41,6 +41,10 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const editHistoryFileInputRef = useRef(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
+  const [isAfkiring, setIsAfkiring] = useState(false);
+  const [isAktifkanModalOpen, setIsAktifkanModalOpen] = useState(false);
+  const [isAktifkaning, setIsAktifkaning] = useState(false);
 
   // Multi-Certificate Hub State
   const [linkedCerts, setLinkedCerts] = useState(item.linkedCertificates || []);
@@ -56,6 +60,17 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     pdfName: ''
   });
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
+
+  // Custom Renew Exempt Modal State
+  const [isRenewExemptModalOpen, setIsRenewExemptModalOpen] = useState(false);
+  const [renewExemptDate, setRenewExemptDate] = useState('');
+  const [isRenewingExempt, setIsRenewingExempt] = useState(false);
+
+  // Header Perpanjangan Confirmation State
+  const [isConfirmRenewHeaderModalOpen, setIsConfirmRenewHeaderModalOpen] = useState(false);
+  const [isRenewingHeader, setIsRenewingHeader] = useState(false);
+  const [isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen] = useState(false);
+  const [isCancelingHeader, setIsCancelingHeader] = useState(false);
 
   // Dynamic Document Type Detection
   const isHaki = Boolean(item.categoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
@@ -150,15 +165,80 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     fileName: ''
   });
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    if (onSaveUpdate) {
-      onSaveUpdate({
-        ...item,
-        ...formData
-      });
+    try {
+      const targetId = item.MasterId || item.id;
+      const updated = await updateMasterItem(targetId, formData);
+      if (onSaveUpdate) {
+        onSaveUpdate({
+          ...item,
+          ...formData,
+          ...updated,
+          id: item.id
+        });
+      }
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Failed to update master item:', err);
+      alert('Gagal menyimpan perubahan data: ' + (err.message || 'Error'));
     }
-    setIsEditing(false);
+  };
+
+  const handleAfkir = () => {
+    setIsAfkirModalOpen(true);
+  };
+
+  const confirmAfkir = async () => {
+    setIsAfkiring(true);
+    try {
+      const targetId = item.MasterId || item.id;
+      const updated = await updateMasterItem(targetId, { status: 'Afkir' });
+      setFormData(prev => ({ ...prev, status: 'Afkir' }));
+      if (onSaveUpdate) {
+        onSaveUpdate({
+          ...item,
+          ...formData,
+          status: 'Afkir',
+          ...updated,
+          id: item.id
+        });
+      }
+      setIsAfkirModalOpen(false);
+    } catch (err) {
+      console.error('Failed to update master item status to Afkir:', err);
+      alert('Gagal mengubah status menjadi Afkir: ' + (err.message || 'Error'));
+    } finally {
+      setIsAfkiring(false);
+    }
+  };
+
+  const handleAktifkan = () => {
+    setIsAktifkanModalOpen(true);
+  };
+
+  const confirmAktifkan = async () => {
+    setIsAktifkaning(true);
+    try {
+      const targetId = item.MasterId || item.id;
+      const updated = await updateMasterItem(targetId, { status: 'Aktif' });
+      setFormData(prev => ({ ...prev, status: 'Aktif' }));
+      if (onSaveUpdate) {
+        onSaveUpdate({
+          ...item,
+          ...formData,
+          status: 'Aktif',
+          ...updated,
+          id: item.id
+        });
+      }
+      setIsAktifkanModalOpen(false);
+    } catch (err) {
+      console.error('Failed to update master item status to Aktif:', err);
+      alert('Gagal mengaktifkan kembali: ' + (err.message || 'Error'));
+    } finally {
+      setIsAktifkaning(false);
+    }
   };
 
   const [selectedUploadFile, setSelectedUploadFile] = useState(null);
@@ -194,6 +274,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
       await fetchHistory();
       setIsUploadModalOpen(false);
       setSelectedUploadFile(null);
+      if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       console.error("Failed to upload manual certificate:", err);
       alert("Gagal mengunggah sertifikat: " + (err.message || 'Error'));
@@ -245,7 +326,8 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const handleDeleteMasterItem = async () => {
     try {
       setIsDeleting(true);
-      await deleteMasterItem(item.id);
+      const targetId = item.MasterId || item.id;
+      await deleteMasterItem(targetId);
       setIsDeleteDialogOpen(false);
       if (onDeleteSuccess) {
         onDeleteSuccess();
@@ -254,10 +336,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
       }
     } catch (error) {
       console.error('Failed to delete:', error);
+      alert('Gagal menghapus data: ' + (error.message || 'Error'));
     } finally {
       setIsDeleting(false);
     }
   };
+
+  const currentStatus = formData.status || item.status || 'Aktif';
+  const isAfkirStatus = currentStatus.toLowerCase() === 'afkir' || currentStatus.toLowerCase() === 'decommissioned';
 
   return (
     <div className="p-8 space-y-6 font-sans-clean max-w-7xl mx-auto animate-in fade-in duration-200">
@@ -306,21 +392,50 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </button>
           )}
 
-          <button
-            onClick={() => { if (onQuickRenew) onQuickRenew(item.id); }}
-            className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
-          >
-            <RotateCcw className="w-4 h-4 text-emerald-700" />
-            <span>Perpanjang</span>
-          </button>
+          {formData.status === 'Perpanjang' || formData.status === 'in_progress' ? (
+            <>
+              <button
+                onClick={() => setIsUploadModalOpen(true)}
+                className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              >
+                <UploadCloud className="w-4 h-4 text-amber-700" />
+                <span>Selesai & Upload File Baru</span>
+              </button>
+              <button
+                onClick={() => setIsConfirmCancelHeaderModalOpen(true)}
+                className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+              >
+                <X className="w-4 h-4 text-rose-600" />
+                <span>Batal Perpanjangan</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setIsConfirmRenewHeaderModalOpen(true)}
+              className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+            >
+              <RotateCcw className="w-4 h-4 text-amber-700" />
+              <span>Perpanjang</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => { if (onQuickDecommission) onQuickDecommission(item.id); }}
-            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
-          >
-            <Ban className="w-4 h-4 text-slate-300" />
-            <span>Afkir</span>
-          </button>
+          {isAfkirStatus ? (
+            <button
+              onClick={handleAktifkan}
+              className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-[#005ea4] border border-blue-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+            >
+              <RotateCcw className="w-4 h-4 text-[#005ea4]" />
+              <span>Batal Afkir / Aktifkan</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleAfkir}
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+            >
+              <Ban className="w-4 h-4 text-slate-300" />
+              <span>Afkir</span>
+            </button>
+          )}
 
           <button
             onClick={() => setIsDeleteDialogOpen(true)}
@@ -334,10 +449,6 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
       {/* CLEAN NEUTRAL STATUS & SISA HARI INFO */}
       {(() => {
-        const currentStatus = formData.status || item.status || 'Aktif';
-        const statusLower = currentStatus.toLowerCase();
-        const isAfkir = statusLower === 'afkir' || statusLower === 'decommissioned';
-
         let sisaHariCalc = item.sisaHari;
         if (sisaHariCalc === undefined || sisaHariCalc === null) {
           const expStr = formData.berakhir || item.berakhir || item.expiryDate;
@@ -365,7 +476,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               <div>
                 <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">Sisa Masa Berlaku</span>
                 <span className="font-bold text-sm text-slate-900">
-                  {isAfkir ? 'Afkir / Non-Aktif' : sisaHariCalc <= 0 ? `Expired (${Math.abs(sisaHariCalc)} hari lalu)` : `${sisaHariCalc.toLocaleString()} Hari`}
+                  {isAfkirStatus ? 'Afkir / Non-Aktif' : sisaHariCalc <= 0 ? `Expired (${Math.abs(sisaHariCalc)} hari lalu)` : `${sisaHariCalc.toLocaleString()} Hari`}
                 </span>
               </div>
             </div>
@@ -665,57 +776,97 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           </div>
 
           {/* SECTION 2: PERMIT & CERTIFICATE LEGAL STATUS */}
-          <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-6 space-y-4 font-mono-data">
-            <h4 className="font-bold text-sm text-slate-900 border-b border-blue-200 pb-3 flex items-center justify-between font-sans">
-              <span className="flex items-center gap-2">
-                <FileCheck className="w-5 h-5 text-[#005ea4]" />
-                <span>Status Legalitas Sertifikat Active</span>
-              </span>
-              <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
-            </h4>
-
-            <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
-              <div>
-                <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
-                <span className="font-bold text-[#005ea4] text-base">{formData.noSertifikat}</span>
-              </div>
-
-              <div>
-                <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
-                <span className="font-bold text-rose-700 text-base">{formData.berakhir}</span>
-              </div>
-            </div>
-
-            <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-[#005ea4]" />
-                <span className="font-bold text-slate-800">
-                  {item.fileUrl || item.pdfUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+          {item.documentStatus === 'EXEMPT' ? (
+            <div className="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-6 space-y-4 font-mono-data text-center">
+              <h4 className="font-bold text-sm text-indigo-900 flex items-center justify-center gap-2 mb-2">
+                <ShieldAlert className="w-6 h-6 text-indigo-600" />
+                <span>Tanpa Sertifikat (Catatan / Exempt)</span>
+              </h4>
+              <p className="text-sm font-bold text-indigo-800 bg-indigo-100/50 p-3 rounded-xl border border-indigo-200 inline-block">
+                Alasan: {item.exemptionNote || 'Tidak ada catatan khusus'}
+              </p>
+              
+              <div className="text-xs text-slate-600 mt-2 p-2 bg-white/50 rounded-lg inline-block border border-indigo-100 mx-auto">
+                <span className="italic block mb-1">* Ini data bawaan dari Master CSV.</span>
+                <span className="font-semibold block">
+                  Estimasi Expired / Jatuh Tempo: <span className="text-rose-600 font-bold ml-1">{formData.berakhir || '-'}</span>
                 </span>
               </div>
-              {item.fileUrl || item.pdfUrl ? (
+
+              <div className="pt-4 mt-2 border-t border-indigo-200/60 flex items-center justify-center gap-3">
                 <button
                   onClick={() => {
-                    const targetUrl = item.fileUrl || item.pdfUrl;
-                    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
-                    window.open(fullUrl, '_blank');
+                    const defaultDate = formData.berakhir && formData.berakhir !== '-' ? formData.berakhir : '';
+                    setRenewExemptDate(defaultDate);
+                    setIsRenewExemptModalOpen(true);
                   }}
-                  className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
-                  <span>Buka File PDF</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-white" />
+                  <RefreshCw className="w-4 h-4" />
+                  <span>Ajukan Perpanjangan</span>
                 </button>
-              ) : (
                 <button
                   onClick={() => setIsUploadModalOpen(true)}
-                  className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
-                  <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
-                  <span>+ Unggah File PDF</span>
+                  <UploadCloud className="w-4 h-4" />
+                  <span>Upload Sertifikat Sekarang</span>
                 </button>
-              )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-6 space-y-4 font-mono-data">
+              <h4 className="font-bold text-sm text-slate-900 border-b border-blue-200 pb-3 flex items-center justify-between font-sans">
+                <span className="flex items-center gap-2">
+                  <FileCheck className="w-5 h-5 text-[#005ea4]" />
+                  <span>Status Legalitas Sertifikat Active</span>
+                </span>
+                <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
+              </h4>
+
+              <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
+                <div>
+                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
+                  <span className="font-bold text-[#005ea4] text-base">{formData.noSertifikat}</span>
+                </div>
+
+                <div>
+                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
+                  <span className="font-bold text-rose-700 text-base">{formData.berakhir}</span>
+                </div>
+              </div>
+
+              <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-[#005ea4]" />
+                  <span className="font-bold text-slate-800">
+                    {item.fileUrl || item.pdfUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+                  </span>
+                </div>
+                {item.fileUrl || item.pdfUrl ? (
+                  <button
+                    onClick={() => {
+                      const targetUrl = item.fileUrl || item.pdfUrl;
+                      const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
+                      window.open(fullUrl, '_blank');
+                    }}
+                    className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                  >
+                    <span>Buka File PDF</span>
+                    <ExternalLink className="w-3.5 h-3.5 text-white" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                    <span>+ Unggah File PDF</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* SECTION 3: REKAM JEJAK / RIWAYAT PERPANJANGAN & ARSIP PDF */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-6">
@@ -1518,6 +1669,269 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
                   {isDeleting ? 'Menghapus...' : 'Ya, Hapus Data'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AFKIR CONFIRMATION MODAL */}
+      {isAfkirModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 mx-auto flex items-center justify-center mb-4 border border-slate-200">
+                <Ban className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Tandai Sebagai Afkir?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin menandai <br /><strong className="text-slate-800">{formData.merekItem || item.title}</strong> sebagai Afkir/Non-Aktif?<br />
+                Tindakan ini akan mengubah status dokumen secara permanen.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAfkirModalOpen(false)}
+                  disabled={isAfkiring}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAfkir}
+                  disabled={isAfkiring}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isAfkiring ? 'Memproses...' : 'Ya, Afkirkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AKTIFKAN CONFIRMATION MODAL */}
+      {isAktifkanModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-blue-100 text-[#005ea4] mx-auto flex items-center justify-center mb-4 border border-blue-200">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Aktifkan Kembali?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin membatalkan afkir dan mengaktifkan kembali <br /><strong className="text-slate-800">{formData.merekItem || item.title}</strong>?<br />
+                Dokumen ini akan kembali dipantau status aktifnya.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAktifkanModalOpen(false)}
+                  disabled={isAktifkaning}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmAktifkan}
+                  disabled={isAktifkaning}
+                  className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isAktifkaning ? 'Memproses...' : 'Ya, Aktifkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* RENEW EXEMPT MODAL */}
+      {isRenewExemptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                <div className="w-10 h-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center border border-amber-200">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-base text-slate-900">Ajukan Perpanjangan</h4>
+                  <p className="text-[11px] text-slate-500 font-mono-data">Tanpa Upload Sertifikat Baru</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3 font-mono-data">
+                <p className="text-xs text-slate-600">
+                  Masukkan estimasi tanggal jatuh tempo / expired yang baru untuk: <br/>
+                  <strong className="text-slate-900 text-sm">{formData.merekItem || item.title}</strong>
+                </p>
+                <div>
+                  <label className="text-xs font-bold text-slate-800 block mb-1">Tanggal Expired Baru (YYYY-MM-DD)</label>
+                  <input
+                    type="date"
+                    value={renewExemptDate}
+                    onChange={(e) => setRenewExemptDate(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 font-bold text-slate-900 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsRenewExemptModalOpen(false)}
+                  disabled={isRenewingExempt}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isRenewingExempt || !renewExemptDate}
+                  onClick={async () => {
+                    if (!renewExemptDate) return;
+                    setIsRenewingExempt(true);
+                    try {
+                      const targetId = item.MasterId || item.id;
+                      const updated = await updateMasterItem(targetId, { expiryDate: renewExemptDate, status: 'Aktif' });
+                      setFormData(prev => ({ ...prev, berakhir: renewExemptDate, status: 'Aktif' }));
+                      if (onSaveUpdate) {
+                        onSaveUpdate({
+                          ...item,
+                          ...formData,
+                          berakhir: renewExemptDate,
+                          status: 'Aktif',
+                          id: targetId
+                        });
+                      }
+                      setIsRenewExemptModalOpen(false);
+                      // Let user know without ugly alert if possible, or keep simple alert for now since it's just success
+                      setTimeout(() => alert("Berhasil memperbarui tanggal jatuh tempo!"), 100);
+                    } catch (err) {
+                      alert("Gagal: " + (err.message || 'Error'));
+                    } finally {
+                      setIsRenewingExempt(false);
+                    }
+                  }}
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs shadow-md transition-all cursor-pointer flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRenewingExempt ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Simpan Perpanjangan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* HEADER PERPANJANG CONFIRMATION MODAL */}
+      {isConfirmRenewHeaderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4 border border-amber-200">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Ajukan Perpanjangan?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin mengajukan perpanjangan untuk <br /><strong className="text-slate-800">{formData.merekItem || item.title}</strong>?<br />
+                Status baris akan berubah menjadi <span className="text-amber-700 font-bold">Kuning (Sedang Diproses)</span>.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmRenewHeaderModalOpen(false)}
+                  disabled={isRenewingHeader}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isRenewingHeader}
+                  onClick={async () => {
+                    setIsRenewingHeader(true);
+                    try {
+                      const targetId = item.MasterId || item.id;
+                      const updated = await updateMasterItem(targetId, { status: 'Perpanjang' });
+                      setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
+                      if (onSaveUpdate) {
+                        onSaveUpdate({
+                          ...item,
+                          ...formData,
+                          status: 'Perpanjang',
+                          workflowStatus: 'in_progress',
+                          id: targetId
+                        });
+                      }
+                      setIsConfirmRenewHeaderModalOpen(false);
+                    } catch (err) {
+                      alert("Gagal mengajukan perpanjangan: " + (err.message || 'Error'));
+                    } finally {
+                      setIsRenewingHeader(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isRenewingHeader ? 'Memproses...' : 'Ya, Ajukan Perpanjangan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* HEADER BATAL PERPANJANGAN CONFIRMATION MODAL */}
+      {isConfirmCancelHeaderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center mb-4 border border-rose-200">
+                <X className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Batalkan Perpanjangan?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin membatalkan perpanjangan untuk <br /><strong className="text-slate-800">{formData.merekItem || item.title}</strong>?<br />
+                Status akan dikembalikan menjadi <span className="text-slate-800 font-bold">Aktif (Normal)</span>.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmCancelHeaderModalOpen(false)}
+                  disabled={isCancelingHeader}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={isCancelingHeader}
+                  onClick={async () => {
+                    setIsCancelingHeader(true);
+                    try {
+                      const targetId = item.MasterId || item.id;
+                      await updateMasterItem(targetId, { status: 'Aktif' });
+                      setFormData(prev => ({ ...prev, status: 'Aktif' }));
+                      if (onSaveUpdate) {
+                        onSaveUpdate({
+                          ...item,
+                          ...formData,
+                          status: 'Aktif',
+                          workflowStatus: item.documentStatus === 'EXEMPT' ? 'exempt' : 'completed',
+                          id: targetId
+                        });
+                      }
+                      setIsConfirmCancelHeaderModalOpen(false);
+                    } catch (err) {
+                      alert("Gagal membatalkan perpanjangan: " + (err.message || 'Error'));
+                    } finally {
+                      setIsCancelingHeader(false);
+                    }
+                  }}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isCancelingHeader ? 'Memproses...' : 'Ya, Batalkan'}
                 </button>
               </div>
             </div>

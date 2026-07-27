@@ -1,6 +1,6 @@
-id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
-EQ-PL-001,B-201-P1,Primary Reformer Waste Heat Boiler,peralatan-pabrik,Pabrik 1A (Amonia),Aktif,,,Bejana Tekan,2023-05-10,2026-05-10,Sertifikat Disnaker Kaltim
-EQ-PL-002,CR-501-P2,Overhead Crane 50 Ton Double Girder,peralatan-pabrik,Pabrik 2 (Gudang Material),Aktif,,,Pesawat Angkat & Angkut,2024-01-15,2027-01-15,Riksa Uji Sucofindo
-EQ-PL-003,TK-301-B3,Tangki Timbun Ammonia Liquid 20000 MT,peralatan-pabrik,Pabrik 3 (Tangki Timbun),Aktif,,,Tangki Timbun B3,2022-09-20,2027-09-20,Lisensi K3 Depnaker
-EQ-PL-004,M-101-P4,Syngas Centrifugal Gas Compressor,peralatan-pabrik,Pabrik 4 (Synthesis Unit),Aktif,,,Mesin & Pesawat Tenaga,2023-11-01,2026-11-01,Inspeksi Berkala UPTD
-EQ-PL-005,JT-801-P5,Instalasi Penyalur Petir & Grounding Grid,peralatan-pabrik,Pabrik 5 (Substation Utama),Aktif,,,Instalasi Petir & Listrik,2024-03-12,2026-03-12,Riksa Uji PT. Lentera Safety
+id;code;title;categoryKey;unitLocation;status;luasM2;luasHa;peruntukan;issueDate;expiryDate;keterangan
+EQ-PL-001;B-201-P1;Primary Reformer Waste Heat Boiler;peralatan-pabrik;Pabrik 1A (Amonia);Aktif;;;Bejana Tekan;10/05/2023;10/05/2026;Sertifikat Disnaker Kaltim
+EQ-PL-002;CR-501-P2;Overhead Crane 50 Ton Double Girder;peralatan-pabrik;Pabrik 2 (Gudang Material);Aktif;;;Pesawat Angkat & Angkut;15/01/2024;15/01/2027;Riksa Uji Sucofindo
+EQ-PL-003;TK-301-B3;Tangki Timbun Ammonia Liquid 20000 MT;peralatan-pabrik;Pabrik 3 (Tangki Timbun);Aktif;;;Tangki Timbun B3;20/09/2022;20/09/2027;Lisensi K3 Depnaker
+EQ-PL-004;M-101-P4;Syngas Centrifugal Gas Compressor;peralatan-pabrik;Pabrik 4 (Synthesis Unit);Aktif;;;Mesin & Pesawat Tenaga;01/11/2023;01/11/2026;Inspeksi Berkala UPTD
+EQ-PL-005;JT-801-P5;Instalasi Penyalur Petir & Grounding Grid;peralatan-pabrik;Pabrik 5 (Substation Utama);Aktif;;;Instalasi Petir & Listrik;12/03/2024;12/03/2026;Riksa Uji PT. Lentera Safety

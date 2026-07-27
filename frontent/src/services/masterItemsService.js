@@ -66,6 +66,20 @@ export const deleteMasterItem = async (id) => {
 };
 
 /**
+ * Update an existing master item
+ */
+export const updateMasterItem = async (id, data) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Updating Master Item ${id}...`, data);
+    await new Promise(res => setTimeout(res, 300));
+    return { id, ...data };
+  }
+  console.log(`[REAL API] Updating Master Item ${id}...`);
+  const response = await api.put(`/master-items/${id}`, data);
+  return response.data;
+};
+
+/**
  * Resolve exemption with mandatory note
  */
 export const resolveMasterItemExemption = async (id, note) => {
