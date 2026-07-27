@@ -75,7 +75,21 @@ export const updateMasterItem = async (id, data) => {
     return { id, ...data };
   }
   console.log(`[REAL API] Updating Master Item ${id}...`);
-  const response = await api.put(`/master-items/${id}`, data);
+
+  const payload = {};
+  if (data.title || data.merekItem) payload.title = data.merekItem || data.title;
+  if (data.code || data.tipe) payload.code = data.code || data.tipe;
+  if (data.categoryKey) payload.categoryKey = data.categoryKey;
+  if (data.unitLocation || data.lokasi) payload.unitLocation = data.lokasi || data.unitLocation;
+  if (data.status) payload.status = data.status;
+  if (data.luasM2) payload.luasM2 = data.luasM2;
+  if (data.luasHa) payload.luasHa = data.luasHa;
+  if (data.peruntukan) payload.peruntukan = data.peruntukan;
+  if (data.terbit || data.issueDate) payload.issueDate = data.terbit || data.issueDate;
+  if (data.berakhir || data.expiryDate) payload.expiryDate = data.berakhir || data.expiryDate;
+  if (data.keterangan) payload.keterangan = data.keterangan;
+
+  const response = await api.put(`/master-items/${id}`, payload);
   return response.data;
 };
 

@@ -6,6 +6,9 @@ Testing_ocr/Surat Keterangan/
 Testing_ocr/Timbangan/
 Testing_ocr/IPP PT PUPUK KALIMANTAN TIMUR/
 
+# Custom CSV
+/Inventor/Custom CSV/*.csv
+
 # Node & NestJS Dependencies
 node_modules/
 dist/

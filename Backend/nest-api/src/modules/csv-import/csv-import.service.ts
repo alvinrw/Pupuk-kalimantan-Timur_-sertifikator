@@ -26,21 +26,18 @@ export class CsvImportService {
 
     try {
       if (type === 'master_items') {
-        const itemIds = results.map(r => r.id).filter(Boolean);
-        const itemCodes = results.map(r => r.code).filter(Boolean);
-
         const existingItems = await this.prisma.masterItem.findMany({
-          where: {
-            OR: [
-              ...(itemIds.length ? [{ id: { in: itemIds } }] : []),
-              ...(itemCodes.length ? [{ code: { in: itemCodes } }] : [])
-            ]
-          },
-          select: { id: true, code: true }
+          select: { id: true, code: true, title: true, unitLocation: true, categoryKey: true }
         });
 
         const existingById = new Map(existingItems.filter(e => e.id).map(e => [e.id, e]));
-        const existingByCode = new Map(existingItems.filter(e => e.code).map(e => [e.code, e]));
+        const existingByCode = new Map(existingItems.filter(e => e.code && e.code !== '-').map(e => [e.code, e]));
+        const existingByFallback = new Map(
+          existingItems.map(e => [
+            `${(e.title || '').trim().toLowerCase()}_${(e.unitLocation || '').trim().toLowerCase()}_${(e.categoryKey || '').trim().toLowerCase()}`,
+            e
+          ])
+        );
 
         let successCount = 0;
         let failCount = 0;
@@ -52,25 +49,29 @@ export class CsvImportService {
         for (let i = 0; i < results.length; i++) {
           const row = results[i];
           try {
+            let rawTitle = (row.title || row.nama || row.jenisPeralatan || '').trim();
+            if (!rawTitle) rawTitle = '-';
+
+            let rawCode = (row.code || row.merek || row.kode || '').trim();
+            if (!rawCode) rawCode = '-';
+
+            const rawCategory = targetCategoryKey || row.categoryKey || 'peralatan-pabrik';
+            const rawLocation = (row.unitLocation || row.lokasi || 'Umum').trim();
+
             let existing = null;
             if (row.id && existingById.has(row.id)) {
               existing = existingById.get(row.id);
-            } else if (row.code && existingByCode.has(row.code)) {
-              existing = existingByCode.get(row.code);
+            } else if (rawCode !== '-' && existingByCode.has(rawCode)) {
+              existing = existingByCode.get(rawCode);
+            } else {
+              const fallbackKey = `${rawTitle.toLowerCase()}_${rawLocation.toLowerCase()}_${rawCategory.toLowerCase()}`;
+              if (existingByFallback.has(fallbackKey)) {
+                existing = existingByFallback.get(fallbackKey);
+              }
             }
 
             const isDuplicate = !!existing;
             if (isDuplicate) duplicateCount++;
-
-            const rawTitle = (row.title || row.nama || row.jenisPeralatan || '').trim();
-            if (!rawTitle || rawTitle === '-') {
-              throw new Error('Validasi Gagal: Nama/Jenis Peralatan tidak boleh kosong atau hanya berisi "-"');
-            }
-
-            const rawCode = (row.code || row.merek || row.kode || '').trim();
-            if (!rawCode || rawCode === '-') {
-              throw new Error('Validasi Gagal: Kode/Merek Item tidak boleh kosong atau hanya berisi "-"');
-            }
 
             const idToUse = existing ? existing.id : (row.id || randomUUID());
 

@@ -99,7 +99,8 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     masaBerlaku: item.masaBerlaku || '5 Tahun',
     terbit: item.terbit || item.issueDate || item.tanggalCiptaan || '',
     berakhir: item.berakhir || item.expiryDate || item.kapanBerakhir || '',
-    keterangan: item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo')
+    keterangan: item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
+    fileUrl: item.fileUrl || item.pdfUrl || ''
   });
 
   // History Certificates State (Real Database)
@@ -124,18 +125,34 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
             rawCert: c
           }));
+
           setHistoryList(mappedCerts);
 
-          const latestCert = mappedCerts[0];
-          if (latestCert) {
+          // Find active certificates
+          const activeCerts = mappedCerts.filter(c => c.status === 'Aktif' || c.status === 'Active');
+
+          let primaryCert = null;
+          if (activeCerts.length > 0) {
+            // Sort active certificates by expired date DESCENDING (furthest/latest expiry date first)
+            primaryCert = activeCerts.slice().sort((a, b) => {
+              const dateA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+              const dateB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+              return dateB - dateA;
+            })[0];
+          } else if (mappedCerts.length > 0) {
+            primaryCert = mappedCerts[0];
+          }
+
+          if (primaryCert) {
             setFormData(prev => ({
               ...prev,
-              noSertifikat: latestCert.noSertifikat,
-              terbit: latestCert.terbit,
-              berakhir: latestCert.expired,
+              noSertifikat: primaryCert.noSertifikat,
+              terbit: primaryCert.terbit,
+              berakhir: primaryCert.expired,
+              fileUrl: primaryCert.fileUrl || prev.fileUrl
             }));
-            if (latestCert.fileUrl) {
-              item.fileUrl = latestCert.fileUrl;
+            if (primaryCert.fileUrl) {
+              item.fileUrl = primaryCert.fileUrl;
             }
           }
         } else {
@@ -161,9 +178,22 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     instansi: 'Disnaker Kaltim / Sucofindo',
     terbit: '2026-07-23',
     expired: '2029-07-23',
-    target: 'current', // 'current' (gantikan sertifikat aktif) or 'archive' (tambah ke histori)
+    target: 'archive', // default to adding certificate to history
     fileName: ''
   });
+
+  const openUploadModal = (target = 'archive') => {
+    setUploadData({
+      noSertifikat: '',
+      instansi: 'Disnaker Kaltim / Sucofindo',
+      terbit: new Date().toISOString().split('T')[0],
+      expired: new Date(new Date().setFullYear(new Date().getFullYear() + 3)).toISOString().split('T')[0],
+      target: target,
+      fileName: ''
+    });
+    setSelectedUploadFile(null);
+    setIsUploadModalOpen(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -270,7 +300,9 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
       if (uploadData.expired) certPayload.expired = uploadData.expired;
       if (fileUrl) certPayload.fileUrl = fileUrl;
 
+      // Always create a new certificate history for this item
       await createCertificateForMasterItem(certPayload);
+
       await fetchHistory();
       setIsUploadModalOpen(false);
       setSelectedUploadFile(null);
@@ -281,9 +313,15 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     }
   };
 
-  const handleDeleteHistoryRow = (id) => {
-    setHistoryList(prev => prev.filter(row => row.id !== id));
-    setSelectedHistoryToDelete(null);
+  const handleDeleteHistoryRow = async (id) => {
+    try {
+      await deleteCertificate(id);
+      await fetchHistory();
+      setSelectedHistoryToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete certificate:", err);
+      alert("Gagal menghapus sertifikat: " + (err.message || "Error"));
+    }
   };
 
   const handleSaveHistoryRowEdit = async (e) => {
@@ -395,7 +433,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           {formData.status === 'Perpanjang' || formData.status === 'in_progress' ? (
             <>
               <button
-                onClick={() => setIsUploadModalOpen(true)}
+                onClick={() => openUploadModal('archive')}
                 className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
               >
                 <UploadCloud className="w-4 h-4 text-amber-700" />
@@ -806,7 +844,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   <span>Ajukan Perpanjangan</span>
                 </button>
                 <button
-                  onClick={() => setIsUploadModalOpen(true)}
+                  onClick={() => openUploadModal('archive')}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
                   <UploadCloud className="w-4 h-4" />
@@ -840,13 +878,13 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 <div className="flex items-center gap-2">
                   <FileText className="w-4 h-4 text-[#005ea4]" />
                   <span className="font-bold text-slate-800">
-                    {item.fileUrl || item.pdfUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+                    {formData.fileUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
                   </span>
                 </div>
-                {item.fileUrl || item.pdfUrl ? (
+                {formData.fileUrl ? (
                   <button
                     onClick={() => {
-                      const targetUrl = item.fileUrl || item.pdfUrl;
+                      const targetUrl = formData.fileUrl;
                       const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
                       window.open(fullUrl, '_blank');
                     }}
@@ -857,7 +895,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   </button>
                 ) : (
                   <button
-                    onClick={() => setIsUploadModalOpen(true)}
+                    onClick={() => openUploadModal('current')}
                     className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                   >
                     <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
@@ -883,7 +921,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsUploadModalOpen(true)}
+                  onClick={() => openUploadModal('current')}
                   className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data"
                 >
                   <UploadCloud className="w-4 h-4" />
@@ -972,12 +1010,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                               </button>
 
                               <button
-                                onClick={async () => {
-                                  if (window.confirm(`Hapus sertifikat ${row.noSertifikat}?`)) {
-                                    await deleteCertificate(row.id);
-                                    await fetchHistory();
-                                  }
-                                }}
+                                onClick={() => setSelectedHistoryToDelete({ ...row })}
                                 className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
                                 title="Hapus Sertifikat Ini"
                               >
@@ -1493,7 +1526,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
                 >
                   <option value="current">Sertifikat Utama / Berkas Aktif (Koreksi)</option>
-                  <option value="archive">Simpan Sebagai Arsip Histori Pendukung</option>
+                  <option value="archive">Sertifikat Baru (Perpanjangan / Tambah Histori)</option>
                 </select>
               </div>
 

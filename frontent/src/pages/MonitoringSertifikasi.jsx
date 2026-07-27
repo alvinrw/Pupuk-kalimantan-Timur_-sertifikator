@@ -24,7 +24,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, updateMasterItem } from '../services/masterItemsService';
+import { getMasterItems, updateMasterItem, createCertificateForMasterItem } from '../services/masterItemsService';
 
 export default function MonitoringSertifikasi() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,111 +70,84 @@ export default function MonitoringSertifikasi() {
       setIsLoading(true);
       const data = await getMasterItems();
       
+      const calcDiff = (dStr) => {
+         if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
+         const expiry = new Date(dStr);
+         if (isNaN(expiry.getTime())) return null;
+         const today = new Date();
+         today.setHours(0, 0, 0, 0);
+         expiry.setHours(0, 0, 0, 0);
+         return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      };
+
+      const calcStatus = (hari) => {
+         if (hari === null) return 'valid';
+         if (hari <= 0) return 'expired';
+         if (hari <= 60) return 'urgent';
+         return 'valid';
+      };
+
+      const getWfStatus = (st, docSt) => {
+         const lowerSt = (st || '').toLowerCase();
+         if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
+         if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
+         if (docSt === 'EXEMPT') return 'exempt';
+         return 'completed';
+      };
+
       const flattened = [];
       data.forEach(item => {
         if (item.documentStatus === 'PENDING_DOC') return; // Skip staging items
 
-        const docs = [];
-        if (item.certificates?.length > 0) docs.push(...item.certificates);
-        if (item.permits?.length > 0) docs.push(...item.permits);
+        const certs = item.certificates || [];
+        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
 
-        const calcDiff = (dStr) => {
-           if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
-           const expiry = new Date(dStr);
-           if (isNaN(expiry.getTime())) return null;
-           const today = new Date();
-           today.setHours(0, 0, 0, 0);
-           expiry.setHours(0, 0, 0, 0);
-           return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        };
-
-        const calcStatus = (hari) => {
-           if (hari === null) return 'valid';
-           if (hari <= 0) return 'expired';
-           if (hari <= 60) return 'urgent';
-           return 'valid';
-        };
-
-        const getWfStatus = (st, docSt) => {
-           const lowerSt = (st || '').toLowerCase();
-           if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
-           if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
-           if (docSt === 'EXEMPT') return 'exempt';
-           return 'completed';
-        };
-
-        if (docs.length === 0) {
-          const dateVal = (item.expiryDate && item.expiryDate !== '2030-01-01' && item.expiryDate !== '-') ? item.expiryDate : '-';
-          const hari = calcDiff(dateVal);
-          flattened.push({
-            id: item.id,
-            MasterId: item.id,
-            no: flattened.length + 1,
-            categoryKey: item.categoryKey || 'Lainnya',
-            kategoriDokumen: item.categoryKey || 'Lainnya',
-            jenisItem: item.categoryKey || 'Peralatan',
-            jenisPeralatan: item.categoryKey || 'Peralatan',
-            merekItem: item.title || '-',
-            tipe: item.categoryKey || '-',
-            code: item.code || item.id,
-            nomorSeri: item.code || '-',
-            nomorSeriTipe: item.code || '-',
-            kapasitas: '-',
-            lokasi: item.unitLocation || 'Umum',
-            unitPabrik: item.unitLocation || 'Umum',
-            status: item.status || 'Aktif',
-            statusOperasional: item.status || 'Aktif',
-            documentStatus: item.documentStatus || 'EXEMPT',
-            exemptionNote: item.exemptionNote || null,
-            tglTerbit: item.createdAt,
-            tglExpired: dateVal,
-            sisaHari: hari,
-            statusLegal: calcStatus(hari),
-            nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (item.code || '-'),
-            instansiPenerbit: '-',
-            nomorSK: '-',
-            keterangan: item.description || '-',
-            riwayatPerpanjangan: [],
-            workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT')
-          });
-        } else {
-          docs.forEach(doc => {
-            const rawExp = doc.expired || item.expiryDate;
-            const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
-            const hari = calcDiff(dateVal);
-            flattened.push({
-              id: doc.id,
-              MasterId: item.id,
-              no: flattened.length + 1,
-              categoryKey: item.categoryKey || 'Lainnya',
-              kategoriDokumen: item.categoryKey || 'Lainnya',
-              jenisItem: item.categoryKey || 'Peralatan',
-              jenisPeralatan: item.categoryKey || 'Peralatan',
-              merekItem: item.title || '-',
-              tipe: item.categoryKey || '-',
-              code: item.code || item.id,
-              nomorSeri: item.code || '-',
-              nomorSeriTipe: item.code || '-',
-              kapasitas: '-',
-              lokasi: item.unitLocation || 'Umum',
-              unitPabrik: item.unitLocation || 'Umum',
-              status: item.status || 'Aktif',
-              statusOperasional: item.status || 'Aktif',
-              documentStatus: item.documentStatus || 'COMPLETED',
-              exemptionNote: item.exemptionNote || null,
-              tglTerbit: doc.terbit || item.createdAt,
-              tglExpired: dateVal,
-              sisaHari: hari,
-              statusLegal: calcStatus(hari),
-              nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (doc.noSertifikat || doc.noIzin || item.code || '-'),
-              instansiPenerbit: doc.instansi || '-',
-              nomorSK: '-',
-              keterangan: doc.keterangan || item.description || '-',
-              riwayatPerpanjangan: [],
-              workflowStatus: getWfStatus(item.status, item.documentStatus)
-            });
-          });
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            return dB - dA;
+          })[0];
+        } else if (certs.length > 0) {
+          primaryCert = certs[0];
         }
+
+        const rawExp = primaryCert?.expired || item.expiryDate;
+        const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+        const hari = calcDiff(dateVal);
+
+        flattened.push({
+          id: item.id,
+          MasterId: item.id,
+          no: flattened.length + 1,
+          categoryKey: item.categoryKey || 'Lainnya',
+          kategoriDokumen: item.categoryKey || 'Lainnya',
+          jenisItem: item.categoryKey || 'Peralatan',
+          jenisPeralatan: item.categoryKey || 'Peralatan',
+          merekItem: item.title || '-',
+          tipe: item.categoryKey || '-',
+          code: item.code || item.id,
+          nomorSeri: item.code || '-',
+          nomorSeriTipe: item.code || '-',
+          kapasitas: '-',
+          lokasi: item.unitLocation || 'Umum',
+          unitPabrik: item.unitLocation || 'Umum',
+          status: item.status || 'Aktif',
+          statusOperasional: item.status || 'Aktif',
+          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          exemptionNote: item.exemptionNote || null,
+          tglTerbit: primaryCert?.terbit || item.createdAt,
+          tglExpired: dateVal,
+          sisaHari: hari,
+          statusLegal: calcStatus(hari),
+          nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.code || '-'),
+          instansiPenerbit: primaryCert?.instansi || '-',
+          nomorSK: '-',
+          keterangan: item.description || '-',
+          riwayatPerpanjangan: certs,
+          workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT')
+        });
       });
       setAllCertificates(flattened);
     } catch (err) {
@@ -235,26 +208,26 @@ export default function MonitoringSertifikasi() {
 
       let matchesRentangHari = true;
       if (filterRentangHari === 'expired') {
-        matchesRentangHari = item.sisaHari <= 0;
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari <= 0;
       } else if (filterRentangHari === 'urgent') {
-        matchesRentangHari = item.sisaHari > 0 && item.sisaHari <= (parseInt(customUrgentDays) || 30);
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= (parseInt(customUrgentDays) || 30);
       } else if (filterRentangHari === '60') {
-        matchesRentangHari = item.sisaHari > 0 && item.sisaHari <= 60;
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= 60;
       } else if (filterRentangHari === '90') {
-        matchesRentangHari = item.sisaHari > 0 && item.sisaHari <= 90;
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= 90;
       } else if (filterRentangHari === '180') {
-        matchesRentangHari = item.sisaHari > 0 && item.sisaHari <= 180;
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= 180;
       } else if (filterRentangHari === '365') {
-        matchesRentangHari = item.sisaHari > 0 && item.sisaHari <= 365;
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= 365;
       }
 
       let matchesTab = true;
       if (expiryTab === 'expired') {
-        matchesTab = item.sisaHari <= 0 && item.workflowStatus !== 'decommissioned';
+        matchesTab = item.sisaHari !== null && item.sisaHari <= 0 && item.workflowStatus !== 'decommissioned';
       } else if (expiryTab === 'urgent') {
-        matchesTab = item.sisaHari > 0 && item.sisaHari <= (parseInt(customUrgentDays) || 30) && item.workflowStatus !== 'decommissioned';
+        matchesTab = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= (parseInt(customUrgentDays) || 30) && item.workflowStatus !== 'decommissioned';
       } else if (expiryTab === 'valid') {
-        matchesTab = item.sisaHari > (parseInt(customUrgentDays) || 30) && item.workflowStatus !== 'decommissioned';
+        matchesTab = (item.sisaHari === null || item.sisaHari > (parseInt(customUrgentDays) || 30)) && item.workflowStatus !== 'decommissioned';
       } else if (expiryTab === 'in_progress') {
         matchesTab = item.workflowStatus === 'in_progress';
       } else if (expiryTab === 'decommissioned') {
@@ -408,7 +381,7 @@ export default function MonitoringSertifikasi() {
   };
 
   // Confirm Complete Renewal with Uploaded File & OCR Data
-  const handleConfirmUploadRenewal = (e) => {
+  const handleConfirmUploadRenewal = async (e) => {
     e.preventDefault();
     if (!activeModalItem) return;
 
@@ -417,41 +390,58 @@ export default function MonitoringSertifikasi() {
       return;
     }
 
-    const newLog = {
-      tahun: new Date().getFullYear().toString(),
-      jenisTindakan: "Perpanjangan & Resertifikasi Baru",
-      noSertifikat: newCertNumber || activeModalItem.certificateNo,
-      tglInspeksi: inspectionDate,
-      tglTerbit: issueDate,
-      tglExpired: newExpiryDate,
-      pelaksana: activeModalItem.agency,
-      status: "Berhasil / Active",
-      catatan: resertifikasiNotes,
-      fileUploaded: uploadedFile.name
-    };
-
-    setAllCertificates(prev =>
-      prev.map(item => {
-        if (item.id === activeModalItem.id) {
-          const updatedLogs = [newLog, ...(item.historyLogs || [])];
-          return {
-            ...item,
-            workflowStatus: "completed",
-            certificateNo: newCertNumber || item.certificateNo,
-            inspectionDate: inspectionDate || item.inspectionDate,
-            issueDate: issueDate || item.issueDate,
-            expiryDate: newExpiryDate || item.expiryDate,
-            sisaHari: 730,
-            currentStage: "Sertifikat Terbit",
-            notes: resertifikasiNotes,
-            historyLogs: updatedLogs
-          };
+    try {
+      let fileUrl = null;
+      if (uploadedFile) {
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', uploadedFile);
+        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+          method: 'POST',
+          body: formDataUpload
+        });
+        if (uploadRes.ok) {
+          const uploadJson = await uploadRes.json();
+          fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
         }
-        return item;
-      })
-    );
+      }
 
-    setActiveModalItem(null);
+      const targetId = activeModalItem.MasterId || activeModalItem.id;
+
+      const certPayload = {
+        itemId: targetId,
+        jenisSertifikat: activeModalItem.jenisPeralatan || 'Riksa Uji Disnaker',
+        noSertifikat: newCertNumber || activeModalItem.noSertifikat || `CERT-${Date.now()}`,
+        status: 'Aktif',
+      };
+      if (issueDate) certPayload.terbit = issueDate;
+      if (newExpiryDate) certPayload.expired = newExpiryDate;
+      if (fileUrl) certPayload.fileUrl = fileUrl;
+
+      // 1. Create new certificate entry in database for history
+      await createCertificateForMasterItem(certPayload);
+
+      // 2. Update master item status to Aktif in database
+      await updateMasterItem(targetId, {
+        status: 'Aktif',
+        issueDate: issueDate || activeModalItem.tglTerbit,
+        expiryDate: newExpiryDate || activeModalItem.tglExpired,
+      });
+
+      // 3. Reload data from database so UI and detail page are connected
+      await fetchMonitoringData();
+
+      setActiveModalItem(null);
+      setUploadedFile(null);
+      setNewCertNumber("");
+      setInspectionDate("");
+      setIssueDate("");
+      setNewExpiryDate("");
+      setResertifikasiNotes("");
+      setOcrSuccess(false);
+    } catch (err) {
+      console.error("Failed to complete renewal:", err);
+      alert("Gagal memproses perpanjangan: " + (err.message || 'Error'));
+    }
   };
 
   const resetFilters = () => {
@@ -464,9 +454,9 @@ export default function MonitoringSertifikasi() {
   };
 
   // 5 Core Summary Cards Counts
-  const countExpired = allCertificates.filter(c => c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
-  const countUrgent = allCertificates.filter(c => c.sisaHari > 0 && c.sisaHari <= (parseInt(customUrgentDays) || 30) && c.workflowStatus !== 'decommissioned').length;
-  const countValid = allCertificates.filter(c => c.sisaHari > (parseInt(customUrgentDays) || 30) && c.workflowStatus !== 'decommissioned').length;
+  const countExpired = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
+  const countUrgent = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= (parseInt(customUrgentDays) || 30) && c.workflowStatus !== 'decommissioned').length;
+  const countValid = allCertificates.filter(c => (c.sisaHari === null || c.sisaHari > (parseInt(customUrgentDays) || 30)) && c.workflowStatus !== 'decommissioned').length;
   const countInProgress = allCertificates.filter(c => c.workflowStatus === 'in_progress').length;
   const countDecommissioned = allCertificates.filter(c => c.workflowStatus === 'decommissioned').length;
 
