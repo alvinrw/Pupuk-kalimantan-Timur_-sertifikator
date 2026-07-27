@@ -1,0 +1,5 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+PRJ-ENV-001,SK-KLHK-881,Izin Amdal Ekspansi Pabrik NPK Cluster 2,perizinan-proyek,Area Pabrik NPK,Aktif,,,Izin Lingkungan AMDAL,2023-01-10,2028-01-10,SK SKKL KLHK RI
+PRJ-ENV-002,PERTEK-BM-01,Persetujuan Teknis Pembuangan Air Limbah Cair (Pertek),perizinan-proyek,Unit Wastewater Treatment,Aktif,,,Pertek Baku Mutu Air,2024-02-14,2029-02-14,Dinas Lingkungan Hidup Kaltim
+PRJ-ENV-003,SK-PROPER-GOLD,Sertifikat Penilaian PROPER Emas 2025-2026,perizinan-proyek,Seluruh Kawasan Pabrik,Aktif,,,Sertifikasi Ketaatan Lingkungan,2025-12-01,2026-12-01,Kementerian LHK RI
+PRJ-ENV-004,IZIN-B3-991,Persetujuan Pengelolaan & Tempat Penyimpanan Limbah B3,perizinan-proyek,TPS Limbah B3 Pusat,Aktif,,,Izin TPS B3,2022-07-19,2027-07-19,Persetujuan Teknis KLHK

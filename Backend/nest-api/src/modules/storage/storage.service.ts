@@ -42,8 +42,23 @@ export class StorageService implements OnModuleInit {
       } else {
         this.logger.log(`ℹ️ Bucket '${this.bucketName}' sudah ada dan siap digunakan.`);
       }
+
+      // Set Public Read Policy agar file PDF bisa diakses/dibuka langsung lewat URL browser
+      const publicReadPolicy = {
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: { AWS: ['*'] },
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${this.bucketName}/*`],
+          },
+        ],
+      };
+      await this.minioClient.setBucketPolicy(this.bucketName, JSON.stringify(publicReadPolicy));
+      this.logger.log(`🔓 Bucket policy '${this.bucketName}' berhasil diset menjadi Public Read.`);
     } catch (error) {
-      this.logger.error(`⚠️ Gagal inisialisasi bucket MinIO: ${error.message}`);
+      this.logger.error(`⚠️ Gagal inisialisasi bucket MinIO / Policy: ${error.message}`);
     }
   }
 

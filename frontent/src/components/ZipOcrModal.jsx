@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   X,
   FileArchive,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function ZipOcrModal({ isOpen, onClose, onMatchSuccess }) {
+  const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'history'
   const [step, setStep] = useState('upload'); // upload -> processing -> result
   const [file, setFile] = useState(null);
@@ -87,45 +88,86 @@ export default function ZipOcrModal({ isOpen, onClose, onMatchSuccess }) {
     }
   ]);
 
-  // Upload History State with explicit Berhasil, Duplikat, and Gagal metrics
-  const [zipHistory, setZipHistory] = useState([
-    {
-      id: "ZIP-HIST-01",
-      fileName: "sertifikat_batch_2026.zip",
-      uploadDate: "2026-07-21 16:45",
-      totalPdfs: 1240,
-      successCount: 1210,
-      duplicateCount: 25,
-      failCount: 5,
-      status: "Selesai Memadankan"
-    },
-    {
-      id: "ZIP-HIST-02",
-      fileName: "scan_crane_boiler_p2.zip",
-      uploadDate: "2026-06-10 11:20",
-      totalPdfs: 320,
-      successCount: 315,
-      duplicateCount: 5,
-      failCount: 0,
-      status: "Selesai Memadankan"
+  // Upload History State (Strictly real history)
+  const [zipHistory, setZipHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('zip_upload_history');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(item => !item.id?.startsWith('ZIP-HIST-0'));
+        }
+      }
+      return [];
+    } catch {
+      return [];
     }
-  ]);
+  });
 
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  React.useEffect(() => {
+    try {
+      localStorage.setItem('zip_upload_history', JSON.stringify(zipHistory));
+    } catch (e) {
+      console.error("Failed to save zip history:", e);
+    }
+  }, [zipHistory]);
 
   if (!isOpen) return null;
 
   const handleFileSelect = (e) => {
-    const selected = (e.target.files && e.target.files[0]) || { name: "sertifikat_batch_pabrik.zip" };
-    triggerSimulation(selected.name);
+    const selected = e.target.files && e.target.files[0];
+    if (selected) {
+      startBatchOcrProcessing(selected.name, selected);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = null;
+    }
   };
 
-  const triggerSimulation = (name) => {
+  const startBatchOcrProcessing = async (name, fileObj) => {
     setFile({ name });
     setStep('processing');
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', fileObj);
+
+      const response = await fetch('http://localhost:8000/api/v1/ocr/process-zip', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      const newExtracted = result.data.map((item, index) => {
+        const extracted = item.data || {};
+        return {
+          id: `ZIP-PDF-${index}`,
+          pdfName: item.pdfName,
+          matchedCode: extracted["Tag Number"] || "-",
+          matchedTitle: extracted["Nama Alat"] || "-",
+          nomorSeri: extracted["Nomor Pengesahan"] || "-",
+          noSertifikat: extracted["Nomor Pengesahan"] || "-",
+          tanggalInspeksi: "2026-01-01",
+          terbit: "2026-07-01",
+          berakhir: "2029-07-01",
+          issuer: extracted["Tempat"] || "Disnaker",
+          statusLabel: item.error ? "Gagal Ekstraksi" : "Berhasil Di-ekstraksi"
+        };
+      });
+
+      setExtractedPdfList(newExtracted);
       setStep('result');
-    }, 1200);
+    } catch (error) {
+      console.error("ZIP OCR API Error:", error);
+      alert("Gagal mengekstraksi ZIP PDF menggunakan AI OCR. Pastikan Backend FastAPI menyala di port 8000.");
+      setStep('upload');
+    }
   };
 
   // Open Edit Extracted Fields Modal
@@ -242,21 +284,24 @@ export default function ZipOcrModal({ isOpen, onClose, onMatchSuccess }) {
           {activeTab === 'upload' && (
             <>
               {step === 'upload' && (
-                <div
-                  onClick={() => triggerSimulation("sertifikat_batch_pabrik_2026.zip")}
-                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-10 flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer transition-colors"
-                >
-                  <FileArchive className="w-10 h-10 text-[#005ea4] mb-2" />
-                  <p className="text-sm font-bold text-slate-800 mb-1">
-                    Klik atau Tarik Berkas ZIP Sertifikat ke Sini
-                  </p>
-                  <p className="text-xs text-slate-500 mb-4">
-                    Ekstraksi otomatis: Nomor Seri, No Sertifikat, Tgl Inspeksi, Terbit, & Berakhir
-                  </p>
-                  <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
-                    Pilih Berkas ZIP
-                  </span>
-                </div>
+                <>
+                  <input type="file" ref={fileInputRef} accept=".zip" className="hidden" onChange={handleFileSelect} />
+                  <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-10 flex flex-col items-center justify-center bg-slate-50 relative cursor-pointer transition-colors"
+                  >
+                    <FileArchive className="w-10 h-10 text-[#005ea4] mb-2" />
+                    <p className="text-sm font-bold text-slate-800 mb-1">
+                      Klik atau Tarik Berkas ZIP Sertifikat ke Sini
+                    </p>
+                    <p className="text-xs text-slate-500 mb-4">
+                      Ekstraksi otomatis: Nomor Seri, No Sertifikat, Tgl Inspeksi, Terbit, & Berakhir
+                    </p>
+                    <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
+                      Pilih Berkas ZIP
+                    </span>
+                  </div>
+                </>
               )}
 
               {step === 'processing' && (

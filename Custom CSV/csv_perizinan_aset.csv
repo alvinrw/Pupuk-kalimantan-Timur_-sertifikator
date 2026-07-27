@@ -1,0 +1,5 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+AST-LH-001,HGB-BPN-091,Sertifikat Hak Guna Bangunan (HGB) Lahan Pabrik 1-4,perizinan-aset,Kawasan Industri Bontang,Aktif,1500000,150.0,Area Industri & Kompleks Pabrik,2015-06-01,2045-06-01,Sertifikat Asli BPN Bontang
+AST-LH-002,HGB-BPN-104,Sertifikat HGB Area Pelabuhan Khusus & Jetty,perizinan-aset,Pesisir Laut Bontang,Aktif,450000,45.0,Fasilitas Dermaga & Tersus,2018-08-15,2048-08-15,Dokumen Hak Pakai & HGB
+AST-LH-003,HP-BPN-055,Sertifikat Hak Pakai Jalur Pipa Gas & Utilitas,perizinan-aset,KORIDOR PIPA BONTANG,Aktif,120000,12.0,Right of Way Pipa Gas,2020-02-10,2035-02-10,Izin BPN & Perhutani
+AST-LH-004,IMB-BTG-881,PBG / IMB Kompleks Perkantoran Direksi & TI,peralatan-aset,Kawasan Kantor Utama,Aktif,12500,1.25,Bangunan Perkantoran,2022-04-05,2052-04-05,Izin Dinas PUPR Bontang

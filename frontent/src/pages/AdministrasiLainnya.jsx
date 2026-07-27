@@ -14,13 +14,14 @@ import {
   X,
   Check,
   Building2,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryCiptaanModal from '../components/SingleEntryCiptaanModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterCertificatesData } from '../data/masterDataset';
+import { getMasterItems } from '../services/masterItemsService';
 
 export default function AdministrasiLainnya() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,51 +91,40 @@ export default function AdministrasiLainnya() {
   };
 
   // Connected Master Data Ciptaan
-  const [ciptaanList, setCiptaanList] = useState(() => {
-    const raw = masterCertificatesData.filter(d => d.categoryKey === 'administrasi-lainnya');
-    if (raw.length > 0) {
-      return raw.map((item, idx) => ({
-        id: item.id || `HAKI-${idx}`,
+  const [ciptaanList, setCiptaanList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMasterItems('administrasi-lainnya');
+      const mapped = data.map((item, idx) => ({
+        id: item.id,
+        MasterId: item.id,
         no: idx + 1,
-        judulCiptaan: item.judulCiptaan || item.merekItem || item.title || "Program Komputer",
-        jenisCiptaan: item.jenisCiptaan || item.jenisItem || "Program Komputer (Software)",
-        tanggalCiptaan: item.tanggalCiptaan || item.issueDate || item.terbit || "2024-03-10",
-        masaBerlaku: item.masaBerlaku || "5 Tahun",
-        kapanBerakhir: item.kapanBerakhir || item.expiryDate || item.berakhir || "2029-03-10",
-        noSertifikat: item.noSertifikat || item.certificateNo || item.code || "-",
-        hasCertificatePdf: item.hasCertificatePdf !== false,
+        judulCiptaan: item.title || "Administrasi Lainnya",
+        jenisCiptaan: item.categoryKey || "Administrasi",
+        tanggalCiptaan: item.createdAt,
+        masaBerlaku: item.areaSqm || "Selamanya",
+        kapanBerakhir: item.expiryDate || "-",
+        noSertifikat: item.certificateNo || item.code || "-",
+        hasCertificatePdf: true,
         status: item.status || "Aktif",
-        merekItem: item.merekItem || item.judulCiptaan,
-        jenisPeralatan: item.jenisItem || item.jenisCiptaan
+        merekItem: item.title,
+        jenisPeralatan: item.categoryKey,
+        linkedCertificates: item.certificates || []
       }));
+      setCiptaanList(mapped);
+    } catch (error) {
+      console.error("Failed to load AdministrasiLainnya", error);
+    } finally {
+      setIsLoading(false);
     }
-    return [
-      {
-        id: "CIP-01",
-        no: 1,
-        judulCiptaan: "Sistem Informasi Sertifikator Inventory AI PKT",
-        jenisCiptaan: "Program Komputer (Software)",
-        tanggalCiptaan: "2024-03-10",
-        masaBerlaku: "5 Tahun",
-        kapanBerakhir: "2029-03-10",
-        noSertifikat: "EC00202400192",
-        hasCertificatePdf: true,
-        status: "Aktif"
-      },
-      {
-        id: "CIP-02",
-        no: 2,
-        judulCiptaan: "Buku Panduan Keselamatan Operasi Kilang Amonia-4",
-        jenisCiptaan: "Buku / Karya Tulis",
-        tanggalCiptaan: "2019-08-15",
-        masaBerlaku: "5 Tahun",
-        kapanBerakhir: "2024-01-15",
-        noSertifikat: "EC00201999120",
-        hasCertificatePdf: true,
-        status: "Expired"
-      }
-    ];
-  });
+  };
+
+  React.useEffect(() => {
+    loadData();
+  }, []);
 
   // Unique options for dropdown filters
   const uniqueJenis = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.jenisCiptaan || i.jenisItem).filter(Boolean))], [ciptaanList]);
@@ -158,19 +148,8 @@ export default function AdministrasiLainnya() {
   }, [ciptaanList, searchTerm, filterJenis, filterMasa]);
 
   // Handlers
-  const handleCsvImported = (newParsed) => {
-    const formatted = newParsed.map((n, i) => ({
-      id: `CIP-CSV-${Date.now()}-${i}`,
-      no: ciptaanList.length + i + 1,
-      judulCiptaan: n.title || "Karya Ciptaan Baru",
-      jenisCiptaan: "Program Komputer (Software)",
-      tanggalCiptaan: "2026-07-22",
-      masaBerlaku: "5 Tahun",
-      kapanBerakhir: "2031-07-22",
-      noSertifikat: n.certificateNo || `EC002026-${i}`,
-      hasCertificatePdf: true
-    }));
-    setCiptaanList(prev => [...formatted, ...prev]);
+  const handleCsvImported = () => {
+    loadData();
   };
 
   const handleSingleAdded = (newItem) => {
@@ -262,7 +241,20 @@ export default function AdministrasiLainnya() {
         onQuickDecommission={(id) => {
           alert(`Menandai ciptaan ${id} sebagai Afkir.`);
         }}
+        onDeleteSuccess={() => {
+          setDetailModalItem(null);
+          loadData();
+        }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Memuat Data Administrasi dari Database...</p>
+      </div>
     );
   }
 
@@ -650,6 +642,8 @@ export default function AdministrasiLainnya() {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
+        categoryKey="administrasi-lainnya"
+        moduleName="Administrasi & Perizinan Lainnya"
       />
 
       <HistoryModal

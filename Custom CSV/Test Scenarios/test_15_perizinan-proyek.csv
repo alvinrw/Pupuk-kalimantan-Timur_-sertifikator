@@ -1,0 +1,16 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+PRJ-TEST-1,CODE-PRJ-1,Testing Item PRJ 1,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-2,CODE-PRJ-2,Testing Item PRJ 2,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-3,CODE-PRJ-3,Testing Item PRJ 3,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-4,CODE-PRJ-4,Testing Item PRJ 4,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-5,CODE-PRJ-5,Testing Item PRJ 5,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-6,CODE-PRJ-6,Testing Item PRJ 6,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-7,CODE-PRJ-7,Testing Item PRJ 7,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-8,CODE-PRJ-8,Testing Item PRJ 8,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-9,CODE-PRJ-9,Testing Item PRJ 9,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-10,CODE-PRJ-10,Testing Item PRJ 10,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-11,CODE-PRJ-11,Testing Item PRJ 11,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-12,CODE-PRJ-12,Testing Item PRJ 12,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-13,CODE-PRJ-13,Testing Item PRJ 13 (ERROR) - Akan Gagal,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-14,CODE-PRJ-14,Testing Item PRJ 14 (ERROR) - Akan Gagal,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+PRJ-TEST-15,CODE-PRJ-15,Testing Item PRJ 15 (ERROR) - Akan Gagal,perizinan-proyek,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing

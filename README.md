@@ -86,13 +86,50 @@ Inventor/
 
 ---
 
-## 🚀 Cara Menjalankan Aplikasi (Frontend)
+## 🚀 Cara Menjalankan Aplikasi (Frontend & Backend)
 
 ### Prasyarat
 - **Node.js**: v18.x atau lebih baru
 - **npm** / **yarn** / **pnpm**
+- **Docker Desktop** (harus dalam kondisi aktif/berjalan)
 
-### Langkah-Langkah
+> [!IMPORTANT]  
+> Pastikan **Docker Desktop** sudah dibuka dan berjalan di *background* sebelum menjalankan backend, karena database PostgreSQL berjalan di dalam *container* Docker.
+
+### Langkah 1: Menjalankan Backend (NestJS & Database)
+
+Buka terminal baru dan jalankan perintah berikut:
+
+1. **Masuk ke direktori backend**:
+   ```bash
+   cd backend/nest-api
+   ```
+
+2. **Install Dependensi**:
+   ```bash
+   npm install
+   ```
+
+3. **Jalankan Database via Docker Compose**:
+   ```bash
+   docker-compose up -d
+   ```
+   *(Pastikan tidak ada error dan container postgres berjalan).*
+
+4. **Jalankan Migrasi Database (Prisma)**:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+5. **Jalankan Backend Server**:
+   ```bash
+   npm run start:dev
+   ```
+   Backend akan berjalan di `http://localhost:3000`.
+
+### Langkah 2: Menjalankan Frontend (React)
+
+Buka terminal baru (biarkan terminal backend tetap berjalan), lalu jalankan perintah berikut:
 
 1. **Masuk ke direktori frontend**:
    ```bash

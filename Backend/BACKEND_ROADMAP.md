@@ -1,34 +1,51 @@
-# 🗺️ ROADMAP & ARSITEKTUR BACKEND (SERTIFIKATOR PKT)
+# 🗺️ ROADMAP & STATUS BACKEND "SERTIFIKATOR"
 
-Sistem Backend dikembangkan menggunakan **NestJS (Node.js + TypeScript)** dengan arsitektur **Modular / Feature-Based**.
-
----
-
-## 📂 Panduan Modul (`Backend/nest-api/src/modules/`)
-
-Setiap modul berdiri sendiri dan memiliki file `README.md` tersendiri di dalam foldernya yang berisi spesifikasi API & checklist tugas.
-
-```text
-src/modules/
-├── master-items/           # CRUD Data Utama (Aset, Proyek, Produk, Peralatan)
-├── certificates/           # Multi-Certificates Hub & Sertifikat Terhubung
-├── monitoring/             # Hitung Sisa Hari Expired Dinamis & Alerting
-├── document-history/       # Upload PDF SK & Log Histori Berkas
-├── csv-import/             # Bulk Import Data via CSV / Excel
-├── equipment/              # Modul Peralatan Pabrik
-├── ocr/                    # Integration Bridge ke FastAPI OCR Service
-├── auth/                   # Modul Authentication & User Management
-└── storage/                # Handler File Storage / Multer
-```
+Dokumen ini berfungsi sebagai papan pantau (Dashboard) untuk melihat sejauh mana progres pengerjaan Backend (baik NestJS maupun FastAPI) dari proyek Sertifikator ini.
 
 ---
 
-## 🔀 Git & Workflow Kerjasama Tim
+## 1️⃣ SERVER AI (FastAPI Python)
+Lokasi Folder: `Backend/fastapi-ocr/`
+> Server kecil yang tugasnya khusus membaca tulisan di dalam Sertifikat/PDF.
 
-1. **Pilih Modul**: Setiap anggota tim dapat mengambil modul yang mau dikerjakan (misal: Anggota A mengerjakan `master-items`, Anggota B mengerjakan `certificates`).
-2. **Buat Branch**: Buat branch sesuai nama modul yang dikerjakan:
-   - `feature/modul-master-items`
-   - `feature/modul-certificates`
-   - `feature/modul-monitoring`
-3. **Fokus Folder**: Kerjakan file di dalam folder modul masing-masing untuk menghindari konflik *git merge*.
-4. **Merge**: Setelah selesai dan dites via Postman/Swagger, lakukan Pull Request ke branch utama.
+| Modul / Fitur | Status | Catatan / Tanggungan |
+| :--- | :---: | :--- |
+| **Setup Arsitektur & Routes** | ✅ Selesai | Endpoint `POST /api/v1/ocr/process-pdf` sudah jalan. |
+| **Extractor: Fire Alarm** | ✅ Selesai | Script OCR sudah jalan, regex berhasil nge-dapetin tanggal & nomor. |
+| **Extractor: Penyalur Petir** | ⏸️ ON HOLD | Pengembangannya ditunda sementara sesuai instruksi |
+| **Autodetect Jenis Sertifikat** | ⏸️ ON HOLD | AI cerdas untuk deteksi Fire Alarm vs Penyalur Petir ditunda |
+
+---
+
+## 2️⃣ SERVER UTAMA (NestJS & Prisma)
+Lokasi Folder: `Backend/nest-api/`
+> Server besar (API Gateway) yang ngurusin Database dan komunikasi ke Frontend React.
+
+### ✅ Yang Sudah Selesai
+| Modul / Folder | Keterangan |
+| :--- | :--- |
+| **`database` & `schema.prisma`** | Koneksi ke PostgreSQL sudah jalan. Tabel `master_items` dan `certificates` sudah dibuat. |
+| **`modules/master-items`** | Fitur CRUD (Create, Read, Update, Delete) Data Pabrik / Aset sudah beres dan jalan lancar. |
+| **`modules/ocr`** | Jembatan pengirim PDF ke FastAPI sudah aktif. NestJS sudah bisa ngobrol dengan Python. |
+
+### ⏳ Yang Sedang Dikerjakan (In Progress)
+| Modul / Folder | PIC | Keterangan |
+| :--- | :---: | :--- |
+| **`modules/certificates`** | Temanmu | Sedang mengerjakan logika CRUD khusus sertifikat. |
+
+### ❌ Tanggungan Utama (Belum Dikerjakan)
+| Modul / Folder | Tingkat Kepentingan | Apa yang Kurang? |
+| :--- | :---: | :--- |
+| **Relasi Database (Prisma)** | 🔥 CRITICAL | API `master-items` belum nampilin data Sertifikat bawaannya pas dipanggil (*join table* belum dipakai). |
+| **`modules/permits`** | 🟡 Medium | Tabel `Permits` (Perizinan non-sertifikat) belum dibikin di database. Kodingan CRUD masih kosong. |
+| **`modules/document-history`** | 🟡 Medium | Tabel untuk nyatet log Riwayat Dokumen belum ada. |
+| **`modules/monitoring`** | 🟡 Medium | Tabel *Logging* dan *cronjob* buat nge-cek sertifikat mana yang mau *expired* (H-30) belum dibuat. |
+| **Koneksi Frontend** | 🔥 CRITICAL | Website React saat ini masih pakai data bohongan, harus segera disambungkan ke API NestJS ini. |
+
+---
+
+## 🚀 Prioritas Selanjutnya (Next Action)
+Sesuai **Implementation Plan** yang barusan diajukan, fokus kita selanjutnya adalah merapikan urusan **Database**:
+1. Mendesain tabel-tabel sisanya di `schema.prisma`.
+2. Melakukan *sync* ke PostgreSQL.
+3. Memperbaiki fungsi `findAll()` di `master-items` agar langsung membawa data sertifikat (Relasi).

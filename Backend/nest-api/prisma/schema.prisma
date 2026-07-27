@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MasterItem {
+  id           String   @id @default(uuid())
+  code         String?  // Kode Perizinan (Opsional)
+  title        String   // Nama Produk / Aset / Proyek
+  categoryKey  String   // 'perizinan-aset', 'perizinan-proyek', 'perizinan-produk', 'peralatan-pabrik'
+  unitLocation String?  // Lokasi / Unit Pabrik
+  status       String   @default("Aktif")
+  luasM2       String?
+  luasHa       String?
+  peruntukan   String?
+  issueDate    String?  // Tanggal terbit
+  expiryDate   String?  // Tanggal expired
+  keterangan   String?
+  
+  // Status kelengkapan dokumen (PENDING_DOC, COMPLETED, EXEMPT)
+  documentStatus String   @default("PENDING_DOC")
+  exemptionNote  String?  // Catatan alasan jika tidak ada sertifikat
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relasi
+  certificates      Certificate[]
+  permits           Permit[]
+  documentHistories DocumentHistory[]
+
+  @@map("master_items")
+}
+
+model Certificate {
+  id              String   @id @default(uuid())
+  itemId          String   // Foreign Key
+  jenisSertifikat String   // "SLF", "AMDAL", "HGB", dll.
+  noSertifikat    String?
+  instansi        String?
+  terbit          String?
+  expired         String?
+  status          String   @default("Aktif")
+  fileUrl         String?  // URL/Path file PDF di MinIO Storage
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Definisi Relasi
+  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  monitoringLogs  MonitoringLog[]
+
+  @@map("certificates")
+}
+
+model Permit {
+  id              String   @id @default(uuid())
+  itemId          String   // Foreign Key
+  jenisIzin       String   // "Izin Lingkungan", "Izin Usaha", dll.
+  noIzin          String?
+  instansi        String?
+  terbit          String?
+  expired         String?
+  status          String   @default("Aktif")
+  keterangan      String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Definisi Relasi
+  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("permits")
+}
+
+model DocumentHistory {
+  id              String   @id @default(uuid())
+  itemId          String   // Foreign Key
+  action          String   // "CREATED", "UPDATED", "UPLOADED", "OCR_PROCESSED"
+  description     String   // Deskripsi perubahan
+  changedBy       String?  // Siapa yang ngubah (kalau ada sistem Auth nanti)
+  
+  createdAt       DateTime @default(now())
+
+  // Definisi Relasi
+  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("document_history")
+}
+
+model MonitoringLog {
+  id              String   @id @default(uuid())
+  certificateId   String?  // Foreign Key ke Sertifikat spesifik
+  action          String?  // "CSV_IMPORT", "PDF_OCR", dll.
+  logType         String?  // "EXPIRED_WARNING", "RENEWAL_SUBMITTED"
+  message         String?
+  status          String?  // "SUCCESS", "FAILED"
+  detail          String?  // JSON string rincian log
+  isResolved      Boolean  @default(false)
+  
+  createdAt       DateTime @default(now())
+  resolvedAt      DateTime?
+
+  // Definisi Relasi
+  certificate     Certificate? @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@map("monitoring_logs")
+}

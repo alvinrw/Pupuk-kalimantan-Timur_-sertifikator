@@ -1,0 +1,16 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+AST-TEST-1,CODE-AST-1,Testing Item AST 1,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-2,CODE-AST-2,Testing Item AST 2,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-3,CODE-AST-3,Testing Item AST 3,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-4,CODE-AST-4,Testing Item AST 4,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-5,CODE-AST-5,Testing Item AST 5,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-6,CODE-AST-6,Testing Item AST 6,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-7,CODE-AST-7,Testing Item AST 7,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-8,CODE-AST-8,Testing Item AST 8,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-9,CODE-AST-9,Testing Item AST 9,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-10,CODE-AST-10,Testing Item AST 10,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-11,CODE-AST-11,Testing Item AST 11,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-12,CODE-AST-12,Testing Item AST 12,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-13,CODE-AST-13,Testing Item AST 13 (ERROR) - Akan Gagal,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-14,CODE-AST-14,Testing Item AST 14 (ERROR) - Akan Gagal,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+AST-TEST-15,CODE-AST-15,Testing Item AST 15 (ERROR) - Akan Gagal,perizinan-aset,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing

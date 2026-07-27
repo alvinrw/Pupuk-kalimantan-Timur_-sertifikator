@@ -1,0 +1,16 @@
+id,code,title,categoryKey,unitLocation,status,luasM2,luasHa,peruntukan,issueDate,expiryDate,keterangan
+EQ-TEST-1,CODE-EQ-1,Testing Item EQ 1,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-2,CODE-EQ-2,Testing Item EQ 2,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-3,CODE-EQ-3,Testing Item EQ 3,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-4,CODE-EQ-4,Testing Item EQ 4,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-5,CODE-EQ-5,Testing Item EQ 5,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-6,CODE-EQ-6,Testing Item EQ 6,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-7,CODE-EQ-7,Testing Item EQ 7,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-8,CODE-EQ-8,Testing Item EQ 8,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-9,CODE-EQ-9,Testing Item EQ 9,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-10,CODE-EQ-10,Testing Item EQ 10,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-11,CODE-EQ-11,Testing Item EQ 11,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-12,CODE-EQ-12,Testing Item EQ 12,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-13,CODE-EQ-13,Testing Item EQ 13 (ERROR) - Akan Gagal,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-14,CODE-EQ-14,Testing Item EQ 14 (ERROR) - Akan Gagal,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing
+EQ-TEST-15,CODE-EQ-15,Testing Item EQ 15 (ERROR) - Akan Gagal,peralatan-pabrik,Pabrik Uji,Aktif,,,Uji Coba,2026-01-01,2030-01-01,File Testing

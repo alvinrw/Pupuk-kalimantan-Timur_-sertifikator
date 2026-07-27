@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search,
   X,
@@ -24,7 +24,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
-import { masterCertificatesData } from '../data/masterDataset';
+import { getMasterItems, updateMasterItem } from '../services/masterItemsService';
 
 export default function MonitoringSertifikasi() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -54,9 +54,140 @@ export default function MonitoringSertifikasi() {
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrSuccess, setOcrSuccess] = useState(false);
   
-  // Master List of all Documents connected from masterDataset
-  const [allCertificates, setAllCertificates] = useState(masterCertificatesData);
-  
+  const [allCertificates, setAllCertificates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Quick Action Modals State
+  const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
+  const [isAktifkanModalOpen, setIsAktifkanModalOpen] = useState(false);
+  const [isRenewConfirmModalOpen, setIsRenewConfirmModalOpen] = useState(false);
+  const [isCancelRenewModalOpen, setIsCancelRenewModalOpen] = useState(false);
+  const [activeItemForAction, setActiveItemForAction] = useState(null);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+
+  const fetchMonitoringData = async () => {
+    try {
+      setIsLoading(true);
+      const data = await getMasterItems();
+      
+      const flattened = [];
+      data.forEach(item => {
+        if (item.documentStatus === 'PENDING_DOC') return; // Skip staging items
+
+        const docs = [];
+        if (item.certificates?.length > 0) docs.push(...item.certificates);
+        if (item.permits?.length > 0) docs.push(...item.permits);
+
+        const calcDiff = (dStr) => {
+           if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
+           const expiry = new Date(dStr);
+           if (isNaN(expiry.getTime())) return null;
+           const today = new Date();
+           today.setHours(0, 0, 0, 0);
+           expiry.setHours(0, 0, 0, 0);
+           return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        };
+
+        const calcStatus = (hari) => {
+           if (hari === null) return 'valid';
+           if (hari <= 0) return 'expired';
+           if (hari <= 60) return 'urgent';
+           return 'valid';
+        };
+
+        const getWfStatus = (st, docSt) => {
+           const lowerSt = (st || '').toLowerCase();
+           if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
+           if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
+           if (docSt === 'EXEMPT') return 'exempt';
+           return 'completed';
+        };
+
+        if (docs.length === 0) {
+          const dateVal = (item.expiryDate && item.expiryDate !== '2030-01-01' && item.expiryDate !== '-') ? item.expiryDate : '-';
+          const hari = calcDiff(dateVal);
+          flattened.push({
+            id: item.id,
+            MasterId: item.id,
+            no: flattened.length + 1,
+            categoryKey: item.categoryKey || 'Lainnya',
+            kategoriDokumen: item.categoryKey || 'Lainnya',
+            jenisItem: item.categoryKey || 'Peralatan',
+            jenisPeralatan: item.categoryKey || 'Peralatan',
+            merekItem: item.title || '-',
+            tipe: item.categoryKey || '-',
+            code: item.code || item.id,
+            nomorSeri: item.code || '-',
+            nomorSeriTipe: item.code || '-',
+            kapasitas: '-',
+            lokasi: item.unitLocation || 'Umum',
+            unitPabrik: item.unitLocation || 'Umum',
+            status: item.status || 'Aktif',
+            statusOperasional: item.status || 'Aktif',
+            documentStatus: item.documentStatus || 'EXEMPT',
+            exemptionNote: item.exemptionNote || null,
+            tglTerbit: item.createdAt,
+            tglExpired: dateVal,
+            sisaHari: hari,
+            statusLegal: calcStatus(hari),
+            nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (item.code || '-'),
+            instansiPenerbit: '-',
+            nomorSK: '-',
+            keterangan: item.description || '-',
+            riwayatPerpanjangan: [],
+            workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT')
+          });
+        } else {
+          docs.forEach(doc => {
+            const rawExp = doc.expired || item.expiryDate;
+            const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+            const hari = calcDiff(dateVal);
+            flattened.push({
+              id: doc.id,
+              MasterId: item.id,
+              no: flattened.length + 1,
+              categoryKey: item.categoryKey || 'Lainnya',
+              kategoriDokumen: item.categoryKey || 'Lainnya',
+              jenisItem: item.categoryKey || 'Peralatan',
+              jenisPeralatan: item.categoryKey || 'Peralatan',
+              merekItem: item.title || '-',
+              tipe: item.categoryKey || '-',
+              code: item.code || item.id,
+              nomorSeri: item.code || '-',
+              nomorSeriTipe: item.code || '-',
+              kapasitas: '-',
+              lokasi: item.unitLocation || 'Umum',
+              unitPabrik: item.unitLocation || 'Umum',
+              status: item.status || 'Aktif',
+              statusOperasional: item.status || 'Aktif',
+              documentStatus: item.documentStatus || 'COMPLETED',
+              exemptionNote: item.exemptionNote || null,
+              tglTerbit: doc.terbit || item.createdAt,
+              tglExpired: dateVal,
+              sisaHari: hari,
+              statusLegal: calcStatus(hari),
+              nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (doc.noSertifikat || doc.noIzin || item.code || '-'),
+              instansiPenerbit: doc.instansi || '-',
+              nomorSK: '-',
+              keterangan: doc.keterangan || item.description || '-',
+              riwayatPerpanjangan: [],
+              workflowStatus: getWfStatus(item.status, item.documentStatus)
+            });
+          });
+        }
+      });
+      setAllCertificates(flattened);
+    } catch (err) {
+      console.error("Failed to fetch MonitoringSertifikasi:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMonitoringData();
+  }, []);
+
   // OCR Extracted & Editable Fields
   const [newCertNumber, setNewCertNumber] = useState('');
   const [inspectionDate, setInspectionDate] = useState('');
@@ -136,50 +267,106 @@ export default function MonitoringSertifikasi() {
 
   // Quick Action: Perpanjang
   const handleQuickRenew = (id) => {
-    setAllCertificates(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          return {
-            ...item,
-            workflowStatus: "in_progress",
-            currentStage: "Proses Perpanjangan"
-          };
-        }
-        return item;
-      })
-    );
+    const item = allCertificates.find(c => c.id === id);
+    if (item) {
+      setActiveItemForAction(item);
+      setIsRenewConfirmModalOpen(true);
+    }
+  };
+
+  const confirmQuickRenew = async () => {
+    if (!activeItemForAction) return;
+    setIsProcessingAction(true);
+    try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Perpanjang' });
+      await fetchMonitoringData();
+      setIsRenewConfirmModalOpen(false);
+    } catch (err) {
+      console.error('Failed to update status to Perpanjang:', err);
+      alert('Gagal mengajukan perpanjangan: ' + (err.message || 'Error'));
+    } finally {
+      setIsProcessingAction(false);
+      setActiveItemForAction(null);
+    }
   };
 
   // Quick Action: Afkir
   const handleQuickDecommission = (id) => {
-    setAllCertificates(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          return {
-            ...item,
-            workflowStatus: "decommissioned",
-            currentStage: "Aset Afkir"
-          };
-        }
-        return item;
-      })
-    );
+    const item = allCertificates.find(c => c.id === id);
+    if (item) {
+      setActiveItemForAction(item);
+      setIsAfkirModalOpen(true);
+    }
   };
 
-  // Quick Action: Batal Status / Reset ke Normal
+  const confirmQuickDecommission = async () => {
+    if (!activeItemForAction) return;
+    setIsProcessingAction(true);
+    try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Afkir' });
+      await fetchMonitoringData();
+      setIsAfkirModalOpen(false);
+    } catch (err) {
+      console.error('Failed to update status to Afkir:', err);
+      alert('Gagal mengubah status menjadi Afkir: ' + (err.message || 'Error'));
+    } finally {
+      setIsProcessingAction(false);
+      setActiveItemForAction(null);
+    }
+  };
+
+  // Quick Action: Batal Afkir / Aktifkan
+  const handleCancelAfkir = (id) => {
+    const item = allCertificates.find(c => c.id === id);
+    if (item) {
+      setActiveItemForAction(item);
+      setIsAktifkanModalOpen(true);
+    }
+  };
+
+  const confirmCancelAfkir = async () => {
+    if (!activeItemForAction) return;
+    setIsProcessingAction(true);
+    try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Aktif' });
+      await fetchMonitoringData();
+      setIsAktifkanModalOpen(false);
+    } catch (err) {
+      console.error('Failed to update status to Aktif:', err);
+      alert('Gagal mengaktifkan kembali: ' + (err.message || 'Error'));
+    } finally {
+      setIsProcessingAction(false);
+      setActiveItemForAction(null);
+    }
+  };
+
+  // Quick Action: Batal Perpanjangan / Reset ke Normal (Aktif)
   const handleCancelAction = (id) => {
-    setAllCertificates(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          return {
-            ...item,
-            workflowStatus: "not_started",
-            currentStage: "-"
-          };
-        }
-        return item;
-      })
-    );
+    const item = allCertificates.find(c => c.id === id);
+    if (item) {
+      setActiveItemForAction(item);
+      setIsCancelRenewModalOpen(true);
+    }
+  };
+
+  const confirmCancelRenew = async () => {
+    if (!activeItemForAction) return;
+    setIsProcessingAction(true);
+    try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Aktif' });
+      await fetchMonitoringData();
+      setIsCancelRenewModalOpen(false);
+    } catch (err) {
+      console.error('Failed to cancel perpanjangan:', err);
+      alert('Gagal membatalkan perpanjangan: ' + (err.message || 'Error'));
+    } finally {
+      setIsProcessingAction(false);
+      setActiveItemForAction(null);
+    }
   };
 
   // Open Complete & Upload Certificate Modal
@@ -287,10 +474,43 @@ export default function MonitoringSertifikasi() {
     return (
       <DocumentDetailPage
         item={selectedDetailDoc}
-        onBack={() => setSelectedDetailDoc(null)}
+        onBack={() => {
+          setSelectedDetailDoc(null);
+          fetchMonitoringData();
+        }}
         onSaveUpdate={(updatedDoc) => {
-          setAllCertificates(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
-          setSelectedDetailDoc(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+          const updateItem = (d) => {
+            const newStatus = updatedDoc.status || d.status;
+            const lowerSt = newStatus.toLowerCase();
+            const isAfkir = lowerSt === 'afkir' || lowerSt === 'decommissioned';
+            const isPerpanjang = lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress';
+            const isExempt = d.documentStatus === 'EXEMPT' || updatedDoc.documentStatus === 'EXEMPT';
+
+            let calcWf = d.workflowStatus;
+            if (isAfkir) calcWf = 'decommissioned';
+            else if (isPerpanjang) calcWf = 'in_progress';
+            else if (lowerSt === 'aktif' || lowerSt === 'completed') calcWf = isExempt ? 'exempt' : 'completed';
+
+            return { 
+              ...d, 
+              ...updatedDoc, 
+              status: newStatus,
+              statusOperasional: newStatus,
+              workflowStatus: calcWf,
+              id: d.id 
+            };
+          };
+
+          setAllCertificates(prev => prev.map(d => {
+            const isMatch = d.MasterId === updatedDoc.MasterId || (d.id === updatedDoc.id && !d.MasterId);
+            return isMatch ? updateItem(d) : d;
+          }));
+
+          setSelectedDetailDoc(prev => {
+            if (!prev) return prev;
+            const isMatch = prev.MasterId === updatedDoc.MasterId || (prev.id === updatedDoc.id && !prev.MasterId);
+            return isMatch ? updateItem(prev) : prev;
+          });
         }}
         onQuickRenew={(id) => {
           handleQuickRenew(id);
@@ -298,7 +518,20 @@ export default function MonitoringSertifikasi() {
         onQuickDecommission={(id) => {
           handleQuickDecommission(id);
         }}
+        onDeleteSuccess={() => {
+          setAllCertificates(prev => prev.filter(c => c.MasterId !== selectedDetailDoc.MasterId && c.id !== (selectedDetailDoc.MasterId || selectedDetailDoc.id)));
+          setSelectedDetailDoc(null);
+        }}
       />
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
+        <p className="font-mono-data font-bold">Memuat Tabel Monitoring dari Database...</p>
+      </div>
     );
   }
 
@@ -503,10 +736,13 @@ export default function MonitoringSertifikasi() {
                 filteredCertificates.map((doc, index) => {
                   const isInProgress = doc.workflowStatus === 'in_progress';
                   const isDecommissioned = doc.workflowStatus === 'decommissioned';
+                  const isExempt = doc.workflowStatus === 'exempt';
 
                   let rowStyleClass = "hover:bg-slate-50/80 transition-colors";
                   if (isDecommissioned) {
                     rowStyleClass = "bg-[#0f172a] text-slate-100 transition-colors hover:bg-slate-800";
+                  } else if (isExempt) {
+                    rowStyleClass = "bg-indigo-50/40 text-indigo-900 border-l-4 border-l-indigo-500 hover:bg-indigo-50/70 transition-colors";
                   } else if (isInProgress) {
                     rowStyleClass = "bg-amber-50/70 hover:bg-amber-100/70 text-slate-900 transition-colors";
                   } else if (doc.sisaHari <= 0) {
@@ -552,21 +788,29 @@ export default function MonitoringSertifikasi() {
 
                       {/* No Sertifikat */}
                       <td className={`py-3 px-3 font-mono-data whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-800'}`}>
-                        {doc.certificateNo || doc.noSertifikat || '-'}
+                        {isExempt ? (
+                          <span className="text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 text-[10px]">Tanpa Sertifikat</span>
+                        ) : (
+                          doc.certificateNo || doc.noSertifikat || '-'
+                        )}
                       </td>
 
                       {/* Tanggal Expiration */}
                       <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-900'}`}>
-                        {doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-'}
-                        <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
-                          ({isDecommissioned ? 'Afkir / Non-Aktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
-                        </span>
+                        {doc.tglExpired && doc.tglExpired !== '2030-01-01' ? doc.tglExpired : (doc.expiryDate && doc.expiryDate !== '2030-01-01' ? doc.expiryDate : '-')}
+                        {doc.sisaHari !== null && doc.sisaHari !== undefined && doc.tglExpired !== '-' && (
+                          <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
+                            ({isDecommissioned ? 'Afkir / Non-Aktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
+                          </span>
+                        )}
                       </td>
 
                       {/* Legal Permit Status */}
                       <td className="py-3 px-3 text-center whitespace-nowrap font-mono-data font-bold">
                         {isDecommissioned ? (
                           <span className="text-slate-400">Non-Aktif</span>
+                        ) : isExempt ? (
+                          <span className="text-indigo-600">Catatan Khusus</span>
                         ) : doc.sisaHari <= 0 ? (
                           <span className="text-rose-600">Expired</span>
                         ) : doc.sisaHari <= (parseInt(customUrgentDays) || 30) ? (
@@ -595,7 +839,7 @@ export default function MonitoringSertifikasi() {
                           </div>
                         ) : isDecommissioned ? (
                           <button
-                            onClick={() => handleCancelAction(doc.id)}
+                            onClick={() => handleCancelAfkir(doc.id)}
                             className="text-xs text-slate-300 hover:text-white hover:underline font-medium cursor-pointer"
                           >
                             Batal Afkir
@@ -1017,6 +1261,148 @@ export default function MonitoringSertifikasi() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* AFKIR CONFIRMATION MODAL */}
+      {isAfkirModalOpen && activeItemForAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-600 mx-auto flex items-center justify-center mb-4 border border-slate-200">
+                <Ban className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Tandai Sebagai Afkir?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin menandai <br /><strong className="text-slate-800">{activeItemForAction.merekItem}</strong> sebagai Afkir/Non-Aktif?<br />
+                Tindakan ini akan mengubah status dokumen secara permanen.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAfkirModalOpen(false)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmQuickDecommission}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isProcessingAction ? 'Memproses...' : 'Ya, Afkirkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AKTIFKAN CONFIRMATION MODAL */}
+      {isAktifkanModalOpen && activeItemForAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-blue-100 text-[#005ea4] mx-auto flex items-center justify-center mb-4 border border-blue-200">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Aktifkan Kembali?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin membatalkan afkir dan mengaktifkan kembali <br /><strong className="text-slate-800">{activeItemForAction.merekItem}</strong>?<br />
+                Dokumen ini akan kembali dipantau status aktifnya.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAktifkanModalOpen(false)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmCancelAfkir}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isProcessingAction ? 'Memproses...' : 'Ya, Aktifkan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* PERPANJANG CONFIRMATION MODAL */}
+      {isRenewConfirmModalOpen && activeItemForAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-amber-100 text-amber-600 mx-auto flex items-center justify-center mb-4 border border-amber-200">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Ajukan Perpanjangan?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin memulai proses perpanjangan untuk <br /><strong className="text-slate-800">{activeItemForAction.merekItem}</strong>?<br />
+                Status baris akan berubah menjadi <span className="text-amber-700 font-bold">Kuning (Sedang Diproses)</span>.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsRenewConfirmModalOpen(false)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmQuickRenew}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isProcessingAction ? 'Memproses...' : 'Ya, Mulai Perpanjangan'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* BATAL PERPANJANGAN CONFIRMATION MODAL */}
+      {isCancelRenewModalOpen && activeItemForAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-5 text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 mx-auto flex items-center justify-center mb-4 border border-rose-200">
+                <X className="w-6 h-6" />
+              </div>
+              <h4 className="font-bold text-base text-slate-900">Batalkan Perpanjangan?</h4>
+              <p className="text-xs text-slate-600 font-medium pb-2">
+                Apakah Anda yakin ingin membatalkan proses perpanjangan untuk <br /><strong className="text-slate-800">{activeItemForAction.merekItem}</strong>?<br />
+                Status baris akan dikembalikan menjadi <span className="text-slate-800 font-bold">Aktif (Normal)</span>.
+              </p>
+              <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCancelRenewModalOpen(false)}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmCancelRenew}
+                  disabled={isProcessingAction}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isProcessingAction ? 'Memproses...' : 'Ya, Batalkan'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
