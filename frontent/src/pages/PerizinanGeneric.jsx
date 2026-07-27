@@ -232,7 +232,25 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
     filteredDocs.forEach((doc) => {
       const certs = doc.linkedCertificates || [];
       if (certs.length > 0) {
-        certs.forEach((cert, idx) => {
+        const certGroups = {};
+        certs.forEach(cert => {
+          const jenis = cert.jenisSertifikat || doc.title || categoryName || 'Generic';
+          if (!certGroups[jenis]) {
+            certGroups[jenis] = [];
+          }
+          certGroups[jenis].push(cert);
+        });
+
+        Object.values(certGroups).forEach((group, idx) => {
+          const sortedGroup = [...group].sort((a, b) => {
+            if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
+            if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
+            const dateA = new Date(a.createdAt || a.terbit || 0);
+            const dateB = new Date(b.createdAt || b.terbit || 0);
+            return dateB - dateA;
+          });
+          const cert = sortedGroup[0];
+
           const noCert = doc.documentStatus === 'EXEMPT'
             ? 'Tanpa Sertifikat'
             : (cert.noSertifikat || cert.noIzin || doc.code || '-');

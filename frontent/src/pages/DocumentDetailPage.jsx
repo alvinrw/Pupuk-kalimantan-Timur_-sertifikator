@@ -155,7 +155,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         }
       }
 
-      const mappedCerts = certList.map(c => ({
+      const mappedCerts = certList.map((c, index) => ({
         id: c.id,
         periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} – ${c.expired.substring(0, 4)}` : 'Periode SK',
         noSertifikat: c.noSertifikat || '-',
@@ -166,6 +166,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         status: c.status || 'Aktif',
         fileUrl: c.fileUrl || null,
         pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
+        isCurrent: c.status?.toLowerCase() === 'aktif' || index === 0, // Fallback to index 0 if none are 'aktif' (though backend sorts later)
         rawCert: c
       }));
 
@@ -335,16 +336,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
       const targetIsUpdate = uploadData.target === 'current' && isSingleCertScope && targetCert?.id;
 
       if (targetIsUpdate) {
-        // UPDATE cert yang ada — koreksi file/no sertifikat, tidak buat row baru
-        const updatePayload = {
-          noSertifikat: uploadData.noSertifikat.trim() || targetCert.noSertifikat,
+        // UPDATE/KOREKSI: Create new record to maintain history log, mark old as 'Direvisi'
+        const certPayload = {
+          itemId: masterItemId,
+          jenisSertifikat: targetCert?.jenisSertifikat || item.jenisPeralatan || item.title || 'Riksa Uji Disnaker',
+          noSertifikat: uploadData.noSertifikat.trim() || targetCert.noSertifikat || `CERT-${Date.now()}`,
           status: 'Aktif',
         };
-        if (uploadData.terbit) updatePayload.terbit = uploadData.terbit;
-        if (uploadData.expired) updatePayload.expired = uploadData.expired;
-        if (uploadData.instansi) updatePayload.instansi = uploadData.instansi;
-        if (fileUrl) updatePayload.fileUrl = fileUrl;
-        await updateCertificate(targetCert.id, updatePayload);
+        if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
+        if (uploadData.expired) certPayload.expired = uploadData.expired;
+        if (uploadData.instansi) certPayload.instansi = uploadData.instansi;
+        if (fileUrl) certPayload.fileUrl = fileUrl;
+
+        await createCertificateForMasterItem(certPayload);
+        // Mark old as 'Direvisi' so it becomes a history artifact
+        if (targetCert?.id) {
+          await updateCertificate(targetCert.id, { status: 'Direvisi' });
+        }
       } else {
         // CREATE sertifikat baru — perpanjangan atau tambah histori
         // Jika isSingleCertScope, gunakan jenisSertifikat yang sama supaya relevan
@@ -358,7 +366,13 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         if (uploadData.expired) certPayload.expired = uploadData.expired;
         if (uploadData.instansi) certPayload.instansi = uploadData.instansi;
         if (fileUrl) certPayload.fileUrl = fileUrl;
+        
         await createCertificateForMasterItem(certPayload);
+        
+        // If it's a renewal (Perpanjangan) for a specific cert, mark the old one as Diperpanjang
+        if (isSingleCertScope && targetCert?.id) {
+          await updateCertificate(targetCert.id, { status: 'Diperpanjang' });
+        }
       }
 
       await fetchHistory();
@@ -1251,9 +1265,11 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                         ? 'bg-slate-800 text-white border-slate-600'
                         : certIsExpired || (certSisaHari !== null && certSisaHari <= 0)
                           ? 'bg-rose-100 text-rose-800 border-rose-300'
-                          : certIsPerpanjang || (certSisaHari !== null && certSisaHari > 0 && certSisaHari <= 30)
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : cert.status?.toLowerCase() === 'direvisi' || cert.status?.toLowerCase() === 'diperpanjang'
+                            ? 'bg-slate-100 text-slate-600 border-slate-300'
+                            : certIsPerpanjang || (certSisaHari !== null && certSisaHari > 0 && certSisaHari <= 30)
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                         }`}>
                         {cert.status || 'Aktif'}
                       </span>
