@@ -241,26 +241,14 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
 
       await createCertificateForMasterItem(basePayload);
 
-      if (uploadData.target === 'current') {
-        if (targetCert?.id) {
-          await updateCertificate(targetCert.id, { status: 'Direvisi' });
-        } else {
-          const activeCertsToArchive = linkedCerts.filter(c => c.status === 'Aktif' || c.status === 'Active');
-          for (const c of activeCertsToArchive) {
-            if (c.id) await updateCertificate(c.id, { status: 'Direvisi' });
-          }
-        }
-      } else if (uploadData.target === 'archive') {
-        if (targetCert?.id) {
-          await updateCertificate(targetCert.id, { status: 'Diperpanjang' });
-        } else {
-          const activeCertsToArchive = linkedCerts.filter(c => c.status === 'Aktif' || c.status === 'Active');
-          for (const c of activeCertsToArchive) {
-            if (c.id) await updateCertificate(c.id, { status: 'Diperpanjang' });
-          }
-        }
+      if (isKoreksi && targetCert?.id) {
+        await updateCertificate(targetCert.id, { status: 'Direvisi' });
+      } else if (isSingleCertScope && targetCert?.id) {
+        await updateCertificate(targetCert.id, { status: 'Diperpanjang' });
+      }
 
-        // Jika ini adalah upload file untuk menyelesaikan perpanjangan, kembalikan status Master ke Aktif
+      // Jika ini adalah upload file untuk menyelesaikan perpanjangan
+      if (uploadData.target === 'archive') {
         const updatedMaster = await updateMasterItem(masterItemId, { status: 'Aktif', documentStatus: 'COMPLETED' });
         setFormData(prev => ({ ...prev, status: 'Aktif' }));
         if (onSaveUpdate) {
