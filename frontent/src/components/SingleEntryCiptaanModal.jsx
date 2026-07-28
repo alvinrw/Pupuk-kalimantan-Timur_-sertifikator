@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, PlusCircle, Save, Upload } from 'lucide-react';
+import { X, PlusCircle, Save, Upload, ShieldAlert } from 'lucide-react';
 
 export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess }) {
   const [formData, setFormData] = useState({
@@ -10,6 +10,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
+  const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
 
   if (!isOpen) return null;
 
@@ -36,10 +37,12 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
 
     onAddSuccess({
       ...formData,
+      file: sertifikatMode === 'dengan' ? selectedFile : null,
       id: `CIPTAAN-MANUAL-${Date.now()}`,
       expiryDate: calculatedExpiry,
-      hasCertificatePdf: !!selectedFile,
-      fileName: selectedFile ? selectedFile.name : null
+      hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
+      documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
+      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (selectedFile ? `CIPTAAN-CERT-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT")
     });
 
     setFormData({
@@ -76,7 +79,65 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
         </div>
 
         {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs max-h-[80vh] overflow-y-auto">
+          {/* Toggles Dengan/Tanpa Sertifikat */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-4">
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('dengan')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'dengan'
+                  ? 'bg-[#005ea4] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              <span>Dengan Sertifikat (PDF)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('tanpa')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'tanpa'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-600" />
+              <span>Tanpa Sertifikat (Exempt)</span>
+            </button>
+          </div>
+
+          {sertifikatMode === 'dengan' && (
+            <div className="pt-2 pb-4 border-b border-slate-200 mb-4">
+              <label className="font-bold text-slate-900 block mb-1">
+                Unggah Berkas Sertifikat Pencatatan (PDF)
+              </label>
+              <div className="border border-dashed border-slate-300 hover:border-[#005ea4] bg-slate-50 p-3.5 rounded-lg flex items-center justify-between relative cursor-pointer">
+                <input
+                  type="file"
+                  accept=".pdf"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 opacity-0 cursor-pointer"
+                />
+                <div className="flex items-center gap-2.5">
+                  <Upload className="w-5 h-5 text-[#005ea4]" />
+                  <div>
+                    <span className="font-bold text-slate-800 block text-xs">
+                      {selectedFile ? selectedFile.name : "Pilih File Sertifikat PDF"}
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-mono-data">
+                      {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Hanya mendukung format .pdf"}
+                    </span>
+                  </div>
+                </div>
+                <span className="px-3 py-1 bg-[#005ea4] text-white text-[11px] font-bold rounded">
+                  {selectedFile ? "Ganti File" : "Pilih PDF"}
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div>
               <label className="font-bold text-slate-900 block mb-1">Judul Ciptaan</label>
@@ -133,36 +194,6 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
             </div>
           </div>
 
-          {/* FILE UPLOAD FIELD (PDF ONLY) */}
-          <div className="pt-2">
-            <label className="font-bold text-slate-900 block mb-1">
-              Unggah Berkas Sertifikat Pencatatan (PDF)
-            </label>
-            <div className="border border-dashed border-slate-300 hover:border-[#005ea4] bg-slate-50 p-3.5 rounded-lg flex items-center justify-between relative cursor-pointer">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <div className="flex items-center gap-2.5">
-                <Upload className="w-5 h-5 text-[#005ea4]" />
-                <div>
-                  <span className="font-bold text-slate-800 block text-xs">
-                    {selectedFile ? selectedFile.name : "Pilih File Sertifikat PDF"}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono-data">
-                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Hanya mendukung format .pdf"}
-                  </span>
-                </div>
-              </div>
-              <span className="px-3 py-1 bg-[#005ea4] text-white text-[11px] font-bold rounded">
-                {selectedFile ? "Ganti File" : "Pilih PDF"}
-              </span>
-            </div>
-          </div>
-
-          {/* Footer */}
           <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">
             <button
               type="button"

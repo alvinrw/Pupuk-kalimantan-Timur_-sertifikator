@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
 
 /**
  * usePerizinanGeneric — Custom hook untuk semua state & business logic PerizinanGeneric.
@@ -254,7 +254,58 @@ export function usePerizinanGeneric({ categoryName, title }) {
   };
 
   const handleCsvImported = () => { loadData(); };
-  const handleSingleAdded = (newItem) => { setDocuments(prev => [newItem, ...prev]); };
+  const handleSingleAdded = async (newItem) => {
+    try {
+      const createdItem = await createMasterItem({
+        title: newItem.title || newItem.merekItem || 'Unknown Item',
+        code: newItem.code || newItem.certificateNo || '-',
+        categoryKey: currentCategoryKey,
+        unitLocation: newItem.unit || newItem.unitPabrik || 'Umum',
+        status: newItem.status || 'Aktif',
+        keterangan: newItem.keterangan || 'Data Manual Input',
+        issueDate: newItem.issueDate || undefined,
+        expiryDate: newItem.expiryDate || newItem.berakhir || undefined,
+        documentStatus: newItem.documentStatus
+      });
+      
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
+        let fileUrl = null;
+        if (newItem.file) {
+          const formData = new FormData();
+          formData.append('file', newItem.file);
+          try {
+            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
+            }
+          } catch (uploadErr) {
+            console.error("Gagal mengunggah file:", uploadErr);
+          }
+        }
+
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.jenisPeralatan || categoryName || 'Sertifikat Perizinan',
+          noSertifikat: newItem.certificateNo || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.issueDate || undefined,
+          expired: newItem.expiryDate || newItem.berakhir || undefined,
+          fileUrl: fileUrl,
+        });
+      }
+
+      loadData();
+    } catch (error) {
+      console.error(error);
+      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
+    }
+  };
 
   const getRowStatusStyle = (doc) => {
     const statusStr = (doc.status || '').toLowerCase();
