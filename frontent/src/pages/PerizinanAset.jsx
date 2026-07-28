@@ -1,18 +1,26 @@
 import React, { useState, useMemo } from 'react';
-import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown, Eye, FileCheck, Loader2 } from 'lucide-react';
+import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown, Eye, FileCheck, Loader2, Building2, FileWarning, ShieldAlert, UploadCloud, X } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryAsetModal from '../components/SingleEntryAsetModal';
+import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, createMasterItem } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption } from '../services/masterItemsService';
 
 export default function PerizinanAset({ title, subtitle }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
+  const [selectedStagingIds, setSelectedStagingIds] = useState([]);
+  const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
+  const [bulkExemptNote, setBulkExemptNote] = useState('');
+  const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
+  const [resolveTargetItem, setResolveTargetItem] = useState(null);
   
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isZipModalOpen, setIsZipModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
+  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   
   const [detailModalItem, setDetailModalItem] = useState(null);
 
@@ -23,21 +31,30 @@ export default function PerizinanAset({ title, subtitle }) {
     try {
       setIsLoading(true);
       const data = await getMasterItems('perizinan-aset');
-      const mapped = data.map(doc => ({
-        id: doc.id,
-        MasterId: doc.id,
-        certificateNo: doc.certificateNo || '-',
-        location: doc.unitLocation || '-',
-        areaSqm: doc.areaSqm || "0",
-        areaHa: doc.areaHa || "0",
-        purpose: doc.title || "Industrial Asset",
-        condition: doc.status || "Baik",
-        description: doc.description || "-",
-        submissionDate: doc.createdAt,
-        validityPeriod: doc.expiryDate || "-",
-        merekItem: doc.title,
-        linkedCertificates: doc.certificates || []
-      }));
+      const mapped = data.map(doc => {
+        const certs = doc.certificates || [];
+        return {
+          id: doc.id,
+          MasterId: doc.id,
+          title: doc.title || "Industrial Asset",
+          merekItem: doc.title,
+          code: doc.code || '-',
+          certificateNo: doc.certificateNo || doc.code || '-',
+          unitLocation: doc.unitLocation || 'Umum',
+          location: doc.unitLocation || '-',
+          areaSqm: doc.areaSqm || "0",
+          areaHa: doc.areaHa || "0",
+          purpose: doc.title || "Industrial Asset",
+          condition: doc.status || "Baik",
+          status: doc.status || "Baik",
+          description: doc.description || "-",
+          submissionDate: doc.createdAt,
+          validityPeriod: doc.expiryDate || "-",
+          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          exemptionNote: doc.exemptionNote || null,
+          linkedCertificates: certs
+        };
+      });
       setDocuments(mapped);
     } catch (error) {
       console.error("Failed to load PerizinanAset", error);
@@ -49,6 +66,42 @@ export default function PerizinanAset({ title, subtitle }) {
   React.useEffect(() => {
     loadData();
   }, []);
+
+  const pendingCount = useMemo(() => {
+    return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
+  }, [documents]);
+
+  const handleBulkExempt = async () => {
+    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
+    try {
+      setIsSubmittingBulkExempt(true);
+      for (const id of selectedStagingIds) {
+        await resolveMasterItemExemption(id, bulkExemptNote.trim());
+      }
+      setSelectedStagingIds([]);
+      setBulkExemptModalOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan bulk action.");
+    } finally {
+      setIsSubmittingBulkExempt(false);
+    }
+  };
+
+  const toggleSelectStaging = (id) => {
+    setSelectedStagingIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllStaging = (currentRows) => {
+    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
+      setSelectedStagingIds([]);
+    } else {
+      setSelectedStagingIds(currentRows.map(r => r.parentDoc.id || r.parentDoc.MasterId));
+    }
+  };
 
   const allColumns = [
     { key: "certificateNo", label: "Nomer Sertifikat" },
@@ -75,51 +128,72 @@ export default function PerizinanAset({ title, subtitle }) {
   const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
   const isVisible = (key) => visibleColumnKeys.includes(key);
 
-  const filteredDocs = documents.filter(doc =>
-    (doc.certificateNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (doc.location || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (doc.purpose || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredDocs = documents.filter(doc => {
+    const matchesTab = activeMainTab === 'staging'
+      ? doc.documentStatus === 'PENDING_DOC'
+      : doc.documentStatus !== 'PENDING_DOC';
+
+    return matchesTab;
+  });
 
   const expandedRows = useMemo(() => {
     const rows = [];
     filteredDocs.forEach((doc) => {
-      rows.push({
-        rowId: `${doc.id}-primary`,
-        parentDoc: doc,
-        isLinked: false,
-        certificateNo: doc.certificateNo || doc.noSertifikat || '-',
-        location: doc.location || doc.unit || '-',
-        areaSqm: doc.areaSqm || doc.luasM2 || '-',
-        areaHa: doc.areaHa || doc.luasHa || '-',
-        purpose: doc.purpose || doc.peruntukan || doc.merekItem || '-',
-        submissionDate: doc.submissionDate || doc.issueDate || doc.terbit || '-',
-        validityPeriod: doc.validityPeriod || doc.expiryDate || doc.berakhir || '-',
-        condition: doc.condition || doc.status || 'Baik',
-        description: doc.description || doc.keterangan || '-'
-      });
+      const certs = doc.linkedCertificates || [];
+      if (certs.length > 0) {
+        certs.forEach((cert, idx) => {
+          const noCert = doc.documentStatus === 'EXEMPT'
+            ? 'Tanpa Sertifikat'
+            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
 
-      if (doc.linkedCertificates && Array.isArray(doc.linkedCertificates)) {
-        doc.linkedCertificates.forEach((lc, idx) => {
           rows.push({
-            rowId: `${doc.id}-linked-${lc.id || idx}`,
+            rowId: `${doc.id}-cert-${cert.id || idx}`,
             parentDoc: doc,
-            isLinked: true,
-            certificateNo: lc.noSertifikat || '-',
-            location: doc.location || doc.unit || '-',
-            areaSqm: doc.areaSqm || doc.luasM2 || '-',
-            areaHa: doc.areaHa || doc.luasHa || '-',
-            purpose: lc.jenisSertifikat || doc.purpose || doc.peruntukan || '-',
-            submissionDate: lc.terbit || '-',
-            validityPeriod: lc.expired || '-',
-            condition: lc.status || 'Aktif',
-            description: lc.instansi || doc.description || '-'
+            cert: cert,
+            certificateNo: noCert,
+            location: doc.location || doc.unitLocation || '-',
+            areaSqm: doc.areaSqm || "0",
+            areaHa: doc.areaHa || "0",
+            purpose: cert.jenisSertifikat || doc.title || doc.purpose || "Industrial Asset",
+            submissionDate: cert.terbit || doc.createdAt,
+            validityPeriod: cert.expired || doc.expiryDate || '-',
+            condition: cert.status || doc.status || 'Baik',
+            description: cert.keterangan || cert.instansi || doc.description || '-'
           });
+        });
+      } else {
+        const noCert = doc.documentStatus === 'EXEMPT'
+          ? 'Tanpa Sertifikat'
+          : (doc.certificateNo || doc.code || '-');
+
+        rows.push({
+          rowId: `${doc.id}-primary`,
+          parentDoc: doc,
+          cert: null,
+          certificateNo: noCert,
+          location: doc.location || doc.unitLocation || '-',
+          areaSqm: doc.areaSqm || "0",
+          areaHa: doc.areaHa || "0",
+          purpose: doc.title || doc.purpose || "Industrial Asset",
+          submissionDate: doc.createdAt,
+          validityPeriod: doc.expiryDate || '-',
+          condition: doc.status || 'Baik',
+          description: doc.description || '-'
         });
       }
     });
-    return rows;
-  }, [filteredDocs]);
+
+    if (!searchTerm.trim()) return rows;
+
+    const s = searchTerm.toLowerCase();
+    return rows.filter(r =>
+      (r.certificateNo || '').toLowerCase().includes(s) ||
+      (r.location || '').toLowerCase().includes(s) ||
+      (r.purpose || '').toLowerCase().includes(s) ||
+      (r.parentDoc.title || '').toLowerCase().includes(s) ||
+      (r.parentDoc.code || '').toLowerCase().includes(s)
+    );
+  }, [filteredDocs, searchTerm]);
 
   const handleCsvImported = () => {
     loadData();
@@ -259,6 +333,38 @@ export default function PerizinanAset({ title, subtitle }) {
         </div>
       </div>
 
+      {/* TAB SWITCHER: DATA UTAMA VS STAGING */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+        <button
+          onClick={() => setActiveMainTab('main')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeMainTab === 'main'
+              ? 'bg-[#005ea4] text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Data Utama</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab('staging')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
+            activeMainTab === 'staging'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+          }`}
+        >
+          <FileWarning className="w-4 h-4 text-amber-500" />
+          <span>Menunggu Dokumen (Staging)</span>
+          {pendingCount > 0 && (
+            <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* Search, Filter Data Count, & Column Selector */}
       <div className="bg-white p-4 rounded-lg border border-[#e2e8f0] shadow-2xs flex flex-wrap items-center justify-between gap-3 relative">
         <div className="relative flex-1 min-w-[280px]">
@@ -328,12 +434,39 @@ export default function PerizinanAset({ title, subtitle }) {
         </div>
       </div>
 
+      {/* BULK ACTION BAR */}
+      {activeMainTab === 'staging' && selectedStagingIds.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between mt-4 shadow-2xs font-mono-data">
+          <div className="text-amber-800 text-xs font-bold">
+            {selectedStagingIds.length} item terpilih
+          </div>
+          <button 
+            onClick={() => setBulkExemptModalOpen(true)}
+            disabled={isSubmittingBulkExempt}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Tandai Terpilih Tanpa Sertifikat
+          </button>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
+                {activeMainTab === 'staging' && (
+                  <th className="py-3.5 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
+                      onChange={() => toggleSelectAllStaging(expandedRows)}
+                      className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                    />
+                  </th>
+                )}
                 {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold">Nomer Sertifikat</th>}
                 {isVisible("location") && <th className="py-3.5 px-4 font-bold">Lokasi</th>}
                 {isVisible("areaSqm") && <th className="py-3.5 px-4 font-bold text-right">Luas (m²)</th>}
@@ -343,6 +476,7 @@ export default function PerizinanAset({ title, subtitle }) {
                 {isVisible("validityPeriod") && <th className="py-3.5 px-4 font-bold">Masa Berlaku Produk</th>}
                 {isVisible("condition") && <th className="py-3.5 px-4 font-bold">Kondisi</th>}
                 {isVisible("description") && <th className="py-3.5 px-4 font-bold">Keterangan</th>}
+                <th className="py-3.5 px-4 font-bold text-right">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -350,9 +484,19 @@ export default function PerizinanAset({ title, subtitle }) {
                 const doc = row.parentDoc;
                 return (
                   <tr key={row.rowId} className="hover:bg-slate-50/80 transition-colors font-mono-data">
+                    {activeMainTab === 'staging' && (
+                      <td className="py-3.5 px-3 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
+                          onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
+                          className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                        />
+                      </td>
+                    )}
                     {isVisible("certificateNo") && (
                       <td
-                        onClick={() => setDetailModalItem(doc)}
+                        onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
                         className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline"
                       >
                         <span>{row.certificateNo}</span>
@@ -401,20 +545,30 @@ export default function PerizinanAset({ title, subtitle }) {
                       </td>
                     )}
                     <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
-                      <button
-                        onClick={() => setDetailModalItem(doc)}
-                        className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span>Lihat Detail</span>
-                      </button>
+                      {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
+                        <button
+                          onClick={() => setResolveTargetItem(doc)}
+                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <FileWarning className="w-3.5 h-3.5" />
+                          <span>Perbaiki / Lengkapi</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
+                          className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>Lihat Detail</span>
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
               })}
               {expandedRows.length === 0 && (
                 <tr>
-                  <td colSpan={visibleColumnKeys.length} className="py-8 text-center text-slate-500 font-mono-data">
+                  <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 1)} className="py-8 text-center text-slate-500 font-mono-data">
                     Data tidak ditemukan.
                   </td>
                 </tr>
@@ -445,11 +599,76 @@ export default function PerizinanAset({ title, subtitle }) {
         onMatchSuccess={handleZipMatched}
       />
 
-      <HistoryModal
-        isOpen={!!historyTargetItem}
-        onClose={() => setHistoryTargetItem(null)}
-        documentItem={historyTargetItem}
+      <ResolveDocumentModal
+        isOpen={!!resolveTargetItem}
+        onClose={() => setResolveTargetItem(null)}
+        item={resolveTargetItem}
+        onSuccess={loadData}
       />
+
+      {/* BULK EXEMPT MODAL */}
+      {bulkExemptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-500" />
+                Tandai Tanpa Sertifikat
+              </h3>
+              <button 
+                onClick={() => setBulkExemptModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800 font-medium">
+                  Anda akan menandai <strong>{selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Catatan / Alasan <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={bulkExemptNote}
+                  onChange={(e) => setBulkExemptNote(e.target.value)}
+                  placeholder="Masukkan alasan mengapa dokumen tidak diperlukan..."
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] bg-slate-50 focus:bg-white resize-none"
+                  rows={3}
+                ></textarea>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkExemptModalOpen(false)}
+                disabled={isSubmittingBulkExempt}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkExempt}
+                disabled={isSubmittingBulkExempt || !bulkExemptNote.trim()}
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+              >
+                {isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Ya, Tandai {selectedStagingIds.length} Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

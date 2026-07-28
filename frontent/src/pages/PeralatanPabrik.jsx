@@ -21,7 +21,7 @@ import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, createMasterItem } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption } from '../services/masterItemsService';
 import { uploadCsv } from '../services/csvService';
 import { Loader2, ShieldAlert, FileWarning } from 'lucide-react';
 
@@ -42,6 +42,10 @@ export default function PeralatanPabrik() {
   const [resolveTargetItem, setResolveTargetItem] = useState(null);
   const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
 
+  const [selectedStagingIds, setSelectedStagingIds] = useState([]);
+  const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
+  const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
+  const [bulkExemptNote, setBulkExemptNote] = useState('Tanpa Sertifikat (Massal)');
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
   
@@ -51,6 +55,39 @@ export default function PeralatanPabrik() {
   // Row Delete Confirmation Modal state
   const [rowConfirmModalOpen, setRowConfirmModalOpen] = useState(false);
   const [pendingDeleteRowId, setPendingDeleteRowId] = useState(null);
+
+  const handleBulkExempt = async () => {
+    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
+
+    try {
+      setIsSubmittingBulkExempt(true);
+      for (const id of selectedStagingIds) {
+        await resolveMasterItemExemption(id, bulkExemptNote.trim());
+      }
+      setSelectedStagingIds([]);
+      setBulkExemptModalOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan bulk action.");
+    } finally {
+      setIsSubmittingBulkExempt(false);
+    }
+  };
+
+  const toggleSelectStaging = (id) => {
+    setSelectedStagingIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllStaging = (currentRows) => {
+    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
+      setSelectedStagingIds([]);
+    } else {
+      setSelectedStagingIds(currentRows.map(r => r.parentItem.id || r.parentItem.MasterId));
+    }
+  };
 
   // Ganti Target Sertifikat Modal State
   const [reassignCertRowItem, setReassignCertRowItem] = useState(null);
@@ -150,61 +187,54 @@ export default function PeralatanPabrik() {
       setIsLoading(true);
       const data = await getMasterItems('peralatan-pabrik');
       
-      const flattened = [];
-      data.forEach(item => {
-        const docs = [];
-        if (item.certificates?.length > 0) docs.push(...item.certificates);
-        if (item.permits?.length > 0) docs.push(...item.permits);
+      const mapped = data.map(item => {
+        const certs = item.certificates || [];
+        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
 
-        if (docs.length === 0) {
-          flattened.push({
-            id: item.id,
-            MasterId: item.id,
-            categoryKey: item.categoryKey,
-            jenisPeralatan: item.title || 'Unknown',
-            merekItem: item.code || '-',
-            tipe: '-',
-            nomorSeri: '-',
-            kapasitas: '-',
-            lokasi: item.unitLocation || 'Umum',
-            user: 'Umum',
-            status: item.status || 'Aktif',
-            documentStatus: item.documentStatus || 'EXEMPT',
-            exemptionNote: item.exemptionNote || null,
-            noSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-',
-            tanggalInspeksi: item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
-            terbit: item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
-            berakhir: item.expiryDate || '-',
-            keterangan: item.description || '-',
-          });
-        } else {
-          docs.forEach(doc => {
-            flattened.push({
-              id: doc.id,
-              MasterId: item.id,
-              categoryKey: item.categoryKey,
-              jenisPeralatan: item.title || 'Unknown',
-              merekItem: item.code || '-',
-              tipe: '-',
-              nomorSeri: '-',
-              kapasitas: '-',
-              lokasi: item.unitLocation || 'Umum',
-              user: 'Umum',
-              status: item.status || 'Aktif',
-              documentStatus: item.documentStatus || 'COMPLETED',
-              exemptionNote: item.exemptionNote || null,
-              noSertifikat: doc.noSertifikat || doc.noIzin || '-',
-              tanggalInspeksi: doc.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
-              terbit: doc.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-'),
-              berakhir: doc.expired || item.expiryDate || '-',
-              keterangan: doc.keterangan || item.description || '-',
-              fileUrl: doc.fileUrl || null,
-              hasPdf: !!doc.fileUrl || doc.hasPdf !== false,
-            });
-          });
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            return dB - dA;
+          })[0];
+        } else if (certs.length > 0) {
+          primaryCert = certs[0];
         }
+
+        const noCert = item.documentStatus === 'EXEMPT'
+          ? 'Tanpa Sertifikat'
+          : (primaryCert?.noSertifikat || primaryCert?.noIzin || '-');
+
+        const terbitVal = primaryCert?.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-');
+        const expiredVal = primaryCert?.expired || item.expiryDate || '-';
+
+        return {
+          id: item.id,
+          MasterId: item.id,
+          categoryKey: item.categoryKey,
+          jenisPeralatan: item.title || 'Unknown',
+          merekItem: item.code || '-',
+          tipe: '-',
+          nomorSeri: '-',
+          kapasitas: '-',
+          lokasi: item.unitLocation || 'Umum',
+          user: 'Umum',
+          status: item.status || 'Aktif',
+          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          exemptionNote: item.exemptionNote || null,
+          noSertifikat: noCert,
+          tanggalInspeksi: terbitVal,
+          terbit: terbitVal,
+          berakhir: expiredVal,
+          keterangan: primaryCert?.keterangan || item.description || '-',
+          fileUrl: primaryCert?.fileUrl || null,
+          hasPdf: !!primaryCert?.fileUrl,
+          certificates: certs,
+        };
       });
-      setEquipmentList(flattened);
+
+      setEquipmentList(mapped);
     } catch (err) {
       console.error("Failed to fetch PeralatanPabrik:", err);
     } finally {
@@ -608,12 +638,39 @@ export default function PeralatanPabrik() {
         </div>
       </div>
 
+      {/* BULK ACTION BAR */}
+      {activeMainTab === 'staging' && selectedStagingIds.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between mt-4 shadow-2xs">
+          <div className="text-amber-800 text-xs font-bold font-mono-data">
+            {selectedStagingIds.length} item terpilih
+          </div>
+          <button 
+            onClick={() => setBulkExemptModalOpen(true)}
+            disabled={isSubmittingBulkExempt}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Tandai Terpilih Tanpa Sertifikat
+          </button>
+        </div>
+      )}
+
       {/* Table with Inline Header Dropdown Filters & COMPLETE "AKSI" DROPDOWN */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
+                {activeMainTab === 'staging' && (
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap w-12">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-slate-300 accent-amber-600 cursor-pointer"
+                      checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
+                      onChange={() => toggleSelectAllStaging(expandedRows)}
+                    />
+                  </th>
+                )}
                 {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap">NO.</th>}
 
                 {/* JENIS PERALATAN PABRIK */}
@@ -716,6 +773,16 @@ export default function PeralatanPabrik() {
 
                   return (
                     <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                      {activeMainTab === 'staging' && (
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap w-12">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-slate-300 accent-amber-600 cursor-pointer"
+                            checked={selectedStagingIds.includes(item.id || item.MasterId)}
+                            onChange={() => toggleSelectStaging(item.id || item.MasterId)}
+                          />
+                        </td>
+                      )}
                       {isVisible("no") && (
                         <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
                           {index + 1}
@@ -1019,6 +1086,70 @@ export default function PeralatanPabrik() {
         item={resolveTargetItem}
         onSuccess={loadData}
       />
+      {/* BULK EXEMPT MODAL */}
+      {bulkExemptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-500" />
+                Tandai Tanpa Sertifikat
+              </h3>
+              <button 
+                onClick={() => setBulkExemptModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800 font-medium">
+                  Anda akan menandai <strong>{selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Catatan / Alasan <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={bulkExemptNote}
+                  onChange={(e) => setBulkExemptNote(e.target.value)}
+                  placeholder="Masukkan alasan mengapa dokumen tidak diperlukan..."
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] bg-slate-50 focus:bg-white resize-none"
+                  rows={3}
+                ></textarea>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkExemptModalOpen(false)}
+                disabled={isSubmittingBulkExempt}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkExempt}
+                disabled={isSubmittingBulkExempt || !bulkExemptNote.trim()}
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+              >
+                {isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Ya, Tandai {selectedStagingIds.length} Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

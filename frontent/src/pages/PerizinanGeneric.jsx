@@ -9,16 +9,28 @@ import {
   Eye,
   FileCheck,
   Check,
-  Loader2
+  Loader2,
+  Building2,
+  FileWarning,
+  ShieldAlert,
+  UploadCloud,
+  X
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryGenericModal from '../components/SingleEntryGenericModal';
+import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems } from '../services/masterItemsService';
+import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
 
 export default function PerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
+  const [selectedStagingIds, setSelectedStagingIds] = useState([]);
+  const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
+  const [bulkExemptNote, setBulkExemptNote] = useState('');
+  const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
+  const [resolveTargetItem, setResolveTargetItem] = useState(null);
   
   // Header Dropdown Filter States
   const [filterJenis, setFilterJenis] = useState('All');
@@ -55,27 +67,36 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
       setIsLoading(true);
       const data = await getMasterItems(currentCategoryKey);
       
-      const mapped = data.map(doc => ({
-        id: doc.id,
-        MasterId: doc.id,
-        categoryKey: doc.categoryKey,
-        kategoriDokumen: doc.categoryKey,
-        jenisItem: doc.title || '-',
-        namaItem: doc.title || '-',
-        code: doc.code || '-',
-        certificateNo: doc.certificateNo || '-',
-        unit: doc.unitLocation || '-',
-        luasM2: doc.areaSqm || "0",
-        luasHa: doc.areaHa || "0",
-        peruntukan: doc.peruntukan || "-",
-        issueDate: doc.createdAt,
-        expiryDate: doc.expiryDate || "-",
-        kondisi: doc.status || "Baik",
-        keterangan: doc.description || "-",
-        status: doc.status || "Aktif",
-        user: "Umum",
-        linkedCertificates: doc.certificates || []
-      }));
+      const mapped = data.map(doc => {
+        const certs = doc.certificates || [];
+        return {
+          id: doc.id,
+          MasterId: doc.id,
+          title: doc.title || '-',
+          categoryKey: doc.categoryKey,
+          kategoriDokumen: doc.categoryKey,
+          jenisItem: doc.title || '-',
+          namaItem: doc.title || '-',
+          merekItem: doc.title,
+          code: doc.code || '-',
+          certificateNo: doc.certificateNo || doc.code || '-',
+          unitLocation: doc.unitLocation || '-',
+          unit: doc.unitLocation || '-',
+          luasM2: doc.areaSqm || "0",
+          luasHa: doc.areaHa || "0",
+          peruntukan: doc.peruntukan || "-",
+          issueDate: doc.createdAt,
+          expiryDate: doc.expiryDate || "-",
+          kondisi: doc.status || "Baik",
+          description: doc.description || "-",
+          keterangan: doc.description || "-",
+          status: doc.status || "Aktif",
+          user: "Umum",
+          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          exemptionNote: doc.exemptionNote || null,
+          linkedCertificates: certs
+        };
+      });
       setDocuments(mapped);
     } catch (error) {
       console.error("Failed to load generic permissions", error);
@@ -119,6 +140,42 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
 
   const allColumns = isAsetCategory ? asetColumns : defaultColumns;
 
+  const pendingCount = useMemo(() => {
+    return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
+  }, [documents]);
+
+  const handleBulkExempt = async () => {
+    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
+    try {
+      setIsSubmittingBulkExempt(true);
+      for (const id of selectedStagingIds) {
+        await resolveMasterItemExemption(id, bulkExemptNote.trim());
+      }
+      setSelectedStagingIds([]);
+      setBulkExemptModalOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan bulk action.");
+    } finally {
+      setIsSubmittingBulkExempt(false);
+    }
+  };
+
+  const toggleSelectStaging = (id) => {
+    setSelectedStagingIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllStaging = (currentRows) => {
+    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
+      setSelectedStagingIds([]);
+    } else {
+      setSelectedStagingIds(currentRows.map(r => r.parentDoc.id || r.parentDoc.MasterId));
+    }
+  };
+
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
 
   const toggleColumn = (key) => {
@@ -143,60 +200,96 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
 
   const filteredDocs = useMemo(() => {
     return categoryFilteredDocs.filter(doc => {
-      const titleStr = doc.title || doc.merekItem || doc.judulCiptaan || '';
+      const matchesTab = activeMainTab === 'staging'
+        ? doc.documentStatus === 'PENDING_DOC'
+        : doc.documentStatus !== 'PENDING_DOC';
+
+      const titleStr = doc.title || doc.merekItem || doc.judulCiptaan || doc.namaItem || '';
       const codeStr = doc.code || doc.id || doc.noSertifikat || '';
       const unitStr = doc.unit || doc.unitPabrik || doc.lokasi || '';
       const certStr = doc.certificateNo || doc.noSertifikat || '';
       const jenisStr = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '';
       const statusStr = doc.status || 'Aktif';
 
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
-        titleStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        codeStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        unitStr.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        certStr.toLowerCase().includes(searchTerm.toLowerCase());
+        titleStr.toLowerCase().includes(searchLower) ||
+        codeStr.toLowerCase().includes(searchLower) ||
+        unitStr.toLowerCase().includes(searchLower) ||
+        certStr.toLowerCase().includes(searchLower) ||
+        jenisStr.toLowerCase().includes(searchLower);
 
       const matchesJenis = filterJenis === 'All' || jenisStr === filterJenis;
       const matchesLokasi = filterLokasi === 'All' || unitStr === filterLokasi;
       const matchesStatus = filterStatus === 'All' || statusStr === filterStatus;
 
-      return matchesSearch && matchesJenis && matchesLokasi && matchesStatus;
+      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus;
     });
-  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus]);
+  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, activeMainTab]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
     filteredDocs.forEach((doc) => {
-      rows.push({
-        rowId: `${doc.id}-primary`,
-        parentDoc: doc,
-        isLinked: false,
-        certNo: doc.certificateNo || doc.noSertifikat || '-',
-        jenisCert: doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || categoryName || 'Generic',
-        issuer: doc.user || doc.issuer || doc.keterangan || 'Dept. General',
-        issueDate: doc.tanggalAwalPengajuan || doc.issueDate || doc.terbit || doc.tanggalCiptaan || '-',
-        expiryDate: doc.expiryDate || doc.berakhir || doc.kapanBerakhir || '-',
-        status: doc.status || 'Aktif',
-        hasPdf: doc.hasCertificatePdf !== false
-      });
+      const certs = doc.linkedCertificates || [];
+      if (certs.length > 0) {
+        const certGroups = {};
+        certs.forEach(cert => {
+          const jenis = cert.jenisSertifikat || doc.title || categoryName || 'Generic';
+          if (!certGroups[jenis]) {
+            certGroups[jenis] = [];
+          }
+          certGroups[jenis].push(cert);
+        });
 
-      if (doc.linkedCertificates && Array.isArray(doc.linkedCertificates)) {
-        doc.linkedCertificates.forEach((lc, idx) => {
-          rows.push({
-            rowId: `${doc.id}-linked-${lc.id || idx}`,
-            parentDoc: doc,
-            isLinked: true,
-            certNo: lc.noSertifikat || '-',
-            jenisCert: lc.jenisSertifikat || 'Sertifikat Terhubung',
-            issuer: lc.instansi || doc.user || 'Instansi Terkait',
-            issueDate: lc.terbit || '-',
-            expiryDate: lc.expired || '-',
-            status: lc.status || 'Aktif',
-            hasPdf: lc.hasPdf !== false
+        Object.values(certGroups).forEach((group, idx) => {
+          const sortedGroup = [...group].sort((a, b) => {
+            if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
+            if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
+            const dateA = new Date(a.createdAt || a.terbit || 0);
+            const dateB = new Date(b.createdAt || b.terbit || 0);
+            return dateB - dateA;
           });
+          const cert = sortedGroup[0];
+
+          const noCert = doc.documentStatus === 'EXEMPT'
+            ? 'Tanpa Sertifikat'
+            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
+
+          rows.push({
+            rowId: `${doc.id}-cert-${cert.id || idx}`,
+            parentDoc: doc,
+            cert: cert,
+            certNo: noCert,
+            jenisCert: cert.jenisSertifikat || doc.title || categoryName || 'Generic',
+            issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
+            issueDate: cert.terbit || doc.createdAt,
+            expiryDate: cert.expired || doc.expiryDate || '-',
+            status: cert.status || doc.status || 'Aktif',
+            hasPdf: !!cert.fileUrl,
+            fileUrl: cert.fileUrl || null
+          });
+        });
+      } else {
+        const noCert = doc.documentStatus === 'EXEMPT'
+          ? 'Tanpa Sertifikat'
+          : (doc.certificateNo || doc.code || '-');
+
+        rows.push({
+          rowId: `${doc.id}-primary`,
+          parentDoc: doc,
+          cert: null,
+          certNo: noCert,
+          jenisCert: doc.title || categoryName || 'Generic',
+          issuer: doc.user || doc.description || 'Umum',
+          issueDate: doc.createdAt,
+          expiryDate: doc.expiryDate || '-',
+          status: doc.status || 'Aktif',
+          hasPdf: !!doc.fileUrl,
+          fileUrl: doc.fileUrl || null
         });
       }
     });
+
     return rows;
   }, [filteredDocs, categoryName]);
 
@@ -315,6 +408,37 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
           )}
         </div>
       </div>
+      {/* TAB SWITCHER: DATA UTAMA VS STAGING */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+        <button
+          onClick={() => setActiveMainTab('main')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+            activeMainTab === 'main'
+              ? 'bg-[#005ea4] text-white shadow-xs'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Data Utama</span>
+        </button>
+
+        <button
+          onClick={() => setActiveMainTab('staging')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
+            activeMainTab === 'staging'
+              ? 'bg-amber-600 text-white shadow-xs'
+              : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+          }`}
+        >
+          <FileWarning className="w-4 h-4 text-amber-500" />
+          <span>Menunggu Dokumen (Staging)</span>
+          {pendingCount > 0 && (
+            <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">
+              {pendingCount}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Search, Reset Filters, & Column Selector */}
       <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 relative">
@@ -384,12 +508,39 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         </div>
       </div>
 
+      {/* BULK ACTION BAR */}
+      {activeMainTab === 'staging' && selectedStagingIds.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between mt-4 shadow-2xs font-mono-data">
+          <div className="text-amber-800 text-xs font-bold">
+            {selectedStagingIds.length} item terpilih
+          </div>
+          <button 
+            onClick={() => setBulkExemptModalOpen(true)}
+            disabled={isSubmittingBulkExempt}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+          >
+            <ShieldAlert className="w-3.5 h-3.5" />
+            Tandai Terpilih Tanpa Sertifikat
+          </button>
+        </div>
+      )}
+
       {/* Main Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider">
+                {activeMainTab === 'staging' && (
+                  <th className="py-3.5 px-3 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
+                      onChange={() => toggleSelectAllStaging(expandedRows)}
+                      className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                    />
+                  </th>
+                )}
                 {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap">NO.</th>}
 
                 {/* NAMA PRODUK / ASET / PROYEK — selalu tampil */}
@@ -508,6 +659,16 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
 
                   return (
                     <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                      {activeMainTab === 'staging' && (
+                        <td className="py-3.5 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
+                            onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
+                            className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                          />
+                        </td>
+                      )}
                       {isVisible("no") && (
                         <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
                           {index + 1}
@@ -517,7 +678,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                       {/* NAMA PRODUK / ASET / PROYEK */}
                       {isVisible("namaItem") && (
                         <td
-                          onClick={() => setDetailModalItem(doc)}
+                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
                           className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans ${
                             isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
                           }`}
@@ -545,7 +706,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                       {/* NO. SERTIFIKAT */}
                       {isVisible("certificateNo") && (
                         <td
-                          onClick={() => setDetailModalItem(doc)}
+                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
                           className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline ${
                             isAfkir ? 'text-slate-200' : 'text-[#005ea4]'
                           }`}
@@ -631,23 +792,32 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                         </td>
                       )}
 
-                      {/* LIHAT DETAIL BUTTON */}
                       <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
-                        <button
-                          onClick={() => setDetailModalItem(doc)}
-                          className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Lihat Detail</span>
-                        </button>
+                        {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
+                          <button
+                            onClick={() => setResolveTargetItem(doc)}
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                          >
+                            <FileWarning className="w-3.5 h-3.5" />
+                            <span>Perbaiki / Lengkapi</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
+                            className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors font-mono-data"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat Detail</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={visibleColumnKeys.length + 1} className="py-8 text-center text-[#64748B] font-mono-data">
-                    Tidak ada dokumen {categoryName} yang sesuai dengan filter pencarian.
+                  <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 1)} className="py-8 text-center text-slate-400 font-mono-data">
+                    Data perizinan tidak ditemukan.
                   </td>
                 </tr>
               )}
@@ -656,7 +826,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* MODALS */}
       <SingleEntryGenericModal
         isOpen={isSingleModalOpen}
         onClose={() => setIsSingleModalOpen(false)}
@@ -669,14 +839,78 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         onClose={() => setIsCsvModalOpen(false)}
         onImportSuccess={handleCsvImported}
         categoryKey={currentCategoryKey}
-        moduleName={categoryName || title}
       />
 
-      <HistoryModal
-        isOpen={!!historyTargetItem}
-        onClose={() => setHistoryTargetItem(null)}
-        documentItem={historyTargetItem}
+      <ResolveDocumentModal
+        isOpen={!!resolveTargetItem}
+        onClose={() => setResolveTargetItem(null)}
+        item={resolveTargetItem}
+        onSuccess={loadData}
       />
+
+      {/* BULK EXEMPT MODAL */}
+      {bulkExemptModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+                <ShieldAlert className="w-5 h-5 text-amber-500" />
+                Tandai Tanpa Sertifikat
+              </h3>
+              <button 
+                onClick={() => setBulkExemptModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-5 space-y-4">
+              <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                <p className="text-xs text-amber-800 font-medium">
+                  Anda akan menandai <strong>{selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Catatan / Alasan <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  value={bulkExemptNote}
+                  onChange={(e) => setBulkExemptNote(e.target.value)}
+                  placeholder="Masukkan alasan mengapa dokumen tidak diperlukan..."
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] bg-slate-50 focus:bg-white resize-none"
+                  rows={3}
+                ></textarea>
+              </div>
+            </div>
+            
+            {/* Footer */}
+            <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setBulkExemptModalOpen(false)}
+                disabled={isSubmittingBulkExempt}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkExempt}
+                disabled={isSubmittingBulkExempt || !bulkExemptNote.trim()}
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+              >
+                {isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Ya, Tandai {selectedStagingIds.length} Item
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

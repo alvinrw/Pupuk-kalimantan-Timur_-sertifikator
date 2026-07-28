@@ -74,7 +74,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
 
       const payload = {
         itemId: targetItemId,
-        jenisSertifikat: 'Riksa Uji Disnaker',
+        jenisSertifikat: item.jenisPeralatan || item.jenisCiptaan || item.title || 'Sertifikat Perizinan',
         noSertifikat: noSertifikat.trim(),
         status: 'Aktif',
       };

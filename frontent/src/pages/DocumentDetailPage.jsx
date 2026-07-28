@@ -25,7 +25,8 @@ import {
   Upload,
   Link2,
   AlertTriangle,
-  CheckSquare
+  CheckSquare,
+  Eye
 } from 'lucide-react';
 import { getMasterItemById, deleteMasterItem, createCertificateForMasterItem, updateCertificate, deleteCertificate, updateMasterItem } from '../services/masterItemsService';
 
@@ -72,35 +73,81 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const [isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen] = useState(false);
   const [isCancelingHeader, setIsCancelingHeader] = useState(false);
 
-  // Dynamic Document Type Detection
-  const isHaki = Boolean(item.categoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
-  const isEquipment = Boolean(item.categoryKey === 'peralatan-pabrik' || (item.nomorSeri && !isHaki && !item.linkedCertificates));
+  const [activeCertId, setActiveCertId] = useState(item?.currentCert?.id || item?.cert?.id || null);
+
+  useEffect(() => {
+    setActiveCertId(item?.currentCert?.id || item?.cert?.id || null);
+  }, [item]);
+
+  const rawTargetCert = item?.currentCert || item?.cert || null;
+  const targetCert = activeCertId 
+    ? (linkedCerts.find(c => c.id === activeCertId) || rawTargetCert)
+    : rawTargetCert;
+  const parentDoc = item?.parentDoc || item;
+  const effectiveCategoryKey = parentDoc.categoryKey || item.categoryKey || '';
+  const isSingleCertScope = Boolean(
+    targetCert?.id &&
+    (effectiveCategoryKey === 'perizinan-aset' ||
+     effectiveCategoryKey === 'perizinan-proyek' ||
+     effectiveCategoryKey === 'perizinan-produk')
+  );
+
+  const isHaki = Boolean(effectiveCategoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
+  const isEquipment = Boolean(effectiveCategoryKey === 'peralatan-pabrik' || (item.nomorSeri && !isHaki && !item.linkedCertificates));
   const isMultiCertItem = Boolean(
     item.linkedCertificates ||
-    item.categoryKey === 'perizinan-aset' ||
-    item.categoryKey === 'perizinan-proyek' ||
-    item.categoryKey === 'perizinan-produk'
+    effectiveCategoryKey === 'perizinan-aset' ||
+    effectiveCategoryKey === 'perizinan-proyek' ||
+    effectiveCategoryKey === 'perizinan-produk'
   );
   const isGenericDoc = !isHaki && !isEquipment;
 
   // Form State for Editing
+  // When isSingleCertScope: init from targetCert fields; else fallback to item fields
   const [formData, setFormData] = useState({
-    merekItem: item.merekItem || item.title || item.judulCiptaan || '',
-    jenisPeralatan: item.jenisPeralatan || item.kategoriDokumen || item.jenisCiptaan || '',
-    tipe: item.tipe || item.code || '',
+    merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
+    jenisPeralatan: isSingleCertScope
+      ? (targetCert?.jenisSertifikat || parentDoc.title || '')
+      : (item.jenisPeralatan || item.jenisCert || item.kategoriDokumen || item.jenisCiptaan || item.title || ''),
+    tipe: isSingleCertScope
+      ? (targetCert?.noSertifikat || parentDoc.code || '')
+      : (item.tipe || item.code || ''),
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
-    lokasi: item.lokasi || item.unitPabrik || item.unit || '',
-    user: item.user || '',
-    status: item.status || 'Aktif',
-    noSertifikat: item.noSertifikat || item.certificateNo || '',
-    tanggalInspeksi: item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || '',
+    lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
+    user: targetCert?.instansi || item.user || item.issuer || 'Umum',
+    status: isSingleCertScope ? (targetCert?.status || 'Aktif') : (item.status || 'Aktif'),
+    noSertifikat: isSingleCertScope
+      ? (targetCert?.noSertifikat || '')
+      : (item.noSertifikat || item.certNo || item.certificateNo || ''),
+    tanggalInspeksi: isSingleCertScope
+      ? (targetCert?.terbit || parentDoc.createdAt || '')
+      : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
     tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
     masaBerlaku: item.masaBerlaku || '5 Tahun',
-    terbit: item.terbit || item.issueDate || item.tanggalCiptaan || '',
-    berakhir: item.berakhir || item.expiryDate || item.kapanBerakhir || '',
-    keterangan: item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo')
+    terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
+    berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
+    keterangan: targetCert?.instansi || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
+    fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || '')
   });
+
+  useEffect(() => {
+    if (isSingleCertScope && targetCert) {
+      setFormData(prev => ({
+        ...prev,
+        jenisPeralatan: targetCert.jenisSertifikat || prev.jenisPeralatan,
+        tipe: targetCert.noSertifikat || prev.tipe,
+        user: targetCert.instansi || prev.user,
+        status: targetCert.status || 'Aktif',
+        noSertifikat: targetCert.noSertifikat || '',
+        tanggalInspeksi: targetCert.terbit || prev.tanggalInspeksi,
+        terbit: targetCert.terbit || '',
+        berakhir: targetCert.expired || '',
+        keterangan: targetCert.instansi || prev.keterangan,
+        fileUrl: targetCert.fileUrl || ''
+      }));
+    }
+  }, [targetCert, isSingleCertScope]);
 
   // History Certificates State (Real Database)
   const [historyList, setHistoryList] = useState([]);
@@ -109,37 +156,74 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const fetchHistory = async () => {
     try {
       setIsLoadingHistory(true);
-      const targetId = item?.MasterId || item?.id;
-      if (targetId) {
-        const detail = await getMasterItemById(targetId);
-        if (detail && detail.certificates && detail.certificates.length > 0) {
-          const mappedCerts = detail.certificates.map(c => ({
-            id: c.id,
-            periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} - ${c.expired.substring(0, 4)}` : 'Periode SK',
-            noSertifikat: c.noSertifikat || '-',
-            terbit: c.terbit || '-',
-            expired: c.expired || '-',
-            status: c.status || 'Aktif',
-            fileUrl: c.fileUrl || null,
-            pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
-            rawCert: c
-          }));
-          setHistoryList(mappedCerts);
+      const masterItemId = parentDoc?.MasterId || parentDoc?.id || item?.MasterId || item?.id;
+      if (!masterItemId) { setHistoryList([]); return; }
 
-          const latestCert = mappedCerts[0];
-          if (latestCert) {
-            setFormData(prev => ({
-              ...prev,
-              noSertifikat: latestCert.noSertifikat,
-              terbit: latestCert.terbit,
-              berakhir: latestCert.expired,
-            }));
-            if (latestCert.fileUrl) {
-              item.fileUrl = latestCert.fileUrl;
-            }
-          }
+      const detail = await getMasterItemById(masterItemId);
+      if (!detail || !detail.certificates || detail.certificates.length === 0) {
+        setHistoryList([]);
+        return;
+      }
+
+      let certList = detail.certificates;
+
+      // When scoped to a specific cert (Perizinan Proyek/Aset/Produk):
+      // Show ALL certs with the same jenisSertifikat as the selected cert.
+      // This allows perpanjangan (renewals) of the same cert type to appear in history.
+      // Primary anchor: find jenisSertifikat from targetCert.id match, then filter by jenisSertifikat.
+      if (isSingleCertScope && targetCert?.id) {
+        const anchorCert = certList.find(c => c.id === targetCert.id);
+        const scopedJenis = anchorCert?.jenisSertifikat || targetCert?.jenisSertifikat;
+        if (scopedJenis) {
+          // Show all certs with same jenisSertifikat (includes renewals)
+          certList = certList.filter(c => c.jenisSertifikat === scopedJenis);
         } else {
-          setHistoryList([]);
+          // Fallback: exact ID only
+          certList = certList.filter(c => c.id === targetCert.id);
+        }
+      }
+
+      const mappedCerts = certList.map((c, index) => ({
+        id: c.id,
+        periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} – ${c.expired.substring(0, 4)}` : 'Periode SK',
+        noSertifikat: c.noSertifikat || '-',
+        jenisSertifikat: c.jenisSertifikat || '-',
+        instansi: c.instansi || '-',
+        terbit: c.terbit || '-',
+        expired: c.expired || '-',
+        status: c.status || 'Aktif',
+        fileUrl: c.fileUrl || null,
+        pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
+        isCurrent: c.status?.toLowerCase() === 'aktif' || index === 0, // Fallback to index 0 if none are 'aktif' (though backend sorts later)
+        rawCert: c
+      }));
+
+      setHistoryList(mappedCerts);
+
+      // Only update formData from DB if NOT scoped — when scoped, formData is already
+      // correctly set from targetCert in useState initialization
+      if (!isSingleCertScope) {
+        const activeCerts = mappedCerts.filter(c => c.status === 'Aktif' || c.status === 'Active');
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dateA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dateB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            return dateB - dateA;
+          })[0];
+        } else if (mappedCerts.length > 0) {
+          primaryCert = mappedCerts[0];
+        }
+        if (primaryCert) {
+          setFormData(prev => ({
+            ...prev,
+            noSertifikat: primaryCert.noSertifikat,
+            jenisPeralatan: primaryCert.rawCert?.jenisSertifikat || prev.jenisPeralatan,
+            terbit: primaryCert.terbit,
+            berakhir: primaryCert.expired,
+            status: primaryCert.status,
+            fileUrl: primaryCert.fileUrl || prev.fileUrl
+          }));
         }
       }
     } catch (err) {
@@ -152,7 +236,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
   useEffect(() => {
     fetchHistory();
-  }, [item]);
+  }, [item, activeCertId]);
 
 
   // Form Upload Manual State
@@ -161,9 +245,22 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     instansi: 'Disnaker Kaltim / Sucofindo',
     terbit: '2026-07-23',
     expired: '2029-07-23',
-    target: 'current', // 'current' (gantikan sertifikat aktif) or 'archive' (tambah ke histori)
+    target: 'archive', // default to adding certificate to history
     fileName: ''
   });
+
+  const openUploadModal = (target = 'archive') => {
+    setUploadData({
+      noSertifikat: '',
+      instansi: 'Disnaker Kaltim / Sucofindo',
+      terbit: new Date().toISOString().split('T')[0],
+      expired: new Date(new Date().setFullYear(new Date().getFullYear() + 3)).toISOString().split('T')[0],
+      target: target,
+      fileName: ''
+    });
+    setSelectedUploadFile(null);
+    setIsUploadModalOpen(true);
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -257,20 +354,55 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         if (uploadRes.ok) {
           const uploadJson = await uploadRes.json();
           fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
+        } else {
+          const errText = await uploadRes.text();
+          throw new Error(`Upload file gagal (${uploadRes.status}): ${errText}`);
         }
       }
 
-      const certPayload = {
-        itemId: item.MasterId || item.id,
-        jenisSertifikat: 'Riksa Uji Disnaker',
-        noSertifikat: uploadData.noSertifikat.trim() || `CERT-${Date.now()}`,
-        status: 'Aktif',
-      };
-      if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
-      if (uploadData.expired) certPayload.expired = uploadData.expired;
-      if (fileUrl) certPayload.fileUrl = fileUrl;
+      const masterItemId = parentDoc.MasterId || parentDoc.id || item.MasterId || item.id;
+      const targetIsUpdate = uploadData.target === 'current' && isSingleCertScope && targetCert?.id;
 
-      await createCertificateForMasterItem(certPayload);
+      if (targetIsUpdate) {
+        // UPDATE/KOREKSI: Create new record to maintain history log, mark old as 'Direvisi'
+        const certPayload = {
+          itemId: masterItemId,
+          jenisSertifikat: targetCert?.jenisSertifikat || item.jenisPeralatan || item.title || 'Riksa Uji Disnaker',
+          noSertifikat: uploadData.noSertifikat.trim() || targetCert.noSertifikat || `CERT-${Date.now()}`,
+          status: 'Aktif',
+        };
+        if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
+        if (uploadData.expired) certPayload.expired = uploadData.expired;
+        if (uploadData.instansi) certPayload.instansi = uploadData.instansi;
+        if (fileUrl) certPayload.fileUrl = fileUrl;
+
+        await createCertificateForMasterItem(certPayload);
+        // Mark old as 'Direvisi' so it becomes a history artifact
+        if (targetCert?.id) {
+          await updateCertificate(targetCert.id, { status: 'Direvisi' });
+        }
+      } else {
+        // CREATE sertifikat baru — perpanjangan atau tambah histori
+        // Jika isSingleCertScope, gunakan jenisSertifikat yang sama supaya relevan
+        const certPayload = {
+          itemId: masterItemId,
+          jenisSertifikat: targetCert?.jenisSertifikat || item.jenisPeralatan || item.title || 'Riksa Uji Disnaker',
+          noSertifikat: uploadData.noSertifikat.trim() || `CERT-${Date.now()}`,
+          status: 'Aktif',
+        };
+        if (uploadData.terbit) certPayload.terbit = uploadData.terbit;
+        if (uploadData.expired) certPayload.expired = uploadData.expired;
+        if (uploadData.instansi) certPayload.instansi = uploadData.instansi;
+        if (fileUrl) certPayload.fileUrl = fileUrl;
+        
+        await createCertificateForMasterItem(certPayload);
+        
+        // If it's a renewal (Perpanjangan) for a specific cert, mark the old one as Diperpanjang
+        if (isSingleCertScope && targetCert?.id) {
+          await updateCertificate(targetCert.id, { status: 'Diperpanjang' });
+        }
+      }
+
       await fetchHistory();
       setIsUploadModalOpen(false);
       setSelectedUploadFile(null);
@@ -281,9 +413,15 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     }
   };
 
-  const handleDeleteHistoryRow = (id) => {
-    setHistoryList(prev => prev.filter(row => row.id !== id));
-    setSelectedHistoryToDelete(null);
+  const handleDeleteHistoryRow = async (id) => {
+    try {
+      await deleteCertificate(id);
+      await fetchHistory();
+      setSelectedHistoryToDelete(null);
+    } catch (err) {
+      console.error("Failed to delete certificate:", err);
+      alert("Gagal menghapus sertifikat: " + (err.message || "Error"));
+    }
   };
 
   const handleSaveHistoryRowEdit = async (e) => {
@@ -361,14 +499,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
-                {formData.merekItem}
+                {isSingleCertScope
+                  ? (targetCert?.jenisSertifikat || formData.jenisPeralatan || formData.merekItem)
+                  : formData.merekItem}
               </h2>
+              {isSingleCertScope && (
+                <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold font-mono-data">
+                  {targetCert?.noSertifikat || formData.noSertifikat || 'Sertifikat'}
+                </span>
+              )}
               <span className="px-2.5 py-0.5 bg-blue-50 text-[#005ea4] border border-blue-200 rounded-lg text-xs font-bold font-mono-data">
-                ID: {item.id}
+                {isSingleCertScope ? `Entity: ${parentDoc.id || item.id}` : `ID: ${item.id}`}
               </span>
             </div>
             <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-              Detail Spesifikasi, Legalitas Sertifikat, dan Rekam Jejak Audit Dokumen
+              {isSingleCertScope
+                ? `Entitas: ${formData.merekItem} · Detail & Riwayat Sertifikat Terpilih`
+                : 'Detail Spesifikasi, Legalitas Sertifikat, dan Rekam Jejak Audit Dokumen'}
             </p>
           </div>
         </div>
@@ -395,7 +542,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           {formData.status === 'Perpanjang' || formData.status === 'in_progress' ? (
             <>
               <button
-                onClick={() => setIsUploadModalOpen(true)}
+                onClick={() => openUploadModal('archive')}
                 className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
               >
                 <UploadCloud className="w-4 h-4 text-amber-700" />
@@ -806,7 +953,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   <span>Ajukan Perpanjangan</span>
                 </button>
                 <button
-                  onClick={() => setIsUploadModalOpen(true)}
+                  onClick={() => openUploadModal('archive')}
                   className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
                 >
                   <UploadCloud className="w-4 h-4" />
@@ -816,55 +963,74 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </div>
           ) : (
             <div className="bg-blue-50/60 border border-blue-200 rounded-2xl p-6 space-y-4 font-mono-data">
-              <h4 className="font-bold text-sm text-slate-900 border-b border-blue-200 pb-3 flex items-center justify-between font-sans">
-                <span className="flex items-center gap-2">
-                  <FileCheck className="w-5 h-5 text-[#005ea4]" />
-                  <span>Status Legalitas Sertifikat Active</span>
-                </span>
-                <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
-              </h4>
+              {/* Compute active primary cert with furthest expiry from historyList */}
+              {(() => {
+                const activeCerts = historyList.filter(c => (c.status || '').toLowerCase() === 'aktif' || (c.status || '').toLowerCase() === 'active');
+                const primaryCert = activeCerts.length > 0
+                  ? activeCerts.slice().sort((a, b) => {
+                      const dateA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+                      const dateB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+                      return dateB - dateA; // descending → furthest expiry first
+                    })[0]
+                  : (historyList.length > 0 ? historyList[0] : null);
 
-              <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
-                <div>
-                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
-                  <span className="font-bold text-[#005ea4] text-base">{formData.noSertifikat}</span>
-                </div>
+                const displayNoSert = primaryCert?.noSertifikat || formData.noSertifikat || '-';
+                const displayExpired = primaryCert?.expired || formData.berakhir || '-';
+                const displayFileUrl = primaryCert?.fileUrl || formData.fileUrl || null;
 
-                <div>
-                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
-                  <span className="font-bold text-rose-700 text-base">{formData.berakhir}</span>
-                </div>
-              </div>
+                return (
+                  <>
+                    <h4 className="font-bold text-sm text-slate-900 border-b border-blue-200 pb-3 flex items-center justify-between font-sans">
+                      <span className="flex items-center gap-2">
+                        <FileCheck className="w-5 h-5 text-[#005ea4]" />
+                        <span>Status Legalitas Sertifikat Active</span>
+                      </span>
+                      <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
+                    </h4>
 
-              <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-[#005ea4]" />
-                  <span className="font-bold text-slate-800">
-                    {item.fileUrl || item.pdfUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
-                  </span>
-                </div>
-                {item.fileUrl || item.pdfUrl ? (
-                  <button
-                    onClick={() => {
-                      const targetUrl = item.fileUrl || item.pdfUrl;
-                      const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
-                      window.open(fullUrl, '_blank');
-                    }}
-                    className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                  >
-                    <span>Buka File PDF</span>
-                    <ExternalLink className="w-3.5 h-3.5 text-white" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setIsUploadModalOpen(true)}
-                    className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                  >
-                    <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
-                    <span>+ Unggah File PDF</span>
-                  </button>
-                )}
-              </div>
+                    <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
+                        <span className="font-bold text-[#005ea4] text-base">{displayNoSert}</span>
+                      </div>
+
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
+                        <span className="font-bold text-rose-700 text-base">{displayExpired}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-[#005ea4]" />
+                        <span className="font-bold text-slate-800">
+                          {displayFileUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+                        </span>
+                      </div>
+                      {displayFileUrl ? (
+                        <button
+                          onClick={() => {
+                            const fullUrl = displayFileUrl.startsWith('http') ? displayFileUrl : `http://localhost:3000${displayFileUrl}`;
+                            window.open(fullUrl, '_blank');
+                          }}
+                          className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <span>Buka File PDF</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-white" />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openUploadModal('current')}
+                          className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <UploadCloud className="w-3.5 h-3.5 text-amber-600" />
+                          <span>+ Unggah File PDF</span>
+                        </button>
+                      )}
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           )}
 
@@ -883,7 +1049,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setIsUploadModalOpen(true)}
+                  onClick={() => openUploadModal('current')}
                   className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data"
                 >
                   <UploadCloud className="w-4 h-4" />
@@ -948,19 +1114,22 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                             <div className="flex items-center justify-end gap-1.5">
                               <button
                                 onClick={() => {
-                                  const targetUrl = row.fileUrl || row.pdfName;
-                                  if (targetUrl && (targetUrl.startsWith('http') || targetUrl.startsWith('/'))) {
-                                    const fullUrl = targetUrl.startsWith('http') ? targetUrl : `http://localhost:3000${targetUrl}`;
+                                  if (row.fileUrl) {
+                                    const fullUrl = row.fileUrl.startsWith('http') ? row.fileUrl : `http://localhost:3000${row.fileUrl}`;
                                     window.open(fullUrl, '_blank');
                                   } else {
-                                    alert(`Berkas PDF ${row.pdfName || ''} belum tersedia.`);
+                                    alert('Berkas PDF belum diunggah untuk sertifikat ini. Gunakan tombol "+ Unggah / Koreksi Berkas PDF Manual" untuk menambahkan file.');
                                   }
                                 }}
-                                className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors cursor-pointer"
-                                title="Buka / Unduh Berkas PDF"
+                                className={`px-2.5 py-1 text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors ${
+                                  row.fileUrl
+                                    ? 'bg-[#005ea4] hover:bg-[#004881] text-white cursor-pointer'
+                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                }`}
+                                title={row.fileUrl ? 'Buka / Unduh Berkas PDF' : 'Belum ada berkas PDF'}
                               >
                                 <FileText className="w-3.5 h-3.5" />
-                                <span>Liat PDF</span>
+                                <span>{row.fileUrl ? 'Liat PDF' : 'Belum Ada'}</span>
                               </button>
 
                               <button
@@ -972,12 +1141,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                               </button>
 
                               <button
-                                onClick={async () => {
-                                  if (window.confirm(`Hapus sertifikat ${row.noSertifikat}?`)) {
-                                    await deleteCertificate(row.id);
-                                    await fetchHistory();
-                                  }
-                                }}
+                                onClick={() => setSelectedHistoryToDelete({ ...row })}
                                 className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
                                 title="Hapus Sertifikat Ini"
                               >
@@ -1039,7 +1203,15 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             <div>
               <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
                 <Link2 className="w-5 h-5 text-[#005ea4]" />
-                <span>Sertifikat Terhubung ({linkedCerts.length} Dokumen)</span>
+                {(() => {
+                  const groupedCerts = Object.values(linkedCerts.reduce((acc, cert) => {
+                    const jenis = cert.jenisSertifikat || 'Generic';
+                    if (!acc[jenis]) acc[jenis] = [];
+                    acc[jenis].push(cert);
+                    return acc;
+                  }, {}));
+                  return <span>Sertifikat Terhubung ({groupedCerts.length} Dokumen)</span>;
+                })()}
               </h4>
               <p className="text-xs text-slate-500 font-mono-data mt-0.5">
                 Daftar semua jenis perizinan / sertifikat yang berlaku untuk aset / proyek / produk ini
@@ -1062,7 +1234,20 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {linkedCerts.map((cert) => {
+              {Object.values(linkedCerts.reduce((acc, cert) => {
+                const jenis = cert.jenisSertifikat || 'Generic';
+                if (!acc[jenis]) acc[jenis] = [];
+                acc[jenis].push(cert);
+                return acc;
+              }, {})).map(group => {
+                return group.sort((a, b) => {
+                  if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
+                  if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
+                  const dateA = new Date(a.createdAt || a.terbit || 0);
+                  const dateB = new Date(b.createdAt || b.terbit || 0);
+                  return dateB - dateA;
+                })[0];
+              }).map((cert) => {
                 const certStatusLower = (cert.status || '').toLowerCase();
                 const certIsExpired = certStatusLower === 'expired';
                 const certIsPerpanjang = certStatusLower === 'perpanjang' || certStatusLower === 'perpanjangan';
@@ -1076,11 +1261,23 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   certSisaHari = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
                 }
 
+                const isActive = activeCertId === cert.id;
+                
                 return (
                   <div
                     key={cert.id}
-                    className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3 font-mono-data text-xs relative group hover:border-slate-300 transition-colors"
+                    onClick={() => setActiveCertId(cert.id)}
+                    className={`rounded-xl p-4 space-y-3 font-mono-data text-xs relative group transition-colors cursor-pointer ${isActive 
+                      ? 'bg-blue-50/50 border-2 border-[#005ea4] shadow-md' 
+                      : 'bg-slate-50 border border-slate-200 hover:border-[#005ea4]/50 hover:bg-slate-100'}`}
                   >
+                    {isActive && (
+                      <div className="absolute -top-3 -right-3">
+                        <span className="bg-[#005ea4] text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                          <Eye className="w-3 h-3" /> Aktif Dilihat
+                        </span>
+                      </div>
+                    )}
                     {/* Delete button */}
                     <button
                       onClick={() => setDeletingLinkedCertId(cert.id)}
@@ -1129,9 +1326,11 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                         ? 'bg-slate-800 text-white border-slate-600'
                         : certIsExpired || (certSisaHari !== null && certSisaHari <= 0)
                           ? 'bg-rose-100 text-rose-800 border-rose-300'
-                          : certIsPerpanjang || (certSisaHari !== null && certSisaHari > 0 && certSisaHari <= 30)
-                            ? 'bg-amber-100 text-amber-800 border-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : cert.status?.toLowerCase() === 'direvisi' || cert.status?.toLowerCase() === 'diperpanjang'
+                            ? 'bg-slate-100 text-slate-600 border-slate-300'
+                            : certIsPerpanjang || (certSisaHari !== null && certSisaHari > 0 && certSisaHari <= 30)
+                              ? 'bg-amber-100 text-amber-800 border-amber-300'
+                              : 'bg-emerald-100 text-emerald-800 border-emerald-300'
                         }`}>
                         {cert.status || 'Aktif'}
                       </span>
@@ -1191,16 +1390,57 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                const newId = `LC-${item.id}-${Date.now()}`;
-                const updatedCerts = [...linkedCerts, { ...newCertData, id: newId }];
-                setLinkedCerts(updatedCerts);
-                if (onSaveUpdate) {
-                  onSaveUpdate({ ...item, linkedCertificates: updatedCerts });
+                try {
+                  // Upload PDF file first if selected
+                  let fileUrl = null;
+                  const pdfInput = document.getElementById('add-linked-cert-pdf-input');
+                  const pdfFile = pdfInput?.files?.[0];
+                  if (pdfFile) {
+                    const formDataUpload = new FormData();
+                    formDataUpload.append('file', pdfFile);
+                    const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+                      method: 'POST',
+                      body: formDataUpload
+                    });
+                    if (uploadRes.ok) {
+                      const uploadJson = await uploadRes.json();
+                      fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
+                    }
+                  }
+
+                  // Save certificate to database
+                  const masterItemId = parentDoc.MasterId || parentDoc.id || item.MasterId || item.id;
+                  const certPayload = {
+                    itemId: masterItemId,
+                    jenisSertifikat: newCertData.jenisSertifikat,
+                    noSertifikat: newCertData.noSertifikat,
+                    instansi: newCertData.instansi || null,
+                    status: newCertData.status || 'Aktif',
+                  };
+                  if (newCertData.terbit) certPayload.terbit = newCertData.terbit;
+                  if (newCertData.expired) certPayload.expired = newCertData.expired;
+                  if (fileUrl) certPayload.fileUrl = fileUrl;
+
+                  const saved = await createCertificateForMasterItem(certPayload);
+
+                  // Update local linked certs state with the DB-saved cert (has real UUID id)
+                  const updatedCerts = [...linkedCerts, saved];
+                  setLinkedCerts(updatedCerts);
+
+                  // Refresh history table
+                  await fetchHistory();
+
+                  // Notify parent to refresh main table
+                  if (onRefreshRequired) onRefreshRequired();
+
+                  setNewCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: '' });
+                  setIsAddCertModalOpen(false);
+                } catch (err) {
+                  console.error('Failed to save linked certificate:', err);
+                  alert('Gagal menyimpan sertifikat terhubung: ' + (err.message || 'Error'));
                 }
-                setNewCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: '' });
-                setIsAddCertModalOpen(false);
               }}
               className="p-6 space-y-4 text-xs font-mono-data"
             >
@@ -1446,10 +1686,9 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 <label className="font-bold text-slate-800 block mb-1">2. No. Sertifikat / SK Baru (Koreksi)</label>
                 <input
                   type="text"
-                  required
                   value={uploadData.noSertifikat}
                   onChange={(e) => setUploadData({ ...uploadData, noSertifikat: e.target.value })}
-                  placeholder="Contoh: CERT-8891/DISNAKER/2026"
+                  placeholder="Contoh: CERT-8891/DISNAKER/2026 (opsional, auto-generate jika kosong)"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
                 />
               </div>
@@ -1493,7 +1732,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
                 >
                   <option value="current">Sertifikat Utama / Berkas Aktif (Koreksi)</option>
-                  <option value="archive">Simpan Sebagai Arsip Histori Pendukung</option>
+                  <option value="archive">Sertifikat Baru (Perpanjangan / Tambah Histori)</option>
                 </select>
               </div>
 
