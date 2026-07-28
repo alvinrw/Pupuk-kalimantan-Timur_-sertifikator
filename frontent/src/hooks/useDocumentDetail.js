@@ -75,7 +75,9 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     kapasitas: item.kapasitas || '',
     lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
     user: targetCert?.instansi || item.user || item.issuer || 'Umum',
-    status: isSingleCertScope ? (targetCert?.status || 'Aktif') : (item.status || 'Aktif'),
+    status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
+      ? item.status
+      : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
     noSertifikat: isSingleCertScope ? (targetCert?.noSertifikat || '') : (item.noSertifikat || item.certNo || item.certificateNo || ''),
     tanggalInspeksi: isSingleCertScope ? (targetCert?.terbit || parentDoc.createdAt || '') : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
     tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
@@ -94,7 +96,9 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
         jenisPeralatan: targetCert.jenisSertifikat || prev.jenisPeralatan,
         tipe: targetCert.noSertifikat || prev.tipe,
         user: targetCert.instansi || prev.user,
-        status: targetCert.status || 'Aktif',
+        status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
+          ? item.status
+          : (targetCert.status || 'Aktif'),
         noSertifikat: targetCert.noSertifikat || '',
         tanggalInspeksi: targetCert.terbit || prev.tanggalInspeksi,
         terbit: targetCert.terbit || '',
@@ -103,7 +107,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
         fileUrl: targetCert.fileUrl || ''
       }));
     }
-  }, [targetCert, isSingleCertScope]);
+  }, [targetCert, isSingleCertScope, item.status]);
 
   // ──────────────────────────────────────────────────────────────────
   // HISTORY STATE
@@ -157,15 +161,20 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
           ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
           : (mappedCerts.length > 0 ? mappedCerts[0] : null);
         if (primaryCert) {
-          setFormData(prev => ({
-            ...prev,
-            noSertifikat: primaryCert.noSertifikat,
-            jenisPeralatan: primaryCert.rawCert?.jenisSertifikat || prev.jenisPeralatan,
-            terbit: primaryCert.terbit,
-            berakhir: primaryCert.expired,
-            status: primaryCert.status,
-            fileUrl: primaryCert.fileUrl || prev.fileUrl
-          }));
+          setFormData(prev => {
+            const currentStatusLower = (prev.status || '').toLowerCase();
+            const isSpecialState = currentStatusLower.includes('perpanjang') || currentStatusLower.includes('proses') || currentStatusLower === 'afkir' || currentStatusLower === 'decommissioned' || currentStatusLower === 'in_progress' || currentStatusLower === 'in progress';
+            
+            return {
+              ...prev,
+              noSertifikat: primaryCert.noSertifikat,
+              jenisPeralatan: primaryCert.rawCert?.jenisSertifikat || prev.jenisPeralatan,
+              terbit: primaryCert.terbit,
+              berakhir: primaryCert.expired,
+              status: isSpecialState ? prev.status : primaryCert.status,
+              fileUrl: primaryCert.fileUrl || prev.fileUrl
+            };
+          });
         }
       }
     } catch (err) {
@@ -236,6 +245,15 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
         await updateCertificate(targetCert.id, { status: 'Direvisi' });
       } else if (isSingleCertScope && targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Diperpanjang' });
+      }
+
+      // Jika ini adalah upload file untuk menyelesaikan perpanjangan
+      if (uploadData.target === 'archive') {
+        const updatedMaster = await updateMasterItem(masterItemId, { status: 'Aktif', documentStatus: 'COMPLETED' });
+        setFormData(prev => ({ ...prev, status: 'Aktif' }));
+        if (onSaveUpdate) {
+           onSaveUpdate({ ...item, ...formData, status: 'Aktif', documentStatus: 'COMPLETED', ...updatedMaster, id: masterItemId });
+        }
       }
 
       await fetchHistory();
@@ -459,13 +477,14 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   // COMPUTED VALUES
   // ──────────────────────────────────────────────────────────────────
   const currentStatus = formData.status || item.status || 'Aktif';
-  const isAfkirStatus = currentStatus.toLowerCase() === 'afkir' || currentStatus.toLowerCase() === 'decommissioned';
+  const lowerStatus = currentStatus.toLowerCase();
+  const isAfkirStatus = lowerStatus === 'afkir' || lowerStatus === 'decommissioned';
+  const isPerpanjangStatus = lowerStatus.includes('perpanjang') || lowerStatus === 'in progress' || lowerStatus === 'in_progress' || lowerStatus === 'proses';
 
   return {
     // context
     parentDoc, effectiveCategoryKey, targetCert, isSingleCertScope,
-    isHaki, isEquipment, isMultiCertItem,
-    currentStatus, isAfkirStatus,
+    isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
     // editing
     isEditing, setIsEditing, formData, setFormData, handleSave,
     // history

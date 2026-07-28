@@ -6,12 +6,13 @@
  *
  * Refactored dari 2183 → ~400 baris.
  */
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft, Edit3, RotateCcw, Ban, Save,
   FileText, CheckCircle2, ShieldAlert, Building2,
   ShieldCheck, FileCheck, ExternalLink, Sparkles,
-  UploadCloud, Trash2, RefreshCw, AlertTriangle, Loader2
+  UploadCloud, Trash2, RefreshCw, AlertTriangle, Loader2,
+  ChevronDown, Settings
 } from 'lucide-react';
 
 // Hook & Config
@@ -28,13 +29,13 @@ import ModalUploadCert from '../components/document-detail/ModalUploadCert';
 import ModalAddLinkedCert from '../components/document-detail/ModalAddLinkedCert';
 import ModalEditHistoryRow from '../components/document-detail/ModalEditHistoryRow';
 
-export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission, onDeleteSuccess, onRefreshRequired }) {
+export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission, onDeleteSuccess, onRefreshRequired, hideLinkedCertificates }) {
   if (!item) return null;
 
   const hook = useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired });
   const {
     parentDoc, effectiveCategoryKey, targetCert, isSingleCertScope,
-    isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus,
+    isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
     isEditing, setIsEditing, formData, setFormData, handleSave,
     historyList, isLoadingHistory,
     selectedHistoryToDelete, setSelectedHistoryToDelete,
@@ -75,6 +76,20 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const displayExpired = primaryCert?.expired || formData.berakhir || '-';
   const displayFileUrl = primaryCert?.fileUrl || formData.fileUrl || null;
 
+  // ─── Dropdown Aksi State ───
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const actionMenuRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (actionMenuRef.current && !actionMenuRef.current.contains(event.target)) {
+        setIsActionMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="p-8 space-y-6 font-sans-clean max-w-7xl mx-auto animate-in fade-in duration-200">
 
@@ -112,52 +127,93 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5 font-mono-data">
-          {!isEditing ? (
-            <button onClick={() => setIsEditing(true)} className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-              <Edit3 className="w-4 h-4 text-amber-700" />
-              <span>Edit Data Dokumen</span>
-            </button>
-          ) : (
-            <button onClick={() => setIsEditing(false)} className="px-3.5 py-2 bg-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-300 transition-colors cursor-pointer">
-              Batal Edit
-            </button>
-          )}
-
-          {formData.status === 'Perpanjang' || formData.status === 'in_progress' ? (
-            <>
-              <button onClick={() => openUploadModal('archive')} className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-                <UploadCloud className="w-4 h-4 text-amber-700" />
-                <span>Selesai & Upload File Baru</span>
-              </button>
-              <button onClick={() => setIsConfirmCancelHeaderModalOpen(true)} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-                <span>Batal Perpanjangan</span>
-              </button>
-            </>
-          ) : (
-            <button onClick={() => setIsConfirmRenewHeaderModalOpen(true)} className="px-3.5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-              <RotateCcw className="w-4 h-4 text-amber-700" />
-              <span>Perpanjang</span>
-            </button>
-          )}
-
-          {isAfkirStatus ? (
-            <button onClick={handleAktifkan} className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 text-[#005ea4] border border-blue-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-              <RotateCcw className="w-4 h-4 text-[#005ea4]" />
-              <span>Batal Afkir / Aktifkan</span>
-            </button>
-          ) : (
-            <button onClick={handleAfkir} className="px-3.5 py-2 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs">
-              <Ban className="w-4 h-4 text-slate-300" />
-              <span>Afkir</span>
-            </button>
-          )}
-
-          <button onClick={() => setIsDeleteDialogOpen(true)} className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs ml-2">
-            <Trash2 className="w-4 h-4 text-rose-600" />
-            <span>Hapus Data</span>
+        {/* Action Buttons Dropdown */}
+        <div className="relative font-mono-data" ref={actionMenuRef}>
+          <button
+            onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+            className="px-4 py-2 bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer shadow-sm transition-colors"
+          >
+            <Settings className="w-4 h-4 text-slate-500" />
+            <span>Aksi</span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} />
           </button>
+          
+          {isActionMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+              {!isEditing ? (
+                <button
+                  onClick={() => { setIsEditing(true); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <Edit3 className="w-4 h-4 text-slate-400" />
+                  <span>Edit Data Dokumen</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => { setIsEditing(false); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <Ban className="w-4 h-4 text-slate-400" />
+                  <span>Batal Edit</span>
+                </button>
+              )}
+
+              {isPerpanjangStatus ? (
+                <>
+                  <button
+                    onClick={() => { openUploadModal('archive'); setIsActionMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <UploadCloud className="w-4 h-4 text-slate-400" />
+                    <span>Selesai & Upload File Baru</span>
+                  </button>
+                  <button
+                    onClick={() => { setIsConfirmCancelHeaderModalOpen(true); setIsActionMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                  >
+                    <Ban className="w-4 h-4 text-slate-400" />
+                    <span>Batal Perpanjangan</span>
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => { setIsConfirmRenewHeaderModalOpen(true); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4 text-slate-400" />
+                  <span>Perpanjang Dokumen</span>
+                </button>
+              )}
+
+              {isAfkirStatus ? (
+                <button
+                  onClick={() => { handleAktifkan(); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4 text-slate-400" />
+                  <span>Batal Afkir / Aktifkan</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => { handleAfkir(); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <Ban className="w-4 h-4 text-slate-400" />
+                  <span>Tandai Sebagai Afkir</span>
+                </button>
+              )}
+
+              <div className="h-px bg-slate-100 my-1 mx-2"></div>
+
+              <button
+                onClick={() => { setIsDeleteDialogOpen(true); setIsActionMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
+                <span>Hapus Data Item</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -419,7 +475,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
       )}
 
       {/* MULTI-CERT HUB (Sertifikat Terhubung) */}
-      {!isEditing && isMultiCertItem && (
+      {!isEditing && isMultiCertItem && !hideLinkedCertificates && (
         <CertificateNavCards
           linkedCerts={linkedCerts}
           activeCertId={activeCertId}

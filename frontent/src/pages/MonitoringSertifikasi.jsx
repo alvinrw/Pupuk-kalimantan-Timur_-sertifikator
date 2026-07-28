@@ -512,6 +512,9 @@ export default function MonitoringSertifikasi() {
           setAllCertificates(prev => prev.filter(c => c.MasterId !== selectedDetailDoc.MasterId && c.id !== (selectedDetailDoc.MasterId || selectedDetailDoc.id)));
           setSelectedDetailDoc(null);
         }}
+        onRefreshRequired={() => {
+          fetchMonitoringData();
+        }}
       />
     );
   }

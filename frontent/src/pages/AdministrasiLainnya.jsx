@@ -308,6 +308,7 @@ export default function AdministrasiLainnya() {
     return (
       <DocumentDetailPage
         item={detailModalItem}
+        hideLinkedCertificates={true}
         onBack={() => setDetailModalItem(null)}
         onSaveUpdate={(updatedItem) => {
           setCiptaanList(prev => prev.map(i => i.id === updatedItem.id ? { ...i, ...updatedItem, judulCiptaan: updatedItem.merekItem || i.judulCiptaan } : i));
