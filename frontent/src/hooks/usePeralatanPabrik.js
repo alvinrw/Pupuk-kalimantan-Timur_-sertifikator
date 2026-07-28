@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
 import { uploadCsv } from '../services/csvService';
 
 /**
@@ -261,7 +261,7 @@ export function usePeralatanPabrik() {
 
   const handleSingleAdded = async (newItem) => {
     try {
-      await createMasterItem({
+      const createdItem = await createMasterItem({
         title: newItem.merekItem || newItem.equipmentName || 'Unknown Item',
         code: newItem.nomorSeri || newItem.tagNumber || '-',
         categoryKey: 'peralatan-pabrik',
@@ -270,11 +270,46 @@ export function usePeralatanPabrik() {
         keterangan: newItem.keterangan || '-',
         issueDate: newItem.terbit || newItem.issueDate || undefined,
         expiryDate: newItem.berakhir || newItem.expiryDate || undefined,
+        documentStatus: newItem.documentStatus,
       });
+      
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      // Jika opsi Dengan Sertifikat dipilih, buat record sertifikat
+      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
+        let fileUrl = null;
+        if (newItem.file) {
+          const formData = new FormData();
+          formData.append('file', newItem.file);
+          try {
+            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
+            }
+          } catch (uploadErr) {
+            console.error("Gagal mengunggah file:", uploadErr);
+          }
+        }
+
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.jenisPeralatan || 'Sertifikat Perizinan',
+          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.terbit || undefined,
+          expired: newItem.berakhir || undefined,
+          fileUrl: fileUrl,
+        });
+      }
+      
       loadData();
     } catch (error) {
       console.error("Gagal menambahkan data:", error);
-      alert("Gagal menyimpan data ke database!");
+      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
     }
   };
 

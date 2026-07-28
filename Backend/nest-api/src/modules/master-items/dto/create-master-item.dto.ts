@@ -44,4 +44,8 @@ export class CreateMasterItemDto {
   @IsString()
   @IsOptional()
   keterangan?: string;
+
+  @IsString()
+  @IsOptional()
+  documentStatus?: string;
 }

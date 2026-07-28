@@ -52,6 +52,33 @@ export default function ModalUploadCert({
           )}
 
           <div>
+            <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
+            <div
+              onClick={() => manualFileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-colors"
+            >
+              <input
+                ref={manualFileInputRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setSelectedUploadFile(file);
+                    setUploadData({ ...uploadData, fileName: file.name });
+                  }
+                }}
+                className="hidden"
+              />
+              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+              <span className="text-xs font-bold text-[#005ea4] block">
+                {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
+              </span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
+            </div>
+          </div>
+
+          <div>
             <label className="font-bold text-slate-800 block mb-1">
               No. Sertifikat / SK Baru <span className="text-rose-500">*</span>
             </label>
@@ -94,33 +121,6 @@ export default function ModalUploadCert({
                 onChange={(e) => setUploadData({ ...uploadData, expired: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
-            <div
-              onClick={() => manualFileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-colors"
-            >
-              <input
-                ref={manualFileInputRef}
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    setSelectedUploadFile(file);
-                    setUploadData({ ...uploadData, fileName: file.name });
-                  }
-                }}
-                className="hidden"
-              />
-              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-              <span className="text-xs font-bold text-[#005ea4] block">
-                {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
             </div>
           </div>
 
