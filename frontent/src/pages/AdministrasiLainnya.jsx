@@ -786,6 +786,14 @@ export default function AdministrasiLainnya() {
       )}
 
       {/* Modals */}
+      <CsvImportModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onImportSuccess={handleCsvImported}
+        categoryKey="administrasi-lainnya"
+        moduleName="Administrasi & Perizinan Ciptaan (HAKI)"
+      />
+
       <SingleEntryCiptaanModal
         isOpen={isSingleModalOpen}
         onClose={() => setIsSingleModalOpen(false)}

@@ -79,20 +79,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         ))}
       </div>
 
-      {/* User Account Footer */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-white border border-slate-200 shadow-xs">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=100"
-            alt="User Avatar"
-            className="w-8 h-8 rounded-full object-cover border border-slate-300"
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-slate-900 truncate" title="Rihmid Pribidi">Rihmid Pribidi</p>
-            <p className="text-[11px] text-slate-500 truncate font-medium" title="Admin">Admin</p>
-          </div>
-        </div>
-      </div>
     </aside>
   );
 }

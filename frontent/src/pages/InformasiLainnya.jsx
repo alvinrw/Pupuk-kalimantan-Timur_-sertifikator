@@ -91,7 +91,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <RotateCcw className="w-4 h-4" />
-          <span>3. Alur Kerja & AI OCR</span>
+          <span>3. Alur Kerja</span>
         </button>
 
         <button
@@ -138,7 +138,7 @@ export default function InformasiLainnya() {
                     <h4 className="font-bold text-sm text-slate-900">{mod.title}</h4>
                   </div>
                   <p className="text-xs text-slate-600 font-mono-data leading-relaxed">
-                    <span className="font-bold text-slate-800">Cakupan Data:</span> {mod.items}
+                    {mod.items}
                   </p>
                 </div>
               );
@@ -251,11 +251,11 @@ export default function InformasiLainnya() {
                   )}
                 </div>
                 <p className="pl-7 text-slate-700 leading-relaxed text-[11px]">
-                  <b>Modul</b>: Perizinan Aset, Perizinan Proyek & Konstruksi, dan Sertifikasi Produk.
+                  <b>Berlaku untuk</b>: Modul Aset, Proyek & Konstruksi, dan Produk.
                 </p>
                 <ul className="ml-7 pl-4 list-disc list-outside space-y-1 text-slate-600 text-[11px]">
-                  <li><b>Karakteristik</b>: 1 Entitas dapat memiliki <b>banyak sertifikat terhubung</b> (PBG, SLF, HGB, Amdal, SNI, Halal).</li>
-                  <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek dengan 3 sertifikat = 3 baris di tabel).</li>
+                  <li><b>Penjelasan</b>: Satu aset/proyek bisa memiliki <b>banyak dokumen</b> (contoh: 1 Pabrik punya PBG dan SLF sekaligus).</li>
+                  <li><b>Tampilan Tabel</b>: <b>Setiap dokumen ditampilkan terpisah</b> (1 aset dengan 3 sertifikat akan muncul sebagai 3 baris).</li>
                 </ul>
               </div>
 
@@ -279,11 +279,11 @@ export default function InformasiLainnya() {
                   )}
                 </div>
                 <p className="pl-7 text-slate-700 leading-relaxed text-[11px]">
-                  <b>Modul</b>: Perizinan Peralatan Pabrik dan Administrasi Lainnya / Hak Cipta (HAKI).
+                  <b>Berlaku untuk</b>: Modul Peralatan Pabrik dan Administrasi (HAKI).
                 </p>
                 <ul className="ml-7 pl-4 list-disc list-outside space-y-1 text-slate-600 text-[11px]">
-                  <li><b>Karakteristik</b>: 1 Peralatan/Ciptaan terikat pada <b>1 Sertifikat/SK</b> (dengan opsi Pindah Target).</li>
-                  <li><b>Behavior Tabel Utama</b>: 1 Item peralatan/ciptaan selalu konsisten <b>1 baris</b> pada tabel utama.</li>
+                  <li><b>Penjelasan</b>: Satu alat/item hanya memiliki <b>satu dokumen perizinan aktif</b> pada satu waktu.</li>
+                  <li><b>Tampilan Tabel</b>: Setiap peralatan hanya muncul sebagai <b>satu baris</b>, walau sertifikatnya sering diperpanjang.</li>
                 </ul>
               </div>
             </div>
@@ -370,6 +370,31 @@ export default function InformasiLainnya() {
                     <li><b>Data Utama Tetap 1 Entitas</b>: Menambahkan sertifikat terhubung tidak membuat aset/alat baru, melainkan menambahkan sertifikat di bawah entitas yang sama.</li>
                     <li><b>Tabel Utama Menampilkan Per Sertifikat</b>: Jika 1 aset punya 3 sertifikat terhubung, tabel utama menampilkan 3 baris terpisah untuk sertifikat tersebut.</li>
                   </ul>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
+                <div className="flex items-center gap-3 border-b border-slate-200 pb-3 font-mono-data">
+                  <div className="w-10 h-10 rounded-xl bg-[#005ea4] text-white flex items-center justify-center font-bold text-lg shadow-xs">C</div>
+                  <div>
+                    <h4 className="font-bold text-base text-slate-900">3. Fase Staging & Proses Perpanjangan Sertifikat</h4>
+                    <p className="pl-[16px] text-xs text-slate-500 font-mono-data">Alur kerja ketika sertifikat sudah mendekati masa kadaluarsa (Perpanjangan)</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono-data text-xs">
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold"><Clock className="w-4 h-4 text-[#005ea4]" /><span>Langkah 1: Inisiasi Perpanjang</span></div>
+                    <p className="text-slate-600 leading-relaxed text-[11px]">Pada halaman detail, klik tombol <b>Perpanjang Sertifikat</b> untuk memasukkan dokumen ke fase staging (Status Kuning).</p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold"><RotateCcw className="w-4 h-4 text-[#005ea4]" /><span>Langkah 2: Lengkapi Draft</span></div>
+                    <p className="text-slate-600 leading-relaxed text-[11px]">Sertifikat sekarang berada di <b>Staging Area</b>. Anda dapat mencicil melengkapi data draft dan persyaratan sebelum file PDF terbit.</p>
+                  </div>
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="flex items-center gap-2 text-[#005ea4] font-bold"><Sparkles className="w-4 h-4 text-[#005ea4]" /><span>Langkah 3: Upload & AI OCR</span></div>
+                    <p className="text-slate-600 leading-relaxed text-[11px]">Upload file PDF terbaru. AI OCR akan otomatis membaca isi PDF. Klik <b>Simpan Perpanjangan</b> dan status kembali Valid.</p>
+                  </div>
                 </div>
               </div>
             </div>

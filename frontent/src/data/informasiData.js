@@ -6,7 +6,7 @@ import {
 
 export const statusColorsGuide = [
   {
-    title: "Afkir / Decommissioned",
+    title: "Non Aktif",
     badge: "Afkir",
     code: "bg-[#0f172a] text-white border-slate-700",
     bgCard: "bg-slate-900 text-white border-slate-700",
@@ -24,7 +24,7 @@ export const statusColorsGuide = [
     description: "Masa berlaku sertifikat perizinan telah melewati tanggal kadaluarsa (sisa hari ≤ 0). Berisiko hukum & keselamatan K3. Harus segera dilakukan resertifikasi ulang atau tera ulang."
   },
   {
-    title: "Perpanjangan / Urgent / Process",
+    title: "Perpanjangan",
     badge: "Perpanjang",
     code: "bg-amber-100 text-amber-900 border-amber-300",
     bgCard: "bg-amber-50 border-amber-200 text-amber-950",
@@ -33,7 +33,7 @@ export const statusColorsGuide = [
     description: "Masa berlaku sertifikat mendekati kadaluarsa (sisa hari ≤ 30 hari) ATAU sedang dalam tahap pengajuan audit resertifikasi lapangan oleh Disnaker/Kemenperin/Sucofindo."
   },
   {
-    title: "Valid / Masa Berlaku Aman",
+    title: "Aktif",
     badge: "Aktif",
     code: "bg-emerald-100 text-emerald-800 border-emerald-300",
     bgCard: "bg-emerald-50/70 border-emerald-200 text-emerald-950",
@@ -52,21 +52,21 @@ export const workflowSteps = [
   },
   {
     step: 2,
-    title: "Pemantauan Tenggat Otomatis H-30",
+    title: "Pemantauan Tenggat Otomatis",
     icon: Activity,
     desc: "Sistem SERTIFIKATOR menghitung sisa hari secara real-time dan mengelompokkan dokumen ke dalam 5 Summary Cards di menu Monitoring & Evaluasi."
   },
   {
     step: 3,
-    title: "Penandaan Fase Status 'Proses Sertifikasi'",
+    title: "Fase Staging (Melengkapi Dokumen)",
     icon: RotateCcw,
-    desc: "Penandaan status dokumen (Warna Kuning / Perpanjang) sebagai indikator bahwa sertifikat sedang dalam fase proses perpanjangan atau pembaruan SK."
+    desc: "Dokumen yang berstatus Perpanjangan akan masuk ke fase staging, di mana pengguna dapat melengkapi draft data sertifikat baru sebelum diunggah."
   },
   {
     step: 4,
     title: "Upload Sertifikat Baru + AI OCR Scanning",
     icon: Sparkles,
-    desc: "Setelah sertifikat penerbitan baru terbit, unggah PDF ke sistem. AI OCR Engine otomatis mengekstrak Nomor SK, Tanggal Terbit, dan Expired Baru tanpa ketik manual."
+    desc: "Saat mengunggah sertifikat baru (PDF), AI OCR akan membantu mengekstrak Nomor SK, Tanggal Terbit, dan Expired secara otomatis agar tidak perlu mengetik manual."
   },
   {
     step: 5,
@@ -80,32 +80,32 @@ export const modulesGuide = [
   {
     title: "Perizinan Peralatan Pabrik",
     icon: Factory,
-    items: "Bejana Tekan / Boiler, Pesawat Angkat (Crane), Tangki Timbun B3, Mesin Tenaga, Instalasi Listrik & Petir, Timbangan Metrologi, Fire Alarm System."
+    items: "Mengelola dan memantau status sertifikasi K3 untuk seluruh peralatan operasional pabrik seperti Bejana Tekan, Crane, dan Instalasi Listrik."
   },
   {
     title: "Perizinan Aset & Bangunan",
     icon: Building2,
-    items: "Persetujuan Bangunan Gedung (PBG), Hak Guna Bangunan (HGB), Izin Tersus Pelabuhan Dermaga, Akreditasi Lab QC B3, Izin Lingkungan WWTP."
+    items: "Mengurus legalitas kepemilikan dan kelayakan fungsi dari aset tetap perusahaan, termasuk Gedung, Lahan, dan Fasilitas Lingkungan."
   },
   {
     title: "Perizinan Proyek & Konstruksi",
     icon: FolderKanban,
-    items: "Sertifikat Laik Fungsi (SLF), PBG Proyek Ekspansi Kilang, Izin K3 Heavy Lifting Crane Proyek, PBG Gudang Bagging Plant, Piping Pipe-Rack."
+    items: "Memantau kelengkapan izin konstruksi, sertifikat laik fungsi, dan dokumen legal lainnya untuk proyek ekspansi atau pembangunan baru."
   },
   {
     title: "Perizinan & Sertifikasi Produk",
     icon: PackageCheck,
-    items: "Sertifikat SNI Urea & NPK Pelangi, Sertifikat Halal BPJPH Kemenag, Sertifikat Industri Hijau Level 5, Standard Mutu Ekspor."
+    items: "Mengelola administrasi pengesahan standar mutu produk (SNI, Halal, Industri Hijau) agar selalu valid dan memenuhi regulasi."
   },
   {
     title: "Administrasi Lainnya / HAKI",
     icon: FileSpreadsheet,
-    items: "Hak Cipta Program Komputer (Software), Buku Panduan K3 Operasi Kilang, Desain Layout Control Room, Modul SOP Operasional."
+    items: "Menyimpan dan mengawasi masa berlaku perlindungan hak cipta (HAKI) untuk program komputer, buku panduan, dan karya intelektual lainnya."
   },
   {
     title: "Monitoring & Evaluasi",
     icon: Activity,
-    items: "Rekapitulasi 5 Summary Cards, Filter Multi-Parameter, Slide-over Riwayat Audit Log, dan Modal Resertifikasi + Pemindaian AI OCR PDF."
+    items: "Dashboard pemantauan terpusat yang menampilkan ringkasan data, notifikasi kedaluwarsa, dan riwayat perpanjangan secara real-time."
   }
 ];
 
