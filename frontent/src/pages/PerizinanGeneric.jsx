@@ -1,354 +1,37 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React from 'react';
 import {
-  Search,
-  FileSpreadsheet,
-  Columns,
-  PlusCircle,
-  ChevronDown,
-  RotateCcw,
-  Eye,
-  FileCheck,
-  Check,
-  Loader2,
-  Building2,
-  FileWarning,
-  ShieldAlert,
-  UploadCloud,
-  X
+  Search, FileSpreadsheet, Columns, PlusCircle, ChevronDown,
+  RotateCcw, Eye, FileCheck, Loader2, Building2, FileWarning, ShieldAlert, X
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
-import HistoryModal from '../components/HistoryModal';
 import SingleEntryGenericModal from '../components/SingleEntryGenericModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
+import { usePerizinanGeneric } from '../hooks/usePerizinanGeneric';
 
 export default function PerizinanGeneric({ title, subtitle, categoryName }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
-  const [selectedStagingIds, setSelectedStagingIds] = useState([]);
-  const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
-  const [bulkExemptNote, setBulkExemptNote] = useState('');
-  const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
-  const [resolveTargetItem, setResolveTargetItem] = useState(null);
-  
-  // Header Dropdown Filter States
-  const [filterJenis, setFilterJenis] = useState('All');
-  const [filterLokasi, setFilterLokasi] = useState('All');
-  const [filterStatus, setFilterStatus] = useState('All');
+  const g = usePerizinanGeneric({ categoryName, title });
 
-  // Modals & Popovers State
-  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-  const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
-  const [historyTargetItem, setHistoryTargetItem] = useState(null);
-  const [detailModalItem, setDetailModalItem] = useState(null);
-
-  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
-  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
-
-  const [documents, setDocuments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const isAsetCategory = useMemo(() => {
-    return categoryName?.toLowerCase().includes('aset');
-  }, [categoryName]);
-
-  const currentCategoryKey = useMemo(() => {
-    const catLower = (categoryName || title || '').toLowerCase();
-    if (catLower.includes('aset')) return 'perizinan-aset';
-    if (catLower.includes('proyek')) return 'perizinan-proyek';
-    if (catLower.includes('produk')) return 'perizinan-produk';
-    if (catLower.includes('ciptaan')) return 'sertifikat-ciptaan';
-    return '';
-  }, [categoryName, title]);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getMasterItems(currentCategoryKey);
-      
-      const mapped = data.map(doc => {
-        const certs = doc.certificates || [];
-        return {
-          id: doc.id,
-          MasterId: doc.id,
-          title: doc.title || '-',
-          categoryKey: doc.categoryKey,
-          kategoriDokumen: doc.categoryKey,
-          jenisItem: doc.title || '-',
-          namaItem: doc.title || '-',
-          merekItem: doc.title,
-          code: doc.code || '-',
-          certificateNo: doc.certificateNo || doc.code || '-',
-          unitLocation: doc.unitLocation || '-',
-          unit: doc.unitLocation || '-',
-          luasM2: doc.areaSqm || "0",
-          luasHa: doc.areaHa || "0",
-          peruntukan: doc.peruntukan || "-",
-          issueDate: doc.createdAt,
-          expiryDate: doc.expiryDate || "-",
-          kondisi: doc.status || "Baik",
-          description: doc.description || "-",
-          keterangan: doc.description || "-",
-          status: doc.status || "Aktif",
-          user: "Umum",
-          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
-          exemptionNote: doc.exemptionNote || null,
-          linkedCertificates: certs
-        };
-      });
-      setDocuments(mapped);
-    } catch (error) {
-      console.error("Failed to load generic permissions", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [categoryName]);
-
-  // Columns Configuration
-  const defaultColumns = [
-    { key: "no", label: "No." },
-    { key: "namaItem", label: "Nama Produk / Proyek" },
-    { key: "code", label: "Kode / Tag Perizinan" },
-    { key: "jenisItem", label: "Jenis Perizinan" },
-    { key: "certificateNo", label: "No. Sertifikat" },
-    { key: "unit", label: "Unit Pabrik / Lokasi" },
-    { key: "user", label: "User / Instansi" },
-    { key: "issueDate", label: "Terbit" },
-    { key: "expiryDate", label: "Expired" },
-    { key: "status", label: "Status" }
-  ];
-
-  const asetColumns = [
-    { key: "no", label: "NO." },
-    { key: "namaItem", label: "NAMA ASET" },
-    { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
-    { key: "unit", label: "LOKASI" },
-    { key: "luasM2", label: "LUAS (M²)" },
-    { key: "luasHa", label: "LUAS (HA)" },
-    { key: "peruntukan", label: "PERUNTUKAN" },
-    { key: "issueDate", label: "TANGGAL AWAL PENGAJUAN" },
-    { key: "expiryDate", label: "MASA BERLAKU PRODUK" },
-    { key: "kondisi", label: "KONDISI" },
-    { key: "keterangan", label: "KETERANGAN" },
-    { key: "status", label: "STATUS" }
-  ];
-
-  const allColumns = isAsetCategory ? asetColumns : defaultColumns;
-
-  const pendingCount = useMemo(() => {
-    return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
-  }, [documents]);
-
-  const handleBulkExempt = async () => {
-    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
-    try {
-      setIsSubmittingBulkExempt(true);
-      for (const id of selectedStagingIds) {
-        await resolveMasterItemExemption(id, bulkExemptNote.trim());
-      }
-      setSelectedStagingIds([]);
-      setBulkExemptModalOpen(false);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      alert("Gagal melakukan bulk action.");
-    } finally {
-      setIsSubmittingBulkExempt(false);
-    }
-  };
-
-  const toggleSelectStaging = (id) => {
-    setSelectedStagingIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAllStaging = (currentRows) => {
-    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
-      setSelectedStagingIds([]);
-    } else {
-      setSelectedStagingIds(currentRows.map(r => r.parentDoc.id || r.parentDoc.MasterId));
-    }
-  };
-
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
-
-  const toggleColumn = (key) => {
-    setVisibleColumnKeys(prev =>
-      prev.includes(key)
-        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
-        : [...prev, key]
-    );
-  };
-
-  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
-  const isVisible = (key) => visibleColumnKeys.includes(key);
-
-  // Filtered dataset according to category & search
-  const categoryFilteredDocs = useMemo(() => {
-    return documents;
-  }, [documents, categoryName]);
-
-  const uniqueJenis = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.jenisItem || i.jenisPeralatan || i.jenisCiptaan || 'General'))], [categoryFilteredDocs]);
-  const uniqueLokasi = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.unitPabrik || i.unit || i.lokasi || 'Kantor Pusat'))], [categoryFilteredDocs]);
-  const uniqueStatus = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.status || 'Aktif'))], [categoryFilteredDocs]);
-
-  const filteredDocs = useMemo(() => {
-    return categoryFilteredDocs.filter(doc => {
-      const matchesTab = activeMainTab === 'staging'
-        ? doc.documentStatus === 'PENDING_DOC'
-        : doc.documentStatus !== 'PENDING_DOC';
-
-      const titleStr = doc.title || doc.merekItem || doc.judulCiptaan || doc.namaItem || '';
-      const codeStr = doc.code || doc.id || doc.noSertifikat || '';
-      const unitStr = doc.unit || doc.unitPabrik || doc.lokasi || '';
-      const certStr = doc.certificateNo || doc.noSertifikat || '';
-      const jenisStr = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '';
-      const statusStr = doc.status || 'Aktif';
-
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        titleStr.toLowerCase().includes(searchLower) ||
-        codeStr.toLowerCase().includes(searchLower) ||
-        unitStr.toLowerCase().includes(searchLower) ||
-        certStr.toLowerCase().includes(searchLower) ||
-        jenisStr.toLowerCase().includes(searchLower);
-
-      const matchesJenis = filterJenis === 'All' || jenisStr === filterJenis;
-      const matchesLokasi = filterLokasi === 'All' || unitStr === filterLokasi;
-      const matchesStatus = filterStatus === 'All' || statusStr === filterStatus;
-
-      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus;
-    });
-  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, activeMainTab]);
-
-  const expandedRows = useMemo(() => {
-    const rows = [];
-    filteredDocs.forEach((doc) => {
-      const certs = doc.linkedCertificates || [];
-      if (certs.length > 0) {
-        const certGroups = {};
-        certs.forEach(cert => {
-          const jenis = cert.jenisSertifikat || doc.title || categoryName || 'Generic';
-          if (!certGroups[jenis]) {
-            certGroups[jenis] = [];
-          }
-          certGroups[jenis].push(cert);
-        });
-
-        Object.values(certGroups).forEach((group, idx) => {
-          const sortedGroup = [...group].sort((a, b) => {
-            if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
-            if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
-            const dateA = new Date(a.createdAt || a.terbit || 0);
-            const dateB = new Date(b.createdAt || b.terbit || 0);
-            return dateB - dateA;
-          });
-          const cert = sortedGroup[0];
-
-          const noCert = doc.documentStatus === 'EXEMPT'
-            ? 'Tanpa Sertifikat'
-            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
-
-          rows.push({
-            rowId: `${doc.id}-cert-${cert.id || idx}`,
-            parentDoc: doc,
-            cert: cert,
-            certNo: noCert,
-            jenisCert: cert.jenisSertifikat || doc.title || categoryName || 'Generic',
-            issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
-            issueDate: cert.terbit || doc.createdAt,
-            expiryDate: cert.expired || doc.expiryDate || '-',
-            status: cert.status || doc.status || 'Aktif',
-            hasPdf: !!cert.fileUrl,
-            fileUrl: cert.fileUrl || null
-          });
-        });
-      } else {
-        const noCert = doc.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (doc.certificateNo || doc.code || '-');
-
-        rows.push({
-          rowId: `${doc.id}-primary`,
-          parentDoc: doc,
-          cert: null,
-          certNo: noCert,
-          jenisCert: doc.title || categoryName || 'Generic',
-          issuer: doc.user || doc.description || 'Umum',
-          issueDate: doc.createdAt,
-          expiryDate: doc.expiryDate || '-',
-          status: doc.status || 'Aktif',
-          hasPdf: !!doc.fileUrl,
-          fileUrl: doc.fileUrl || null
-        });
-      }
-    });
-
-    return rows;
-  }, [filteredDocs, categoryName]);
-
-  const resetFilters = () => {
-    setSearchTerm('');
-    setFilterJenis('All');
-    setFilterLokasi('All');
-    setFilterStatus('All');
-    selectAllColumns();
-  };
-
-  const handleCsvImported = () => {
-    loadData();
-  };
-
-  const handleSingleAdded = (newItem) => {
-    setDocuments(prev => [newItem, ...prev]);
-  };
-
-  // Helper to determine status color styling for table rows
-  const getRowStatusStyle = (doc) => {
-    const statusStr = (doc.status || '').toLowerCase();
-    
-    if (statusStr === 'afkir' || statusStr === 'decommissioned') {
-      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
-    }
-    if (statusStr === 'expired') {
-      return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
-    }
-    if (statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses') {
-      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
-    }
-    return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
-  };
-
-  if (detailModalItem) {
+  // ============================================================
+  // DETAIL VIEW
+  // ============================================================
+  if (g.detailModalItem) {
     return (
       <DocumentDetailPage
-        item={detailModalItem}
-        onBack={() => setDetailModalItem(null)}
+        item={g.detailModalItem}
+        onBack={() => g.setDetailModalItem(null)}
         onSaveUpdate={(updatedDoc) => {
-          setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc, title: updatedDoc.merekItem || d.title } : d));
-          setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+          g.setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc, title: updatedDoc.merekItem || d.title } : d));
+          g.setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
         }}
-        onQuickRenew={(id) => {
-          alert(`Inisiasi Perpanjangan untuk dokumen ${id}. Menuju menu Monitoring.`);
-        }}
-        onQuickDecommission={(id) => {
-          alert(`Menandai dokumen ${id} sebagai Afkir.`);
-        }}
-        onDeleteSuccess={() => {
-          setDetailModalItem(null);
-          loadData();
-        }}
+        onQuickRenew={(id) => alert(`Inisiasi Perpanjangan untuk dokumen ${id}. Menuju menu Monitoring.`)}
+        onQuickDecommission={(id) => alert(`Menandai dokumen ${id} sebagai Afkir.`)}
+        onDeleteSuccess={() => { g.setDetailModalItem(null); g.loadData(); }}
       />
     );
   }
 
-  if (isLoading) {
+  if (g.isLoading) {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
@@ -359,45 +42,35 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
 
   return (
     <div className="p-6 space-y-6 font-sans-clean">
-      {/* Header & Workflow Dropdown */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-bold text-xl text-slate-900">
-            {title}
-          </h2>
-          <p className="text-xs text-slate-600 font-mono-data">
-            {subtitle}
-          </p>
+          <h2 className="font-bold text-xl text-slate-900">{title}</h2>
+          <p className="text-xs text-slate-600 font-mono-data">{subtitle}</p>
         </div>
 
-        {/* Dropdown Menu "+ Kelola / Impor Dokumen" */}
+        {/* Import Dropdown */}
         <div className="relative font-mono-data">
           <button
-            onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
+            onClick={() => g.setIsImportMenuOpen(!g.isImportMenuOpen)}
             className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Kelola / Impor Dokumen</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isImportMenuOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${g.isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
-
-          {isImportMenuOpen && (
+          {g.isImportMenuOpen && (
             <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs">
-              <button
-                onClick={() => { setIsSingleModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
-              >
+              <button onClick={() => { g.setIsSingleModalOpen(true); g.setIsImportMenuOpen(false); }}
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer">
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
                   <span className="block">+ Tambah Single Perizinan Baru</span>
                   <span className="text-[10px] text-slate-500 font-normal font-mono-data">Input manual 1 dokumen {categoryName}</span>
                 </div>
               </button>
-
-              <button
-                onClick={() => { setIsCsvModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
-              >
+              <button onClick={() => { g.setIsCsvModalOpen(true); g.setIsImportMenuOpen(false); }}
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer">
                 <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
                 <div>
                   <span className="block">Impor CSV Master</span>
@@ -408,96 +81,56 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
           )}
         </div>
       </div>
-      {/* TAB SWITCHER: DATA UTAMA VS STAGING */}
+
+      {/* Tab Switcher */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
-        <button
-          onClick={() => setActiveMainTab('main')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            activeMainTab === 'main'
-              ? 'bg-[#005ea4] text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
-        >
+        <button onClick={() => g.setActiveMainTab('main')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${g.activeMainTab === 'main' ? 'bg-[#005ea4] text-white shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
           <Building2 className="w-4 h-4" />
           <span>Data Utama</span>
         </button>
-
-        <button
-          onClick={() => setActiveMainTab('staging')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
-            activeMainTab === 'staging'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
-          }`}
-        >
+        <button onClick={() => g.setActiveMainTab('staging')}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${g.activeMainTab === 'staging' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'}`}>
           <FileWarning className="w-4 h-4 text-amber-500" />
           <span>Menunggu Dokumen (Staging)</span>
-          {pendingCount > 0 && (
-            <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">
-              {pendingCount}
-            </span>
+          {g.pendingCount > 0 && (
+            <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">{g.pendingCount}</span>
           )}
         </button>
       </div>
 
-      {/* Search, Reset Filters, & Column Selector */}
+      {/* Search, Reset & Column Selector */}
       <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 relative">
         <div className="relative flex-1 min-w-[280px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+          <input type="text" value={g.searchTerm} onChange={(e) => g.setSearchTerm(e.target.value)}
             placeholder={`Cari dokumen ${categoryName || 'perizinan'}, kode, nomor sertifikat...`}
-            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-          />
+            className="w-full pl-9 pr-4 py-2 text-xs bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4]" />
         </div>
-
         <div className="flex items-center gap-2 font-mono-data">
-          {(searchTerm || filterJenis !== 'All' || filterLokasi !== 'All' || filterStatus !== 'All' || visibleColumnKeys.length < allColumns.length) && (
-            <button
-              onClick={resetFilters}
-              className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold rounded-md transition-colors cursor-pointer"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Filter</span>
+          {(g.searchTerm || g.filterJenis !== 'All' || g.filterLokasi !== 'All' || g.filterStatus !== 'All' || g.visibleColumnKeys.length < g.allColumns.length) && (
+            <button onClick={g.resetFilters}
+              className="flex items-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200 text-xs font-bold rounded-md transition-colors cursor-pointer">
+              <RotateCcw className="w-3.5 h-3.5" /><span>Reset Filter</span>
             </button>
           )}
-
-          {/* Column Visibility Selector Dropdown */}
           <div className="relative">
-            <button
-              onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
-              className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-md text-xs font-bold text-slate-700 cursor-pointer shadow-2xs"
-            >
+            <button onClick={() => g.setIsColumnDropdownOpen(!g.isColumnDropdownOpen)}
+              className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-300 rounded-md text-xs font-bold text-slate-700 cursor-pointer shadow-2xs">
               <Columns className="w-4 h-4 text-[#005ea4]" />
-              <span>Pilih Kolom ({visibleColumnKeys.length}/{allColumns.length})</span>
+              <span>Pilih Kolom ({g.visibleColumnKeys.length}/{g.allColumns.length})</span>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
-
-            {isColumnDropdownOpen && (
+            {g.isColumnDropdownOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-40 text-xs space-y-2">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <span className="font-bold text-slate-900">Visibilitas Kolom</span>
-                  <button
-                    onClick={selectAllColumns}
-                    className="text-[11px] text-[#005ea4] font-bold hover:underline cursor-pointer"
-                  >
-                    Pilih Semua
-                  </button>
+                  <button onClick={g.selectAllColumns} className="text-[11px] text-[#005ea4] font-bold hover:underline cursor-pointer">Pilih Semua</button>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-1.5 pr-1">
-                  {allColumns.map((col) => (
-                    <label
-                      key={col.key}
-                      className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer select-none"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isVisible(col.key)}
-                        onChange={() => toggleColumn(col.key)}
-                        className="rounded border-slate-300 text-[#005ea4] focus:ring-[#005ea4]"
-                      />
+                  {g.allColumns.map((col) => (
+                    <label key={col.key} className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-50 rounded cursor-pointer select-none">
+                      <input type="checkbox" checked={g.isVisible(col.key)} onChange={() => g.toggleColumn(col.key)} className="rounded border-slate-300 text-[#005ea4] focus:ring-[#005ea4]" />
                       <span className="text-slate-700 font-medium">{col.label}</span>
                     </label>
                   ))}
@@ -508,306 +141,151 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         </div>
       </div>
 
-      {/* BULK ACTION BAR */}
-      {activeMainTab === 'staging' && selectedStagingIds.length > 0 && (
+      {/* Bulk Action Bar */}
+      {g.activeMainTab === 'staging' && g.selectedStagingIds.length > 0 && (
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between mt-4 shadow-2xs font-mono-data">
-          <div className="text-amber-800 text-xs font-bold">
-            {selectedStagingIds.length} item terpilih
-          </div>
-          <button 
-            onClick={() => setBulkExemptModalOpen(true)}
-            disabled={isSubmittingBulkExempt}
-            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            Tandai Terpilih Tanpa Sertifikat
+          <div className="text-amber-800 text-xs font-bold">{g.selectedStagingIds.length} item terpilih</div>
+          <button onClick={() => g.setBulkExemptModalOpen(true)} disabled={g.isSubmittingBulkExempt}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer">
+            <ShieldAlert className="w-3.5 h-3.5" />Tandai Terpilih Tanpa Sertifikat
           </button>
         </div>
       )}
 
       {/* Main Table */}
-      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${g.activeMainTab === 'staging' && g.selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider">
-                {activeMainTab === 'staging' && (
+                {g.activeMainTab === 'staging' && (
                   <th className="py-3.5 px-3 w-10 text-center">
-                    <input
-                      type="checkbox"
-                      checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
-                      onChange={() => toggleSelectAllStaging(expandedRows)}
-                      className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
-                    />
+                    <input type="checkbox" checked={g.expandedRows.length > 0 && g.selectedStagingIds.length === g.expandedRows.length}
+                      onChange={() => g.toggleSelectAllStaging(g.expandedRows)} className="rounded border-slate-300 accent-[#005ea4] cursor-pointer" />
                   </th>
                 )}
-                {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap">NO.</th>}
-
-                {/* NAMA PRODUK / ASET / PROYEK — selalu tampil */}
-                {isVisible("namaItem") && (
+                {g.isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap">NO.</th>}
+                {g.isVisible("namaItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900">
-                    {isAsetCategory
-                      ? 'NAMA ASET'
-                      : categoryName?.toLowerCase().includes('proyek')
-                      ? 'NAMA PROYEK'
-                      : 'NAMA PRODUK'}
+                    {g.isAsetCategory ? 'NAMA ASET' : categoryName?.toLowerCase().includes('proyek') ? 'NAMA PROYEK' : 'NAMA PRODUK'}
                   </th>
                 )}
-
-                {!isAsetCategory && isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">KODE PERIZINAN</th>}
-
-                {/* JENIS PERIZINAN FILTER (non-aset) */}
-                {!isAsetCategory && isVisible("jenisItem") && (
+                {!g.isAsetCategory && g.isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">KODE PERIZINAN</th>}
+                {!g.isAsetCategory && g.isVisible("jenisItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center gap-1.5">
                       <span>JENIS PERIZINAN</span>
-                      <select
-                        value={filterJenis}
-                        onChange={(e) => setFilterJenis(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
-                      >
+                      <select value={g.filterJenis} onChange={(e) => g.setFilterJenis(e.target.value)} className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer">
                         <option value="All">Semua</option>
-                        {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
-                          <option key={idx} value={j}>{j}</option>
-                        ))}
+                        {g.uniqueJenis.filter(j => j !== 'All').map((j, idx) => <option key={idx} value={j}>{j}</option>)}
                       </select>
                     </div>
                   </th>
                 )}
-
-                {/* NO. SERTIFIKAT (First for Aset) */}
-                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">NOMOR SERTIFIKAT</th>}
-
-                {/* LOKASI / UNIT FILTER */}
-                {isVisible("unit") && (
+                {g.isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">NOMOR SERTIFIKAT</th>}
+                {g.isVisible("unit") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center gap-1.5">
                       <span>LOKASI</span>
-                      <select
-                        value={filterLokasi}
-                        onChange={(e) => setFilterLokasi(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
-                      >
+                      <select value={g.filterLokasi} onChange={(e) => g.setFilterLokasi(e.target.value)} className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer">
                         <option value="All">Semua</option>
-                        {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
-                          <option key={idx} value={l}>{l}</option>
-                        ))}
+                        {g.uniqueLokasi.filter(l => l !== 'All').map((l, idx) => <option key={idx} value={l}>{l}</option>)}
                       </select>
                     </div>
                   </th>
                 )}
-
-                {/* ASET SPECIFIC HEADERS */}
-                {isAsetCategory && isVisible("luasM2") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (M²)</th>}
-                {isAsetCategory && isVisible("luasHa") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (HA)</th>}
-                {isAsetCategory && isVisible("peruntukan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">PERUNTUKAN</th>}
-
-                {!isAsetCategory && isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">INSTANSI / USER</th>}
-                
-                {isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{isAsetCategory ? "TANGGAL AWAL PENGAJUAN" : "TERBIT"}</th>}
-                {isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{isAsetCategory ? "MASA BERLAKU PRODUK" : "EXPIRED"}</th>}
-
-                {isAsetCategory && isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KONDISI</th>}
-                {isAsetCategory && isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
-
-                {/* STATUS FILTER */}
-                {isVisible("status") && (
+                {g.isAsetCategory && g.isVisible("luasM2") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (M²)</th>}
+                {g.isAsetCategory && g.isVisible("luasHa") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (HA)</th>}
+                {g.isAsetCategory && g.isVisible("peruntukan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">PERUNTUKAN</th>}
+                {!g.isAsetCategory && g.isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">INSTANSI / USER</th>}
+                {g.isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{g.isAsetCategory ? "TANGGAL AWAL PENGAJUAN" : "TERBIT"}</th>}
+                {g.isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{g.isAsetCategory ? "MASA BERLAKU PRODUK" : "EXPIRED"}</th>}
+                {g.isAsetCategory && g.isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KONDISI</th>}
+                {g.isAsetCategory && g.isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
+                {g.isVisible("status") && (
                   <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center justify-center gap-1.5">
                       <span>STATUS</span>
-                      <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
-                      >
+                      <select value={g.filterStatus} onChange={(e) => g.setFilterStatus(e.target.value)} className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer">
                         <option value="All">Semua</option>
-                        {uniqueStatus.filter(s => s !== 'All').map((s, idx) => (
-                          <option key={idx} value={s}>{s}</option>
-                        ))}
+                        {g.uniqueStatus.filter(s => s !== 'All').map((s, idx) => <option key={idx} value={s}>{s}</option>)}
                       </select>
                     </div>
                   </th>
                 )}
-
                 <th className="py-3.5 px-4 font-bold text-right whitespace-nowrap">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {expandedRows.length > 0 ? (
-                expandedRows.map((row, index) => {
+              {g.expandedRows.length > 0 ? (
+                g.expandedRows.map((row, index) => {
                   const doc = row.parentDoc;
-                  const rowClass = getRowStatusStyle({ status: row.status });
+                  const rowClass = g.getRowStatusStyle({ status: row.status });
                   const statusStr = (row.status || '').toLowerCase();
                   const isAfkir = statusStr === 'afkir' || statusStr === 'decommissioned';
                   const isExpired = statusStr === 'expired';
                   const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
-
                   const docCode = doc.code || doc.id || '-';
                   const docUnit = doc.unit || doc.unitPabrik || doc.lokasi || '-';
-                  const docCert = row.certNo;
-                  const docExpiry = row.expiryDate;
-                  const docJenis = row.jenisCert;
-                  const docUser = row.issuer;
-                  const docIssue = row.issueDate;
                   const docNamaItem = doc.merekItem || doc.title || doc.judulCiptaan || '-';
-
-                  const namaItemLabel = categoryName?.toLowerCase().includes('aset')
-                    ? 'Nama Aset'
-                    : categoryName?.toLowerCase().includes('proyek')
-                    ? 'Nama Proyek'
-                    : 'Nama Produk';
 
                   return (
                     <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
-                      {activeMainTab === 'staging' && (
+                      {g.activeMainTab === 'staging' && (
                         <td className="py-3.5 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
-                            onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
-                            className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
-                          />
+                          <input type="checkbox" checked={g.selectedStagingIds.includes(doc.id || doc.MasterId)}
+                            onChange={() => g.toggleSelectStaging(doc.id || doc.MasterId)} className="rounded border-slate-300 accent-[#005ea4] cursor-pointer" />
                         </td>
                       )}
-                      {isVisible("no") && (
-                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
-                          {index + 1}
-                        </td>
-                      )}
-
-                      {/* NAMA PRODUK / ASET / PROYEK */}
-                      {isVisible("namaItem") && (
-                        <td
-                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans ${
-                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
-                          }`}
-                          title={`Klik untuk Lihat Detail — ${namaItemLabel}`}
-                        >
+                      {g.isVisible("no") && <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">{index + 1}</td>}
+                      {g.isVisible("namaItem") && (
+                        <td onClick={() => g.setDetailModalItem({ ...doc, currentCert: row.cert })}
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans ${isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'}`}>
                           <div className="flex items-center gap-2">
                             <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.hasPdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
                             <span className="max-w-[220px] truncate block">{docNamaItem}</span>
                           </div>
                         </td>
                       )}
-
-                      {!isAsetCategory && isVisible("code") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {docCode}
-                        </td>
+                      {!g.isAsetCategory && g.isVisible("code") && (
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>{docCode}</td>
                       )}
-
-                      {!isAsetCategory && isVisible("jenisItem") && (
-                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {docJenis}
-                        </td>
+                      {!g.isAsetCategory && g.isVisible("jenisItem") && (
+                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>{row.jenisCert}</td>
                       )}
-
-                      {/* NO. SERTIFIKAT */}
-                      {isVisible("certificateNo") && (
-                        <td
-                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                          className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline ${
-                            isAfkir ? 'text-slate-200' : 'text-[#005ea4]'
-                          }`}
-                        >
+                      {g.isVisible("certificateNo") && (
+                        <td onClick={() => g.setDetailModalItem({ ...doc, currentCert: row.cert })}
+                          className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           <div className="flex items-start gap-1.5">
                             <FileCheck className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${row.hasPdf ? 'text-emerald-600' : 'text-slate-400'}`} />
-                            <div>
-                              <span className="block">{docCert}</span>
-                            </div>
+                            <div><span className="block">{row.certNo}</span></div>
                           </div>
                         </td>
                       )}
-
-                      {/* LOKASI */}
-                      {isVisible("unit") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-semibold">
-                          {docUnit}
-                        </td>
-                      )}
-
-                      {/* ASET SPECIFIC VALUES */}
-                      {isAsetCategory && isVisible("luasM2") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">
-                          {doc.luasM2 || doc.kapasitas || '12.000 m²'}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("luasHa") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">
-                          {doc.luasHa || '1,2 Ha'}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("peruntukan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
-                          {doc.peruntukan || doc.title || doc.merekItem || 'Fasilitas Industrial'}
-                        </td>
-                      )}
-
-                      {!isAsetCategory && isVisible("user") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
-                          {docUser}
-                        </td>
-                      )}
-
-                      {isVisible("issueDate") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          {docIssue}
-                        </td>
-                      )}
-
-                      {isVisible("expiryDate") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
-                          {docExpiry}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("kondisi") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">
-                          {doc.kondisi || (isAfkir ? 'Afkir / Non-Aktif' : isExpired ? 'Perlu Re-sertifikasi' : 'Baik & Layak')}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("keterangan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px]">
-                          {doc.keterangan || doc.user || 'DPMPTSP / BPN Kota Bontang'}
-                        </td>
-                      )}
-
-                      {isVisible("status") && (
+                      {g.isVisible("unit") && <td className="py-3.5 px-4 whitespace-nowrap font-semibold">{docUnit}</td>}
+                      {g.isAsetCategory && g.isVisible("luasM2") && <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">{doc.luasM2 || doc.kapasitas || '12.000 m²'}</td>}
+                      {g.isAsetCategory && g.isVisible("luasHa") && <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">{doc.luasHa || '1,2 Ha'}</td>}
+                      {g.isAsetCategory && g.isVisible("peruntukan") && <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">{doc.peruntukan || doc.title || doc.merekItem || 'Fasilitas Industrial'}</td>}
+                      {!g.isAsetCategory && g.isVisible("user") && <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">{row.issuer}</td>}
+                      {g.isVisible("issueDate") && <td className="py-3.5 px-4 whitespace-nowrap">{row.issueDate}</td>}
+                      {g.isVisible("expiryDate") && <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>{row.expiryDate}</td>}
+                      {g.isAsetCategory && g.isVisible("kondisi") && <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">{doc.kondisi || (isAfkir ? 'Afkir / Non-Aktif' : isExpired ? 'Perlu Re-sertifikasi' : 'Baik & Layak')}</td>}
+                      {g.isAsetCategory && g.isVisible("keterangan") && <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px]">{doc.keterangan || doc.user || 'DPMPTSP / BPN Kota Bontang'}</td>}
+                      {g.isVisible("status") && (
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
-                            isAfkir
-                              ? 'bg-slate-800 text-white border-slate-600'
-                              : isExpired
-                              ? 'bg-rose-100 text-rose-900 border-rose-300'
-                              : isPerpanjang
-                              ? 'bg-amber-100 text-amber-900 border-amber-300'
-                              : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                          }`}>
+                          <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${isAfkir ? 'bg-slate-800 text-white border-slate-600' : isExpired ? 'bg-rose-100 text-rose-900 border-rose-300' : isPerpanjang ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-100 text-emerald-800 border-emerald-300'}`}>
                             {row.status}
                           </span>
                         </td>
                       )}
-
                       <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
-                        {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
-                          <button
-                            onClick={() => setResolveTargetItem(doc)}
-                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <FileWarning className="w-3.5 h-3.5" />
-                            <span>Perbaiki / Lengkapi</span>
+                        {doc.documentStatus === 'PENDING_DOC' || g.activeMainTab === 'staging' ? (
+                          <button onClick={() => g.setResolveTargetItem(doc)} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors">
+                            <FileWarning className="w-3.5 h-3.5" /><span>Perbaiki / Lengkapi</span>
                           </button>
                         ) : (
-                          <button
-                            onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                            className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors font-mono-data"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Lihat Detail</span>
+                          <button onClick={() => g.setDetailModalItem({ ...doc, currentCert: row.cert })} className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors font-mono-data">
+                            <Eye className="w-3.5 h-3.5" /><span>Lihat Detail</span>
                           </button>
                         )}
                       </td>
@@ -816,7 +294,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                 })
               ) : (
                 <tr>
-                  <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 1)} className="py-8 text-center text-slate-400 font-mono-data">
+                  <td colSpan={g.visibleColumnKeys.length + (g.activeMainTab === 'staging' ? 2 : 1)} className="py-8 text-center text-slate-400 font-mono-data">
                     Data perizinan tidak ditemukan.
                   </td>
                 </tr>
@@ -826,86 +304,40 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         </div>
       </div>
 
-      {/* MODALS */}
-      <SingleEntryGenericModal
-        isOpen={isSingleModalOpen}
-        onClose={() => setIsSingleModalOpen(false)}
-        onAddSuccess={handleSingleAdded}
-        categoryName={categoryName}
-      />
+      {/* ======================================================
+          MODALS
+      ====================================================== */}
 
-      <CsvImportModal
-        isOpen={isCsvModalOpen}
-        onClose={() => setIsCsvModalOpen(false)}
-        onImportSuccess={handleCsvImported}
-        categoryKey={currentCategoryKey}
-      />
+      <SingleEntryGenericModal isOpen={g.isSingleModalOpen} onClose={() => g.setIsSingleModalOpen(false)} onAddSuccess={g.handleSingleAdded} categoryName={categoryName} />
+      <CsvImportModal isOpen={g.isCsvModalOpen} onClose={() => g.setIsCsvModalOpen(false)} onImportSuccess={g.handleCsvImported} categoryKey={g.currentCategoryKey} />
+      <ResolveDocumentModal isOpen={!!g.resolveTargetItem} onClose={() => g.setResolveTargetItem(null)} item={g.resolveTargetItem} onSuccess={g.loadData} />
 
-      <ResolveDocumentModal
-        isOpen={!!resolveTargetItem}
-        onClose={() => setResolveTargetItem(null)}
-        item={resolveTargetItem}
-        onSuccess={loadData}
-      />
-
-      {/* BULK EXEMPT MODAL */}
-      {bulkExemptModalOpen && (
+      {/* Bulk Exempt Modal */}
+      {g.bulkExemptModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200">
-            {/* Header */}
             <div className="px-5 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
-                <ShieldAlert className="w-5 h-5 text-amber-500" />
-                Tandai Tanpa Sertifikat
-              </h3>
-              <button 
-                onClick={() => setBulkExemptModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"
-              >
-                <X className="w-4 h-4" />
-              </button>
+              <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-amber-500" />Tandai Tanpa Sertifikat</h3>
+              <button onClick={() => g.setBulkExemptModalOpen(false)} className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"><X className="w-4 h-4" /></button>
             </div>
-            
-            {/* Body */}
             <div className="p-5 space-y-4">
               <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                <p className="text-xs text-amber-800 font-medium">
-                  Anda akan menandai <strong>{selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).
-                </p>
+                <p className="text-xs text-amber-800 font-medium">Anda akan menandai <strong>{g.selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).</p>
               </div>
-              
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Catatan / Alasan <span className="text-rose-500">*</span>
-                </label>
-                <textarea
-                  value={bulkExemptNote}
-                  onChange={(e) => setBulkExemptNote(e.target.value)}
+                <label className="block text-xs font-bold text-slate-700 mb-1">Catatan / Alasan <span className="text-rose-500">*</span></label>
+                <textarea value={g.bulkExemptNote} onChange={(e) => g.setBulkExemptNote(e.target.value)}
                   placeholder="Masukkan alasan mengapa dokumen tidak diperlukan..."
-                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] bg-slate-50 focus:bg-white resize-none"
-                  rows={3}
-                ></textarea>
+                  className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] bg-slate-50 focus:bg-white resize-none" rows={3} />
               </div>
             </div>
-            
-            {/* Footer */}
             <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setBulkExemptModalOpen(false)}
-                disabled={isSubmittingBulkExempt}
-                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={handleBulkExempt}
-                disabled={isSubmittingBulkExempt || !bulkExemptNote.trim()}
-                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
-              >
-                {isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Ya, Tandai {selectedStagingIds.length} Item
+              <button type="button" onClick={() => g.setBulkExemptModalOpen(false)} disabled={g.isSubmittingBulkExempt}
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50">Batal</button>
+              <button type="button" onClick={g.handleBulkExempt} disabled={g.isSubmittingBulkExempt || !g.bulkExemptNote.trim()}
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs">
+                {g.isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Ya, Tandai {g.selectedStagingIds.length} Item
               </button>
             </div>
           </div>
