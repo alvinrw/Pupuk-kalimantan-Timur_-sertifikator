@@ -771,8 +771,12 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
                       )}
 
                       {isAsetCategory && isVisible("keterangan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px]">
-                          {doc.keterangan || doc.user || 'DPMPTSP / BPN Kota Bontang'}
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px] max-w-[300px] truncate" title={doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? doc.exemptionNote : ''}>
+                          {doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? (
+                            <span className="text-amber-700 font-semibold italic">{doc.exemptionNote}</span>
+                          ) : (
+                            doc.keterangan || doc.user || 'DPMPTSP / BPN Kota Bontang'
+                          )}
                         </td>
                       )}
 
