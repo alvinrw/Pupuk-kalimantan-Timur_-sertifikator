@@ -147,7 +147,51 @@ export default function PeralatanPabrik() {
         selectAllColumns={data.selectAllColumns} toggleColumn={data.toggleColumn}
       />
 
+<<<<<<< HEAD
       {data.activeMainTab === 'staging' && data.selectedStagingIds.length > 0 && (
+=======
+          {/* Column Visibility Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => p.setIsColumnDropdownOpen(!p.isColumnDropdownOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs transition-colors"
+            >
+              <Columns className="w-4 h-4 text-[#005ea4]" />
+              <span>Pilih Kolom Tampil ({p.visibleColumnKeys.length}/{p.allColumns.length})</span>
+            </button>
+            {p.isColumnDropdownOpen && (
+              <div className="absolute right-0 top-10 z-40 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 space-y-2 text-xs font-sans-clean">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="font-bold text-slate-900 text-xs">Centang Kolom yang Tampil</span>
+                  <button onClick={p.selectAllColumns} className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline">Pilih Semua</button>
+                </div>
+                <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                  {p.allColumns.map((col) => {
+                    const checked = p.isVisible(col.key);
+                    return (
+                      <label
+                        key={col.key}
+                        onClick={() => p.toggleColumn(col.key)}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'}`}
+                      >
+                        <input type="checkbox" checked={checked} onChange={() => { }} className="rounded border-slate-300 accent-[#005ea4]" />
+                        <span className="text-xs">{col.label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <div className="pt-2 border-t border-slate-200 text-right">
+                  <button onClick={() => p.setIsColumnDropdownOpen(false)} className="px-3 py-1 bg-[#005ea4] text-white text-[11px] font-bold rounded-md">Selesai</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Bulk Action Bar */}
+      {p.activeMainTab === 'staging' && p.selectedStagingIds.length > 0 && (
+>>>>>>> 3dcf060 (feat: enhance Modals with OCR and Exempt toggles, fix refresh list sync bug)
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between mt-4 shadow-2xs">
           <div className="text-amber-800 text-xs font-bold font-mono-data">
             {data.selectedStagingIds.length} item terpilih
