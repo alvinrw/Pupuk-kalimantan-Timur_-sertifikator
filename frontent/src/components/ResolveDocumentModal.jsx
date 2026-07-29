@@ -61,7 +61,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
         const formData = new FormData();
         formData.append('file', selectedFile);
 
-        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+        const uploadRes = await fetch('http://localhost:3005/api/v1/document-history/upload', {
           method: 'POST',
           body: formData,
         });

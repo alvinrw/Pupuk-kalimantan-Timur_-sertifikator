@@ -360,7 +360,7 @@ export function useMonitoring() {
       if (uploadedFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
-        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+        const uploadRes = await fetch('http://localhost:3005/api/v1/document-history/upload', {
           method: 'POST',
           body: formDataUpload
         });
