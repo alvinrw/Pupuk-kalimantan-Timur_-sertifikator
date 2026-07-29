@@ -13,6 +13,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [filterJenis, setFilterJenis] = useState('All');
   const [filterLokasi, setFilterLokasi] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterHasSertifikat, setFilterHasSertifikat] = useState('All'); // 'All' | 'ada' | 'tidak'
 
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
@@ -68,7 +69,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           keterangan: doc.description || "-",
           status: doc.status || "Aktif",
           user: "Umum",
-          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs
         };
@@ -90,6 +91,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "namaItem", label: "Nama Produk / Proyek" },
     { key: "code", label: "Kode / Tag Perizinan" },
     { key: "jenisItem", label: "Jenis Perizinan" },
+    { key: "hasSertifikat", label: "Ada Sertifikat" },
     { key: "certificateNo", label: "No. Sertifikat" },
     { key: "unit", label: "Unit Pabrik / Lokasi" },
     { key: "user", label: "User / Instansi" },
@@ -101,6 +103,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const asetColumns = [
     { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
+    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
     { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
     { key: "unit", label: "LOKASI" },
     { key: "luasM2", label: "LUAS (M²)" },
@@ -188,10 +191,15 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       const matchesJenis = filterJenis === 'All' || jenisStr === filterJenis;
       const matchesLokasi = filterLokasi === 'All' || unitStr === filterLokasi;
       const matchesStatus = filterStatus === 'All' || statusStr === filterStatus;
+      const matchesHasSertifikat = filterHasSertifikat === 'All'
+        ? true
+        : filterHasSertifikat === 'ada'
+        ? doc.documentStatus !== 'EXEMPT'
+        : doc.documentStatus === 'EXEMPT';
 
-      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus;
+      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus && matchesHasSertifikat;
     });
-  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, activeMainTab]);
+  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, filterHasSertifikat, activeMainTab]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
@@ -267,12 +275,17 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     selectAllColumns();
   };
 
-  const handleCsvImported = () => {
-    loadData();
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
   };
 
-  const handleSingleAdded = (newItem) => {
-    setDocuments(prev => [newItem, ...prev]);
+  const handleSingleAdded = async () => {
+    setIsSingleModalOpen(false);
+    await loadData();
   };
 
   const getRowStatusStyle = (doc) => {
@@ -300,6 +313,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     filterJenis, setFilterJenis,
     filterLokasi, setFilterLokasi,
     filterStatus, setFilterStatus,
+    filterHasSertifikat, setFilterHasSertifikat,
     isCsvModalOpen, setIsCsvModalOpen,
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,

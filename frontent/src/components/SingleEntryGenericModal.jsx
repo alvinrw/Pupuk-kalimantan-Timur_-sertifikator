@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, PlusCircle, Upload, ShieldAlert, Loader2 } from 'lucide-react';
+import { X, PlusCircle, Upload, ShieldAlert, Loader2, AlertTriangle } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 
 export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess, categoryName }) {
@@ -17,6 +17,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
   const [selectedFile, setSelectedFile] = useState(null);
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
   const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
@@ -40,12 +41,16 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
             }));
             
             if (!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) {
-              alert("AI tidak dapat mendeteksi informasi pada dokumen ini. Silakan isi data secara manual.");
+              setOcrErrorMsg("AI tidak dapat mendeteksi informasi pada dokumen ini. Silakan isi data secara manual.");
+            } else if (!ocrData.noSertifikat || !ocrData.terbit || !ocrData.expired) {
+              setOcrErrorMsg("AI hanya berhasil mendeteksi sebagian informasi. Silakan lengkapi data yang kosong secara manual.");
+            } else {
+              setOcrErrorMsg("");
             }
           }
         } catch (err) {
           console.error("Gagal melakukan scan AI:", err);
-          alert("Gagal melakukan pemindaian dokumen.");
+          setOcrErrorMsg("Gagal melakukan pemindaian dokumen.");
         } finally {
           setIsScanningOcr(false);
         }
@@ -156,6 +161,13 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
                 <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>AI sedang memindai & mengunduh metadata dokumen...</span>
+                </div>
+              )}
+
+              {ocrErrorMsg && (
+                <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{ocrErrorMsg}</span>
                 </div>
               )}
             </div>

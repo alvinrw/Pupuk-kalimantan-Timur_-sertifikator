@@ -116,7 +116,7 @@ export function useMonitoring() {
           unitPabrik: item.unitLocation || 'Umum',
           status: item.status || 'Aktif',
           statusOperasional: item.status || 'Aktif',
-          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
           tglTerbit: primaryCert?.terbit || item.createdAt,
           tglExpired: dateVal,
@@ -127,7 +127,7 @@ export function useMonitoring() {
           nomorSK: '-',
           keterangan: item.description || '-',
           riwayatPerpanjangan: certs,
-          workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT')
+          workflowStatus: getWfStatus(item.status, item.documentStatus || item.document_status || 'PENDING_DOC')
         });
       });
       setAllCertificates(flattened);

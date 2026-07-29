@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCheck, FileWarning, Eye, ShieldAlert } from 'lucide-react';
+import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function GenericTable({
   activeMainTab,
@@ -20,6 +20,8 @@ export default function GenericTable({
   filterStatus,
   setFilterStatus,
   uniqueStatus,
+  filterHasSertifikat,
+  setFilterHasSertifikat,
   getRowStatusStyle,
   toggleSelectStaging,
   setDetailModalItem,
@@ -88,6 +90,24 @@ export default function GenericTable({
                         {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
                           <option key={idx} value={j}>{j}</option>
                         ))}
+                      </select>
+                    </div>
+                  </th>
+                )}
+
+
+                {isVisible("hasSertifikat") && (
+                  <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>ADA SERTIFIKAT</span>
+                      <select
+                        value={filterHasSertifikat}
+                        onChange={(e) => setFilterHasSertifikat(e.target.value)}
+                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
+                      >
+                        <option value="All">Semua</option>
+                        <option value="ada">Ada</option>
+                        <option value="tidak">Tidak Ada</option>
                       </select>
                     </div>
                   </th>
@@ -213,6 +233,28 @@ export default function GenericTable({
                       {!isAsetCategory && isVisible("jenisItem") && (
                         <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {docJenis}
+                        </td>
+                      )}
+
+
+                      {isVisible("hasSertifikat") && (
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {doc.documentStatus === 'PENDING_DOC' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              <FileWarning className="w-3 h-3" />
+                              Belum Upload
+                            </span>
+                          ) : doc.documentStatus === 'EXEMPT' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                              <XCircle className="w-3 h-3" />
+                              Tidak Ada
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Ada
+                            </span>
+                          )}
                         </td>
                       )}
 

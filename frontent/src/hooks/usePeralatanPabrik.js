@@ -9,6 +9,7 @@ export function usePeralatanPabrik() {
   const [filterLokasi, setFilterLokasi] = useState('All');
   const [filterUser, setFilterUser] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterHasSertifikat, setFilterHasSertifikat] = useState('All'); // 'All' | 'ada' | 'tidak'
 
   // Modals & Popovers
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -48,6 +49,7 @@ export function usePeralatanPabrik() {
     { key: "lokasi", label: "Lokasi" },
     { key: "user", label: "User" },
     { key: "status", label: "Status" },
+    { key: "hasSertifikat", label: "Ada Sertifikat" },
     { key: "noSertifikat", label: "No. Sertifikat" },
     { key: "tanggalInspeksi", label: "Tanggal Inspeksi" },
     { key: "terbit", label: "Terbit" },
@@ -96,7 +98,7 @@ export function usePeralatanPabrik() {
           lokasi: item.unitLocation || 'Umum',
           user: 'Umum',
           status: item.status || 'Aktif',
-          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
           noSertifikat: noCert,
           tanggalInspeksi: terbitVal,
@@ -177,10 +179,7 @@ export function usePeralatanPabrik() {
 
     if (isPerpanjang) return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
 
-    if (item.documentStatus === 'PENDING_DOC' || item.documentStatus === 'EXEMPT') {
-      if (item.documentStatus === 'EXEMPT') {
-        return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
-      }
+    if (item.documentStatus === 'PENDING_DOC') {
       return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
     }
 
@@ -228,10 +227,15 @@ export function usePeralatanPabrik() {
       const matchesLokasi = filterLokasi === 'All' || item.lokasi === filterLokasi;
       const matchesUser = filterUser === 'All' || item.user === filterUser;
       const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
+      const matchesHasSertifikat = filterHasSertifikat === 'All'
+        ? true
+        : filterHasSertifikat === 'ada'
+        ? item.documentStatus !== 'EXEMPT'
+        : item.documentStatus === 'EXEMPT';
 
-      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus;
+      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus && matchesHasSertifikat;
     });
-  }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus]);
+  }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus, filterHasSertifikat]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
@@ -273,6 +277,14 @@ export function usePeralatanPabrik() {
     return rows;
   }, [filteredData]);
 
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
+  };
+
   const handleSingleAdded = async (newItem) => {
     try {
       await createMasterItem({
@@ -285,7 +297,8 @@ export function usePeralatanPabrik() {
         issueDate: newItem.terbit || newItem.issueDate || undefined,
         expiryDate: newItem.berakhir || newItem.expiryDate || undefined,
       });
-      loadData();
+      setIsSingleModalOpen(false);
+      await loadData();
     } catch (error) {
       console.error("Gagal menambahkan data:", error);
       alert("Gagal menyimpan data ke database!");
@@ -359,6 +372,7 @@ export function usePeralatanPabrik() {
 
     alert(`Sertifikat ${reassignCertRowItem.noSertifikat} berhasil dipindahkan ke ${selectedNewTargetItem.merekItem} (${selectedNewTargetItem.tipe})!`);
     setReassignCertRowItem(null);
+    loadData();
   };
 
   const targetSearchLower = (searchTargetItemTerm || '').toLowerCase();
@@ -376,6 +390,7 @@ export function usePeralatanPabrik() {
     filterLokasi, setFilterLokasi,
     filterUser, setFilterUser,
     filterStatus, setFilterStatus,
+    filterHasSertifikat, setFilterHasSertifikat,
     isCsvModalOpen, setIsCsvModalOpen,
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,
@@ -400,7 +415,7 @@ export function usePeralatanPabrik() {
     loadData, handleBulkExempt, toggleSelectStaging, toggleSelectAllStaging,
     toggleColumn, selectAllColumns, isVisible, getRowStatusStyle,
     uniqueJenis, uniqueLokasi, uniqueUser, pendingCount, filteredData, expandedRows,
-    handleSingleAdded, handleZipMatched, requestDeleteRow, confirmDeleteRow,
+    handleSingleAdded, handleCsvImported, handleZipMatched, requestDeleteRow, confirmDeleteRow,
     openReassignTargetModal, confirmReassignTargetRow, filteredTargetEquipmentList
   };
 }

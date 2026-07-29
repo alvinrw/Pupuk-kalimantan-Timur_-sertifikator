@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileWarning, ShieldAlert, FileCheck, Eye, Check } from 'lucide-react';
+import { FileWarning, ShieldAlert, FileCheck, Eye, Check, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function PeralatanTable({
   activeMainTab,
@@ -13,6 +13,7 @@ export default function PeralatanTable({
   filterLokasi, setFilterLokasi,
   filterUser, setFilterUser,
   filterStatus, setFilterStatus,
+  filterHasSertifikat, setFilterHasSertifikat,
   uniqueJenis, uniqueLokasi, uniqueUser,
   setDetailModalItem,
   setResolveTargetItem,
@@ -117,6 +118,24 @@ export default function PeralatanTable({
                 </th>
               )}
 
+
+              {isVisible("hasSertifikat") && (
+                <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>ADA SERTIFIKAT</span>
+                    <select
+                      value={filterHasSertifikat}
+                      onChange={(e) => setFilterHasSertifikat(e.target.value)}
+                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs"
+                    >
+                      <option value="All">Semua</option>
+                      <option value="ada">Ada</option>
+                      <option value="tidak">Tidak Ada</option>
+                    </select>
+                  </div>
+                </th>
+              )}
+
               {isVisible("noSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NO. SERTIFIKAT</th>}
               {isVisible("tanggalInspeksi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TANGGAL INSPEKSI</th>}
               {isVisible("terbit") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TERBIT</th>}
@@ -207,6 +226,26 @@ export default function PeralatanTable({
                           </span>
                         </td>
                       )}
+                    {isVisible("hasSertifikat") && (
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {item.documentStatus === 'PENDING_DOC' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <FileWarning className="w-3 h-3" />
+                            Belum Upload
+                          </span>
+                        ) : item.documentStatus === 'EXEMPT' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                            <XCircle className="w-3 h-3" />
+                            Tidak Ada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Ada
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {isVisible("noSertifikat") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center gap-1.5">
                         {row.documentStatus === 'PENDING_DOC' ? (

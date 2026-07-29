@@ -175,6 +175,7 @@ export default function PeralatanPabrik() {
         filterLokasi={data.filterLokasi} setFilterLokasi={data.setFilterLokasi}
         filterUser={data.filterUser} setFilterUser={data.setFilterUser}
         filterStatus={data.filterStatus} setFilterStatus={data.setFilterStatus}
+        filterHasSertifikat={data.filterHasSertifikat} setFilterHasSertifikat={data.setFilterHasSertifikat}
         uniqueJenis={data.uniqueJenis} uniqueLokasi={data.uniqueLokasi} uniqueUser={data.uniqueUser}
         setDetailModalItem={data.setDetailModalItem}
         setResolveTargetItem={data.setResolveTargetItem}
@@ -204,7 +205,7 @@ export default function PeralatanPabrik() {
       <CsvImportModal
         isOpen={data.isCsvModalOpen}
         onClose={() => data.setIsCsvModalOpen(false)}
-        onImportSuccess={() => data.loadData()}
+        onImportSuccess={data.handleCsvImported}
         categoryKey="peralatan-pabrik"
       />
       <HistoryModal

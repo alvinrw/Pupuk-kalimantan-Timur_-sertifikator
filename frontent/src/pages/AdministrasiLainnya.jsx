@@ -39,6 +39,7 @@ export default function AdministrasiLainnya() {
   // Header Dropdown Filter States
   const [filterJenis, setFilterJenis] = useState('All');
   const [filterMasa, setFilterMasa] = useState('All');
+  const [filterHasSertifikat, setFilterHasSertifikat] = useState('All'); // 'All' | 'ada' | 'tidak'
 
   // Modals & Popovers
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -66,6 +67,7 @@ export default function AdministrasiLainnya() {
     { key: "no", label: "No." },
     { key: "judulCiptaan", label: "Judul Ciptaan" },
     { key: "jenisCiptaan", label: "Jenis Ciptaan" },
+    { key: "hasSertifikat", label: "Ada Sertifikat" },
     { key: "tanggalCiptaan", label: "Tanggal Ciptaan" },
     { key: "masaBerlaku", label: "Masa Berlaku" },
     { key: "kapanBerakhir", label: "Kapan Berakhir" }
@@ -140,7 +142,7 @@ export default function AdministrasiLainnya() {
           masaBerlaku: item.areaSqm || "Selamanya",
           kapanBerakhir: expiryVal,
           noSertifikat: noCert,
-          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
           hasCertificatePdf: !!primaryCert?.fileUrl,
           fileUrl: primaryCert?.fileUrl || null,
@@ -219,14 +221,23 @@ export default function AdministrasiLainnya() {
 
       const matchesJenis = filterJenis === 'All' || jenis === filterJenis;
       const matchesMasa = filterMasa === 'All' || (item.masaBerlaku || '') === filterMasa;
+      const matchesHasSertifikat = filterHasSertifikat === 'All'
+        ? true
+        : filterHasSertifikat === 'ada'
+        ? item.documentStatus !== 'EXEMPT'
+        : item.documentStatus === 'EXEMPT';
 
-      return matchesTab && matchesSearch && matchesJenis && matchesMasa;
+      return matchesTab && matchesSearch && matchesJenis && matchesMasa && matchesHasSertifikat;
     });
-  }, [ciptaanList, searchTerm, filterJenis, filterMasa, activeMainTab]);
+  }, [ciptaanList, searchTerm, filterJenis, filterMasa, filterHasSertifikat, activeMainTab]);
 
   // Handlers
-  const handleCsvImported = () => {
-    loadData();
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
   };
 
   const handleSingleAdded = async (newItem) => {
@@ -275,6 +286,7 @@ export default function AdministrasiLainnya() {
         });
       }
 
+      setIsSingleModalOpen(false);
       loadData();
     } catch (error) {
       console.error(error);
@@ -332,6 +344,7 @@ export default function AdministrasiLainnya() {
 
     alert(`Sertifikat ${reassignCertRowItem.noSertifikat} berhasil dipindahkan ke ${selectedNewTargetItem.judulCiptaan}!`);
     setReassignCertRowItem(null);
+    loadData();
   };
 
   const filteredTargetList = ciptaanList.filter(eq =>
@@ -348,6 +361,7 @@ export default function AdministrasiLainnya() {
         onBack={() => setDetailModalItem(null)}
         onSaveUpdate={(updatedItem) => {
           setCiptaanList(prev => prev.map(i => i.id === updatedItem.id ? { ...i, ...updatedItem, judulCiptaan: updatedItem.merekItem || i.judulCiptaan } : i));
+          loadData();
         }}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan untuk ciptaan ${id}. Menuju menu Monitoring.`);
@@ -359,6 +373,7 @@ export default function AdministrasiLainnya() {
           setDetailModalItem(null);
           loadData();
         }}
+        onRefreshRequired={() => loadData()}
       />
     );
   }
@@ -592,6 +607,24 @@ export default function AdministrasiLainnya() {
 
                 {isVisible("tanggalCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TANGGAL CIPTAAN</th>}
 
+                {/* SERTIFIKAT FILTER */}
+                {isVisible("hasSertifikat") && (
+                  <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>ADA SERTIFIKAT</span>
+                      <select
+                        value={filterHasSertifikat}
+                        onChange={(e) => setFilterHasSertifikat(e.target.value)}
+                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
+                      >
+                        <option value="All">Semua</option>
+                        <option value="ada">Ada</option>
+                        <option value="tidak">Tidak Ada</option>
+                      </select>
+                    </div>
+                  </th>
+                )}
+
                 {/* MASA BERLAKU FILTER */}
                 {isVisible("masaBerlaku") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
@@ -655,6 +688,24 @@ export default function AdministrasiLainnya() {
                       {isVisible("jenisCiptaan") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {item.jenisCiptaan}
+                        </td>
+                      )}
+                      {isVisible("hasSertifikat") && (
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          {item.documentStatus === 'PENDING_DOC' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                              <FileWarning className="w-3 h-3" />
+                              Belum Upload
+                            </span>
+                          ) : item.documentStatus === 'EXEMPT' ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                              Tidak Ada
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Ada
+                            </span>
+                          )}
                         </td>
                       )}
                     {isVisible("tanggalCiptaan") && (

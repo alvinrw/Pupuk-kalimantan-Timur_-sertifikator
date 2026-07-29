@@ -15,6 +15,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
   const [expired, setExpired] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const fileInputRef = useRef(null);
 
   const handleFileChange = async (file) => {
@@ -30,12 +31,16 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
           setExpired(ocrData.expired || '');
           
           if (!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) {
-            alert("AI tidak dapat mendeteksi informasi pada dokumen ini. Silakan isi data secara manual.");
+            setOcrErrorMsg("AI tidak dapat mendeteksi informasi pada dokumen ini. Silakan isi data secara manual.");
+          } else if (!ocrData.noSertifikat || !ocrData.terbit || !ocrData.expired) {
+            setOcrErrorMsg("AI hanya berhasil mendeteksi sebagian informasi. Silakan lengkapi data yang kosong secara manual.");
+          } else {
+            setOcrErrorMsg("");
           }
         }
       } catch (err) {
         console.error("Gagal melakukan scan AI:", err);
-        alert("Gagal melakukan pemindaian dokumen.");
+        setOcrErrorMsg("Gagal melakukan pemindaian dokumen.");
       } finally {
         setIsScanningOcr(false);
       }
@@ -208,6 +213,12 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                     </span>
                   </div>
                 </div>
+                {ocrErrorMsg && (
+                  <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
+                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{ocrErrorMsg}</span>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-1">

@@ -163,7 +163,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       setStep('upload');
       setFiles([]);
       if (anySuccess && onImportSuccess) {
-        onImportSuccess();
+        await onImportSuccess();
       }
       onClose();
     } catch (error) {

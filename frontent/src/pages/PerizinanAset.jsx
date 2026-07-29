@@ -50,7 +50,7 @@ export default function PerizinanAset({ title, subtitle }) {
           description: doc.description || "-",
           submissionDate: doc.createdAt,
           validityPeriod: doc.expiryDate || "-",
-          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs
         };
@@ -195,8 +195,12 @@ export default function PerizinanAset({ title, subtitle }) {
     );
   }, [filteredDocs, searchTerm]);
 
-  const handleCsvImported = () => {
-    loadData();
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
   };
 
   const handleZipMatched = async (extractedList) => {
