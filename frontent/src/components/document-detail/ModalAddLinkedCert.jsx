@@ -1,10 +1,7 @@
-/**
- * ModalAddLinkedCert — Modal tambah sertifikat terhubung baru.
- * Dipisah dari DocumentDetailPage (sebelumnya ~200 baris inline).
- */
 import React, { useState } from 'react';
-import { X, Link2, CheckSquare, Upload } from 'lucide-react';
+import { X, Link2, CheckSquare, Upload, ShieldAlert, Loader2 } from 'lucide-react';
 import { UPLOAD_ENDPOINT } from '../../config/api';
+import { scanPdfDocument } from '../../services/ocrService';
 
 export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
   const [certData, setCertData] = useState({
@@ -13,13 +10,45 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
   });
   const [pdfFile, setPdfFile] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
 
   if (!isOpen) return null;
 
   const handleClose = () => {
     setCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', pdfName: '' });
     setPdfFile(null);
+    setSertifikatMode('dengan');
     onClose();
+  };
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (file) { 
+      setPdfFile(file); 
+      setCertData(prev => ({ ...prev, pdfName: file.name })); 
+
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          setIsScanningOcr(true);
+          const ocrData = await scanPdfDocument(file);
+          if (ocrData) {
+            setCertData(prev => ({
+              ...prev,
+              jenisSertifikat: prev.jenisSertifikat || ocrData.jenisSertifikat || '',
+              noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
+              terbit: ocrData.terbit || prev.terbit,
+              expired: ocrData.expired || prev.expired,
+              instansi: ocrData.instansi || prev.instansi,
+            }));
+          }
+        } catch (err) {
+          console.error("Gagal melakukan scan OCR:", err);
+        } finally {
+          setIsScanningOcr(false);
+        }
+      }
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -29,13 +58,13 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
       await onSave({
         certPayload: {
           jenisSertifikat: certData.jenisSertifikat,
-          noSertifikat: certData.noSertifikat,
+          noSertifikat: sertifikatMode === 'tanpa' ? 'Tanpa Sertifikat' : (certData.noSertifikat || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`),
           instansi: certData.instansi || null,
           terbit: certData.terbit || undefined,
           expired: certData.expired || undefined,
           status: certData.status || 'Aktif',
         },
-        pdfFile,
+        pdfFile: sertifikatMode === 'dengan' ? pdfFile : null,
       });
       handleClose();
     } catch (err) {
@@ -47,7 +76,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-[#005ea4] flex items-center justify-center">
@@ -64,6 +93,65 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs font-mono-data">
+          
+          {/* Mode Toggle */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1.5 rounded-xl border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('dengan')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'dengan'
+                  ? 'bg-[#005ea4] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              <span>Dengan Berkas (PDF)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('tanpa')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'tanpa'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-600" />
+              <span>Tanpa Sertifikat (Exempt)</span>
+            </button>
+          </div>
+
+          {/* Upload Section (Only visible if 'dengan') */}
+          {sertifikatMode === 'dengan' && (
+            <div className="pb-2 border-b border-slate-200 mb-2">
+              <label className="font-bold text-slate-900 block mb-1">Lampirkan Berkas Sertifikat (PDF)</label>
+              <div className="border border-dashed border-slate-300 bg-slate-50 hover:bg-blue-50/50 p-3 rounded-xl flex items-center justify-between transition-colors">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-[#005ea4]" />
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-800">
+                      {pdfFile ? certData.pdfName : 'Belum ada berkas PDF'}
+                    </span>
+                    <span className="text-[10px] text-slate-500">
+                      {isScanningOcr ? 'Sedang mengekstrak data OCR...' : (pdfFile ? 'Berkas siap diunggah' : 'Format didukung: PDF')}
+                    </span>
+                  </div>
+                </div>
+                <input
+                  type="file" accept=".pdf" className="hidden" id="add-linked-cert-pdf-input"
+                  onChange={handleFileChange}
+                />
+                <label
+                  htmlFor="add-linked-cert-pdf-input"
+                  className="px-3 py-1.5 bg-white border border-slate-300 hover:bg-slate-100 hover:text-[#005ea4] text-slate-700 font-bold rounded-lg cursor-pointer transition-colors flex items-center gap-1"
+                >
+                  {isScanningOcr ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Pilih File</span>}
+                </label>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="font-bold text-slate-800 block mb-1">Jenis / Nama Sertifikat <span className="text-rose-500">*</span></label>
             <input
@@ -76,13 +164,14 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
           </div>
 
           <div>
-            <label className="font-bold text-slate-800 block mb-1">No. SK / Sertifikat <span className="text-rose-500">*</span></label>
+            <label className="font-bold text-slate-800 block mb-1">No. SK / Sertifikat {sertifikatMode === 'dengan' && <span className="text-rose-500">*</span>}</label>
             <input
-              type="text" required
-              value={certData.noSertifikat}
+              type="text" required={sertifikatMode === 'dengan'}
+              disabled={sertifikatMode === 'tanpa'}
+              value={sertifikatMode === 'tanpa' ? 'Tanpa Sertifikat' : certData.noSertifikat}
               onChange={(e) => setCertData({ ...certData, noSertifikat: e.target.value })}
               placeholder="Contoh: PBG-64.74/DPMPTSP/2024"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs text-[#005ea4]"
+              className={`w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs ${sertifikatMode === 'tanpa' ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'text-[#005ea4]'}`}
             />
           </div>
 
@@ -103,7 +192,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
               <input
                 type="date" value={certData.terbit}
                 onChange={(e) => setCertData({ ...certData, terbit: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs font-bold"
               />
             </div>
             <div>
@@ -111,7 +200,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
               <input
                 type="date" value={certData.expired}
                 onChange={(e) => setCertData({ ...certData, expired: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs font-bold text-rose-600"
               />
             </div>
           </div>
@@ -130,31 +219,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
             </select>
           </div>
 
-          <div>
-            <label className="font-bold text-slate-800 block mb-1">Unggah Berkas PDF Sertifikat</label>
-            <div className="border border-dashed border-slate-300 hover:border-[#005ea4] rounded-lg p-3 text-center bg-slate-50 transition-colors">
-              <input
-                type="file" accept=".pdf" className="hidden" id="add-linked-cert-pdf-input"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) { setPdfFile(file); setCertData(prev => ({ ...prev, pdfName: file.name })); }
-                }}
-              />
-              <label
-                htmlFor="add-linked-cert-pdf-input"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold rounded-lg cursor-pointer text-xs transition-colors"
-              >
-                <Upload className="w-3.5 h-3.5 text-[#005ea4]" />
-                <span>Pilih Berkas PDF</span>
-              </label>
-              {certData.pdfName
-                ? <span className="block text-emerald-700 font-bold text-[11px] mt-1.5">✓ Terpilih: {certData.pdfName}</span>
-                : <span className="block text-slate-400 text-[10px] mt-1">Format: PDF (Opsional)</span>
-              }
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2">
+          <div className="pt-3 border-t border-slate-200 flex justify-end gap-2 mt-4">
             <button type="button" onClick={handleClose} className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer">
               Batal
             </button>
@@ -162,7 +227,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
               type="submit" disabled={isSubmitting}
               className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <CheckSquare className="w-4 h-4" />
+              {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckSquare className="w-4 h-4" />}
               <span>{isSubmitting ? 'Menyimpan...' : 'Simpan Sertifikat'}</span>
             </button>
           </div>

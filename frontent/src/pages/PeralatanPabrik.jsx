@@ -19,17 +19,13 @@ export default function PeralatanPabrik() {
     return (
       <DocumentDetailPage
         item={data.detailModalItem}
-        onBack={() => data.setDetailModalItem(null)}
+        onBack={() => { 
+          data.setDetailModalItem(null);
+          data.loadData();
+        }}
         onSaveUpdate={(updatedItem) => {
-          data.setEquipmentList(prev => prev.map(i => {
-            const isMatch = i.MasterId === updatedItem.MasterId || (i.id === updatedItem.id && !i.MasterId);
-            return isMatch ? { ...i, ...updatedItem, id: i.id } : i;
-          }));
-          data.setDetailModalItem(prev => {
-            if (!prev) return prev;
-            const isMatch = prev.MasterId === updatedItem.MasterId || (prev.id === updatedItem.id && !prev.MasterId);
-            return isMatch ? { ...prev, ...updatedItem, id: prev.id } : prev;
-          });
+          // Refresh langsung dari server untuk memastikan data terupdate 100%
+          data.loadData();
         }}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan Sertifikat untuk item ${id}. Menuju menu Monitoring.`);

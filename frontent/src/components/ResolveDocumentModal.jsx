@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { X, Upload, FileCheck, FileWarning, AlertTriangle, ShieldAlert, CheckCircle2, FileText, Loader2 } from 'lucide-react';
 import { resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
+import { scanPdfDocument } from '../services/ocrService';
 
 export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess }) {
   const [option, setOption] = useState('upload'); // 'upload' | 'exempt'
@@ -13,7 +14,28 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
   const [terbit, setTerbit] = useState('');
   const [expired, setExpired] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
   const fileInputRef = useRef(null);
+
+  const handleFileChange = async (file) => {
+    if (!file) return;
+    setSelectedFile(file);
+    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+      try {
+        setIsScanningOcr(true);
+        const ocrData = await scanPdfDocument(file);
+        if (ocrData) {
+          if (ocrData.noSertifikat) setNoSertifikat(ocrData.noSertifikat);
+          if (ocrData.terbit) setTerbit(ocrData.terbit);
+          if (ocrData.expired) setExpired(ocrData.expired);
+        }
+      } catch (err) {
+        console.error("Gagal melakukan scan OCR:", err);
+      } finally {
+        setIsScanningOcr(false);
+      }
+    }
+  };
 
   // Form State Opsi B (Exempt + Catatan Alasan)
   const [exemptionNote, setExemptionNote] = useState('');
@@ -160,7 +182,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
                     e.preventDefault();
-                    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
+                    if (e.dataTransfer.files[0]) handleFileChange(e.dataTransfer.files[0]);
                   }}
                   className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50"
                 >
@@ -168,14 +190,18 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                     ref={fileInputRef}
                     type="file"
                     accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    onChange={(e) => handleFileChange(e.target.files[0])}
                     className="hidden"
                   />
                   <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
-                  <span className="text-xs font-bold text-[#005ea4] block">
-                    {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-xs font-bold text-[#005ea4]">
+                      {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
+                    </span>
+                    <span className="text-[10px] text-slate-500 mt-1">
+                      {isScanningOcr ? 'Sedang mengekstrak data OCR...' : 'Maksimal 10MB'}
+                    </span>
+                  </div>
                 </div>
               </div>
 

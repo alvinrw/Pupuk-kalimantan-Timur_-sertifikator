@@ -25,7 +25,7 @@ export const getMasterItems = async (categoryKey = '', search = '') => {
 
   // Real API Fetch
   console.log('[REAL API] Fetching Master Items from NestJS...');
-  const params = {};
+  const params = { _t: Date.now() };
   if (categoryKey) params.categoryKey = categoryKey;
   if (search) params.search = search;
 
@@ -46,7 +46,7 @@ export const getMasterItemById = async (id) => {
   }
 
   console.log(`[REAL API] Fetching Master Item ${id}...`);
-  const response = await api.get(`/master-items/${id}`);
+  const response = await api.get(`/master-items/${id}`, { params: { _t: Date.now() } });
   return response.data;
 };
 

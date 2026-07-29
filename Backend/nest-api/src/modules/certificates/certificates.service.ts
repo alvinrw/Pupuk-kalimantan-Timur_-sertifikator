@@ -48,10 +48,41 @@ export class CertificatesService {
   }
 
   async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.certificate.delete({
+    const cert = await this.findOne(id);
+    const result = await this.prisma.certificate.delete({
       where: { id },
     });
+
+    // Update MasterItem status and dates based on remaining certificates
+    if (cert.itemId) {
+      const remainingCerts = await this.prisma.certificate.findMany({
+        where: { itemId: cert.itemId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (remainingCerts.length === 0) {
+        await this.prisma.masterItem.update({
+          where: { id: cert.itemId },
+          data: {
+            documentStatus: 'EXEMPT',
+            exemptionNote: 'Semua sertifikat telah dihapus',
+            issueDate: null,
+            expiryDate: null,
+          },
+        }).catch(() => {});
+      } else {
+        const latest = remainingCerts[0];
+        await this.prisma.masterItem.update({
+          where: { id: cert.itemId },
+          data: {
+            issueDate: latest.terbit,
+            expiryDate: latest.expired,
+          },
+        }).catch(() => {});
+      }
+    }
+
+    return result;
   }
 }
 

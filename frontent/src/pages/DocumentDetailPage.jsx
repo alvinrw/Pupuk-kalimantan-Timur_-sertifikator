@@ -59,6 +59,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen, isCancelingHeader, confirmCancelHeader,
     isRenewExemptModalOpen, setIsRenewExemptModalOpen,
     renewExemptDate, setRenewExemptDate, isRenewingExempt, confirmRenewExempt,
+    localDocumentStatus,
   } = hook;
 
   // ─── Sisa hari kalkulasi ───
@@ -72,8 +73,8 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   const primaryCert = activeCerts.length > 0
     ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
     : (historyList.length > 0 ? historyList[0] : null);
-  const displayNoSert = primaryCert?.noSertifikat || formData.noSertifikat || '-';
-  const displayExpired = primaryCert?.expired || formData.berakhir || '-';
+  const displayNoSert = primaryCert?.noSertifikat || formData.noSertifikat || 'Belum Ada Sertifikat Active';
+  const displayExpired = primaryCert?.expired || formData.berakhir || 'Belum Ada Data';
   const displayFileUrl = primaryCert?.fileUrl || formData.fileUrl || null;
 
   // ─── Dropdown Aksi State ───
@@ -205,13 +206,24 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
 
               <div className="h-px bg-slate-100 my-1 mx-2"></div>
 
-              <button
-                onClick={() => { setIsDeleteDialogOpen(true); setIsActionMenuOpen(false); }}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
-              >
-                <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
-                <span>Hapus Data Item</span>
-              </button>
+              {primaryCert ? (
+                <button
+                  onClick={() => { setSelectedHistoryToDelete(primaryCert); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
+                  <span>Hapus Data Item (Sertifikat)</span>
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-400 flex items-center gap-2.5 cursor-not-allowed opacity-60"
+                  title="Belum ada sertifikat aktif"
+                >
+                  <Trash2 className="w-4 h-4 text-slate-300" />
+                  <span>Hapus Data Item (Sertifikat)</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -393,7 +405,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           </div>
 
           {/* SECTION 2: CERT LEGAL STATUS */}
-          {item.documentStatus === 'EXEMPT' ? (
+          {localDocumentStatus === 'EXEMPT' ? (
             <div className="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-6 space-y-4 font-mono-data text-center">
               <h4 className="font-bold text-sm text-indigo-900 flex items-center justify-center gap-2 mb-2">
                 <ShieldAlert className="w-6 h-6 text-indigo-600" />
@@ -546,9 +558,9 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={handleDeleteMasterItem}
         isLoading={isDeleting}
-        title="Konfirmasi Hapus Data"
-        description={<>Apakah Anda yakin ingin menghapus seluruh data untuk <br /><strong className="text-slate-800">{formData.merekItem}</strong>?<br />Tindakan ini tidak dapat dibatalkan.</>}
-        confirmLabel={isDeleting ? 'Menghapus...' : 'Ya, Hapus Data'}
+        title="Konfirmasi Hapus Seluruh Data Induk"
+        description={<>Apakah Anda yakin ingin menghapus seluruh entitas data untuk <br /><strong className="text-slate-800">{formData.merekItem}</strong>?<br /><br /><span className="text-rose-600 font-bold">PERINGATAN: Tindakan ini akan menghapus entitas induk beserta seluruh histori dan dokumen/sertifikat terhubung di dalamnya secara permanen!</span></>}
+        confirmLabel={isDeleting ? 'Menghapus...' : 'Ya, Hapus Seluruh Data & Dokumen'}
         icon={<AlertTriangle className="w-6 h-6" />}
         iconBgClassName="bg-rose-100 text-rose-600"
         confirmClassName="bg-rose-600 hover:bg-rose-700 text-white"

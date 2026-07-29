@@ -62,8 +62,9 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   );
 
   // ──────────────────────────────────────────────────────────────────
-  // EDITING STATE
+  // EDITING & LOCAL STATE
   // ──────────────────────────────────────────────────────────────────
+  const [localDocumentStatus, setLocalDocumentStatus] = useState(item.documentStatus || 'PENDING_DOC');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
@@ -123,7 +124,18 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
 
       const detail = await getMasterItemById(masterItemId);
       if (!detail || !detail.certificates || detail.certificates.length === 0) {
-        setHistoryList([]); return;
+        setHistoryList([]);
+        if (!isSingleCertScope) {
+          setLocalDocumentStatus('EXEMPT');
+          setFormData(prev => ({
+            ...prev,
+            noSertifikat: '',
+            terbit: '',
+            berakhir: '',
+            fileUrl: null
+          }));
+        }
+        return;
       }
 
       let certList = detail.certificates;
@@ -161,6 +173,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
           ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
           : (mappedCerts.length > 0 ? mappedCerts[0] : null);
         if (primaryCert) {
+          setLocalDocumentStatus('COMPLETED');
           setFormData(prev => {
             const currentStatusLower = (prev.status || '').toLowerCase();
             const isSpecialState = currentStatusLower.includes('perpanjang') || currentStatusLower.includes('proses') || currentStatusLower === 'afkir' || currentStatusLower === 'decommissioned' || currentStatusLower === 'in_progress' || currentStatusLower === 'in progress';
@@ -175,6 +188,15 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
               fileUrl: primaryCert.fileUrl || prev.fileUrl
             };
           });
+        } else {
+          setLocalDocumentStatus('EXEMPT');
+          setFormData(prev => ({
+            ...prev,
+            noSertifikat: '',
+            terbit: '',
+            berakhir: '',
+            fileUrl: null
+          }));
         }
       }
     } catch (err) {
@@ -278,6 +300,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     try {
       await deleteCertificate(id);
       await fetchHistory();
+      if (onRefreshRequired) onRefreshRequired();
       setSelectedHistoryToDelete(null);
     } catch (err) {
       console.error('Failed to delete certificate:', err);
@@ -519,5 +542,6 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     // renew exempt
     isRenewExemptModalOpen, setIsRenewExemptModalOpen,
     renewExemptDate, setRenewExemptDate, isRenewingExempt, confirmRenewExempt,
+    localDocumentStatus,
   };
 }
