@@ -25,7 +25,7 @@ import HistoryModal from '../components/HistoryModal';
 import SingleEntryCiptaanModal from '../components/SingleEntryCiptaanModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
 
 export default function AdministrasiLainnya() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -229,21 +229,57 @@ export default function AdministrasiLainnya() {
     loadData();
   };
 
-  const handleSingleAdded = (newItem) => {
-    setCiptaanList(prev => [
-      {
-        id: newItem.id,
-        no: prev.length + 1,
-        judulCiptaan: newItem.judulCiptaan,
-        jenisCiptaan: newItem.jenisCiptaan,
-        tanggalCiptaan: newItem.tanggalCiptaan,
-        masaBerlaku: newItem.masaBerlaku,
-        kapanBerakhir: newItem.expiryDate,
-        noSertifikat: `EC-REG-${Date.now().toString().substring(8)}`,
-        hasCertificatePdf: newItem.hasCertificatePdf
-      },
-      ...prev
-    ]);
+  const handleSingleAdded = async (newItem) => {
+    try {
+      const createdItem = await createMasterItem({
+        title: newItem.judulCiptaan || 'Unknown Item',
+        code: newItem.noSertifikat || '-',
+        categoryKey: 'administrasi-lainnya',
+        unitLocation: 'Umum',
+        status: 'Aktif',
+        keterangan: 'Data Manual Input',
+        issueDate: newItem.tanggalCiptaan || undefined,
+        expiryDate: newItem.expiryDate || undefined,
+        documentStatus: newItem.documentStatus
+      });
+      
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
+        let fileUrl = null;
+        if (newItem.file) {
+          const formData = new FormData();
+          formData.append('file', newItem.file);
+          try {
+            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
+            }
+          } catch (uploadErr) {
+            console.error("Gagal mengunggah file:", uploadErr);
+          }
+        }
+
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.jenisCiptaan || 'Sertifikat Pencatatan',
+          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.tanggalCiptaan || undefined,
+          expired: newItem.expiryDate || undefined,
+          fileUrl: fileUrl,
+        });
+      }
+
+      loadData();
+    } catch (error) {
+      console.error(error);
+      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
+    }
   };
 
   const handleZipMatched = () => {
@@ -786,6 +822,14 @@ export default function AdministrasiLainnya() {
       )}
 
       {/* Modals */}
+      <CsvImportModal
+        isOpen={isCsvModalOpen}
+        onClose={() => setIsCsvModalOpen(false)}
+        onImportSuccess={handleCsvImported}
+        categoryKey="administrasi-lainnya"
+        moduleName="Administrasi & Perizinan Ciptaan (HAKI)"
+      />
+
       <SingleEntryCiptaanModal
         isOpen={isSingleModalOpen}
         onClose={() => setIsSingleModalOpen(false)}

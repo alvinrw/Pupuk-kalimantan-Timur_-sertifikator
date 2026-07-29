@@ -6,7 +6,7 @@ import HistoryModal from '../components/HistoryModal';
 import SingleEntryAsetModal from '../components/SingleEntryAsetModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
 
 export default function PerizinanAset({ title, subtitle }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -222,18 +222,57 @@ export default function PerizinanAset({ title, subtitle }) {
 
   const handleSingleAdded = async (newItem) => {
     try {
-      await createMasterItem({
-        title: newItem.dokumen || newItem.title || 'Unknown Item',
-        code: newItem.noSertifikat || '-',
+      const createdItem = await createMasterItem({
+        title: newItem.title || newItem.dokumen || 'Unknown Item',
+        code: newItem.code || newItem.noSertifikat || '-',
         categoryKey: 'perizinan-aset',
-        unitLocation: newItem.lokasi || 'Umum',
-        status: newItem.status || 'Aktif',
-        keterangan: newItem.keterangan || '-',
+        unitLocation: newItem.location || newItem.lokasi || 'Umum',
+        status: newItem.condition || newItem.status || 'Aktif',
+        keterangan: newItem.keterangan || newItem.description || '-',
+        issueDate: newItem.submissionDate || undefined,
+        expiryDate: newItem.validityPeriod || undefined,
+        luasM2: newItem.areaSqm || undefined,
+        luasHa: newItem.areaHa || undefined,
+        peruntukan: newItem.purpose || undefined,
+        documentStatus: newItem.documentStatus
       });
+      
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
+        let fileUrl = null;
+        if (newItem.file) {
+          const formData = new FormData();
+          formData.append('file', newItem.file);
+          try {
+            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
+            }
+          } catch (uploadErr) {
+            console.error("Gagal mengunggah file:", uploadErr);
+          }
+        }
+
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.purpose || 'Sertifikat Aset',
+          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.submissionDate || undefined,
+          expired: newItem.validityPeriod || undefined,
+          fileUrl: fileUrl,
+        });
+      }
+
       loadData();
     } catch (error) {
       console.error(error);
-      alert("Gagal menyimpan data ke database!");
+      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
     }
   };
 

@@ -2,8 +2,9 @@
  * ModalUploadCert — Modal unggah / koreksi berkas PDF manual.
  * Dipisah dari DocumentDetailPage (sebelumnya ~160 baris inline).
  */
-import React, { useRef } from 'react';
-import { X, UploadCloud, Save, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, UploadCloud, Save, Upload, Loader2 } from 'lucide-react';
+import { scanPdfDocument } from '../../services/ocrService';
 
 export default function ModalUploadCert({
   isOpen,
@@ -16,6 +17,8 @@ export default function ModalUploadCert({
   onSubmit,
   isSingleCertScope,
 }) {
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
+
   if (!isOpen) return null;
 
   return (
@@ -50,6 +53,59 @@ export default function ModalUploadCert({
               <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
             </div>
           )}
+
+          <div>
+            <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
+            <div
+              onClick={() => manualFileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-colors"
+            >
+              <input
+                ref={manualFileInputRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setSelectedUploadFile(file);
+                    setUploadData(prev => ({ ...prev, fileName: file.name }));
+
+                    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+                      try {
+                        setIsScanningOcr(true);
+                        const ocrData = await scanPdfDocument(file);
+                        if (ocrData) {
+                          setUploadData(prev => ({
+                            ...prev,
+                            noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
+                            terbit: ocrData.terbit || prev.terbit,
+                            expired: ocrData.expired || prev.expired,
+                            instansi: ocrData.instansi || prev.instansi,
+                          }));
+                        }
+                      } catch (err) {
+                        console.error("Gagal scan OCR:", err);
+                      } finally {
+                        setIsScanningOcr(false);
+                      }
+                    }
+                  }
+                }}
+                className="hidden"
+              />
+              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+              <span className="text-xs font-bold text-[#005ea4] block">
+                {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
+              </span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
+            </div>
+            {isScanningOcr && (
+              <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+              </div>
+            )}
+          </div>
 
           <div>
             <label className="font-bold text-slate-800 block mb-1">
@@ -94,33 +150,6 @@ export default function ModalUploadCert({
                 onChange={(e) => setUploadData({ ...uploadData, expired: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
-            <div
-              onClick={() => manualFileInputRef.current?.click()}
-              className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-colors"
-            >
-              <input
-                ref={manualFileInputRef}
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => {
-                  const file = e.target.files[0];
-                  if (file) {
-                    setSelectedUploadFile(file);
-                    setUploadData({ ...uploadData, fileName: file.name });
-                  }
-                }}
-                className="hidden"
-              />
-              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-              <span className="text-xs font-bold text-[#005ea4] block">
-                {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
-              </span>
-              <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
             </div>
           </div>
 

@@ -78,7 +78,7 @@ export default function InformasiLainnya() {
           }`}
         >
           <RotateCcw className="w-4 h-4" />
-          <span>3. Alur Kerja & AI OCR</span>
+          <span>3. Alur Kerja</span>
         </button>
 
         <button

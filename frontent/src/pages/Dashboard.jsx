@@ -4,14 +4,17 @@ import {
   FileCheck2,
   Clock,
   CheckCircle2,
-  Wrench,
   XCircle,
   Activity,
   Filter,
   X,
   RotateCcw,
   Check,
-  Loader2
+  Loader2,
+  RotateCw,
+  FileMinus,
+  Wrench,
+  Power
 } from 'lucide-react';
 import {
   BarChart,
@@ -22,24 +25,23 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 import { getMasterItems } from '../services/masterItemsService';
 
-export default function Dashboard({ stats }) {
-  // Category & Multi-Parameter Filter States
+export default function Dashboard() {
   const [filterKategori, setFilterKategori] = useState('All');
   const [filterUnitPabrik, setFilterUnitPabrik] = useState('All');
   const [filterStatusOperasional, setFilterStatusOperasional] = useState('All');
-
-  // Pop-up Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  
+  // Custom Urgent Threshold
+  const [customUrgentDays, setCustomUrgentDays] = useState(30);
 
-  // Data States
   const [rawItems, setRawItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch Data on Component Mount
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -55,42 +57,62 @@ export default function Dashboard({ stats }) {
     loadData();
   }, []);
 
-  // Data Mapping: Convert Backend format to Dashboard UI format
   const allDashboardItems = useMemo(() => {
-    return rawItems.map(item => {
-      // Calculate sisaHari based on expiryDate
-      let sisaHari = 999;
-      if (item.expiryDate) {
-        const expiry = new Date(item.expiryDate);
-        const today = new Date();
-        const diffTime = expiry - today;
-        sisaHari = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      } else {
-        // Fallback: If no expiryDate on MasterItem, check its certificates/permits if they were populated
-        // This is a simplified fallback
+    const calcDiff = (dStr) => {
+      if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
+      const expiry = new Date(dStr);
+      if (isNaN(expiry.getTime())) return null;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      expiry.setHours(0, 0, 0, 0);
+      return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    };
+
+    const getWfStatus = (st, docSt) => {
+      const lowerSt = (st || '').toLowerCase();
+      if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
+      if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
+      if (docSt === 'EXEMPT') return 'exempt';
+      return 'completed';
+    };
+
+    const flattened = [];
+    rawItems.forEach(item => {
+      if (item.documentStatus === 'PENDING_DOC') return;
+
+      const certs = item.certificates || [];
+      const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+
+      let primaryCert = null;
+      if (activeCerts.length > 0) {
+        primaryCert = activeCerts.slice().sort((a, b) => {
+          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+          return dB - dA;
+        })[0];
+      } else if (certs.length > 0) {
+        primaryCert = certs[0];
       }
 
-      // Determine legalStatus
-      let legalStatus = 'valid';
-      if (sisaHari < 0) {
-        legalStatus = 'expired';
-      } else if (sisaHari <= 60) {
-        legalStatus = 'warning';
-      }
+      const rawExp = primaryCert?.expired || item.expiryDate;
+      const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+      const hari = calcDiff(dateVal);
+      
+      const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
 
-      return {
+      flattened.push({
         id: item.id,
-        kategori: item.categoryKey || 'Lainnya', // Will be mapped to proper names in UI
+        kategori: item.categoryKey || 'Lainnya',
         jenis: item.title || 'Unknown',
         unit: item.unitLocation || 'Umum',
         opStatus: item.status || 'Aktif',
-        legalStatus,
-        sisaHari
-      };
+        sisaHari: hari,
+        workflowStatus: wfStatus
+      });
     });
+    return flattened;
   }, [rawItems]);
 
-  // Count active non-default filters
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterKategori !== 'All') count++;
@@ -99,7 +121,6 @@ export default function Dashboard({ stats }) {
     return count;
   }, [filterKategori, filterUnitPabrik, filterStatusOperasional]);
 
-  // Filtered items based on dropdown selections
   const filteredItems = useMemo(() => {
     return allDashboardItems.filter(item => {
       const matchKategori = filterKategori === 'All' || item.kategori === filterKategori;
@@ -109,309 +130,289 @@ export default function Dashboard({ stats }) {
     });
   }, [allDashboardItems, filterKategori, filterUnitPabrik, filterStatusOperasional]);
 
-  // Dynamic Operational Counts
-  const opStats = useMemo(() => {
-    const aktif = filteredItems.filter(i => i.opStatus === 'Aktif').length;
-    const repair = filteredItems.filter(i => i.opStatus === 'Repair').length;
-    const rusak = filteredItems.filter(i => i.opStatus === 'Rusak').length;
-    return { aktif, repair, rusak };
-  }, [filteredItems]);
+  const stats = useMemo(() => {
+    const threshold = parseInt(customUrgentDays) || 30;
+    
+    // Legalitas Stats
+    const expired = filteredItems.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
+    const urgent = filteredItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length;
+    const valid = filteredItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length;
+    
+    const totalActive = filteredItems.filter(c => c.workflowStatus !== 'decommissioned').length;
+    
+    // Operasional Fisik & Workflow Stats
+    const inProgress = filteredItems.filter(c => c.workflowStatus === 'in_progress').length;
+    const decommissioned = filteredItems.filter(c => c.workflowStatus === 'decommissioned').length;
+    const exempt = filteredItems.filter(c => c.workflowStatus === 'exempt').length;
+    
+    const opAktif = filteredItems.filter(c => c.opStatus === 'Aktif' || c.opStatus === 'Proses').length;
+    const opRusak = filteredItems.filter(c => c.opStatus === 'Rusak').length;
+    const opRepair = filteredItems.filter(c => c.opStatus === 'Repair').length;
 
-  // Dynamic Legal Permit Counts
-  const legalStats = useMemo(() => {
-    const total = filteredItems.length;
-    const valid = filteredItems.filter(i => i.legalStatus === 'valid').length;
-    const warning = filteredItems.filter(i => i.legalStatus === 'warning').length;
-    const expired = filteredItems.filter(i => i.legalStatus === 'expired').length;
-    return { total, valid, warning, expired };
-  }, [filteredItems]);
+    return { 
+      expired, urgent, valid, totalActive, threshold,
+      inProgress, decommissioned, exempt,
+      opAktif, opRusak, opRepair 
+    };
+  }, [filteredItems, customUrgentDays]);
 
   const statusPieData = [
-    { name: 'Sertifikat Valid', value: legalStats.valid, color: '#10B981' },
-    { name: 'Akan Expired (< 30 Hari)', value: legalStats.warning, color: '#F59E0B' },
-    { name: 'Expired / Perlu Renewal', value: legalStats.expired, color: '#EF4444' },
+    { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
+    { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
+    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
+    { name: 'Expired', value: stats.expired, color: '#EF4444' },
   ];
 
-  const plantBarData = useMemo(() => {
-    const units = ['Pabrik 1A', 'Pabrik 2', 'Pabrik 3', 'Pabrik 4', 'Pabrik 5', 'Pabrik 6', 'UBS 6', 'Diklat B', 'Pabrik NPK'];
-    return units.map(unitName => {
-      const unitItems = filteredItems.filter(i => i.unit === unitName);
+  const categoryBarData = useMemo(() => {
+    const threshold = parseInt(customUrgentDays) || 30;
+    const categories = Array.from(new Set(allDashboardItems.map(i => i.kategori)));
+    return categories.map(cat => {
+      const catItems = filteredItems.filter(i => i.kategori === cat);
       return {
-        name: unitName,
-        Aktif: unitItems.filter(i => i.opStatus === 'Aktif').length,
-        Repair: unitItems.filter(i => i.opStatus === 'Repair').length,
-        Rusak: unitItems.filter(i => i.opStatus === 'Rusak').length,
+        name: cat,
+        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned').length,
+        Urgent: catItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length,
+        Expired: catItems.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length,
       };
-    }).filter(u => u.Aktif > 0 || u.Repair > 0 || u.Rusak > 0 || filterUnitPabrik === u.name);
-  }, [filteredItems, filterUnitPabrik]);
+    }).filter(u => u.Valid > 0 || u.Urgent > 0 || u.Expired > 0 || filterKategori === u.name);
+  }, [filteredItems, allDashboardItems, filterKategori, customUrgentDays]);
 
   const resetFilters = () => {
     setFilterKategori('All');
     setFilterUnitPabrik('All');
     setFilterStatusOperasional('All');
+    setCustomUrgentDays(30);
   };
+
+  const getCategoryOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.kategori))];
+  const getUnitOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.unit))];
 
   if (isLoading) {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
-        <p className="font-mono-data font-bold">Menarik Data dari Database...</p>
+        <p className="font-mono-data font-bold">Memuat Statistik Dashboard Overview...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8 font-sans-clean max-w-7xl mx-auto">
-      {/* Clean Page Title Header with Single Pop-up Filter Button */}
-      <div className="pb-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Activity className="w-6 h-6 text-[#005ea4]" />
-            Dashboard Monitoring Sertifikasi & Operational Status
+    <div className="p-6 md:p-8 space-y-8 font-sans-clean max-w-[1600px] mx-auto bg-slate-50/50 min-h-screen">
+      {/* HEADER */}
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 pb-6 border-b border-slate-200">
+        <div className="space-y-2">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Dashboard Overview
           </h1>
-          <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-            Ringkasan kelayakan izin sertifikat dan status fisik peralatan pabrik (Aktif, Repair, Rusak)
+          <p className="text-slate-500 font-mono-data text-xs md:text-sm max-w-2xl leading-relaxed">
+            Ringkasan status legalitas dan operasional fisik seluruh aset, peralatan pabrik, proyek, dan dokumen HAKI.
           </p>
         </div>
 
-        {/* POP-UP FILTER BUTTON */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {activeFilterCount > 0 && (
-            <span className="text-xs text-slate-500 font-mono-data font-bold hidden sm:inline">
-              Showing {filteredItems.length} of {allDashboardItems.length} items
-            </span>
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-2 px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset Filter ({activeFilterCount})
+            </button>
           )}
+          
           <button
             onClick={() => setIsFilterModalOpen(true)}
-            className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors font-mono-data cursor-pointer"
+            className={`flex items-center gap-2 px-4 py-2 font-bold text-xs rounded-lg transition-all shadow-xs ${
+              activeFilterCount > 0 ? 'bg-[#005ea4] text-white hover:bg-[#004881]' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+            }`}
           >
-            <Filter className="w-4 h-4 text-white" />
-            <span>Filter Kategori & Data</span>
-            {activeFilterCount > 0 && (
-              <span className="w-5 h-5 bg-amber-400 text-slate-900 rounded-full text-[10px] flex items-center justify-center font-extrabold ml-1 shadow-2xs">
-                {activeFilterCount}
-              </span>
-            )}
+            <Filter className="w-4 h-4" />
+            <span>Filter Data Global</span>
+            {activeFilterCount > 0 && <span className="w-5 h-5 bg-white text-[#005ea4] rounded-full text-[10px] ml-1 flex items-center justify-center">{activeFilterCount}</span>}
           </button>
         </div>
       </div>
 
-      {/* OPERATIONAL STATUS BREAKDOWN CARDS (AKTIF, REPAIR, RUSAK) */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2 font-mono-data">
-          <Activity className="w-4 h-4 text-[#005ea4]" />
-          <span>Status Kondisi Fisik Peralatan Pabrik</span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Aktif */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Aktif (Operasional)</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-emerald-600">
-                {opStats.aktif}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Normal Operasional</span>
-            </div>
-          </div>
-
-          {/* Repair */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Repair (Perbaikan)</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
-                <Wrench className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-amber-600">
-                {opStats.repair}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Perbaikan / Overhaul</span>
-            </div>
-          </div>
-
-          {/* Rusak */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Rusak (Out of Order)</span>
-              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center">
-                <XCircle className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-rose-600">
-                {opStats.rusak}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Tidak Laik / Stop Operasi</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SERTIFIKAT STATUS SUMMARY */}
-      <div>
-        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3 flex items-center gap-2 font-mono-data">
-          <FileCheck2 className="w-4 h-4 text-[#005ea4]" />
-          <span>Status Masa Berlaku Sertifikat Perizinan</span>
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-          {/* Total */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Total Sertifikat</span>
-              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-800 border border-slate-200 flex items-center justify-center">
-                <FileCheck2 className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-slate-900">
-                {legalStats.total}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Total Dokumen Terdaftar</span>
-            </div>
-          </div>
-
-          {/* Valid */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Sertifikat Valid</span>
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                <CheckCircle2 className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-emerald-600">
-                {legalStats.valid}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Masa Berlaku Aman</span>
-            </div>
-          </div>
-
-          {/* Warning */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Akan Expired (&lt;2 Bulan / 60 Hari)</span>
-              <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-                <Clock className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-amber-600">
-                {legalStats.warning}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Perlu Pengajuan Berkas</span>
-            </div>
-          </div>
-
-          {/* Expired */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Expired / Perlu Renewal</span>
-              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center font-bold">
-                <AlertTriangle className="w-4 h-4" />
-              </div>
-            </div>
-            <div>
-              <span className="text-3xl font-extrabold text-rose-600">
-                {legalStats.expired}
-              </span>
-              <span className="text-[11px] text-slate-500 block font-mono-data mt-1">Kadaluarsa (Proses SK)</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Bar Chart Panel */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
-            <div>
-              <h3 className="font-bold text-base text-slate-900">
-                Distribusi Kondisi Peralatan per Unit Pabrik
-              </h3>
-            </div>
-            <div className="flex items-center gap-3 text-xs font-mono-data">
-              <span className="flex items-center gap-1.5 text-slate-700 font-bold">
-                <span className="w-3 h-3 rounded bg-emerald-500"></span> Aktif
-              </span>
-              <span className="flex items-center gap-1.5 text-slate-700 font-bold">
-                <span className="w-3 h-3 rounded bg-amber-500"></span> Repair
-              </span>
-              <span className="flex items-center gap-1.5 text-slate-700 font-bold">
-                <span className="w-3 h-3 rounded bg-rose-500"></span> Rusak
-              </span>
-            </div>
-          </div>
-          <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={plantBarData} barGap={4}>
-                <XAxis dataKey="name" stroke="#334155" fontSize={11} fontWeight="bold" tickLine={false} />
-                <YAxis stroke="#334155" fontSize={11} fontWeight="bold" tickLine={false} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '12px', fontWeight: 'bold' }}
-                />
-                <Bar dataKey="Aktif" fill="#10B981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Repair" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="Rusak" fill="#EF4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Pie Chart Panel */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-xs flex flex-col justify-between">
-          <div>
-            <div className="pb-4 mb-4 border-b border-slate-200">
-              <h3 className="font-bold text-base text-slate-900">
-                Proporsi Masa Berlaku Sertifikat
-              </h3>
-            </div>
-            <div className="h-52 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={statusPieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={75}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {statusPieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '8px', color: '#0f172a', fontSize: '12px', fontWeight: 'bold' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div className="space-y-2.5 border-t border-slate-200 pt-4 font-mono-data">
-            {statusPieData.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-3.5 h-3.5 rounded" style={{ backgroundColor: item.color }} />
-                  <span className="text-slate-800 font-bold">{item.name}</span>
-                </div>
-                <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                  {item.value} Dokumen
+      {/* STATISTIK UTAMA */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Kolom Kiri: Status Legalitas */}
+        <div className="lg:col-span-7 space-y-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider font-mono-data">
+            <FileCheck2 className="w-4 h-4 text-[#005ea4]" />
+            Status Legalitas Sertifikat
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs relative overflow-hidden group hover:border-[#005ea4] transition-colors">
+              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors z-0"></div>
+              <div className="relative z-10 flex flex-col space-y-1">
+                <span className="text-emerald-800 font-mono-data text-xs font-bold uppercase flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Valid
                 </span>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-extrabold text-emerald-600">{stats.valid}</span>
+                  <span className="text-xs text-emerald-700 font-mono-data mb-1.5 font-bold">item</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs relative overflow-hidden group hover:border-amber-400 transition-colors">
+              <div className="absolute -right-6 -top-6 w-32 h-32 bg-amber-500/10 rounded-full transition-colors z-0"></div>
+              <div className="relative z-10 flex flex-col space-y-1">
+                <div className="flex items-center gap-1 mb-1 relative z-20">
+                  <span className="text-amber-800 font-mono-data text-[10px] sm:text-[11px] font-bold uppercase flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 hidden sm:block" /> Urgent &le;
+                  </span>
+                  <input
+                    type="number"
+                    value={customUrgentDays}
+                    onChange={(e) => setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-10 px-1 py-0.5 text-xs font-bold text-amber-900 bg-amber-100/50 border border-amber-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
+                  />
+                  <span className="text-amber-800 font-mono-data text-[10px] sm:text-[11px] font-bold uppercase">Hr</span>
+                </div>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-extrabold text-amber-600">{stats.urgent}</span>
+                  <span className="text-xs text-amber-700 font-mono-data mb-1.5 font-bold">item</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs relative overflow-hidden group hover:border-rose-400 transition-colors">
+              <div className="absolute right-0 bottom-0 w-24 h-24 bg-rose-500/10 rounded-tl-full transition-colors z-0"></div>
+              <div className="relative z-10 flex flex-col space-y-1">
+                <span className="text-rose-800 font-mono-data text-xs font-bold uppercase flex items-center gap-1.5 mt-1.5 mb-0.5">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Expired
+                </span>
+                <div className="flex items-end gap-2">
+                  <span className="text-4xl font-extrabold text-rose-600">{stats.expired}</span>
+                  <span className="text-xs text-rose-700 font-mono-data mb-1.5 font-bold">item</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Kolom Kanan: Operasional Fisik & Administratif */}
+        <div className="lg:col-span-5 space-y-4">
+          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider font-mono-data">
+            <Activity className="w-4 h-4 text-[#005ea4]" />
+            Status Operasional Fisik & Berkas
+          </h3>
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3 h-[116px]">
+            
+            {/* Fisik Aktif */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
+              <span className="text-emerald-700 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
+                <Power className="w-3 h-3 shrink-0" /> Fisik Aktif
+              </span>
+              <span className="text-2xl font-extrabold text-emerald-600">{stats.opAktif}</span>
+            </div>
+
+            {/* Rusak / Repair */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
+              <span className="text-rose-700 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
+                <Wrench className="w-3 h-3 shrink-0" /> Rusak/Repair
+              </span>
+              <span className="text-2xl font-extrabold text-rose-600">{stats.opRusak + stats.opRepair}</span>
+            </div>
+
+            {/* In Progress */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
+              <span className="text-amber-700 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
+                <RotateCw className="w-3 h-3 shrink-0" /> In Progress
+              </span>
+              <span className="text-2xl font-extrabold text-amber-600">{stats.inProgress}</span>
+            </div>
+
+            {/* Non Sertifikat */}
+            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
+              <span className="text-slate-600 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
+                <FileMinus className="w-3 h-3 shrink-0" /> Non Sertifikat
+              </span>
+              <span className="text-2xl font-extrabold text-slate-700">{stats.exempt}</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* CHART VISUALISASI */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Pie Chart */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs flex flex-col relative overflow-hidden">
+          <h3 className="font-bold text-slate-800 text-sm mb-4 relative z-10">Distribusi Status Sertifikat</h3>
+          <div className="flex-1 min-h-[250px] relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusPieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={5}
+                  dataKey="value"
+                  stroke="none"
+                >
+                  {statusPieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                </Pie>
+                <Tooltip formatter={(value) => [`${value} Item`, 'Jumlah']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+              </PieChart>
+            </ResponsiveContainer>
+            
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.totalActive}</span>
+              <span className="text-[10px] text-slate-500 font-mono-data font-bold">Total Aktif</span>
+            </div>
+          </div>
+          <div className="mt-4 space-y-2 relative z-10">
+            {statusPieData.map((item, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs font-mono-data">
+                <div className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></span>
+                  <span className="text-slate-600">{item.name}</span>
+                </div>
+                <span className="font-bold text-slate-900">{item.value}</span>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Bar Chart (Per Kategori) */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs col-span-1 lg:col-span-2 flex flex-col relative overflow-hidden">
+          <div className="flex items-center justify-between mb-6 relative z-10">
+            <h3 className="font-bold text-slate-800 text-sm">Pemetaan Status per Kategori Perizinan</h3>
+            {filterKategori !== 'All' && (
+              <span className="text-[10px] px-2 py-1 bg-blue-50 text-[#005ea4] border border-blue-200 rounded font-bold">Filtered: {filterKategori}</span>
+            )}
+          </div>
+          
+          <div className="flex-1 min-h-[250px] w-full relative z-10">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={categoryBarData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'monospace' }} 
+                  axisLine={false} 
+                  tickLine={false}
+                  interval={0}
+                  angle={-15}
+                  textAnchor="end"
+                />
+                <YAxis tick={{ fontSize: 10, fill: '#64748B' }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
+                <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
+                <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
+                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
+                <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
-      {/* POP-UP FILTER MODAL SYSTEM */}
+      {/* FILTER MODAL */}
       {isFilterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 font-sans-clean animate-in fade-in duration-200">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
@@ -420,105 +421,41 @@ export default function Dashboard({ stats }) {
               <div className="flex items-center gap-2">
                 <Filter className="w-5 h-5 text-amber-400" />
                 <div>
-                  <h3 className="font-bold text-base">Filter Kategori & Data Overview</h3>
-                  <p className="text-xs text-slate-400 font-mono-data">Sesuaikan tampilan statistik dashboard sesuai kebutuhan</p>
+                  <h3 className="font-bold text-base">Filter Kategori & Data</h3>
+                  <p className="text-xs text-slate-400 font-mono-data">Sesuaikan data yang ingin ditampilkan</p>
                 </div>
               </div>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <button onClick={() => setIsFilterModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"><X className="w-5 h-5" /></button>
             </div>
-
+            
             {/* Modal Body */}
-            <div className="p-6 space-y-4 text-xs font-mono-data">
-              {/* 1. Filter Kategori Perizinan */}
+            <div className="p-6 space-y-5 text-xs font-mono-data">
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  1. Kategori Perizinan Utama
-                </label>
-                <select
-                  value={filterKategori}
-                  onChange={(e) => setFilterKategori(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs cursor-pointer"
-                >
-                  <option value="All">Semua Jenis Perizinan ({allDashboardItems.length})</option>
-                  <option value="Perizinan Peralatan Pabrik">Perizinan Peralatan Pabrik</option>
-                  <option value="Perizinan Aset">Perizinan Aset & Lahan</option>
-                  <option value="Perizinan Produk">Perizinan Produk (SNI/Halal)</option>
-                  <option value="Perizinan Proyek">Perizinan Proyek (SLF/PUPR)</option>
-                  <option value="Administrasi Lainnya">Administrasi Lainnya (Software/HAKI)</option>
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">1. Kategori Perizinan Utama</label>
+                <select value={filterKategori} onChange={(e) => setFilterKategori(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer">
+                  {getCategoryOptions().map(cat => <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>)}
                 </select>
               </div>
 
-              {/* 2. Filter Unit Pabrik */}
               <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  2. Unit Pabrik / Area Operasional
-                </label>
-                <select
-                  value={filterUnitPabrik}
-                  onChange={(e) => setFilterUnitPabrik(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs cursor-pointer"
-                >
-                  <option value="All">Semua Unit Pabrik / Area</option>
-                  <option value="Pabrik 1A">Pabrik 1A</option>
-                  <option value="Pabrik 2">Pabrik 2</option>
-                  <option value="Pabrik 3">Pabrik 3</option>
-                  <option value="Pabrik 4">Pabrik 4</option>
-                  <option value="Pabrik 5">Pabrik 5</option>
-                  <option value="Pabrik 6">Pabrik 6</option>
-                  <option value="UBS 6">UBS 6</option>
-                  <option value="Diklat B">Diklat B</option>
-                  <option value="Pabrik NPK">Pabrik NPK</option>
-                  <option value="Kawasan Industri">Kawasan Industri</option>
-                </select>
-              </div>
-
-              {/* 3. Filter Status Fisik Operasional */}
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">
-                  3. Status Fisik Peralatan
-                </label>
-                <select
-                  value={filterStatusOperasional}
-                  onChange={(e) => setFilterStatusOperasional(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs cursor-pointer"
-                >
+                <label className="block text-xs font-bold text-slate-800 mb-1.5">2. Status Fisik Peralatan</label>
+                <select value={filterStatusOperasional} onChange={(e) => setFilterStatusOperasional(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer">
                   <option value="All">Semua Status Fisik Operasional</option>
                   <option value="Aktif">Aktif (Operasional Normal)</option>
                   <option value="Repair">Repair (Dalam Perbaikan/Overhaul)</option>
                   <option value="Rusak">Rusak (Out of Service / Tidak Laik)</option>
+                  <option value="Afkir">Afkir (Decommissioned)</option>
                 </select>
               </div>
-
-              {/* Summary Indicator inside Modal */}
-              <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl text-slate-700 flex items-center justify-between">
-                <span className="text-xs font-bold font-mono-data">Hasil Filter Data:</span>
-                <span className="text-xs font-extrabold text-[#005ea4] bg-white px-2.5 py-1 rounded-lg border border-blue-200">
-                  {filteredItems.length} of {allDashboardItems.length} items
-                </span>
-              </div>
             </div>
-
+            
             {/* Modal Footer */}
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="px-3.5 py-2 text-rose-700 hover:bg-rose-50 border border-rose-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors font-mono-data"
-              >
+              <button type="button" onClick={() => { resetFilters(); setIsFilterModalOpen(false); }} className="px-3.5 py-2 text-rose-700 hover:bg-rose-50 border border-rose-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors font-mono-data">
                 <RotateCcw className="w-3.5 h-3.5" />
                 <span>Reset Filter</span>
               </button>
-
-              <button
-                type="button"
-                onClick={() => setIsFilterModalOpen(false)}
-                className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-colors font-mono-data cursor-pointer"
-              >
+              <button type="button" onClick={() => setIsFilterModalOpen(false)} className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-colors font-mono-data cursor-pointer">
                 <Check className="w-4 h-4" />
                 <span>Terapkan Filter</span>
               </button>
@@ -529,5 +466,3 @@ export default function Dashboard({ stats }) {
     </div>
   );
 }
-
-

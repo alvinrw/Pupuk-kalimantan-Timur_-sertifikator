@@ -154,6 +154,32 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
           {option === 'upload' && (
             <form onSubmit={handleUploadSubmit} className="space-y-4">
               <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Opsional)</label>
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
+                  }}
+                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.png,.jpg,.jpeg"
+                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    className="hidden"
+                  />
+                  <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
+                  <span className="text-xs font-bold text-[#005ea4] block">
+                    {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
                 <label className="text-xs font-bold text-slate-700 block">Nomor Sertifikat / Pengesahan <span className="text-rose-500">*</span></label>
                 <input
                   type="text"
@@ -183,32 +209,6 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                     onChange={(e) => setExpired(e.target.value)}
                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
                   />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Opsional)</label>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
-                  }}
-                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                    className="hidden"
-                  />
-                  <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
-                  <span className="text-xs font-bold text-[#005ea4] block">
-                    {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
                 </div>
               </div>
 

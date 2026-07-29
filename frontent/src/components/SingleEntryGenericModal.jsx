@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, PlusCircle, Upload } from 'lucide-react';
+import { X, PlusCircle, Upload, ShieldAlert, Loader2 } from 'lucide-react';
+import { scanPdfDocument } from '../services/ocrService';
 
 export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess, categoryName }) {
   const [formData, setFormData] = useState({
@@ -14,12 +15,36 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
+  const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedFile(file);
+
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          setIsScanningOcr(true);
+          const ocrData = await scanPdfDocument(file);
+          if (ocrData) {
+            setFormData(prev => ({
+              ...prev,
+              title: ocrData.namaPeralatan || prev.title,
+              certificateNo: ocrData.noSertifikat || prev.certificateNo,
+              issueDate: ocrData.terbit || prev.issueDate,
+              expiryDate: ocrData.expired || prev.expiryDate,
+              issuer: ocrData.instansi || prev.issuer,
+            }));
+          }
+        } catch (err) {
+          console.error("Gagal melakukan scan OCR:", err);
+        } finally {
+          setIsScanningOcr(false);
+        }
+      }
     }
   };
 
@@ -27,15 +52,17 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
     e.preventDefault();
     onAddSuccess({
       ...formData,
+      file: sertifikatMode === 'dengan' ? selectedFile : null,
       id: `PERIZ-MANUAL-${Date.now()}`,
       code: formData.code || `PERIZ-${Math.floor(100 + Math.random() * 900)}`,
-      certificateNo: formData.certificateNo || (selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : "PERIZ-BELUM-ADA-SK"),
-      hasCertificatePdf: !!selectedFile,
+      certificateNo: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.certificateNo || (selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : "PERIZ-BELUM-ADA-SK")),
+      hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
       merekItem: formData.title,
       jenisPeralatan: categoryName || "Perizinan Generic",
       unitPabrik: formData.unit,
       berakhir: formData.expiryDate,
-      keterangan: selectedFile ? `Sertifikat Attached (${selectedFile.name})` : "Input Manual Baru"
+      keterangan: sertifikatMode === 'tanpa' ? "Tidak Perlu Sertifikat" : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : "Input Manual Baru"),
+      documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
     });
 
     setFormData({
@@ -76,7 +103,59 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs font-mono-data">
+        <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs font-mono-data max-h-[80vh] overflow-y-auto">
+          {/* Toggles Dengan/Tanpa Sertifikat */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-4">
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('dengan')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'dengan'
+                  ? 'bg-[#005ea4] text-white shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Upload className="w-4 h-4" />
+              <span>Dengan Sertifikat (PDF)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('tanpa')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'tanpa'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <ShieldAlert className="w-4 h-4 text-amber-600" />
+              <span>Tanpa Sertifikat (Exempt)</span>
+            </button>
+          </div>
+
+          {sertifikatMode === 'dengan' && (
+            <div className="pt-2 pb-4 border-b border-slate-200 mb-4">
+              <label className="font-bold text-slate-900 block mb-1">Lampirkan Berkas Sertifikat (PDF)</label>
+              <div className="border border-dashed border-slate-300 bg-slate-50 p-3 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-4 h-4 text-[#005ea4]" />
+                  <span className="text-slate-700 truncate max-w-[280px]">
+                    {selectedFile ? selectedFile.name : "Belum ada file dipilih"}
+                  </span>
+                </div>
+                <label className="px-3 py-1 bg-[#005ea4] text-white text-xs font-bold rounded cursor-pointer hover:bg-[#004881]">
+                  Pilih PDF
+                  <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
+                </label>
+              </div>
+              {isScanningOcr && (
+                <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <label className="font-bold text-slate-900 block mb-1">Nama Dokumen / Item Perizinan <span className="text-rose-500">*</span></label>
             <input
@@ -103,19 +182,13 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
 
             <div>
               <label className="font-bold text-slate-900 block mb-1">Unit Pabrik / Lokasi</label>
-              <select
+              <input
+                type="text"
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                placeholder="Contoh: Pabrik 1A (Amonia)"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs font-bold text-slate-800"
-              >
-                <option value="Pabrik 1A (Amonia)">Pabrik 1A (Amonia)</option>
-                <option value="Pabrik 2 (Urea)">Pabrik 2 (Urea)</option>
-                <option value="Pabrik 3 (Urea)">Pabrik 3 (Urea)</option>
-                <option value="Pabrik 4 (Amuria)">Pabrik 4 (Amuria)</option>
-                <option value="Pabrik 5 (Utility)">Pabrik 5 (Utility)</option>
-                <option value="Dermaga & Pelabuhan">Dermaga & Pelabuhan</option>
-                <option value="Kantor Pusat">Kantor Pusat</option>
-              </select>
+              />
             </div>
           </div>
 
@@ -131,16 +204,20 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
               />
             </div>
 
-            <div>
-              <label className="font-bold text-slate-900 block mb-1">No. Sertifikat / SK</label>
-              <input
-                type="text"
-                value={formData.certificateNo}
-                onChange={(e) => setFormData({ ...formData, certificateNo: e.target.value })}
-                placeholder="Contoh: SK-PERIZ-2024-001"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs font-bold text-[#005ea4]"
-              />
-            </div>
+            {sertifikatMode === 'dengan' ? (
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">No. Sertifikat / SK</label>
+                <input
+                  type="text"
+                  value={formData.certificateNo}
+                  onChange={(e) => setFormData({ ...formData, certificateNo: e.target.value })}
+                  placeholder="Contoh: SK-PERIZ-2024-001"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs font-bold text-[#005ea4]"
+                />
+              </div>
+            ) : (
+              <div></div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -165,24 +242,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
             </div>
           </div>
 
-          {/* Lampiran PDF Single */}
-          <div>
-            <label className="font-bold text-slate-900 block mb-1">Lampirkan Berkas Sertifikat (PDF)</label>
-            <div className="border border-dashed border-slate-300 bg-slate-50 p-3 rounded-lg flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Upload className="w-4 h-4 text-[#005ea4]" />
-                <span className="text-slate-700 truncate max-w-[280px]">
-                  {selectedFile ? selectedFile.name : "Belum ada file dipilih"}
-                </span>
-              </div>
-              <label className="px-3 py-1 bg-[#005ea4] text-white text-xs font-bold rounded cursor-pointer hover:bg-[#004881]">
-                Pilih PDF
-                <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
-              </label>
-            </div>
-          </div>
 
-          {/* Footer Buttons */}
           <div className="pt-4 border-t border-slate-200 flex items-center justify-end gap-2">
             <button
               type="button"

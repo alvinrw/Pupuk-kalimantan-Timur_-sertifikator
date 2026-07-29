@@ -37,10 +37,10 @@ export default function MonitoringSertifikasi() {
   if (selectedDetailDoc) {
     return (
       <DocumentDetailPage
-        item={selectedDetailDoc}
+        item={m.selectedDetailDoc}
         onBack={() => {
-          setSelectedDetailDoc(null);
-          fetchMonitoringData();
+          m.setSelectedDetailDoc(null);
+          m.fetchMonitoringData();
         }}
         onSaveUpdate={(updatedDoc) => {
           const updateItem = (d) => {
@@ -49,51 +49,38 @@ export default function MonitoringSertifikasi() {
             const isAfkir = lowerSt === 'afkir' || lowerSt === 'decommissioned';
             const isPerpanjang = lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress';
             const isExempt = d.documentStatus === 'EXEMPT' || updatedDoc.documentStatus === 'EXEMPT';
-
             let calcWf = d.workflowStatus;
             if (isAfkir) calcWf = 'decommissioned';
             else if (isPerpanjang) calcWf = 'in_progress';
             else if (lowerSt === 'aktif' || lowerSt === 'completed') calcWf = isExempt ? 'exempt' : 'completed';
-
-            return { 
-              ...d, 
-              ...updatedDoc, 
-              status: newStatus,
-              statusOperasional: newStatus,
-              workflowStatus: calcWf,
-              id: d.id 
-            };
+            return { ...d, ...updatedDoc, status: newStatus, statusOperasional: newStatus, workflowStatus: calcWf, id: d.id };
           };
 
-          setAllCertificates(prev => prev.map(d => {
+          m.setAllCertificates(prev => prev.map(d => {
             const isMatch = d.MasterId === updatedDoc.MasterId || (d.id === updatedDoc.id && !d.MasterId);
             return isMatch ? updateItem(d) : d;
           }));
-
-          setSelectedDetailDoc(prev => {
+          m.setSelectedDetailDoc(prev => {
             if (!prev) return prev;
             const isMatch = prev.MasterId === updatedDoc.MasterId || (prev.id === updatedDoc.id && !prev.MasterId);
             return isMatch ? updateItem(prev) : prev;
           });
         }}
-        onQuickRenew={(id) => {
-          handleQuickRenew(id);
-        }}
-        onQuickDecommission={(id) => {
-          handleQuickDecommission(id);
-        }}
+        onQuickRenew={(id) => m.handleQuickRenew(id)}
+        onQuickDecommission={(id) => m.handleQuickDecommission(id)}
         onDeleteSuccess={() => {
-          setAllCertificates(prev => prev.filter(c => c.MasterId !== selectedDetailDoc.MasterId && c.id !== (selectedDetailDoc.MasterId || selectedDetailDoc.id)));
-          setSelectedDetailDoc(null);
+          m.setAllCertificates(prev => prev.filter(c => c.MasterId !== m.selectedDetailDoc.MasterId && c.id !== (m.selectedDetailDoc.MasterId || m.selectedDetailDoc.id)));
+          m.setSelectedDetailDoc(null);
         }}
-        onRefreshRequired={() => {
-          fetchMonitoringData();
-        }}
+        onRefreshRequired={() => m.fetchMonitoringData()}
       />
     );
   }
 
-  if (isLoading) {
+  // ============================================================
+  // LOADING STATE
+  // ============================================================
+  if (m.isLoading) {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
@@ -102,6 +89,9 @@ export default function MonitoringSertifikasi() {
     );
   }
 
+  // ============================================================
+  // MAIN RENDER
+  // ============================================================
   return (
     <div className="p-8 space-y-8 font-sans-clean max-w-7xl mx-auto">
       {/* Header Title & Top Filter Button */}
@@ -117,9 +107,9 @@ export default function MonitoringSertifikasi() {
         </div>
 
         <div className="flex items-center gap-3">
-          {activeFilterCount > 0 && (
+          {m.activeFilterCount > 0 && (
             <span className="text-xs text-slate-500 font-mono-data font-bold hidden sm:inline">
-              Showing {filteredCertificates.length} of {allCertificates.length} items
+              Showing {m.filteredCertificates.length} of {m.allCertificates.length} items
             </span>
           )}
           <button
@@ -128,9 +118,9 @@ export default function MonitoringSertifikasi() {
           >
             <Filter className="w-4 h-4 text-white" />
             <span>Filter Kategori & Data</span>
-            {activeFilterCount > 0 && (
+            {m.activeFilterCount > 0 && (
               <span className="w-5 h-5 bg-amber-400 text-slate-900 rounded-full text-[10px] flex items-center justify-center font-extrabold ml-1 shadow-2xs">
-                {activeFilterCount}
+                {m.activeFilterCount}
               </span>
             )}
           </button>

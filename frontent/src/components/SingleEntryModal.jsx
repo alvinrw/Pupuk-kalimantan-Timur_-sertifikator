@@ -1,25 +1,52 @@
 import React, { useState } from 'react';
-import { X, PlusCircle, Save, Upload, FileCheck } from 'lucide-react';
+import { X, PlusCircle, Save, Upload, FileCheck, Loader2, Sparkles } from 'lucide-react';
+import { scanPdfDocument } from '../services/ocrService';
 
 export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
   const [formData, setFormData] = useState({
-    jenisPeralatan: 'Bejana Tekan / Boiler',
+    jenisPeralatan: '',
     merekItem: '',
     tipe: '',
     nomorSeri: '',
     kapasitas: '',
     lokasi: 'Pabrik 1A (Amonia)',
     user: 'Dept. Operasi Pabrik 1A',
-    status: 'Aktif'
+    status: 'Aktif',
+    noSertifikat: '',
+    terbit: '',
+    expired: ''
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
+  const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedFile(file);
+
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          setIsScanningOcr(true);
+          const ocrData = await scanPdfDocument(file);
+          if (ocrData) {
+            setFormData(prev => ({
+              ...prev,
+              noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
+              terbit: ocrData.terbit || prev.terbit,
+              expired: ocrData.expired || prev.expired,
+              merekItem: ocrData.namaPeralatan || prev.merekItem,
+            }));
+          }
+        } catch (err) {
+          console.error("Gagal melakukan scan OCR:", err);
+        } finally {
+          setIsScanningOcr(false);
+        }
+      }
     }
   };
 
@@ -27,25 +54,31 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     e.preventDefault();
     onAddSuccess({
       ...formData,
+      file: sertifikatMode === 'dengan' ? selectedFile : null,
       id: `EQ-MANUAL-${Date.now()}`,
-      noSertifikat: selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT",
-      tanggalInspeksi: new Date().toISOString().split('T')[0],
-      terbit: new Date().toISOString().split('T')[0],
-      berakhir: '2027-12-31',
-      hasCertificatePdf: !!selectedFile,
-      keterangan: selectedFile ? `Sertifikat Attached (${selectedFile.name})` : "Data Manual Input"
+      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT")),
+      tanggalInspeksi: formData.terbit || new Date().toISOString().split('T')[0],
+      terbit: formData.terbit || new Date().toISOString().split('T')[0],
+      berakhir: formData.expired || '',
+      hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
+      documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
+      keterangan: sertifikatMode === 'tanpa' ? "Tidak Perlu Sertifikat" : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : "Data Manual Input")
     });
     setFormData({
-      jenisPeralatan: 'Bejana Tekan / Boiler',
+      jenisPeralatan: '',
       merekItem: '',
       tipe: '',
       nomorSeri: '',
       kapasitas: '',
       lokasi: 'Pabrik 1A (Amonia)',
       user: 'Dept. Operasi Pabrik 1A',
-      status: 'Aktif'
+      status: 'Aktif',
+      noSertifikat: '',
+      terbit: '',
+      expired: ''
     });
     setSelectedFile(null);
+    setSertifikatMode('dengan');
     onClose();
   };
 
@@ -74,20 +107,119 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
 
         {/* Body Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 text-xs">
+          
+          {/* OPTION SELECTOR: DENGAN / TANPA SERTIFIKAT */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl mb-4">
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('dengan')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'dengan'
+                  ? 'bg-white text-[#005ea4] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <FileCheck className="w-4 h-4" />
+              <span>Dengan Sertifikat (PDF)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSertifikatMode('tanpa')}
+              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                sertifikatMode === 'tanpa'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <X className="w-4 h-4 text-amber-600" />
+              <span>Tanpa Sertifikat (Exempt)</span>
+            </button>
+          </div>
+
+          {/* FILE UPLOAD & CERTIFICATE DATA FIELD - Tampil jika mode 'dengan' */}
+          {sertifikatMode === 'dengan' && (
+            <div className="space-y-4 pb-2 border-b border-slate-200 mb-4">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">
+                  Unggah Berkas Sertifikat (PDF)
+                </label>
+                <div className="border border-dashed border-slate-300 hover:border-[#005ea4] bg-slate-50 p-3.5 rounded-lg flex items-center justify-between relative cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileChange}
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                  />
+                  <div className="flex items-center gap-2.5">
+                    <Upload className="w-5 h-5 text-[#005ea4]" />
+                    <div>
+                      <span className="font-bold text-slate-800 block text-xs">
+                        {selectedFile ? selectedFile.name : "Pilih File Sertifikat PDF"}
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono-data">
+                        {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Hanya mendukung format .pdf"}
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1 bg-[#005ea4] text-white text-[11px] font-bold rounded">
+                    {selectedFile ? "Ganti File" : "Pilih PDF"}
+                  </span>
+                </div>
+              </div>
+
+              {isScanningOcr && (
+                <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+                </div>
+              )}
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Nomor Sertifikat</label>
+                <input
+                  type="text"
+                  value={formData.noSertifikat}
+                  onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                  placeholder="Isi manual atau biarkan AI OCR membaca otomatis"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ALWAYS VISIBLE DATE FIELDS */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Tanggal Terbit / Berlaku</label>
+              <input
+                type="date"
+                value={formData.terbit}
+                onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Tanggal Berakhir</label>
+              <input
+                type="date"
+                value={formData.expired}
+                onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+              />
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="font-bold text-slate-900 block mb-1">Jenis Peralatan Pabrik</label>
-              <select
+              <input
+                type="text"
                 value={formData.jenisPeralatan}
                 onChange={(e) => setFormData({ ...formData, jenisPeralatan: e.target.value })}
+                placeholder="misal: Bejana Tekan / Boiler"
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
-              >
-                <option value="Bejana Tekan / Boiler">Bejana Tekan / Boiler</option>
-                <option value="Pesawat Angkat & Angkut">Pesawat Angkat & Angkut</option>
-                <option value="Tangki Timbun B3">Tangki Timbun B3</option>
-                <option value="Mesin & Pesawat Tenaga">Mesin & Pesawat Tenaga</option>
-                <option value="Instalasi Listrik & Petir">Instalasi Listrik & Petir</option>
-              </select>
+                required
+              />
             </div>
 
             <div>
@@ -162,34 +294,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
             </div>
           </div>
 
-          {/* FILE UPLOAD FIELD (PDF ONLY) */}
-          <div className="pt-2">
-            <label className="font-bold text-slate-900 block mb-1">
-              Unggah Berkas Sertifikat (PDF)
-            </label>
-            <div className="border border-dashed border-slate-300 hover:border-[#005ea4] bg-slate-50 p-3.5 rounded-lg flex items-center justify-between relative cursor-pointer">
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={handleFileChange}
-                className="absolute inset-0 opacity-0 cursor-pointer"
-              />
-              <div className="flex items-center gap-2.5">
-                <Upload className="w-5 h-5 text-[#005ea4]" />
-                <div>
-                  <span className="font-bold text-slate-800 block text-xs">
-                    {selectedFile ? selectedFile.name : "Pilih File Sertifikat PDF"}
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono-data">
-                    {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : "Hanya mendukung format .pdf"}
-                  </span>
-                </div>
-              </div>
-              <span className="px-3 py-1 bg-[#005ea4] text-white text-[11px] font-bold rounded">
-                {selectedFile ? "Ganti File" : "Pilih PDF"}
-              </span>
-            </div>
-          </div>
+
 
           {/* Footer */}
           <div className="pt-4 border-t border-slate-200 flex justify-end gap-2">

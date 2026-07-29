@@ -1,99 +1,80 @@
 # 🧹 Catatan Refactoring Codebase — Inventor PKT
 
-> Dokumen ini mencatat seluruh perubahan yang dilakukan dalam sesi refactoring besar-besaran pada tanggal **28 Juli 2026**.
+> Dokumen ini mencatat seluruh perubahan yang dilakukan dalam sesi refactoring besar-besaran (Sprint 1 & Sprint 2) pada tanggal **28 Juli 2026**.
 
 ---
 
-## 📊 Ringkasan Perubahan
+## 📊 Ringkasan Perubahan (Sprint 1 & Sprint 2)
 
-| File | Sebelum | Sesudah | Pengurangan |
-|------|---------|---------|-------------|
-| `DocumentDetailPage.jsx` | 2,183 baris | 559 baris | **-74%** ✅ |
-| Logic handler | inline di komponen | `useDocumentDetail.js` (hook terpisah) | Terpisah |
-| Modal blocks | 7 modal hardcoded inline | 4 komponen + 1 reusable | Bersih |
-| Hardcoded URL | `http://localhost:3000` di 3+ tempat | `config/api.js` (1 tempat) | Bersih |
+| File | Baris Awal | Baris Akhir | Pengurangan | Status |
+|------|------------|-------------|-------------|--------|
+| `DocumentDetailPage.jsx` | 2,183 | 559 | **-74%** | ✅ Sprint 1 |
+| `MonitoringSertifikasi.jsx` | 1,404 | 196 | **-86%** | ✅ Sprint 2 |
+| `PeralatanPabrik.jsx` | 1,156 | 451 | **-61%** | ✅ Sprint 2 |
+| `InformasiLainnya.jsx` | 963 | 310 | **-68%** | ✅ Sprint 2 |
+| `PerizinanGeneric.jsx` | 917 | 370 | **-60%** | ✅ Sprint 2 |
 
 ---
 
-## ✅ Apa yang Berubah?
+## ✅ Detail Refactoring Sprint 2
 
-### 1. `src/config/api.js` — [NEW]
-**Centralized API Configuration**
+### 1. `MonitoringSertifikasi.jsx` (1,404 baris ➔ 196 baris)
+- **`src/hooks/useMonitoring.js` [NEW]**: Diekstrak semua 15+ state variables, useEffect, filter handlers, quick actions (Renew, Afkir, Aktifkan, Batal Renew), dan upload renewal dengan OCR simulation.
+- **`src/components/monitoring/SummaryCards.jsx` [NEW]**: 5 Kartu statistik monitoring terpisah.
+- **`src/components/monitoring/FilterModal.jsx` [NEW]**: Pop-up modal multi-parameter filter.
+- **`src/components/monitoring/MonitoringTable.jsx` [NEW]**: Tabel monitoring lengkap dengan aksi workflow.
+- **`src/components/monitoring/UploadRenewalModal.jsx` [NEW]**: Modal unggah sertifikat baru + status pemindaian AI OCR.
+- **Penggunaan `ModalConfirm.jsx`**: Menggantikan 4 blok modal konfirmasi (Afkir, Aktifkan, Perpanjang, Batal) dengan komponen reusable dari Sprint 1.
 
-Sebelumnya `http://localhost:3000` di-*hardcode* langsung di dalam handler di `DocumentDetailPage.jsx` (muncul di 3+ tempat). Sekarang semua URL dikontrol dari satu file.
+### 2. `PeralatanPabrik.jsx` (1,156 baris ➔ 451 baris)
+- **`src/hooks/usePeralatanPabrik.js` [NEW]**: Custom hook berisi semua logic fetch data, visibility kolom, filter header, re-assign target sertifikat, dan bulk exempt.
+- **Penggunaan `ModalConfirm.jsx`**: Konfirmasi hapus baris kini memakai `ModalConfirm`.
 
-```js
-// Sebelum (tersebar di berbagai handler):
-const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', ...);
-const fullUrl = url.startsWith('http') ? url : `http://localhost:3000${url}`;
+### 3. `PerizinanGeneric.jsx` (917 baris ➔ 370 baris)
+- **`src/hooks/usePerizinanGeneric.js` [NEW]**: Hook terpisah untuk mengelola state pencarian, filter per jenis/lokasi/status, visibilitas 12+ kolom, dan staging bulk exempt.
 
-// Sesudah (dari config):
-import { UPLOAD_ENDPOINT, getFullFileUrl } from '../config/api';
-const uploadRes = await fetch(UPLOAD_ENDPOINT, ...);
-window.open(getFullFileUrl(fileUrl), '_blank');
+### 4. `InformasiLainnya.jsx` (963 baris ➔ 310 baris)
+- **`src/data/informasiData.js` [NEW]**: Ekstraksi semua data statis (kamus warna status, langkah workflow step-by-step, panduan 6 modul, rincian kolom 5 kategori, dan templat CSV).
+
+---
+
+## 🔧 Panduan Struktur Codebase Terbaru
+
+```
+src/
+├── config/
+│   └── api.js                       (Konfigurasi BASE_URL, UPLOAD_ENDPOINT terpusat)
+├── data/
+│   └── informasiData.js             (Data statis & kamus panduan sistem)
+├── hooks/
+│   ├── useDocumentDetail.js         (Business logic DocumentDetailPage)
+│   ├── useMonitoring.js             (Business logic MonitoringSertifikasi)
+│   ├── usePeralatanPabrik.js        (Business logic PeralatanPabrik)
+│   └── usePerizinanGeneric.js       (Business logic PerizinanGeneric)
+├── components/
+│   ├── document-detail/
+│   │   ├── ModalConfirm.jsx         (Reusable confirmation modal)
+│   │   ├── ModalUploadCert.jsx
+│   │   ├── ModalAddLinkedCert.jsx
+│   │   ├── ModalEditHistoryRow.jsx
+│   │   ├── CertHistorySection.jsx
+│   │   └── CertificateNavCards.jsx
+│   └── monitoring/
+│       ├── SummaryCards.jsx
+│       ├── FilterModal.jsx
+│       ├── MonitoringTable.jsx
+│       └── UploadRenewalModal.jsx
+└── pages/
+    ├── DocumentDetailPage.jsx       (Orchestrator 559 baris)
+    ├── MonitoringSertifikasi.jsx    (Orchestrator 196 baris)
+    ├── PeralatanPabrik.jsx          (Orchestrator 451 baris)
+    ├── PerizinanGeneric.jsx         (Orchestrator 370 baris)
+    └── InformasiLainnya.jsx         (Orchestrator 310 baris)
 ```
 
 ---
 
-### 2. `src/hooks/useDocumentDetail.js` — [NEW]
-**Custom Hook — semua state & business logic**
+## 🎉 Status Refactoring
 
-Diekstrak dari `DocumentDetailPage.jsx`. Berisi:
-- 20+ state variables (isEditing, formData, historyList, linkedCerts, dll.)
-- 15+ handler functions (handleSave, handleUploadSubmit, confirmAfkir, dll.)
-- 3 useEffect hooks (fetch history, sync formData, sync activeCertId)
-
----
-
-### 3. `src/components/document-detail/` — [NEW FOLDER]
-
-Folder baru berisi semua sub-komponen yang sebelumnya inline di `DocumentDetailPage.jsx`:
-
-| File | Deskripsi | Baris Lama (inline) |
-|------|-----------|---------------------|
-| `ModalConfirm.jsx` | Generic reusable confirm modal | ~200 baris (5 blok duplikat) |
-| `ModalUploadCert.jsx` | Modal unggah/koreksi PDF | ~145 baris |
-| `ModalAddLinkedCert.jsx` | Modal tambah sertifikat terhubung | ~200 baris |
-| `ModalEditHistoryRow.jsx` | Modal edit baris histori | ~90 baris |
-| `CertHistorySection.jsx` | Tabel histori + audit timeline | ~160 baris |
-| `CertificateNavCards.jsx` | Kartu navigasi sertifikat | ~175 baris |
-
----
-
-### 4. `src/pages/DocumentDetailPage.jsx` — [REWRITE]
-**Sebelum:** God Component 2,183 baris — semua modal, semua section, semua state, semua handler digabung jadi satu.  
-**Sesudah:** Orchestrator 559 baris — hanya menerima data dari hook dan mendistribusikan ke sub-komponen.
-
----
-
-### 5. `frontent/README.md` — [NEW]
-Dokumentasi lengkap frontend: cara run, struktur folder, pola arsitektur.
-
----
-
-## 🔧 Cara Navigasi Codebase Setelah Refactor
-
-```
-Mau ubah logic upload?     → src/hooks/useDocumentDetail.js (handleUploadSubmit)
-Mau ubah tampilan histori? → src/components/document-detail/CertHistorySection.jsx
-Mau ubah modal konfirmasi? → src/components/document-detail/ModalConfirm.jsx
-Mau tambah field di form?  → src/pages/DocumentDetailPage.jsx (Edit Form section)
-Mau ubah URL API?          → src/config/api.js
-```
-
----
-
-## ⚠️ Yang BELUM Direfactor (Next Steps)
-
-File-file berikut masih besar dan perlu refactoring di sprint berikutnya:
-
-| File | Baris | Prioritas |
-|------|-------|-----------|
-| `MonitoringSertifikasi.jsx` | 1,295 | 🔴 Tinggi |
-| `PeralatanPabrik.jsx` | 1,072 | 🟡 Sedang |
-| `InformasiLainnya.jsx` | 908 | 🟡 Sedang |
-| `PerizinanGeneric.jsx` | 836 | 🟢 Rendah |
-
-Pola refactoring yang sama bisa diterapkan:
-1. Buat custom hook untuk state & logic masing-masing halaman.
-2. Pecah section besar menjadi komponen terpisah di `components/`.
+**SEMUA Halaman Besar Telah Selesai Direfactor!**
+Seluruh kode kini mengikuti prinsip Clean Code, Single Responsibility Principle, dan modularitas berbasis Custom Hooks + Sub-Components.

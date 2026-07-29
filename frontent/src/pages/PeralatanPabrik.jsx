@@ -62,9 +62,7 @@ export default function PeralatanPabrik() {
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="font-bold text-xl text-[#0F172A]">
-            Perizinan Peralatan Pabrik
-          </h2>
+          <h2 className="font-bold text-xl text-[#0F172A]">Perizinan Peralatan Pabrik</h2>
           <p className="text-xs text-[#64748B] font-mono-data">
             Daftar perizinan peralatan pabrik, nomor seri, kapasitas, lokasi, dan status sertifikat
           </p>
@@ -93,7 +91,6 @@ export default function PeralatanPabrik() {
                   <span className="text-[10px] text-slate-500 font-normal font-mono-data">Termasuk unggah foto / PDF sertifikat</span>
                 </div>
               </button>
-
               <button
                 onClick={() => { data.setIsCsvModalOpen(true); data.setIsImportMenuOpen(false); }}
                 className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
@@ -124,7 +121,6 @@ export default function PeralatanPabrik() {
           <Building2 className="w-4 h-4" />
           <span>Data Utama</span>
         </button>
-
         <button
           onClick={() => data.setActiveMainTab('staging')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
