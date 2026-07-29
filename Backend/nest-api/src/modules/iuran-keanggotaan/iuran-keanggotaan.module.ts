@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { IuranKeanggotaanService } from './iuran-keanggotaan.service';
 import { IuranKeanggotaanController } from './iuran-keanggotaan.controller';
-import { PrismaModule } from '../prisma/prisma.module';
+import { DatabaseModule } from '../../database/database.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [DatabaseModule],
   controllers: [IuranKeanggotaanController],
   providers: [IuranKeanggotaanService],
 })
