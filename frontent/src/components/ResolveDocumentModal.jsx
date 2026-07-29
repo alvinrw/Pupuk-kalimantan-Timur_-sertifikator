@@ -28,9 +28,14 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
           setNoSertifikat(ocrData.noSertifikat || '');
           setTerbit(ocrData.terbit || '');
           setExpired(ocrData.expired || '');
+          
+          if (!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) {
+            alert("AI tidak dapat mendeteksi informasi pada dokumen ini. Silakan isi data secara manual.");
+          }
         }
       } catch (err) {
         console.error("Gagal melakukan scan AI:", err);
+        alert("Gagal melakukan pemindaian dokumen.");
       } finally {
         setIsScanningOcr(false);
       }
