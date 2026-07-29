@@ -35,15 +35,15 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
           if (ocrData) {
             setCertData(prev => ({
               ...prev,
-              jenisSertifikat: prev.jenisSertifikat || ocrData.jenisSertifikat || '',
-              noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
-              terbit: ocrData.terbit || prev.terbit,
-              expired: ocrData.expired || prev.expired,
+              jenisSertifikat: ocrData.jenisSertifikat || prev.jenisSertifikat || '',
+              noSertifikat: ocrData.noSertifikat || '',
+              terbit: ocrData.terbit || '',
+              expired: ocrData.expired || '',
               instansi: ocrData.instansi || prev.instansi,
             }));
           }
         } catch (err) {
-          console.error("Gagal melakukan scan OCR:", err);
+          console.error("Gagal melakukan scan AI:", err);
         } finally {
           setIsScanningOcr(false);
         }
@@ -134,7 +134,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                       {pdfFile ? certData.pdfName : 'Belum ada berkas PDF'}
                     </span>
                     <span className="text-[10px] text-slate-500">
-                      {isScanningOcr ? 'Sedang mengekstrak data OCR...' : (pdfFile ? 'Berkas siap diunggah' : 'Format didukung: PDF')}
+                      {isScanningOcr ? 'Sedang mengekstrak data AI...' : (pdfFile ? 'Berkas siap diunggah' : 'Format didukung: PDF')}
                     </span>
                   </div>
                 </div>

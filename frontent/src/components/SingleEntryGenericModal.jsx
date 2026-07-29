@@ -33,14 +33,14 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
             setFormData(prev => ({
               ...prev,
               title: ocrData.namaPeralatan || prev.title,
-              certificateNo: ocrData.noSertifikat || prev.certificateNo,
-              issueDate: ocrData.terbit || prev.issueDate,
-              expiryDate: ocrData.expired || prev.expiryDate,
+              certificateNo: ocrData.noSertifikat || '',
+              issueDate: ocrData.terbit || '',
+              expiryDate: ocrData.expired || '',
               issuer: ocrData.instansi || prev.issuer,
             }));
           }
         } catch (err) {
-          console.error("Gagal melakukan scan OCR:", err);
+          console.error("Gagal melakukan scan AI:", err);
         } finally {
           setIsScanningOcr(false);
         }
@@ -150,7 +150,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
               {isScanningOcr && (
                 <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+                  <span>AI sedang memindai & mengunduh metadata dokumen...</span>
                 </div>
               )}
             </div>

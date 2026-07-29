@@ -213,7 +213,7 @@ export default function PerizinanAset({ title, subtitle }) {
         });
       }
       loadData();
-      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP OCR!`);
+      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP AI!`);
     } catch (err) {
       console.error(err);
       alert("Terjadi kesalahan saat menyimpan data Batch ZIP!");

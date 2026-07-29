@@ -35,14 +35,14 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
           if (ocrData) {
             setFormData(prev => ({
               ...prev,
-              noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
-              terbit: ocrData.terbit || prev.terbit,
-              expired: ocrData.expired || prev.expired,
+              noSertifikat: ocrData.noSertifikat || '',
+              terbit: ocrData.terbit || '',
+              expired: ocrData.expired || '',
               merekItem: ocrData.namaPeralatan || prev.merekItem,
             }));
           }
         } catch (err) {
-          console.error("Gagal melakukan scan OCR:", err);
+          console.error("Gagal melakukan scan AI:", err);
         } finally {
           setIsScanningOcr(false);
         }
@@ -170,7 +170,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
               {isScanningOcr && (
                 <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+                  <span>AI sedang memindai & mengunduh metadata dokumen...</span>
                 </div>
               )}
 
@@ -180,7 +180,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                   type="text"
                   value={formData.noSertifikat}
                   onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                  placeholder="Isi manual atau biarkan AI OCR membaca otomatis"
+                  placeholder="Isi manual atau biarkan AI membaca otomatis"
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
                 />
               </div>

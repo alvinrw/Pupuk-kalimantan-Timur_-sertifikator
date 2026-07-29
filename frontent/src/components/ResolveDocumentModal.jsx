@@ -25,12 +25,12 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
         setIsScanningOcr(true);
         const ocrData = await scanPdfDocument(file);
         if (ocrData) {
-          if (ocrData.noSertifikat) setNoSertifikat(ocrData.noSertifikat);
-          if (ocrData.terbit) setTerbit(ocrData.terbit);
-          if (ocrData.expired) setExpired(ocrData.expired);
+          setNoSertifikat(ocrData.noSertifikat || '');
+          setTerbit(ocrData.terbit || '');
+          setExpired(ocrData.expired || '');
         }
       } catch (err) {
-        console.error("Gagal melakukan scan OCR:", err);
+        console.error("Gagal melakukan scan AI:", err);
       } finally {
         setIsScanningOcr(false);
       }
@@ -199,7 +199,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                       {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
                     </span>
                     <span className="text-[10px] text-slate-500 mt-1">
-                      {isScanningOcr ? 'Sedang mengekstrak data OCR...' : 'Maksimal 10MB'}
+                      {isScanningOcr ? 'Sedang mengekstrak data AI...' : 'Maksimal 10MB'}
                     </span>
                   </div>
                 </div>

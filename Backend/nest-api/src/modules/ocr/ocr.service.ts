@@ -112,11 +112,10 @@ export class OcrService {
       };
     } catch (error) {
       this.logger.error(`Error parsing PDF: ${error.message}`, error.stack);
-      const todayStr = new Date().toISOString().split('T')[0];
       return {
         noSertifikat: undefined,
-        terbit: todayStr,
-        expired: this.addOneYear(todayStr),
+        terbit: undefined,
+        expired: undefined,
         confidence: 50,
       };
     }
