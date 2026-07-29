@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, PlusCircle, Upload, ShieldAlert } from 'lucide-react';
+import { X, PlusCircle, Upload, ShieldAlert, Loader2 } from 'lucide-react';
+import { scanPdfDocument } from '../services/ocrService';
 
 export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess, categoryName }) {
   const [formData, setFormData] = useState({
@@ -15,12 +16,35 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedFile(file);
+
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          setIsScanningOcr(true);
+          const ocrData = await scanPdfDocument(file);
+          if (ocrData) {
+            setFormData(prev => ({
+              ...prev,
+              title: ocrData.namaPeralatan || prev.title,
+              certificateNo: ocrData.noSertifikat || prev.certificateNo,
+              issueDate: ocrData.terbit || prev.issueDate,
+              expiryDate: ocrData.expired || prev.expiryDate,
+              issuer: ocrData.instansi || prev.issuer,
+            }));
+          }
+        } catch (err) {
+          console.error("Gagal melakukan scan OCR:", err);
+        } finally {
+          setIsScanningOcr(false);
+        }
+      }
     }
   };
 
@@ -123,6 +147,12 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
                   <input type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
                 </label>
               </div>
+              {isScanningOcr && (
+                <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+                </div>
+              )}
             </div>
           )}
 

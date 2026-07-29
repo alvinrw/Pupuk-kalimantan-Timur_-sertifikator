@@ -2,8 +2,9 @@
  * ModalUploadCert — Modal unggah / koreksi berkas PDF manual.
  * Dipisah dari DocumentDetailPage (sebelumnya ~160 baris inline).
  */
-import React, { useRef } from 'react';
-import { X, UploadCloud, Save, Upload } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, UploadCloud, Save, Upload, Loader2 } from 'lucide-react';
+import { scanPdfDocument } from '../../services/ocrService';
 
 export default function ModalUploadCert({
   isOpen,
@@ -16,6 +17,8 @@ export default function ModalUploadCert({
   onSubmit,
   isSingleCertScope,
 }) {
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
+
   if (!isOpen) return null;
 
   return (
@@ -61,11 +64,31 @@ export default function ModalUploadCert({
                 ref={manualFileInputRef}
                 type="file"
                 accept=".pdf,.png,.jpg,.jpeg"
-                onChange={(e) => {
+                onChange={async (e) => {
                   const file = e.target.files[0];
                   if (file) {
                     setSelectedUploadFile(file);
-                    setUploadData({ ...uploadData, fileName: file.name });
+                    setUploadData(prev => ({ ...prev, fileName: file.name }));
+
+                    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+                      try {
+                        setIsScanningOcr(true);
+                        const ocrData = await scanPdfDocument(file);
+                        if (ocrData) {
+                          setUploadData(prev => ({
+                            ...prev,
+                            noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
+                            terbit: ocrData.terbit || prev.terbit,
+                            expired: ocrData.expired || prev.expired,
+                            instansi: ocrData.instansi || prev.instansi,
+                          }));
+                        }
+                      } catch (err) {
+                        console.error("Gagal scan OCR:", err);
+                      } finally {
+                        setIsScanningOcr(false);
+                      }
+                    }
                   }
                 }}
                 className="hidden"
@@ -76,6 +99,12 @@ export default function ModalUploadCert({
               </span>
               <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
             </div>
+            {isScanningOcr && (
+              <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+              </div>
+            )}
           </div>
 
           <div>

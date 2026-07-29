@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { X, Save, Upload, ShieldAlert } from 'lucide-react';
+import { X, Save, Upload, ShieldAlert, Loader2 } from 'lucide-react';
+import { scanPdfDocument } from '../services/ocrService';
 
 export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) {
   const [formData, setFormData] = useState({
@@ -17,12 +18,34 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setSelectedFile(file);
+
+      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+        try {
+          setIsScanningOcr(true);
+          const ocrData = await scanPdfDocument(file);
+          if (ocrData) {
+            setFormData(prev => ({
+              ...prev,
+              noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
+              submissionDate: ocrData.terbit || prev.submissionDate,
+              validityPeriod: ocrData.expired || prev.validityPeriod,
+              purpose: ocrData.namaPeralatan || prev.purpose,
+            }));
+          }
+        } catch (err) {
+          console.error("Gagal melakukan scan OCR:", err);
+        } finally {
+          setIsScanningOcr(false);
+        }
+      }
     }
   };
 
@@ -123,6 +146,13 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                   </span>
                 </div>
               </div>
+
+              {isScanningOcr && (
+                <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
+                </div>
+              )}
 
               <div>
                 <label className="font-bold text-slate-900 block mb-1">Nomor Sertifikat</label>
