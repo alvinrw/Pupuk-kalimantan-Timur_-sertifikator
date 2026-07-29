@@ -110,3 +110,22 @@ model MonitoringLog {
 
   @@map("monitoring_logs")
 }
+
+model IuranKeanggotaan {
+  id          String   @id @default(uuid())
+  nomer       String?
+  kompartemen String?
+  unitKerja   String?
+  asosiasi    String?
+  periode     String?
+  nominal     Float?
+  status      String?  @default("Belum Lunas")
+  nama        String?
+  npk         String?
+  keterangan  String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("iuran_keanggotaan")
+}

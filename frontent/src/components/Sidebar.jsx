@@ -9,7 +9,8 @@ import {
   Activity,
   History,
   HelpCircle,
-  Settings
+  Settings,
+  Users
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
@@ -34,6 +35,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
+        { id: "iuran-keanggotaan", label: "Iuran Keanggotaan", icon: Users },
         { id: "informasi-lainnya", label: "Informasi Lainnya", icon: HelpCircle },
       ]
     }

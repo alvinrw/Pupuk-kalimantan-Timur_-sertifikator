@@ -10,6 +10,7 @@ import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import PerizinanAset from './pages/PerizinanAset';
 import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
 import InformasiLainnya from './pages/InformasiLainnya';
+import IuranKeanggotaan from './pages/IuranKeanggotaan';
 
 import {
   mockStats,
@@ -110,6 +111,8 @@ export default function App() {
         return <RiwayatPerpanjangan />;
       case 'informasi-lainnya':
         return <InformasiLainnya />;
+      case 'iuran-keanggotaan':
+        return <IuranKeanggotaan />;
       default:
         return (
           <Dashboard
