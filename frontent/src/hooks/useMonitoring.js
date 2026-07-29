@@ -1,14 +1,9 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getMasterItems, updateMasterItem, createCertificateForMasterItem } from '../services/masterItemsService';
-import { UPLOAD_ENDPOINT } from '../config/api';
 
-/**
- * useMonitoring — Custom hook untuk semua state & business logic MonitoringSertifikasi.
- * Ekstrak dari MonitoringSertifikasi.jsx agar komponen hanya fokus ke rendering UI.
- */
 export function useMonitoring() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [expiryTab, setExpiryTab] = useState('all');
+  const [expiryTab, setExpiryTab] = useState('all'); // 'all' | 'expired' | 'urgent' | 'valid' | 'in_progress' | 'decommissioned'
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
 
   // Global & Multi-Parameter Dropdown Filter States
@@ -21,7 +16,7 @@ export function useMonitoring() {
   // Pop-up Filter Modal State
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
-  // Drawer Sidebar State
+  // Drawer Sidebar State for Riwayat Perpanjangan
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
 
   // Modal States for Action & Upload Renewal
@@ -33,7 +28,7 @@ export function useMonitoring() {
   const [uploadedFile, setUploadedFile] = useState(null);
   const [isOcrScanning, setIsOcrScanning] = useState(false);
   const [ocrSuccess, setOcrSuccess] = useState(false);
-
+  
   const [allCertificates, setAllCertificates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,35 +50,35 @@ export function useMonitoring() {
     try {
       setIsLoading(true);
       const data = await getMasterItems();
-
+      
       const calcDiff = (dStr) => {
-        if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
-        const expiry = new Date(dStr);
-        if (isNaN(expiry.getTime())) return null;
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        expiry.setHours(0, 0, 0, 0);
-        return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+         if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
+         const expiry = new Date(dStr);
+         if (isNaN(expiry.getTime())) return null;
+         const today = new Date();
+         today.setHours(0, 0, 0, 0);
+         expiry.setHours(0, 0, 0, 0);
+         return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       };
 
       const calcStatus = (hari) => {
-        if (hari === null) return 'valid';
-        if (hari <= 0) return 'expired';
-        if (hari <= 60) return 'urgent';
-        return 'valid';
+         if (hari === null) return 'valid';
+         if (hari <= 0) return 'expired';
+         if (hari <= 60) return 'urgent';
+         return 'valid';
       };
 
       const getWfStatus = (st, docSt) => {
-        const lowerSt = (st || '').toLowerCase();
-        if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
-        if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
-        if (docSt === 'EXEMPT') return 'exempt';
-        return 'completed';
+         const lowerSt = (st || '').toLowerCase();
+         if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
+         if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
+         if (docSt === 'EXEMPT') return 'exempt';
+         return 'completed';
       };
 
       const flattened = [];
       data.forEach(item => {
-        if (item.documentStatus === 'PENDING_DOC') return;
+        if (item.documentStatus === 'PENDING_DOC') return; // Skip staging items
 
         const certs = item.certificates || [];
         const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
@@ -147,11 +142,9 @@ export function useMonitoring() {
     fetchMonitoringData();
   }, []);
 
-  // Dynamic Options for Dropdowns
   const uniqueKategori = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.kategoriDokumen || i.categoryKey || ''))], [allCertificates]);
   const uniqueUnitPabrik = useMemo(() => ['All', ...new Set(allCertificates.map(i => i.unitPabrik || i.unit || i.lokasi || ''))], [allCertificates]);
 
-  // Count active filters for badge
   const activeFilterCount = useMemo(() => {
     let count = 0;
     if (filterKategori !== 'All') count++;
@@ -162,7 +155,6 @@ export function useMonitoring() {
     return count;
   }, [filterKategori, filterUnitPabrik, filterStatusOperasional, filterRentangHari, searchTerm]);
 
-  // Filtering Logic
   const filteredCertificates = useMemo(() => {
     return allCertificates.filter((item) => {
       const merekStr = (item.merekItem || item.title || item.judulCiptaan || '');
@@ -171,6 +163,7 @@ export function useMonitoring() {
       const katStr = (item.kategoriDokumen || item.categoryKey || '');
       const certStr = (item.certificateNo || item.noSertifikat || '');
       const unitStr = (item.unitPabrik || item.unit || item.lokasi || '');
+
       const searchLower = searchTerm.toLowerCase();
 
       const matchesSearch =
@@ -217,10 +210,12 @@ export function useMonitoring() {
     });
   }, [allCertificates, searchTerm, filterKategori, filterUnitPabrik, filterStatusOperasional, filterRentangHari, customUrgentDays, expiryTab]);
 
-  // Quick Action: Perpanjang
   const handleQuickRenew = (id) => {
     const item = allCertificates.find(c => c.id === id);
-    if (item) { setActiveItemForAction(item); setIsRenewConfirmModalOpen(true); }
+    if (item) {
+      setActiveItemForAction(item);
+      setIsRenewConfirmModalOpen(true);
+    }
   };
 
   const confirmQuickRenew = async () => {
@@ -240,10 +235,12 @@ export function useMonitoring() {
     }
   };
 
-  // Quick Action: Afkir
   const handleQuickDecommission = (id) => {
     const item = allCertificates.find(c => c.id === id);
-    if (item) { setActiveItemForAction(item); setIsAfkirModalOpen(true); }
+    if (item) {
+      setActiveItemForAction(item);
+      setIsAfkirModalOpen(true);
+    }
   };
 
   const confirmQuickDecommission = async () => {
@@ -263,10 +260,12 @@ export function useMonitoring() {
     }
   };
 
-  // Quick Action: Batal Afkir / Aktifkan
   const handleCancelAfkir = (id) => {
     const item = allCertificates.find(c => c.id === id);
-    if (item) { setActiveItemForAction(item); setIsAktifkanModalOpen(true); }
+    if (item) {
+      setActiveItemForAction(item);
+      setIsAktifkanModalOpen(true);
+    }
   };
 
   const confirmCancelAfkir = async () => {
@@ -286,10 +285,12 @@ export function useMonitoring() {
     }
   };
 
-  // Quick Action: Batal Perpanjangan
   const handleCancelAction = (id) => {
     const item = allCertificates.find(c => c.id === id);
-    if (item) { setActiveItemForAction(item); setIsCancelRenewModalOpen(true); }
+    if (item) {
+      setActiveItemForAction(item);
+      setIsCancelRenewModalOpen(true);
+    }
   };
 
   const confirmCancelRenew = async () => {
@@ -309,59 +310,68 @@ export function useMonitoring() {
     }
   };
 
-  // Open Complete & Upload Certificate Modal
   const openCompleteModal = (item) => {
     setActiveModalItem(item);
     setModalMode('complete_upload');
     setUploadedFile(null);
     setIsOcrScanning(false);
     setOcrSuccess(false);
-    setNewCertNumber(item.certificateNo);
+
+    setNewCertNumber(item.certificateNo || '');
     setInspectionDate(item.inspectionDate || "2026-04-10");
     setIssueDate(item.issueDate || "2026-04-15");
     setNewExpiryDate("2028-04-15");
     setResertifikasiNotes("Perpanjangan selesai. File sertifikat baru telah diunggah dan terverifikasi oleh OCR.");
   };
 
-  // Simulated OCR Scan Event Handler
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
     setUploadedFile(file);
     setIsOcrScanning(true);
     setOcrSuccess(false);
+
     setTimeout(() => {
       const randomCertNum = "500.15.18.2 / " + Math.floor(2000 + Math.random() * 8000) + " / DTKT-2026";
       const todayStr = new Date().toISOString().split('T')[0];
+      
       setNewCertNumber(randomCertNum);
       setInspectionDate("2026-04-10");
       setIssueDate(todayStr);
       setNewExpiryDate("2028-04-15");
+      
       setIsOcrScanning(false);
       setOcrSuccess(true);
     }, 1200);
   };
 
-  // Confirm Complete Renewal with Uploaded File & OCR Data
   const handleConfirmUploadRenewal = async (e) => {
     e.preventDefault();
     if (!activeModalItem) return;
+
     if (!uploadedFile) {
       alert("Harap pilih/upload file sertifikat baru terlebih dahulu!");
       return;
     }
+
     try {
       let fileUrl = null;
       if (uploadedFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
-        const uploadRes = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: formDataUpload });
+        const uploadRes = await fetch('http://localhost:3005/api/v1/document-history/upload', {
+          method: 'POST',
+          body: formDataUpload
+        });
         if (uploadRes.ok) {
           const uploadJson = await uploadRes.json();
           fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
         }
       }
+
       const targetId = activeModalItem.MasterId || activeModalItem.id;
+
       const certPayload = {
         itemId: targetId,
         jenisSertifikat: activeModalItem.jenisPeralatan || 'Riksa Uji Disnaker',
@@ -373,11 +383,13 @@ export function useMonitoring() {
       if (fileUrl) certPayload.fileUrl = fileUrl;
 
       await createCertificateForMasterItem(certPayload);
+
       await updateMasterItem(targetId, {
         status: 'Aktif',
         issueDate: issueDate || activeModalItem.tglTerbit,
         expiryDate: newExpiryDate || activeModalItem.tglExpired,
       });
+
       await fetchMonitoringData();
 
       setActiveModalItem(null);
@@ -403,7 +415,6 @@ export function useMonitoring() {
     setExpiryTab('all');
   };
 
-  // Summary counts
   const countExpired = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
   const countUrgent = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= (parseInt(customUrgentDays) || 30) && c.workflowStatus !== 'decommissioned').length;
   const countValid = allCertificates.filter(c => (c.sisaHari === null || c.sisaHari > (parseInt(customUrgentDays) || 30)) && c.workflowStatus !== 'decommissioned').length;
@@ -411,51 +422,55 @@ export function useMonitoring() {
   const countDecommissioned = allCertificates.filter(c => c.workflowStatus === 'decommissioned').length;
 
   return {
-    // Data
-    allCertificates, setAllCertificates,
-    filteredCertificates,
-    isLoading,
-    // UI State
     searchTerm, setSearchTerm,
     expiryTab, setExpiryTab,
     selectedDetailDoc, setSelectedDetailDoc,
-    selectedHistoryItem, setSelectedHistoryItem,
-    isFilterModalOpen, setIsFilterModalOpen,
-    // Filters
     filterKategori, setFilterKategori,
     filterUnitPabrik, setFilterUnitPabrik,
     filterStatusOperasional, setFilterStatusOperasional,
     filterRentangHari, setFilterRentangHari,
     customUrgentDays, setCustomUrgentDays,
-    activeFilterCount,
-    uniqueKategori,
-    uniqueUnitPabrik,
-    // Summary counts
-    countExpired, countUrgent, countValid, countInProgress, countDecommissioned,
-    // Quick Actions
-    handleQuickRenew, confirmQuickRenew,
-    handleQuickDecommission, confirmQuickDecommission,
-    handleCancelAfkir, confirmCancelAfkir,
-    handleCancelAction, confirmCancelRenew,
+    isFilterModalOpen, setIsFilterModalOpen,
+    selectedHistoryItem, setSelectedHistoryItem,
+    activeModalItem, setActiveModalItem,
+    modalMode, setModalMode,
+    resertifikasiNotes, setResertifikasiNotes,
+    uploadedFile, setUploadedFile,
+    isOcrScanning, setIsOcrScanning,
+    ocrSuccess, setOcrSuccess,
+    allCertificates, setAllCertificates,
+    isLoading, setIsLoading,
     isAfkirModalOpen, setIsAfkirModalOpen,
     isAktifkanModalOpen, setIsAktifkanModalOpen,
     isRenewConfirmModalOpen, setIsRenewConfirmModalOpen,
     isCancelRenewModalOpen, setIsCancelRenewModalOpen,
-    activeItemForAction,
-    isProcessingAction,
-    // Upload Renewal Modal
-    activeModalItem, setActiveModalItem,
-    modalMode, setModalMode,
-    uploadedFile, setUploadedFile,
-    isOcrScanning, ocrSuccess,
+    activeItemForAction, setActiveItemForAction,
+    isProcessingAction, setIsProcessingAction,
     newCertNumber, setNewCertNumber,
     inspectionDate, setInspectionDate,
     issueDate, setIssueDate,
     newExpiryDate, setNewExpiryDate,
-    resertifikasiNotes, setResertifikasiNotes,
-    openCompleteModal, handleFileSelect, handleConfirmUploadRenewal,
-    // Fetch
+
+    // Derived states & functions
     fetchMonitoringData,
+    uniqueKategori,
+    uniqueUnitPabrik,
+    activeFilterCount,
+    filteredCertificates,
+    handleQuickRenew,
+    confirmQuickRenew,
+    handleQuickDecommission,
+    confirmQuickDecommission,
+    handleCancelAfkir,
+    confirmCancelAfkir,
+    handleCancelAction,
+    confirmCancelRenew,
+    openCompleteModal,
+    handleFileSelect,
+    handleConfirmUploadRenewal,
     resetFilters,
+
+    // Counts
+    counts: { countExpired, countUrgent, countValid, countInProgress, countDecommissioned }
   };
 }

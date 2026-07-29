@@ -1,15 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
-import { uploadCsv } from '../services/csvService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption } from '../services/masterItemsService';
 
-/**
- * usePeralatanPabrik — Custom hook untuk semua state & business logic PeralatanPabrik.
- * Ekstrak dari PeralatanPabrik.jsx agar komponen hanya fokus ke rendering UI.
- */
 export function usePeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Column Header Dropdown Filter States
+  
+  // Filter States
   const [filterJenis, setFilterJenis] = useState('All');
   const [filterLokasi, setFilterLokasi] = useState('All');
   const [filterUser, setFilterUser] = useState('All');
@@ -21,7 +16,7 @@ export function usePeralatanPabrik() {
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
   const [detailModalItem, setDetailModalItem] = useState(null);
   const [resolveTargetItem, setResolveTargetItem] = useState(null);
-  const [activeMainTab, setActiveMainTab] = useState('main');
+  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
 
   const [selectedStagingIds, setSelectedStagingIds] = useState([]);
   const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
@@ -29,24 +24,20 @@ export function usePeralatanPabrik() {
   const [bulkExemptNote, setBulkExemptNote] = useState('Tanpa Sertifikat (Massal)');
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
-
-  // Active Row Action Dropdown state
+  
   const [openActionRowId, setOpenActionRowId] = useState(null);
-
-  // Row Delete Confirmation Modal state
   const [rowConfirmModalOpen, setRowConfirmModalOpen] = useState(false);
   const [pendingDeleteRowId, setPendingDeleteRowId] = useState(null);
+
+  // Data State
+  const [equipmentList, setEquipmentList] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Ganti Target Sertifikat Modal State
   const [reassignCertRowItem, setReassignCertRowItem] = useState(null);
   const [searchTargetItemTerm, setSearchTargetItemTerm] = useState('');
   const [selectedNewTargetItem, setSelectedNewTargetItem] = useState(null);
 
-  // Master Equipment Data
-  const [equipmentList, setEquipmentList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // 14 Columns Configuration
   const allColumns = [
     { key: "no", label: "No." },
     { key: "jenisPeralatan", label: "Jenis Peralatan Pabrik" },
@@ -66,52 +57,15 @@ export function usePeralatanPabrik() {
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
 
-  const toggleColumn = (key) => {
-    setVisibleColumnKeys(prev =>
-      prev.includes(key)
-        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
-        : [...prev, key]
-    );
-  };
-
-  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
-  const isVisible = (key) => visibleColumnKeys.includes(key);
-
-  // Helper row status style
-  const getRowStatusStyle = (item) => {
-    const statusStr = (item.status || '').toLowerCase();
-    const workflowStr = (item.workflowStatus || '').toLowerCase();
-    if (statusStr === 'afkir' || statusStr === 'decommissioned' || workflowStr === 'decommissioned') {
-      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
-    }
-    let isExpired = statusStr === 'expired';
-    let isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'in_progress' || workflowStr === 'in_progress';
-    if (isPerpanjang) return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
-    if (item.documentStatus === 'PENDING_DOC' || item.documentStatus === 'EXEMPT') {
-      if (item.documentStatus === 'EXEMPT') return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
-      return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
-    }
-    if (item.berakhir && item.berakhir !== '-') {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const expDate = new Date(item.berakhir); expDate.setHours(0,0,0,0);
-      if (!isNaN(expDate.getTime())) {
-        const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        if (diffDays <= 0) isExpired = true;
-      }
-    } else {
-      if (statusStr === 'aktif' || statusStr === '') isExpired = false;
-    }
-    if (isExpired) return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
-    return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
-  };
-
   const loadData = async () => {
     try {
       setIsLoading(true);
       const data = await getMasterItems('peralatan-pabrik');
+      
       const mapped = data.map(item => {
         const certs = item.certificates || [];
         const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+
         let primaryCert = null;
         if (activeCerts.length > 0) {
           primaryCert = activeCerts.slice().sort((a, b) => {
@@ -122,11 +76,14 @@ export function usePeralatanPabrik() {
         } else if (certs.length > 0) {
           primaryCert = certs[0];
         }
+
         const noCert = item.documentStatus === 'EXEMPT'
           ? 'Tanpa Sertifikat'
           : (primaryCert?.noSertifikat || primaryCert?.noIzin || '-');
+
         const terbitVal = primaryCert?.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-');
         const expiredVal = primaryCert?.expired || item.expiryDate || '-';
+
         return {
           id: item.id,
           MasterId: item.id,
@@ -151,6 +108,7 @@ export function usePeralatanPabrik() {
           certificates: certs,
         };
       });
+
       setEquipmentList(mapped);
     } catch (err) {
       console.error("Failed to fetch PeralatanPabrik:", err);
@@ -159,20 +117,105 @@ export function usePeralatanPabrik() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  // Unique options for header dropdowns
+  const handleBulkExempt = async () => {
+    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
+    try {
+      setIsSubmittingBulkExempt(true);
+      for (const id of selectedStagingIds) {
+        await resolveMasterItemExemption(id, bulkExemptNote.trim());
+      }
+      setSelectedStagingIds([]);
+      setBulkExemptModalOpen(false);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal melakukan bulk action.");
+    } finally {
+      setIsSubmittingBulkExempt(false);
+    }
+  };
+
+  const toggleSelectStaging = (id) => {
+    setSelectedStagingIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllStaging = (currentRows) => {
+    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
+      setSelectedStagingIds([]);
+    } else {
+      setSelectedStagingIds(currentRows.map(r => r.parentItem.id || r.parentItem.MasterId));
+    }
+  };
+
+  const toggleColumn = (key) => {
+    setVisibleColumnKeys(prev =>
+      prev.includes(key)
+        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
+        : [...prev, key]
+    );
+  };
+
+  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
+  const isVisible = (key) => visibleColumnKeys.includes(key);
+
+  const getRowStatusStyle = (item) => {
+    const statusStr = (item.status || '').toLowerCase();
+    const workflowStr = (item.workflowStatus || '').toLowerCase();
+    
+    if (statusStr === 'afkir' || statusStr === 'decommissioned' || workflowStr === 'decommissioned') {
+      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
+    }
+
+    let isExpired = statusStr === 'expired';
+    let isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'in_progress' || workflowStr === 'in_progress';
+
+    if (isPerpanjang) return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
+
+    if (item.documentStatus === 'PENDING_DOC' || item.documentStatus === 'EXEMPT') {
+      if (item.documentStatus === 'EXEMPT') {
+        return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
+      }
+      return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
+    }
+
+    if (item.berakhir && item.berakhir !== '-') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const expDate = new Date(item.berakhir);
+      expDate.setHours(0, 0, 0, 0);
+
+      if (!isNaN(expDate.getTime())) {
+        const diffDays = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        if (diffDays <= 0) isExpired = true;
+      }
+    } else {
+      if (statusStr === 'aktif' || statusStr === '') isExpired = false;
+    }
+
+    if (isExpired) return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
+    return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
+  };
+
   const uniqueJenis = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.jenisPeralatan))], [equipmentList]);
   const uniqueLokasi = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.lokasi))], [equipmentList]);
   const uniqueUser = useMemo(() => ['All', ...new Set(equipmentList.map(i => i.user))], [equipmentList]);
 
-  const pendingCount = useMemo(() => equipmentList.filter(i => i.documentStatus === 'PENDING_DOC').length, [equipmentList]);
+  const pendingCount = useMemo(() => {
+    return equipmentList.filter(i => i.documentStatus === 'PENDING_DOC').length;
+  }, [equipmentList]);
 
   const filteredData = useMemo(() => {
     return equipmentList.filter((item) => {
       const matchesTab = activeMainTab === 'staging'
         ? item.documentStatus === 'PENDING_DOC'
         : item.documentStatus !== 'PENDING_DOC';
+
       const searchLower = (searchTerm || '').toLowerCase();
       const matchesSearch =
         (item.jenisPeralatan || '').toLowerCase().includes(searchLower) ||
@@ -180,10 +223,12 @@ export function usePeralatanPabrik() {
         (item.tipe || '').toLowerCase().includes(searchLower) ||
         (item.nomorSeri || '').toLowerCase().includes(searchLower) ||
         (item.noSertifikat || '').toLowerCase().includes(searchLower);
+
       const matchesJenis = filterJenis === 'All' || item.jenisPeralatan === filterJenis;
       const matchesLokasi = filterLokasi === 'All' || item.lokasi === filterLokasi;
       const matchesUser = filterUser === 'All' || item.user === filterUser;
       const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
+
       return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus;
     });
   }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus]);
@@ -206,6 +251,7 @@ export function usePeralatanPabrik() {
         exemptionNote: item.exemptionNote,
         hasPdf: item.hasCertificatePdf !== false
       });
+
       if (item.linkedCertificates && Array.isArray(item.linkedCertificates)) {
         item.linkedCertificates.forEach((lc, idx) => {
           rows.push({
@@ -227,41 +273,9 @@ export function usePeralatanPabrik() {
     return rows;
   }, [filteredData]);
 
-  const handleBulkExempt = async () => {
-    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
-    try {
-      setIsSubmittingBulkExempt(true);
-      for (const id of selectedStagingIds) {
-        await resolveMasterItemExemption(id, bulkExemptNote.trim());
-      }
-      setSelectedStagingIds([]);
-      setBulkExemptModalOpen(false);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      alert("Gagal melakukan bulk action.");
-    } finally {
-      setIsSubmittingBulkExempt(false);
-    }
-  };
-
-  const toggleSelectStaging = (id) => {
-    setSelectedStagingIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  };
-
-  const toggleSelectAllStaging = (currentRows) => {
-    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
-      setSelectedStagingIds([]);
-    } else {
-      setSelectedStagingIds(currentRows.map(r => r.parentItem.id || r.parentItem.MasterId));
-    }
-  };
-
-  const handleCsvImported = () => { loadData(); };
-
   const handleSingleAdded = async (newItem) => {
     try {
-      const createdItem = await createMasterItem({
+      await createMasterItem({
         title: newItem.merekItem || newItem.equipmentName || 'Unknown Item',
         code: newItem.nomorSeri || newItem.tagNumber || '-',
         categoryKey: 'peralatan-pabrik',
@@ -270,46 +284,11 @@ export function usePeralatanPabrik() {
         keterangan: newItem.keterangan || '-',
         issueDate: newItem.terbit || newItem.issueDate || undefined,
         expiryDate: newItem.berakhir || newItem.expiryDate || undefined,
-        documentStatus: newItem.documentStatus,
       });
-      
-      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
-
-      // Jika opsi Dengan Sertifikat dipilih, buat record sertifikat
-      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
-        let fileUrl = null;
-        if (newItem.file) {
-          const formData = new FormData();
-          formData.append('file', newItem.file);
-          try {
-            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
-              method: 'POST',
-              body: formData,
-            });
-            if (uploadRes.ok) {
-              const uploadJson = await uploadRes.json();
-              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
-            }
-          } catch (uploadErr) {
-            console.error("Gagal mengunggah file:", uploadErr);
-          }
-        }
-
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.jenisPeralatan || 'Sertifikat Perizinan',
-          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
-          status: 'Aktif',
-          terbit: newItem.terbit || undefined,
-          expired: newItem.berakhir || undefined,
-          fileUrl: fileUrl,
-        });
-      }
-      
       loadData();
     } catch (error) {
       console.error("Gagal menambahkan data:", error);
-      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
+      alert("Gagal menyimpan data ke database!");
     }
   };
 
@@ -355,17 +334,29 @@ export function usePeralatanPabrik() {
 
   const confirmReassignTargetRow = () => {
     if (!reassignCertRowItem || !selectedNewTargetItem) return;
+
     setEquipmentList(prev =>
       prev.map(eq => {
         if (eq.id === selectedNewTargetItem.id) {
-          return { ...eq, noSertifikat: reassignCertRowItem.noSertifikat, hasCertificatePdf: true, keterangan: `Sertifikat Dipindahkan dari ${reassignCertRowItem.tipe}` };
+          return {
+            ...eq,
+            noSertifikat: reassignCertRowItem.noSertifikat,
+            hasCertificatePdf: true,
+            keterangan: `Sertifikat Dipindahkan dari ${reassignCertRowItem.tipe}`
+          };
         }
         if (eq.id === reassignCertRowItem.id) {
-          return { ...eq, noSertifikat: "BELUM_ADA_SERTIFIKAT", hasCertificatePdf: false, keterangan: "Sertifikat Dipindahkan ke Item Lain" };
+          return {
+            ...eq,
+            noSertifikat: "BELUM_ADA_SERTIFIKAT",
+            hasCertificatePdf: false,
+            keterangan: "Sertifikat Dipindahkan ke Item Lain"
+          };
         }
         return eq;
       })
     );
+
     alert(`Sertifikat ${reassignCertRowItem.noSertifikat} berhasil dipindahkan ke ${selectedNewTargetItem.merekItem} (${selectedNewTargetItem.tipe})!`);
     setReassignCertRowItem(null);
   };
@@ -380,51 +371,36 @@ export function usePeralatanPabrik() {
   );
 
   return {
-    // Data
-    equipmentList, setEquipmentList,
-    filteredData, expandedRows,
-    isLoading, loadData,
-    // UI State
     searchTerm, setSearchTerm,
-    activeMainTab, setActiveMainTab,
-    pendingCount,
-    // Filters
     filterJenis, setFilterJenis,
     filterLokasi, setFilterLokasi,
     filterUser, setFilterUser,
     filterStatus, setFilterStatus,
-    uniqueJenis, uniqueLokasi, uniqueUser,
-    // Modals
     isCsvModalOpen, setIsCsvModalOpen,
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,
     detailModalItem, setDetailModalItem,
     resolveTargetItem, setResolveTargetItem,
-    // Column visibility
-    allColumns, visibleColumnKeys, toggleColumn, selectAllColumns, isVisible,
-    isColumnDropdownOpen, setIsColumnDropdownOpen,
-    isImportMenuOpen, setIsImportMenuOpen,
-    // Bulk exempt
+    activeMainTab, setActiveMainTab,
     selectedStagingIds, setSelectedStagingIds,
-    isSubmittingBulkExempt,
+    isSubmittingBulkExempt, setIsSubmittingBulkExempt,
     bulkExemptModalOpen, setBulkExemptModalOpen,
     bulkExemptNote, setBulkExemptNote,
-    handleBulkExempt,
-    toggleSelectStaging, toggleSelectAllStaging,
-    // Row actions
+    isColumnDropdownOpen, setIsColumnDropdownOpen,
+    isImportMenuOpen, setIsImportMenuOpen,
     openActionRowId, setOpenActionRowId,
     rowConfirmModalOpen, setRowConfirmModalOpen,
-    pendingDeleteRowId,
-    requestDeleteRow, confirmDeleteRow,
-    // Reassign modal
+    pendingDeleteRowId, setPendingDeleteRowId,
+    equipmentList, setEquipmentList,
+    isLoading, setIsLoading,
     reassignCertRowItem, setReassignCertRowItem,
     searchTargetItemTerm, setSearchTargetItemTerm,
     selectedNewTargetItem, setSelectedNewTargetItem,
-    filteredTargetEquipmentList,
-    openReassignTargetModal, confirmReassignTargetRow,
-    // Handlers
-    handleCsvImported, handleSingleAdded, handleZipMatched,
-    // Style
-    getRowStatusStyle,
+    allColumns, visibleColumnKeys, setVisibleColumnKeys,
+    loadData, handleBulkExempt, toggleSelectStaging, toggleSelectAllStaging,
+    toggleColumn, selectAllColumns, isVisible, getRowStatusStyle,
+    uniqueJenis, uniqueLokasi, uniqueUser, pendingCount, filteredData, expandedRows,
+    handleSingleAdded, handleZipMatched, requestDeleteRow, confirmDeleteRow,
+    openReassignTargetModal, confirmReassignTargetRow, filteredTargetEquipmentList
   };
 }

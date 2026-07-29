@@ -1,24 +1,19 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
+import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
 
-/**
- * usePerizinanGeneric — Custom hook untuk semua state & business logic PerizinanGeneric.
- */
-export function usePerizinanGeneric({ categoryName, title }) {
+export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeMainTab, setActiveMainTab] = useState('main');
+  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
   const [selectedStagingIds, setSelectedStagingIds] = useState([]);
   const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
   const [bulkExemptNote, setBulkExemptNote] = useState('');
   const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
   const [resolveTargetItem, setResolveTargetItem] = useState(null);
-
-  // Header Dropdown Filter States
+  
   const [filterJenis, setFilterJenis] = useState('All');
   const [filterLokasi, setFilterLokasi] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
 
-  // Modals & Popovers State
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
@@ -30,7 +25,9 @@ export function usePerizinanGeneric({ categoryName, title }) {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isAsetCategory = useMemo(() => categoryName?.toLowerCase().includes('aset'), [categoryName]);
+  const isAsetCategory = useMemo(() => {
+    return categoryName?.toLowerCase().includes('aset');
+  }, [categoryName]);
 
   const currentCategoryKey = useMemo(() => {
     const catLower = (categoryName || title || '').toLowerCase();
@@ -45,6 +42,7 @@ export function usePerizinanGeneric({ categoryName, title }) {
     try {
       setIsLoading(true);
       const data = await getMasterItems(currentCategoryKey);
+      
       const mapped = data.map(doc => {
         const certs = doc.certificates || [];
         return {
@@ -83,9 +81,10 @@ export function usePerizinanGeneric({ categoryName, title }) {
     }
   };
 
-  useEffect(() => { loadData(); }, [categoryName]);
+  useEffect(() => {
+    loadData();
+  }, [categoryName]);
 
-  // Columns Configuration
   const defaultColumns = [
     { key: "no", label: "No." },
     { key: "namaItem", label: "Nama Produk / Proyek" },
@@ -116,20 +115,9 @@ export function usePerizinanGeneric({ categoryName, title }) {
 
   const allColumns = isAsetCategory ? asetColumns : defaultColumns;
 
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
-
-  const toggleColumn = (key) => {
-    setVisibleColumnKeys(prev =>
-      prev.includes(key)
-        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
-        : [...prev, key]
-    );
-  };
-
-  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
-  const isVisible = (key) => visibleColumnKeys.includes(key);
-
-  const pendingCount = useMemo(() => documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length, [documents]);
+  const pendingCount = useMemo(() => {
+    return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
+  }, [documents]);
 
   const handleBulkExempt = async () => {
     if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
@@ -150,23 +138,34 @@ export function usePerizinanGeneric({ categoryName, title }) {
   };
 
   const toggleSelectStaging = (id) => {
-    setSelectedStagingIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    setSelectedStagingIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
   };
 
-  const toggleSelectAllStaging = (currentRows) => {
-    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
-      setSelectedStagingIds([]);
-    } else {
-      setSelectedStagingIds(currentRows.map(r => r.parentDoc.id || r.parentDoc.MasterId));
-    }
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
+
+  const toggleColumn = (key) => {
+    setVisibleColumnKeys(prev =>
+      prev.includes(key)
+        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
+        : [...prev, key]
+    );
   };
 
-  const uniqueJenis = useMemo(() => ['All', ...new Set(documents.map(i => i.jenisItem || i.jenisPeralatan || i.jenisCiptaan || 'General'))], [documents]);
-  const uniqueLokasi = useMemo(() => ['All', ...new Set(documents.map(i => i.unitPabrik || i.unit || i.lokasi || 'Kantor Pusat'))], [documents]);
-  const uniqueStatus = useMemo(() => ['All', ...new Set(documents.map(i => i.status || 'Aktif'))], [documents]);
+  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
+  const isVisible = (key) => visibleColumnKeys.includes(key);
+
+  const categoryFilteredDocs = useMemo(() => {
+    return documents;
+  }, [documents, categoryName]);
+
+  const uniqueJenis = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.jenisItem || i.jenisPeralatan || i.jenisCiptaan || 'General'))], [categoryFilteredDocs]);
+  const uniqueLokasi = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.unitPabrik || i.unit || i.lokasi || 'Kantor Pusat'))], [categoryFilteredDocs]);
+  const uniqueStatus = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.status || 'Aktif'))], [categoryFilteredDocs]);
 
   const filteredDocs = useMemo(() => {
-    return documents.filter(doc => {
+    return categoryFilteredDocs.filter(doc => {
       const matchesTab = activeMainTab === 'staging'
         ? doc.documentStatus === 'PENDING_DOC'
         : doc.documentStatus !== 'PENDING_DOC';
@@ -192,7 +191,7 @@ export function usePerizinanGeneric({ categoryName, title }) {
 
       return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus;
     });
-  }, [documents, searchTerm, filterJenis, filterLokasi, filterStatus, activeMainTab]);
+  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, activeMainTab]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
@@ -202,9 +201,12 @@ export function usePerizinanGeneric({ categoryName, title }) {
         const certGroups = {};
         certs.forEach(cert => {
           const jenis = cert.jenisSertifikat || doc.title || categoryName || 'Generic';
-          if (!certGroups[jenis]) certGroups[jenis] = [];
+          if (!certGroups[jenis]) {
+            certGroups[jenis] = [];
+          }
           certGroups[jenis].push(cert);
         });
+
         Object.values(certGroups).forEach((group, idx) => {
           const sortedGroup = [...group].sort((a, b) => {
             if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
@@ -214,34 +216,46 @@ export function usePerizinanGeneric({ categoryName, title }) {
             return dateB - dateA;
           });
           const cert = sortedGroup[0];
-          const noCert = doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (cert.noSertifikat || cert.noIzin || doc.code || '-');
+
+          const noCert = doc.documentStatus === 'EXEMPT'
+            ? 'Tanpa Sertifikat'
+            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
+
           rows.push({
             rowId: `${doc.id}-cert-${cert.id || idx}`,
-            parentDoc: doc, cert,
+            parentDoc: doc,
+            cert: cert,
             certNo: noCert,
             jenisCert: cert.jenisSertifikat || doc.title || categoryName || 'Generic',
             issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
             issueDate: cert.terbit || doc.createdAt,
             expiryDate: cert.expired || doc.expiryDate || '-',
             status: cert.status || doc.status || 'Aktif',
-            hasPdf: !!cert.fileUrl, fileUrl: cert.fileUrl || null
+            hasPdf: !!cert.fileUrl,
+            fileUrl: cert.fileUrl || null
           });
         });
       } else {
-        const noCert = doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (doc.certificateNo || doc.code || '-');
+        const noCert = doc.documentStatus === 'EXEMPT'
+          ? 'Tanpa Sertifikat'
+          : (doc.certificateNo || doc.code || '-');
+
         rows.push({
           rowId: `${doc.id}-primary`,
-          parentDoc: doc, cert: null,
+          parentDoc: doc,
+          cert: null,
           certNo: noCert,
           jenisCert: doc.title || categoryName || 'Generic',
           issuer: doc.user || doc.description || 'Umum',
           issueDate: doc.createdAt,
           expiryDate: doc.expiryDate || '-',
           status: doc.status || 'Aktif',
-          hasPdf: !!doc.fileUrl, fileUrl: doc.fileUrl || null
+          hasPdf: !!doc.fileUrl,
+          fileUrl: doc.fileUrl || null
         });
       }
     });
+
     return rows;
   }, [filteredDocs, categoryName]);
 
@@ -253,103 +267,53 @@ export function usePerizinanGeneric({ categoryName, title }) {
     selectAllColumns();
   };
 
-  const handleCsvImported = () => { loadData(); };
-  const handleSingleAdded = async (newItem) => {
-    try {
-      const createdItem = await createMasterItem({
-        title: newItem.title || newItem.merekItem || 'Unknown Item',
-        code: newItem.code || newItem.certificateNo || '-',
-        categoryKey: currentCategoryKey,
-        unitLocation: newItem.unit || newItem.unitPabrik || 'Umum',
-        status: newItem.status || 'Aktif',
-        keterangan: newItem.keterangan || 'Data Manual Input',
-        issueDate: newItem.issueDate || undefined,
-        expiryDate: newItem.expiryDate || newItem.berakhir || undefined,
-        documentStatus: newItem.documentStatus
-      });
-      
-      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+  const handleCsvImported = () => {
+    loadData();
+  };
 
-      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
-        let fileUrl = null;
-        if (newItem.file) {
-          const formData = new FormData();
-          formData.append('file', newItem.file);
-          try {
-            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
-              method: 'POST',
-              body: formData,
-            });
-            if (uploadRes.ok) {
-              const uploadJson = await uploadRes.json();
-              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
-            }
-          } catch (uploadErr) {
-            console.error("Gagal mengunggah file:", uploadErr);
-          }
-        }
-
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.jenisPeralatan || categoryName || 'Sertifikat Perizinan',
-          noSertifikat: newItem.certificateNo || 'BELUM_ADA_SERTIFIKAT',
-          status: 'Aktif',
-          terbit: newItem.issueDate || undefined,
-          expired: newItem.expiryDate || newItem.berakhir || undefined,
-          fileUrl: fileUrl,
-        });
-      }
-
-      loadData();
-    } catch (error) {
-      console.error(error);
-      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
-    }
+  const handleSingleAdded = (newItem) => {
+    setDocuments(prev => [newItem, ...prev]);
   };
 
   const getRowStatusStyle = (doc) => {
     const statusStr = (doc.status || '').toLowerCase();
-    if (statusStr === 'afkir' || statusStr === 'decommissioned') return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
-    if (statusStr === 'expired') return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
-    if (statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses') return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
+    if (statusStr === 'afkir' || statusStr === 'decommissioned') {
+      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
+    }
+    if (statusStr === 'expired') {
+      return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
+    }
+    if (statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses') {
+      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
+    }
     return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
   };
 
   return {
-    // Data
-    documents, setDocuments,
-    filteredDocs, expandedRows,
-    isLoading, loadData,
-    isAsetCategory, currentCategoryKey,
-    // UI State
     searchTerm, setSearchTerm,
     activeMainTab, setActiveMainTab,
-    pendingCount,
-    // Filters
+    selectedStagingIds, setSelectedStagingIds,
+    bulkExemptModalOpen, setBulkExemptModalOpen,
+    bulkExemptNote, setBulkExemptNote,
+    isSubmittingBulkExempt, setIsSubmittingBulkExempt,
+    resolveTargetItem, setResolveTargetItem,
     filterJenis, setFilterJenis,
     filterLokasi, setFilterLokasi,
     filterStatus, setFilterStatus,
-    uniqueJenis, uniqueLokasi, uniqueStatus,
-    // Modals
     isCsvModalOpen, setIsCsvModalOpen,
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,
     detailModalItem, setDetailModalItem,
-    resolveTargetItem, setResolveTargetItem,
     isColumnDropdownOpen, setIsColumnDropdownOpen,
     isImportMenuOpen, setIsImportMenuOpen,
-    // Column visibility
-    allColumns, visibleColumnKeys, toggleColumn, selectAllColumns, isVisible,
-    // Bulk exempt
-    selectedStagingIds, setSelectedStagingIds,
-    isSubmittingBulkExempt,
-    bulkExemptModalOpen, setBulkExemptModalOpen,
-    bulkExemptNote, setBulkExemptNote,
-    handleBulkExempt,
-    toggleSelectStaging, toggleSelectAllStaging,
-    // Handlers
-    handleCsvImported, handleSingleAdded, resetFilters,
-    // Style
-    getRowStatusStyle,
+    documents, setDocuments,
+    isLoading, setIsLoading,
+    isAsetCategory, currentCategoryKey,
+    loadData, allColumns, pendingCount,
+    handleBulkExempt, toggleSelectStaging,
+    visibleColumnKeys, toggleColumn, selectAllColumns, isVisible,
+    uniqueJenis, uniqueLokasi, uniqueStatus, expandedRows,
+    resetFilters, handleCsvImported, handleSingleAdded,
+    getRowStatusStyle
   };
 }

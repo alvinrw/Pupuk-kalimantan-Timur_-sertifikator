@@ -71,7 +71,7 @@ services:
     container_name: sertifikator_nest_api
     restart: always
     ports:
-      - "3000:3000"
+      - "3005:3000"
     environment:
       PORT: 3000
       DATABASE_URL: "postgresql://postgres:password123@postgres:5432/sertifikator_db?schema=public"
