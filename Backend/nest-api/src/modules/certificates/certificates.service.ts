@@ -9,7 +9,10 @@ export class CertificatesService {
 
   async create(createCertificateDto: CreateCertificateDto) {
     const cert = await this.prisma.certificate.create({
-      data: createCertificateDto,
+      data: {
+        ...createCertificateDto,
+        jenisSertifikat: createCertificateDto.jenisSertifikat || 'Sertifikat Utama'
+      },
     });
 
     if (createCertificateDto.itemId) {

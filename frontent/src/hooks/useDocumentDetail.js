@@ -70,9 +70,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
-    jenisPeralatan: isSingleCertScope
-      ? (targetCert?.jenisSertifikat || parentDoc.title || '')
-      : (item.jenisPeralatan || item.jenisCert || item.kategoriDokumen || item.jenisCiptaan || item.title || ''),
+    jenisPeralatan: parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset',
     tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
@@ -90,32 +88,88 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
     keterangan: targetCert?.keterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
     fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
-    namaSertifikat: isSingleCertScope ? (targetCert?.namaSertifikat || '') : (item.namaSertifikat || '')
+    namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || ''
   });
 
   // ──────────────────────────────────────────────────────────────────
   // REMINDER & NOTIFICATION STATE
   // ──────────────────────────────────────────────────────────────────
-  const [reminderEnabled, setReminderEnabled] = useState(item.notificationSetting ? item.notificationSetting.isEnabled : true);
-  const [triggerType, setTriggerType] = useState(item.notificationSetting ? (item.notificationSetting.triggerType || 'DAYS') : 'DAYS');
-  const [reminderDays, setReminderDays] = useState(item.notificationSetting ? item.notificationSetting.triggerDays : 30);
-  const [triggerDate, setTriggerDate] = useState(item.notificationSetting && item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
+  const [reminderEnabled, setReminderEnabled] = useState(() => {
+    if (item && item.notificationSetting) return item.notificationSetting.isEnabled !== false;
+    if (item && item.reminderEnabled !== undefined) return !!item.reminderEnabled;
+    return true;
+  });
+  const [triggerType, setTriggerType] = useState(() => {
+    if (item && item.notificationSetting) return item.notificationSetting.triggerType || 'DAYS';
+    return 'DAYS';
+  });
+  const [reminderDays, setReminderDays] = useState(() => {
+    if (item && item.notificationSetting) return item.notificationSetting.triggerDays ?? 30;
+    return 30;
+  });
+  const [triggerDate, setTriggerDate] = useState(() => {
+    if (item && item.notificationSetting && item.notificationSetting.triggerDate) {
+      return item.notificationSetting.triggerDate.substring(0, 10);
+    }
+    return '';
+  });
 
   useEffect(() => {
-    if (item && item.notificationSetting) {
-      setReminderEnabled(item.notificationSetting.isEnabled);
-      setTriggerType(item.notificationSetting.triggerType || 'DAYS');
-      setReminderDays(item.notificationSetting.triggerDays);
-      setTriggerDate(item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
+    if (item) {
+      if (item.notificationSetting) {
+        setReminderEnabled(item.notificationSetting.isEnabled !== false);
+        setTriggerType(item.notificationSetting.triggerType || 'DAYS');
+        setReminderDays(item.notificationSetting.triggerDays ?? 30);
+        setTriggerDate(item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
+      } else if (item.reminderEnabled !== undefined) {
+        setReminderEnabled(!!item.reminderEnabled);
+      }
     }
   }, [item]);
+
+  const handleToggleReminder = async (newVal) => {
+    const isChecked = typeof newVal === 'boolean' ? newVal : !reminderEnabled;
+    setReminderEnabled(isChecked);
+    if (item) {
+      if (!item.notificationSetting) {
+        item.notificationSetting = {};
+      }
+      item.notificationSetting.isEnabled = isChecked;
+      item.reminderEnabled = isChecked;
+    }
+    try {
+      const targetId = item?.MasterId || item?.id;
+      if (targetId) {
+        await updateNotificationSetting(targetId, {
+          isEnabled: isChecked,
+          triggerType: triggerType,
+          triggerDays: parseInt(reminderDays) || 30,
+          triggerDate: triggerType === 'DATE' ? triggerDate : null
+        });
+      }
+      if (onSaveUpdate) {
+        onSaveUpdate({
+          ...item,
+          notificationSetting: {
+            ...item?.notificationSetting,
+            isEnabled: isChecked,
+            triggerType: triggerType,
+            triggerDays: parseInt(reminderDays) || 30,
+            triggerDate: triggerType === 'DATE' ? triggerDate : null
+          }
+        });
+      }
+    } catch (err) {
+      console.error('Failed to toggle reminder setting:', err);
+    }
+  };
 
   // Sync formData whenever targetCert changes (navigasi antar sertifikat)
   useEffect(() => {
     if (isSingleCertScope && targetCert) {
       setFormData(prev => ({
         ...prev,
-        jenisPeralatan: targetCert.jenisSertifikat || prev.jenisPeralatan,
+        namaSertifikat: targetCert.namaSertifikat || targetCert.jenisSertifikat || prev.namaSertifikat,
         tipe: targetCert.noSertifikat || prev.tipe,
         user: targetCert.instansi || prev.user,
         status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
@@ -146,6 +200,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
       const detail = await getMasterItemById(masterItemId);
       if (!detail || !detail.certificates || detail.certificates.length === 0) {
         setHistoryList([]);
+        setLinkedCerts([]);
         if (!isSingleCertScope) {
           setLocalDocumentStatus('EXEMPT');
           setFormData(prev => ({
@@ -159,7 +214,26 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
         return;
       }
 
-      let certList = detail.certificates;
+      let masterCertList = detail.certificates || [];
+
+      const allMappedLinkedCerts = masterCertList.map((c, index) => ({
+        id: c.id,
+        periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} – ${c.expired.substring(0, 4)}` : 'Periode SK',
+        noSertifikat: c.noSertifikat || '-',
+        namaSertifikat: c.namaSertifikat || c.jenisSertifikat || 'Sertifikat Terhubung',
+        jenisSertifikat: c.jenisSertifikat || '-',
+        instansi: c.instansi || '-',
+        terbit: c.terbit || '-',
+        expired: c.expired || '-',
+        status: c.status || 'Aktif',
+        fileUrl: c.fileUrl || null,
+        pdfName: c.fileUrl ? c.fileUrl.split('/').pop() : 'sertifikat.pdf',
+        isCurrent: c.status?.toLowerCase() === 'aktif' || index === 0,
+        rawCert: c
+      }));
+      setLinkedCerts(allMappedLinkedCerts);
+
+      let certList = masterCertList;
 
       if (isSingleCertScope && targetCert?.id) {
         const anchorCert = certList.find(c => c.id === targetCert.id);
@@ -175,6 +249,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
         id: c.id,
         periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} – ${c.expired.substring(0, 4)}` : 'Periode SK',
         noSertifikat: c.noSertifikat || '-',
+        namaSertifikat: c.namaSertifikat || c.jenisSertifikat || 'Sertifikat Terhubung',
         jenisSertifikat: c.jenisSertifikat || '-',
         instansi: c.instansi || '-',
         terbit: c.terbit || '-',
@@ -202,7 +277,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
             return {
               ...prev,
               noSertifikat: primaryCert.noSertifikat,
-              jenisPeralatan: primaryCert.rawCert?.jenisSertifikat || prev.jenisPeralatan,
+              namaSertifikat: primaryCert.namaSertifikat || primaryCert.jenisSertifikat || '',
               terbit: primaryCert.terbit,
               berakhir: primaryCert.expired,
               status: isSpecialState ? prev.status : primaryCert.status,
@@ -597,11 +672,22 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     }
   };
 
-  const handleDeleteLinkedCert = (id) => {
-    const updatedCerts = linkedCerts.filter(c => c.id !== id);
-    setLinkedCerts(updatedCerts);
-    if (onSaveUpdate) onSaveUpdate({ ...item, linkedCertificates: updatedCerts });
-    setDeletingLinkedCertId(null);
+  const handleDeleteLinkedCert = async (id) => {
+    try {
+      if (id) {
+        await deleteCertificate(id);
+      }
+      await fetchHistory();
+      if (onRefreshRequired) onRefreshRequired();
+      if (activeCertId === id) {
+        setActiveCertId(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete linked certificate:', err);
+      alert('Gagal menghapus sertifikat terhubung: ' + (err.message || 'Error'));
+    } finally {
+      setDeletingLinkedCertId(null);
+    }
   };
 
   // ──────────────────────────────────────────────────────────────────
@@ -655,5 +741,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     triggerType, setTriggerType,
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
+    handleToggleReminder,
+    localDocumentStatus, setLocalDocumentStatus
   };
 }

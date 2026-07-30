@@ -65,6 +65,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     triggerType, setTriggerType,
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
+    handleToggleReminder,
   } = hook;
 
   // ─── Sisa hari kalkulasi ───
@@ -112,9 +113,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           <div>
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
-                {isSingleCertScope
-                  ? (targetCert?.jenisSertifikat || formData.jenisPeralatan || formData.merekItem)
-                  : (formData.namaSertifikat || formData.merekItem)}
+                {formData.merekItem || formData.title || targetCert?.jenisSertifikat || formData.jenisPeralatan || 'Detail Dokumen'}
               </h2>
               {isSingleCertScope && (
                 <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold font-mono-data">
@@ -529,11 +528,25 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             </h4>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full ${reminderEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
                   <span className="text-xs font-bold text-slate-700">
                     Status Pengingat: {reminderEnabled ? 'Aktif' : 'Nonaktif'}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReminder(!reminderEnabled)}
+                    className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      reminderEnabled ? 'bg-[#005ea4]' : 'bg-slate-300'
+                    }`}
+                    title={reminderEnabled ? 'Klik untuk menonaktifkan pengingat' : 'Klik untuk mengaktifkan pengingat'}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        reminderEnabled ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
                 </div>
                 {reminderEnabled ? (
                   <div className="text-xs text-slate-500 font-mono-data space-y-1">
@@ -868,16 +881,6 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           </div>
         </div>
       )}
-      {/* MODAL CONFIRM DELETE MASTER ITEM */}
-      <ModalConfirm
-        isOpen={isDeleteDialogOpen}
-        onClose={() => setIsDeleteDialogOpen(false)}
-        title="Hapus Alat Ini?"
-        message={`Data alat dan semua sertifikat historinya akan dihapus permanen.`}
-        confirmText="Hapus Permanen"
-        onConfirm={handleDeleteMasterItem}
-        isProcessing={isDeleting}
-      />
     </div>
   );
 }

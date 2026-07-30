@@ -70,17 +70,20 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           meta = { keteranganAsli: doc.keterangan };
         }
 
+        const actualJenisAset = meta.tipe || doc.jenisPeralatan || meta.jenisAset || doc.categoryKey || (categoryName?.toLowerCase().includes('aset') ? 'Perizinan Aset' : categoryName?.toLowerCase().includes('proyek') ? 'Perizinan Proyek' : 'Perizinan Produk');
+
         return {
           id: doc.id,
           MasterId: doc.id,
           title: doc.title || '-',
           categoryKey: doc.categoryKey,
           kategoriDokumen: doc.categoryKey,
-          jenisItem: doc.title || '-',
+          jenisItem: actualJenisAset,
+          jenisPeralatan: actualJenisAset,
           namaItem: doc.title || '-',
           merekItem: doc.title,
           code: doc.code || '-',
-          certificateNo: primaryCert?.noSertifikat || doc.code || '-',
+          certificateNo: primaryCert?.noSertifikat || meta.noSertifikat || '-',
           unitLocation: doc.unitLocation || '-',
           unit: doc.unitLocation || '-',
           luasM2: doc.luasM2 || "0",
@@ -96,7 +99,9 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
           documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
-          linkedCertificates: certs
+          linkedCertificates: certs,
+          notificationSetting: doc.notificationSetting || null,
+          reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true
         };
       });
       setDocuments(mapped);
@@ -111,35 +116,32 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     loadData();
   }, [categoryName]);
 
+  const isProyek = categoryName?.toLowerCase().includes('proyek');
+  const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
+
   const defaultColumns = [
-    { key: "no", label: "No." },
-    { key: "namaItem", label: "Nama Produk / Proyek" },
-    { key: "code", label: "Kode / Tag Perizinan" },
-    { key: "jenisItem", label: "Jenis Perizinan" },
-    { key: "hasSertifikat", label: "Ada Sertifikat" },
-    { key: "namaSertifikat", label: "Nama Sertifikat" },
-    { key: "certificateNo", label: "No. Sertifikat" },
-    { key: "unit", label: "Unit Pabrik / Lokasi" },
-    { key: "user", label: "User / Instansi" },
-    { key: "issueDate", label: "Terbit" },
-    { key: "expiryDate", label: "Expired" },
-    { key: "status", label: "Status" }
+    { key: "no", label: "NO." },
+    { key: "namaItem", label: isProyek ? "NAMA PROYEK" : isProduk ? "NAMA PRODUK" : "NAMA ITEM" },
+    { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
+    { key: "code", label: isProyek ? "KODE PROYEK" : isProduk ? "KODE PRODUK" : "KODE REGISTRASI" },
+    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
+    { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
+    { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
+    { key: "unit", label: isProyek ? "LOKASI PROYEK" : isProduk ? "UNIT PENGELOLA" : "LOKASI" },
+    { key: "user", label: "PENANGGUNG JAWAB" },
+    { key: "status", label: "STATUS" }
   ];
 
   const asetColumns = [
     { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
-    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
+    { key: "code", label: "NOMOR SERI ASSET" },
+    { key: "jenisItem", label: "JENIS ASET" },
     { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
     { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
+    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
     { key: "unit", label: "LOKASI" },
-    { key: "luasM2", label: "LUAS (M²)" },
-    { key: "luasHa", label: "LUAS (HA)" },
-    { key: "peruntukan", label: "PERUNTUKAN" },
-    { key: "issueDate", label: "TANGGAL AWAL PENGAJUAN" },
-    { key: "expiryDate", label: "MASA BERLAKU PRODUK" },
-    { key: "kondisi", label: "KONDISI" },
-    { key: "keterangan", label: "KETERANGAN" },
+    { key: "user", label: "PENANGGUNG JAWAB" },
     { key: "status", label: "STATUS" }
   ];
 
@@ -174,6 +176,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   };
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
+
+  useEffect(() => {
+    setVisibleColumnKeys(allColumns.map(c => c.key));
+  }, [isAsetCategory, categoryName, title]);
 
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>
@@ -232,67 +238,50 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     const rows = [];
     filteredDocs.forEach((doc) => {
       const certs = doc.linkedCertificates || [];
+      const assetCategory = doc.jenisPeralatan || doc.categoryKey || categoryName || 'Perizinan Aset';
+
       if (certs.length > 0) {
-        const certGroups = {};
-        certs.forEach(cert => {
-          const jenis = cert.jenisSertifikat || doc.title || categoryName || 'Generic';
-          if (!certGroups[jenis]) {
-            certGroups[jenis] = [];
-          }
-          certGroups[jenis].push(cert);
-        });
-
-        Object.values(certGroups).forEach((group, idx) => {
-          const sortedGroup = [...group].sort((a, b) => {
-            if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
-            if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
-            const dateA = new Date(a.createdAt || a.terbit || 0);
-            const dateB = new Date(b.createdAt || b.terbit || 0);
-            return dateB - dateA;
-          });
-          const cert = sortedGroup[0];
-
+        certs.forEach((cert, idx) => {
           const noCert = doc.documentStatus === 'EXEMPT'
             ? 'Tanpa Sertifikat'
-            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
+            : (cert.noSertifikat || cert.noIzin || '-');
 
           rows.push({
             rowId: `${doc.id}-cert-${cert.id || idx}`,
             parentDoc: doc,
             cert: cert,
             certNo: noCert,
-            jenisCert: cert.jenisSertifikat || doc.title || categoryName || 'Generic',
+            jenisCert: assetCategory,
             issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
-            issueDate: cert.terbit || doc.createdAt,
+            issueDate: cert.terbit || doc.createdAt || '-',
             expiryDate: cert.expired || doc.expiryDate || '-',
             status: cert.status || doc.status || 'Aktif',
             hasPdf: !!cert.fileUrl,
             fileUrl: cert.fileUrl || null,
-            namaSertifikat: cert.namaSertifikat || '-'
+            namaSertifikat: cert.namaSertifikat || cert.jenisSertifikat || '-'
           });
         });
       } else {
         const noCert = doc.documentStatus === 'EXEMPT'
           ? 'Tanpa Sertifikat'
-          : (doc.certificateNo || doc.code || '-');
+          : (doc.certificateNo || '-');
 
         rows.push({
           rowId: `${doc.id}-primary`,
           parentDoc: doc,
           cert: null,
           certNo: noCert,
-          jenisCert: doc.title || categoryName || 'Generic',
+          jenisCert: assetCategory,
           issuer: doc.user || doc.description || 'Umum',
-          issueDate: doc.createdAt,
+          issueDate: doc.createdAt || '-',
           expiryDate: doc.expiryDate || '-',
           status: doc.status || 'Aktif',
           hasPdf: !!doc.fileUrl,
           fileUrl: doc.fileUrl || null,
-          namaSertifikat: doc.namaSertifikat || '-'
+          namaSertifikat: '-'
         });
       }
     });
-
     return rows;
   }, [filteredDocs, categoryName]);
 

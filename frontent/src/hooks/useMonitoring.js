@@ -129,7 +129,9 @@ export function useMonitoring() {
           nomorSK: '-',
           keterangan: item.description || '-',
           riwayatPerpanjangan: certs,
-          workflowStatus: getWfStatus(item.status, item.documentStatus || item.document_status || 'PENDING_DOC')
+          workflowStatus: getWfStatus(item.status, item.documentStatus || item.document_status || 'PENDING_DOC'),
+          notificationSetting: item.notificationSetting || null,
+          reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true
         });
       });
       setAllCertificates(flattened);

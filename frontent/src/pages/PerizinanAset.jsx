@@ -104,14 +104,12 @@ export default function PerizinanAset({ title, subtitle }) {
   };
 
   const allColumns = [
-    { key: "certificateNo", label: "Nomer Sertifikat" },
+    { key: "title", label: "Nama Aset" },
+    { key: "namaSertifikat", label: "Nama Sertifikat" },
+    { key: "certificateNo", label: "Nomor Sertifikat" },
     { key: "location", label: "Lokasi" },
-    { key: "areaSqm", label: "Luas (m²)" },
-    { key: "areaHa", label: "Luas (Ha)" },
-    { key: "purpose", label: "Peruntukan" },
-    { key: "submissionDate", label: "Tanggal Awal Pengajuan" },
-    { key: "validityPeriod", label: "Masa Berlaku Produk" },
-    { key: "condition", label: "Kondisi" },
+    { key: "user", label: "Penanggung Jawab" },
+    { key: "condition", label: "Status" },
     { key: "description", label: "Keterangan" },
   ];
 
@@ -289,7 +287,9 @@ export default function PerizinanAset({ title, subtitle }) {
         onSaveUpdate={(updatedDoc) => {
           setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
           setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+          loadData();
         }}
+        onRefreshRequired={loadData}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan untuk aset ${id}.`);
         }}
@@ -511,14 +511,12 @@ export default function PerizinanAset({ title, subtitle }) {
                     />
                   </th>
                 )}
-                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold">Nomer Sertifikat</th>}
+                {isVisible("title") && <th className="py-3.5 px-4 font-bold">Nama Aset</th>}
+                {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold">Nama Sertifikat</th>}
+                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold">Nomor Sertifikat</th>}
                 {isVisible("location") && <th className="py-3.5 px-4 font-bold">Lokasi</th>}
-                {isVisible("areaSqm") && <th className="py-3.5 px-4 font-bold text-right">Luas (m²)</th>}
-                {isVisible("areaHa") && <th className="py-3.5 px-4 font-bold text-right">Luas (Ha)</th>}
-                {isVisible("purpose") && <th className="py-3.5 px-4 font-bold">Peruntukan</th>}
-                {isVisible("submissionDate") && <th className="py-3.5 px-4 font-bold">Tanggal Awal Pengajuan</th>}
-                {isVisible("validityPeriod") && <th className="py-3.5 px-4 font-bold">Masa Berlaku Produk</th>}
-                {isVisible("condition") && <th className="py-3.5 px-4 font-bold">Kondisi</th>}
+                {isVisible("user") && <th className="py-3.5 px-4 font-bold">Penanggung Jawab</th>}
+                {isVisible("condition") && <th className="py-3.5 px-4 font-bold">Status</th>}
                 {isVisible("description") && <th className="py-3.5 px-4 font-bold">Keterangan</th>}
                 <th className="py-3.5 px-4 font-bold text-right">AKSI</th>
               </tr>
@@ -538,12 +536,22 @@ export default function PerizinanAset({ title, subtitle }) {
                         />
                       </td>
                     )}
-                    {isVisible("certificateNo") && (
+                    {isVisible("title") && (
                       <td
                         onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
                         className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline"
                       >
-                        <span>{row.certificateNo}</span>
+                        <span>{doc.merekItem || doc.title}</span>
+                      </td>
+                    )}
+                    {isVisible("namaSertifikat") && (
+                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                        {row.cert?.namaSertifikat || doc.namaSertifikat || '-'}
+                      </td>
+                    )}
+                    {isVisible("certificateNo") && (
+                      <td className="py-3.5 px-4 font-mono-data font-bold text-slate-800">
+                        {row.certificateNo}
                       </td>
                     )}
                     {isVisible("location") && (
@@ -551,29 +559,9 @@ export default function PerizinanAset({ title, subtitle }) {
                         {row.location}
                       </td>
                     )}
-                    {isVisible("areaSqm") && (
-                      <td className="py-3.5 px-4 font-mono-data text-right text-slate-700">
-                        {row.areaSqm}
-                      </td>
-                    )}
-                    {isVisible("areaHa") && (
-                      <td className="py-3.5 px-4 font-mono-data text-right text-slate-700">
-                        {row.areaHa}
-                      </td>
-                    )}
-                    {isVisible("purpose") && (
+                    {isVisible("user") && (
                       <td className="py-3.5 px-4 text-slate-700">
-                        {row.purpose}
-                      </td>
-                    )}
-                    {isVisible("submissionDate") && (
-                      <td className="py-3.5 px-4 font-mono-data text-slate-700">
-                        {row.submissionDate}
-                      </td>
-                    )}
-                    {isVisible("validityPeriod") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700">
-                        {row.validityPeriod}
+                        {doc.user || doc.penanggungJawab || 'Departemen Utility'}
                       </td>
                     )}
                     {isVisible("condition") && (

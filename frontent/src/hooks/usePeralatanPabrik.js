@@ -113,6 +113,8 @@ export function usePeralatanPabrik() {
           noSertifikat: noCert,
           terbit: terbitVal,
           berakhir: expiredVal,
+          notificationSetting: item.notificationSetting || null,
+          reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true,
           keterangan: primaryCert?.keterangan || meta.keteranganAsli || '-',
           fileUrl: primaryCert?.fileUrl || null,
           hasPdf: !!primaryCert?.fileUrl,

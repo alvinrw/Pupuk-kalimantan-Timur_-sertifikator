@@ -75,12 +75,26 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {!isAsetCategory && isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">KODE PERIZINAN</th>}
+                {isVisible("code") && (
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">
+                    {isAsetCategory
+                      ? "NOMOR SERI ASSET"
+                      : categoryName?.toLowerCase().includes('proyek')
+                      ? "KODE PROYEK"
+                      : "KODE PRODUK"}
+                  </th>
+                )}
 
-                {!isAsetCategory && isVisible("jenisItem") && (
+                {isVisible("jenisItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center gap-1.5">
-                      <span>JENIS PERIZINAN</span>
+                      <span>
+                        {isAsetCategory
+                          ? "JENIS ASET"
+                          : categoryName?.toLowerCase().includes('proyek')
+                          ? "KATEGORI PROYEK"
+                          : "JENIS PRODUK"}
+                      </span>
                       <select
                         value={filterJenis}
                         onChange={(e) => setFilterJenis(e.target.value)}
@@ -118,7 +132,13 @@ export default function GenericTable({
                 {isVisible("unit") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
                     <div className="flex items-center gap-1.5">
-                      <span>LOKASI</span>
+                      <span>
+                        {isAsetCategory
+                          ? "LOKASI"
+                          : categoryName?.toLowerCase().includes('proyek')
+                          ? "LOKASI PROYEK"
+                          : "UNIT PENGELOLA"}
+                      </span>
                       <select
                         value={filterLokasi}
                         onChange={(e) => setFilterLokasi(e.target.value)}
@@ -133,15 +153,9 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {isAsetCategory && isVisible("luasM2") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (M²)</th>}
-                {isAsetCategory && isVisible("luasHa") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">LUAS (HA)</th>}
-                {isAsetCategory && isVisible("peruntukan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">PERUNTUKAN</th>}
-
-                {!isAsetCategory && isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">INSTANSI / USER</th>}
-                
-                {isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{isAsetCategory ? "TANGGAL AWAL PENGAJUAN" : "TERBIT"}</th>}
-                {isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">{isAsetCategory ? "MASA BERLAKU PRODUK" : "EXPIRED"}</th>}
-
+                {isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">PENANGGUNG JAWAB</th>}
+                {!isAsetCategory && isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TERBIT</th>}
+                {!isAsetCategory && isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">EXPIRED</th>}
                 {isAsetCategory && isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KONDISI</th>}
                 {isAsetCategory && isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
 
@@ -224,15 +238,15 @@ export default function GenericTable({
                         </td>
                       )}
 
-                      {!isAsetCategory && isVisible("code") && (
+                      {isVisible("code") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {docCode}
                         </td>
                       )}
 
-                      {!isAsetCategory && isVisible("jenisItem") && (
-                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {docJenis}
+                      {isVisible("jenisItem") && (
+                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-slate-700'}`}>
+                          {row.jenisCert || doc.jenisPeralatan || doc.categoryKey || '-'}
                         </td>
                       )}
 
@@ -286,37 +300,19 @@ export default function GenericTable({
                         </td>
                       )}
 
-                      {isAsetCategory && isVisible("luasM2") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">
-                          {doc.luasM2 || doc.kapasitas || '12.000 m²'}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("luasHa") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800">
-                          {doc.luasHa || '1,2 Ha'}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("peruntukan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
-                          {doc.peruntukan || doc.title || doc.merekItem || 'Fasilitas Industrial'}
-                        </td>
-                      )}
-
-                      {!isAsetCategory && isVisible("user") && (
+                      {isVisible("user") && (
                         <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
                           {docUser}
                         </td>
                       )}
 
-                      {isVisible("issueDate") && (
+                      {!isAsetCategory && isVisible("issueDate") && (
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           {docIssue}
                         </td>
                       )}
 
-                      {isVisible("expiryDate") && (
+                      {!isAsetCategory && isVisible("expiryDate") && (
                         <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
                           {docExpiry}
                         </td>

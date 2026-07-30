@@ -148,6 +148,8 @@ export default function AdministrasiLainnya() {
           fileUrl: primaryCert?.fileUrl || null,
           status: item.status || "Aktif",
           merekItem: item.title,
+          notificationSetting: item.notificationSetting || null,
+          reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true,
           jenisPeralatan: item.categoryKey,
           linkedCertificates: certs
         };

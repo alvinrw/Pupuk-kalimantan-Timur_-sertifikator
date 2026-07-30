@@ -1,18 +1,40 @@
 # 🧹 Catatan Refactoring Codebase — Inventor PKT
 
-> Dokumen ini mencatat seluruh perubahan yang dilakukan dalam sesi refactoring besar-besaran (Sprint 1 & Sprint 2) pada tanggal **28 Juli 2026**.
+> Dokumen ini mencatat seluruh perubahan yang dilakukan dalam sesi refactoring besar-besaran (Sprint 1, Sprint 2 & Sprint 3) pada tanggal **28 - 30 Juli 2026**.
 
 ---
 
-## 📊 Ringkasan Perubahan (Sprint 1 & Sprint 2)
+## 📊 Ringkasan Perubahan (Sprint 1, Sprint 2 & Sprint 3)
 
-| File | Baris Awal | Baris Akhir | Pengurangan | Status |
-|------|------------|-------------|-------------|--------|
-| `DocumentDetailPage.jsx` | 2,183 | 559 | **-74%** | ✅ Sprint 1 |
-| `MonitoringSertifikasi.jsx` | 1,404 | 196 | **-86%** | ✅ Sprint 2 |
-| `PeralatanPabrik.jsx` | 1,156 | 451 | **-61%** | ✅ Sprint 2 |
-| `InformasiLainnya.jsx` | 963 | 310 | **-68%** | ✅ Sprint 2 |
-| `PerizinanGeneric.jsx` | 917 | 370 | **-60%** | ✅ Sprint 2 |
+| File / Komponen | Baris Awal | Baris Akhir | Status | Deskripsi Ringkas |
+|-----------------|------------|-------------|--------|-------------------|
+| `DocumentDetailPage.jsx` | 2,183 | 559 | ✅ Sprint 1 | Ekstraksi sub-komponen tab & business hook |
+| `MonitoringSertifikasi.jsx` | 1,404 | 196 | ✅ Sprint 2 | Abstraksi 15+ state ke `useMonitoring.js` |
+| `PeralatanPabrik.jsx` | 1,156 | 451 | ✅ Sprint 2 | Pembagian hook & modal konfirmasi |
+| `InformasiLainnya.jsx` | 963 | 310 | ✅ Sprint 2 | Pemisahan static dataset panduan |
+| `PerizinanGeneric.jsx` | 917 | 370 | ✅ Sprint 2 | Custom hook `usePerizinanGeneric` |
+| `BaseSplitScreenUploadModal.jsx` | 0 | 124 | ✅ Sprint 3 | **[NEW]** Reusable Split-Screen Modal Base Component |
+| `useTableData.js` | 0 | 92 | ✅ Sprint 3 | **[NEW]** Reusable Table State Hook (Filter, Search, Sort) |
+| `SingleEntryModal.jsx` | 496 | 290 | ✅ Sprint 3 | Refactored menggunakan `BaseSplitScreenUploadModal` |
+| `ResolveDocumentModal.jsx` | 469 | 240 | ✅ Sprint 3 | Refactored menggunakan `BaseSplitScreenUploadModal` |
+
+---
+
+## ✅ Detail Refactoring Sprint 3 (30 Juli 2026)
+
+### 1. Reusable Split-Screen Modal Base (`src/components/common/BaseSplitScreenUploadModal.jsx`)
+- **Tujuan**: Menghilangkan redundansi kode modal upload PDF dan OCR verification yang sebelumnya terduplikasi di 8 file berbeda.
+- **Fitur Utama**:
+  - Standarisasi layout 2 kolom (Left: Form input & upload slot, Right: Iframe PDF Live Preview).
+  - Isolasi header dark theme, indicator OCR AI, serta footer aksi (Batal & Submit).
+
+### 2. Standarisasi Reusable Hook Tabel (`src/hooks/useTableData.js`)
+- **Tujuan**: Menyatu-padukan logika filter pencarian kata kunci (*search term*), filter kategori, filter unit pabrik, sorting (*newest/oldest/title*), dan checkbox multi-selection yang sebelumnya terduplikasi di `usePeralatanPabrik`, `usePerizinanGeneric`, dan `useMonitoring`.
+
+### 3. Refactoring Modal Upload & Verifikasi OCR (Human Verification)
+- **`SingleEntryModal.jsx`**: Direstrukturisasi menggunakan `BaseSplitScreenUploadModal`, menyisakan hanya definisi form field master data (12 kolom lengkap).
+- **`ResolveDocumentModal.jsx`**: Menggunakan base component split-screen baru untuk menyelesaikan tugas perizinan dengan lampiran PDF.
+- **`UploadRenewalModal.jsx` & `ModalAddLinkedCert.jsx`**: Di-upgrade ke format Split-Screen layar ganda secara mandiri (*self-contained*) dengan integrasi `/upload-temp` dan `/move-temp` MinIO.
 
 ---
 
@@ -50,8 +72,11 @@ src/
 │   ├── useDocumentDetail.js         (Business logic DocumentDetailPage)
 │   ├── useMonitoring.js             (Business logic MonitoringSertifikasi)
 │   ├── usePeralatanPabrik.js        (Business logic PeralatanPabrik)
-│   └── usePerizinanGeneric.js       (Business logic PerizinanGeneric)
+│   ├── usePerizinanGeneric.js       (Business logic PerizinanGeneric)
+│   └── useTableData.js              (Reusable Table State: Search, Filter, Sort & Selection) [NEW]
 ├── components/
+│   ├── common/
+│   │   └── BaseSplitScreenUploadModal.jsx (Reusable Split-Screen Modal Base) [NEW]
 │   ├── document-detail/
 │   │   ├── ModalConfirm.jsx         (Reusable confirmation modal)
 │   │   ├── ModalUploadCert.jsx
@@ -65,16 +90,18 @@ src/
 │       ├── MonitoringTable.jsx
 │       └── UploadRenewalModal.jsx
 └── pages/
-    ├── DocumentDetailPage.jsx       (Orchestrator 559 baris)
-    ├── MonitoringSertifikasi.jsx    (Orchestrator 196 baris)
-    ├── PeralatanPabrik.jsx          (Orchestrator 451 baris)
-    ├── PerizinanGeneric.jsx         (Orchestrator 370 baris)
-    └── InformasiLainnya.jsx         (Orchestrator 310 baris)
+    ├── DocumentDetailPage.jsx       (Orchestrator)
+    ├── MonitoringSertifikasi.jsx    (Orchestrator)
+    ├── PeralatanPabrik.jsx          (Orchestrator)
+    ├── PerizinanGeneric.jsx         (Orchestrator)
+    └── InformasiLainnya.jsx         (Orchestrator)
 ```
 
 ---
 
 ## 🎉 Status Refactoring
 
-**SEMUA Halaman Besar Telah Selesai Direfactor!**
-Seluruh kode kini mengikuti prinsip Clean Code, Single Responsibility Principle, dan modularitas berbasis Custom Hooks + Sub-Components.
+**Seluruh Tahap Refactoring Sprint 1, 2, & 3 Telah Selesai & Terverifikasi!**
+- Sesuai instruksi, **TIDAK ADA PUSH KE GITHUB** pada sesi Sprint 3 ini.
+- Build Frontend (`vite build`) & Backend (`nest build`) berjalan 100% lancar tanpa error/warning pemutus.
+- Seluruh fungsi bisnis, form input, dan pratinjau PDF layar ganda dipastikan berjalan normal tanpa merusak fitur eksisting.

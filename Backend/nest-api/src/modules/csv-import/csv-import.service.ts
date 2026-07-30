@@ -51,7 +51,10 @@ export class CsvImportService {
 
         // Helper untuk lookup case-insensitive
         const getVal = (r: any, keys: string[]) => {
-          const k = Object.keys(r).find(key => keys.includes(String(key).trim().toLowerCase()));
+          const k = Object.keys(r).find(key => {
+            const cleanKey = String(key).trim().toLowerCase();
+            return keys.some(target => cleanKey === target.toLowerCase() || cleanKey.replace(/\s+/g, '') === target.toLowerCase().replace(/\s+/g, ''));
+          });
           return k ? String(r[k]).trim() : '';
         };
 
@@ -118,29 +121,47 @@ export class CsvImportService {
         for (let i = 0; i < results.length; i++) {
           const row = results[i];
           try {
-            let rawTitle = String(row['Jenis Peralatan'] || row.jenisPeralatan || row.title || row.nama || '').trim();
-            let rawCode = String(row['Merek / Nama Peralatan'] || row.merek || row.code || row.kode || '').trim();
+            let rawTitle = getVal(row, [
+              'nama aset', 'nama_aset', 'namaaset',
+              'merek / nama peralatan', 'merek/nama peralatan', 'nama peralatan', 'nama_peralatan',
+              'nama produk', 'judul ciptaan', 'judul_ciptaan', 'nama proyek', 'nama perizinan proyek',
+              'jenis peralatan', 'jenis_peralatan',
+              'title', 'nama', 'name'
+            ]);
+
+            let rawCode = getVal(row, [
+              'nomor seri asset', 'nomor seri aset', 'nomor_seri_asset',
+              'nomor seri', 'nomor_seri', 'no seri', 'sn',
+              'kode proyek', 'kode produk', 'code', 'kode',
+              'merek / nama peralatan', 'tipe'
+            ]);
+
+            if (!rawTitle && rawCode) {
+              rawTitle = rawCode;
+            } else if (rawTitle && !rawCode) {
+              rawCode = rawTitle;
+            }
 
             if (!rawTitle && !rawCode) {
-              continue; // Skip baris kosong atau baris panduan Excel (misal: "Keterangan Kolom")
+              continue; // Skip baris kosong atau baris panduan Excel
             }
 
-            if (!rawTitle) rawTitle = '-';
-            if (!rawCode) rawCode = '-';
+            if (rawTitle.toLowerCase().includes('keterangan kolom') || rawTitle.toLowerCase().includes('keterangan_kolom')) {
+              continue; // Skip baris keterangan di template Excel
+            }
 
-            const rawCategory = targetCategoryKey || row.categoryKey || 'peralatan-pabrik';
+            const rawCategory = targetCategoryKey || getVal(row, ['categorykey', 'category', 'kategori']) || 'peralatan-pabrik';
             
-            let rawLocation = String(row['Unit Pabrik'] || row['Lokasi'] || row.unitLocation || row.lokasi || 'Umum').trim();
-            if (row['Unit Pabrik'] && row['Lokasi']) {
-              rawLocation = `${row['Unit Pabrik']} - ${row['Lokasi']}`;
-            }
+            let unitPabrik = getVal(row, ['unit pabrik', 'unit_pabrik', 'unit']);
+            let lokasi = getVal(row, ['lokasi', 'unit location', 'unitlocation', 'area']);
+            let rawLocation = (unitPabrik && lokasi) ? `${unitPabrik} - ${lokasi}` : (unitPabrik || lokasi || 'Umum');
 
-            const cleanTipe = String(row['Tipe'] || row.tipe || '').trim();
-            const cleanNoSeri = String(row['Nomor Seri'] || row.nomorSeri || '').trim();
-            const cleanPenanggungJawab = String(row['Penanggung Jawab'] || row.penanggungJawab || '').trim();
-            const cleanNoSertifikat = String(row['No. Sertifikat'] || row.noSertifikat || '').trim();
+            const cleanTipe = getVal(row, ['tipe', 'jenis aset', 'jenis peralatan', 'jenis ciptaan', 'jenis produk', 'kategori proyek']);
+            const cleanNoSeri = getVal(row, ['nomor seri asset', 'nomor seri aset', 'nomor seri', 'nomor_seri', 'sn']);
+            const cleanPenanggungJawab = getVal(row, ['penanggung jawab', 'penanggung_jawab', 'user', 'instansi']);
+            const cleanNoSertifikat = getVal(row, ['no. sertifikat', 'no sertifikat', 'nomor sertifikat', 'nosertifikat']);
             const cleanNamaSertifikat = getVal(row, ['nama sertifikat', 'namasertifikat', 'nama_sertifikat']);
-            const cleanKeteranganAsli = String(row.keterangan || '').trim();
+            const cleanKeteranganAsli = getVal(row, ['keterangan', 'description']);
 
             const extraData = {
               tipe: cleanTipe,
@@ -170,20 +191,26 @@ export class CsvImportService {
 
             const idToUse = existing ? existing.id : (row.id || randomUUID());
 
+            const luasM2Val = getVal(row, ['luas (m²)', 'luas m2', 'luasm2', 'luas_m2']) || (row.luasM2 != null ? String(row.luasM2) : null);
+            const luasHaVal = getVal(row, ['luas (ha)', 'luas ha', 'luasha', 'luas_ha']) || (row.luasHa != null ? String(row.luasHa) : null);
+            const peruntukanVal = getVal(row, ['peruntukan', 'peruntukan lahan']) || row.peruntukan || null;
+            const issueDateVal = getVal(row, ['tanggal terbit', 'tanggal_terbit', 'terbit', 'issuedate', 'tanggal awal pengajuan']) || row.issueDate || null;
+            const expiryDateVal = getVal(row, ['tanggal berakhir', 'tanggal_berakhir', 'expired', 'expirydate', 'masa berlaku']) || row.expiryDate || null;
+
             const dataToSave = {
               code: rawCode,
               title: rawTitle,
               categoryKey: rawCategory,
               unitLocation: rawLocation,
-              status: row['Status'] || row.status || 'Aktif',
-              luasM2: row.luasM2 != null ? String(row.luasM2) : null,
-              luasHa: row.luasHa != null ? String(row.luasHa) : null,
-              peruntukan: row.peruntukan || null,
-              issueDate: row['Tanggal Terbit'] || row.issueDate || null,
-              expiryDate: row['Tanggal Berakhir'] || row.expiryDate || null,
+              status: getVal(row, ['status']) || row.status || 'Aktif',
+              luasM2: luasM2Val,
+              luasHa: luasHaVal,
+              peruntukan: peruntukanVal,
+              issueDate: issueDateVal,
+              expiryDate: expiryDateVal,
               keterangan: jsonKeterangan,
-              documentStatus: existing ? existing.documentStatus : 'PENDING_DOC',
-              updatedAt: new Date() // Pastikan waktu terupdate ke yang paling baru
+              documentStatus: existing ? existing.documentStatus : (cleanNoSertifikat && cleanNoSertifikat !== '-' ? 'COMPLETED' : 'PENDING_DOC'),
+              updatedAt: new Date()
             };
 
             if (existing) {
@@ -198,6 +225,23 @@ export class CsvImportService {
                   ...dataToSave
                 }
               });
+            }
+
+            if (cleanNoSertifikat && cleanNoSertifikat !== '-' && cleanNoSertifikat !== 'Tanpa Sertifikat') {
+              try {
+                await this.prisma.certificate.create({
+                  data: {
+                    itemId: idToUse,
+                    jenisSertifikat: cleanTipe || 'Sertifikat Utama',
+                    namaSertifikat: cleanNamaSertifikat || 'Sertifikat Master',
+                    noSertifikat: cleanNoSertifikat,
+                    instansi: cleanPenanggungJawab || 'Instansi Penerbit',
+                    terbit: issueDateVal || '',
+                    expired: expiryDateVal || '',
+                    status: 'Aktif'
+                  }
+                });
+              } catch(e) {}
             }
             
             if (!isDuplicate) {
