@@ -76,18 +76,27 @@ export const updateMasterItem = async (id, data) => {
   }
   console.log(`[REAL API] Updating Master Item ${id}...`);
 
-  const payload = {};
-  if (data.title || data.merekItem) payload.title = data.merekItem || data.title;
-  if (data.code || data.tipe) payload.code = data.code || data.tipe;
-  if (data.categoryKey) payload.categoryKey = data.categoryKey;
-  if (data.unitLocation || data.lokasi) payload.unitLocation = data.lokasi || data.unitLocation;
-  if (data.status) payload.status = data.status;
-  if (data.luasM2) payload.luasM2 = data.luasM2;
-  if (data.luasHa) payload.luasHa = data.luasHa;
-  if (data.peruntukan) payload.peruntukan = data.peruntukan;
-  if (data.terbit || data.issueDate) payload.issueDate = data.terbit || data.issueDate;
-  if (data.berakhir || data.expiryDate) payload.expiryDate = data.berakhir || data.expiryDate;
-  if (data.keterangan) payload.keterangan = data.keterangan;
+  const payload = {
+    title: data.title,
+    code: data.code,
+    categoryKey: data.categoryKey,
+    unitLocation: data.unitLocation,
+    status: data.status,
+    luasM2: data.luasM2,
+    luasHa: data.luasHa,
+    peruntukan: data.peruntukan,
+    issueDate: data.issueDate,
+    expiryDate: data.expiryDate,
+    keterangan: data.keterangan,
+    documentStatus: data.documentStatus
+  };
+
+  // Clean undefined properties
+  Object.keys(payload).forEach(key => {
+    if (payload[key] === undefined) {
+      delete payload[key];
+    }
+  });
 
   const response = await api.put(`/master-items/${id}`, payload);
   return response.data;
@@ -119,6 +128,19 @@ export const createMasterItem = async (data) => {
   }
   console.log('[REAL API] Creating Master Item...');
   const response = await api.post('/master-items', data);
+  return response.data;
+};
+
+/**
+ * Update Notification Setting for a master item
+ */
+export const updateNotificationSetting = async (id, data) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Updating Notification Setting ${id}...`, data);
+    await new Promise(res => setTimeout(res, 300));
+    return data;
+  }
+  const response = await api.put(`/master-items/${id}/notification-setting`, data);
   return response.data;
 };
 

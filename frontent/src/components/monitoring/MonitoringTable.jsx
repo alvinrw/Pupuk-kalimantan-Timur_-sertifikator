@@ -60,6 +60,7 @@ export default function MonitoringTable({
               <th className="py-3 px-3 font-bold whitespace-nowrap">UNIT PABRIK</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap">MEREK / NAMA ITEM</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap">NOMOR SERI / TAG</th>
+              <th className="py-3 px-3 font-bold whitespace-nowrap">NAMA SERTIFIKAT</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap">NO. SERTIFIKAT</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap">TGL EXPIRATION</th>
               <th className="py-3 px-3 font-bold text-center whitespace-nowrap">STATUS PERIZINAN</th>
@@ -107,6 +108,9 @@ export default function MonitoringTable({
                     </td>
                     <td className={`py-3 px-3 font-mono-data font-semibold whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-700'}`}>
                       {doc.nomorSeriTipe || doc.nomorSeri || doc.tipe || doc.code || '-'}
+                    </td>
+                    <td className={`py-3 px-3 font-mono-data whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-800'}`}>
+                      {doc.namaSertifikat || '-'}
                     </td>
                     <td className={`py-3 px-3 font-mono-data whitespace-nowrap ${isDecommissioned ? 'text-slate-300' : 'text-slate-800'}`}>
                       {isExempt ? (

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Filter, Loader2, Search } from 'lucide-react';
+import { Activity, Filter, Loader2, Search, AlertTriangle } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
 import { useMonitoring } from '../hooks/useMonitoring';
 import MonitoringSummaryCards from '../components/monitoring/MonitoringSummaryCards';
@@ -15,6 +15,7 @@ export default function MonitoringSertifikasi() {
     searchTerm, setSearchTerm,
     expiryTab, setExpiryTab,
     selectedDetailDoc, setSelectedDetailDoc,
+    activeReminders,
     
     // Derived state
     activeFilterCount,
@@ -127,6 +128,7 @@ export default function MonitoringSertifikasi() {
           </button>
         </div>
       </div>
+
 
       <MonitoringSummaryCards
         counts={monitoringData.counts}

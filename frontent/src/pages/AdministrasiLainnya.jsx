@@ -278,6 +278,7 @@ export default function AdministrasiLainnya() {
         await createCertificateForMasterItem({
           itemId: targetItemId,
           jenisSertifikat: newItem.jenisCiptaan || 'Sertifikat Pencatatan',
+          namaSertifikat: newItem.namaSertifikat || undefined,
           noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
           status: 'Aktif',
           terbit: newItem.tanggalCiptaan || undefined,

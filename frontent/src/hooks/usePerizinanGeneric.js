@@ -46,6 +46,30 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       
       const mapped = data.map(doc => {
         const certs = doc.certificates || [];
+        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            return dB - dA;
+          })[0];
+        } else if (certs.length > 0) {
+          primaryCert = certs[0];
+        }
+
+        let meta = {};
+        try {
+          if (doc.keterangan && doc.keterangan.startsWith('{')) {
+            meta = JSON.parse(doc.keterangan);
+          } else {
+            meta = { keteranganAsli: doc.keterangan };
+          }
+        } catch (e) {
+          meta = { keteranganAsli: doc.keterangan };
+        }
+
         return {
           id: doc.id,
           MasterId: doc.id,
@@ -56,19 +80,20 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           namaItem: doc.title || '-',
           merekItem: doc.title,
           code: doc.code || '-',
-          certificateNo: doc.certificateNo || doc.code || '-',
+          certificateNo: primaryCert?.noSertifikat || doc.code || '-',
           unitLocation: doc.unitLocation || '-',
           unit: doc.unitLocation || '-',
-          luasM2: doc.areaSqm || "0",
-          luasHa: doc.areaHa || "0",
+          luasM2: doc.luasM2 || "0",
+          luasHa: doc.luasHa || "0",
           peruntukan: doc.peruntukan || "-",
-          issueDate: doc.createdAt,
-          expiryDate: doc.expiryDate || "-",
+          issueDate: primaryCert?.terbit || doc.issueDate || (doc.createdAt ? doc.createdAt.substring(0, 10) : '-'),
+          expiryDate: primaryCert?.expired || doc.expiryDate || "-",
           kondisi: doc.status || "Baik",
-          description: doc.description || "-",
-          keterangan: doc.description || "-",
+          description: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
+          keterangan: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
+          namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
           status: doc.status || "Aktif",
-          user: "Umum",
+          user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
           documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs
@@ -92,6 +117,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "code", label: "Kode / Tag Perizinan" },
     { key: "jenisItem", label: "Jenis Perizinan" },
     { key: "hasSertifikat", label: "Ada Sertifikat" },
+    { key: "namaSertifikat", label: "Nama Sertifikat" },
     { key: "certificateNo", label: "No. Sertifikat" },
     { key: "unit", label: "Unit Pabrik / Lokasi" },
     { key: "user", label: "User / Instansi" },
@@ -104,6 +130,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
     { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
+    { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
     { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
     { key: "unit", label: "LOKASI" },
     { key: "luasM2", label: "LUAS (M²)" },
@@ -240,7 +267,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             expiryDate: cert.expired || doc.expiryDate || '-',
             status: cert.status || doc.status || 'Aktif',
             hasPdf: !!cert.fileUrl,
-            fileUrl: cert.fileUrl || null
+            fileUrl: cert.fileUrl || null,
+            namaSertifikat: cert.namaSertifikat || '-'
           });
         });
       } else {
@@ -259,7 +287,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           expiryDate: doc.expiryDate || '-',
           status: doc.status || 'Aktif',
           hasPdf: !!doc.fileUrl,
-          fileUrl: doc.fileUrl || null
+          fileUrl: doc.fileUrl || null,
+          namaSertifikat: doc.namaSertifikat || '-'
         });
       }
     });

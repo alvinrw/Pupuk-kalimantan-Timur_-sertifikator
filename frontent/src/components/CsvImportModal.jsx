@@ -241,7 +241,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
         <div className="p-6">
           {activeTab === 'upload' && (
             <>
-              <input type="file" ref={fileInputRef} accept=".csv" multiple className="hidden" onChange={handleFileChange} />
+              <input type="file" ref={fileInputRef} accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" multiple className="hidden" onChange={handleFileChange} />
               
               {step === 'upload' && (
                 <>
@@ -251,13 +251,13 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                   >
                     <FileSpreadsheet className="w-10 h-10 text-[#005ea4] mb-2" />
                     <p className="text-sm font-bold text-slate-800 mb-1">
-                      Klik atau Tarik Berkas CSV ke Sini
+                      Klik atau Tarik Berkas CSV / Excel ke Sini
                     </p>
                     <p className="text-xs text-slate-500 mb-4">
                       Format mendukung CSV / Excel gabungan multi-unit
                     </p>
                     <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
-                      Pilih Berkas CSV
+                      Pilih Berkas CSV / Excel
                     </span>
                   </div>
                 </>
@@ -267,7 +267,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <span className="font-bold text-slate-800 text-xs font-mono-data block">
-                      Berkas CSV Terpilih ({files.length})
+                      Berkas Terpilih ({files.length})
                     </span>
                     <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1">
                       {files.map((f, i) => (

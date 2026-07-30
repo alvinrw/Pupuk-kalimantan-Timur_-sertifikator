@@ -30,6 +30,7 @@ export function useMonitoring() {
   const [ocrSuccess, setOcrSuccess] = useState(false);
   
   const [allCertificates, setAllCertificates] = useState([]);
+  const [activeReminders, setActiveReminders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Quick Action Modals State
@@ -123,6 +124,7 @@ export function useMonitoring() {
           sisaHari: hari,
           statusLegal: calcStatus(hari),
           nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.code || '-'),
+          namaSertifikat: primaryCert?.namaSertifikat || item.namaSertifikat || '-',
           instansiPenerbit: primaryCert?.instansi || '-',
           nomorSK: '-',
           keterangan: item.description || '-',
@@ -131,6 +133,15 @@ export function useMonitoring() {
         });
       });
       setAllCertificates(flattened);
+      try {
+        const reminderRes = await fetch('http://localhost:3000/api/v1/master-items/reminders/active');
+        if (reminderRes.ok) {
+          const reminderJson = await reminderRes.json();
+          setActiveReminders(reminderJson);
+        }
+      } catch (err) {
+        console.error("Failed to fetch active reminders in monitoring:", err);
+      }
     } catch (err) {
       console.error("Failed to fetch MonitoringSertifikasi:", err);
     } finally {
@@ -179,7 +190,11 @@ export function useMonitoring() {
       const matchesStatusFisik = filterStatusOperasional === 'All' || item.statusOperasional === filterStatusOperasional || item.status === filterStatusOperasional;
 
       let matchesRentangHari = true;
-      if (filterRentangHari === 'expired') {
+      if (filterRentangHari === 'today') {
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari === 0;
+      } else if (filterRentangHari === '7') {
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= 7;
+      } else if (filterRentangHari === 'expired') {
         matchesRentangHari = item.sisaHari !== null && item.sisaHari <= 0;
       } else if (filterRentangHari === 'urgent') {
         matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= (parseInt(customUrgentDays) || 30);
@@ -360,7 +375,7 @@ export function useMonitoring() {
       if (uploadedFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
-        const uploadRes = await fetch('http://localhost:3005/api/v1/document-history/upload', {
+        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
           method: 'POST',
           body: formDataUpload
         });
@@ -450,6 +465,7 @@ export function useMonitoring() {
     inspectionDate, setInspectionDate,
     issueDate, setIssueDate,
     newExpiryDate, setNewExpiryDate,
+    activeReminders, setActiveReminders,
 
     // Derived states & functions
     fetchMonitoringData,

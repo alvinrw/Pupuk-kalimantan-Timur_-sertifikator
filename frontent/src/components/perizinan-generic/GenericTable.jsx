@@ -112,7 +112,7 @@ export default function GenericTable({
                     </div>
                   </th>
                 )}
-
+                {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA SERTIFIKAT</th>}
                 {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">NOMOR SERTIFIKAT</th>}
 
                 {isVisible("unit") && (
@@ -255,6 +255,12 @@ export default function GenericTable({
                               Ada
                             </span>
                           )}
+                        </td>
+                      )}
+
+                      {isVisible("namaSertifikat") && (
+                        <td className="py-3.5 px-4 font-semibold whitespace-nowrap text-slate-800">
+                          {row.namaSertifikat || '-'}
                         </td>
                       )}
 

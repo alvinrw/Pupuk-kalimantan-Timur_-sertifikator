@@ -29,9 +29,11 @@ model MasterItem {
   updatedAt    DateTime @updatedAt
 
   // Relasi
-  certificates      Certificate[]
-  permits           Permit[]
-  documentHistories DocumentHistory[]
+  certificates          Certificate[]
+  permits               Permit[]
+  documentHistories     DocumentHistory[]
+  notificationSetting   NotificationSetting?
+  reminderNotifications ReminderNotification[]
 
   @@map("master_items")
 }
@@ -40,6 +42,7 @@ model Certificate {
   id              String   @id @default(uuid())
   itemId          String   // Foreign Key
   jenisSertifikat String   // "SLF", "AMDAL", "HGB", dll.
+  namaSertifikat  String?
   noSertifikat    String?
   instansi        String?
   terbit          String?
@@ -109,4 +112,35 @@ model MonitoringLog {
   certificate     Certificate? @relation(fields: [certificateId], references: [id], onDelete: Cascade)
 
   @@map("monitoring_logs")
+}
+
+model NotificationSetting {
+  id              String      @id @default(uuid())
+  itemId          String      @unique // Relasi 1-to-1 ke MasterItem
+  isEnabled       Boolean     @default(true)
+  triggerType     String      @default("DAYS") // "DAYS" atau "DATE"
+  triggerDays     Int         @default(30)     // Pemicu H-30, H-7, dll.
+  triggerDate     DateTime?                    // Tanggal spesifik pemicu notifikasi
+  lastTriggeredAt DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relasi
+  item            MasterItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model ReminderNotification {
+  id          String      @id @default(uuid())
+  itemId      String      // Relasi ke MasterItem
+  message     String
+  isResolved  Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  resolvedAt  DateTime?
+
+  // Relasi
+  item        MasterItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@map("reminder_notifications")
 }

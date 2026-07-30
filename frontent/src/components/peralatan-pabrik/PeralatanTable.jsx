@@ -59,7 +59,6 @@ export default function PeralatanTable({
               {isVisible("merekItem") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">MEREK/ITEM</th>}
               {isVisible("tipe") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TIPE</th>}
               {isVisible("nomorSeri") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NOMOR SERI</th>}
-              {isVisible("kapasitas") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KAPASITAS</th>}
 
               {/* LOKASI */}
               {isVisible("lokasi") && (
@@ -137,7 +136,7 @@ export default function PeralatanTable({
               )}
 
               {isVisible("noSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NO. SERTIFIKAT</th>}
-              {isVisible("tanggalInspeksi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TANGGAL INSPEKSI</th>}
+              {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA SERTIFIKAT</th>}
               {isVisible("terbit") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TERBIT</th>}
               {isVisible("berakhir") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">BERAKHIR</th>}
               {isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
@@ -194,11 +193,6 @@ export default function PeralatanTable({
                     {isVisible("nomorSeri") && (
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         {item.nomorSeri}
-                      </td>
-                    )}
-                    {isVisible("kapasitas") && (
-                      <td className="py-3.5 px-4 font-medium whitespace-nowrap">
-                        {item.kapasitas}
                       </td>
                     )}
                     {isVisible("lokasi") && (
@@ -269,13 +263,13 @@ export default function PeralatanTable({
                         )}
                       </td>
                     )}
-                  {isVisible("tanggalInspeksi") && (
-                    <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
-                      {row.tanggalInspeksi}
+                  {isVisible("namaSertifikat") && (
+                    <td className="py-3.5 px-4 font-mono-data font-bold text-slate-700 whitespace-nowrap">
+                      {row.namaSertifikat || '-'}
                     </td>
                   )}
                   {isVisible("terbit") && (
-                    <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
+                    <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap">
                       {row.terbit}
                     </td>
                   )}

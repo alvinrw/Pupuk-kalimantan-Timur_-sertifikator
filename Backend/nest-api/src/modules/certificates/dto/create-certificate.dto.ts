@@ -11,6 +11,10 @@ export class CreateCertificateDto {
 
   @IsString()
   @IsOptional()
+  namaSertifikat?: string;
+
+  @IsString()
+  @IsOptional()
   noSertifikat?: string;
 
   @IsString()

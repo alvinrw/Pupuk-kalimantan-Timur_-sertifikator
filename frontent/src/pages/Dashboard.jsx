@@ -59,7 +59,7 @@ export default function Dashboard() {
 
   const allDashboardItems = useMemo(() => {
     const calcDiff = (dStr) => {
-      if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
+      if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return -999;
       const expiry = new Date(dStr);
       if (isNaN(expiry.getTime())) return null;
       const today = new Date();
@@ -231,6 +231,8 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
+
+
 
       {/* STATISTIK UTAMA */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

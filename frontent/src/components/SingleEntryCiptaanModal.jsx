@@ -7,7 +7,9 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
     judulCiptaan: '',
     jenisCiptaan: 'Program Komputer (Software)',
     tanggalCiptaan: new Date().toISOString().split('T')[0],
-    masaBerlaku: '5 Tahun'
+    masaBerlaku: '5 Tahun',
+    namaSertifikat: '',
+    noSertifikat: ''
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
@@ -28,6 +30,8 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
           if (ocrData) {
             setFormData(prev => ({
               ...prev,
+              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
+              noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
               judulCiptaan: ocrData.namaPeralatan || prev.judulCiptaan,
               tanggalCiptaan: ocrData.terbit || prev.tanggalCiptaan,
             }));
@@ -63,14 +67,17 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
       expiryDate: calculatedExpiry,
       hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
       documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
-      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (selectedFile ? `CIPTAAN-CERT-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT")
+      namaSertifikat: formData.namaSertifikat,
+      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `CIPTAAN-CERT-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT"))
     });
 
     setFormData({
       judulCiptaan: '',
       jenisCiptaan: 'Program Komputer (Software)',
       tanggalCiptaan: new Date().toISOString().split('T')[0],
-      masaBerlaku: '5 Tahun'
+      masaBerlaku: '5 Tahun',
+      namaSertifikat: '',
+      noSertifikat: ''
     });
     setSelectedFile(null);
     onClose();
@@ -166,6 +173,29 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
           )}
 
           <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Nama Sertifikat</label>
+                <input
+                  type="text"
+                  value={formData.namaSertifikat}
+                  onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                  placeholder="Contoh: Sertifikat HAKI"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Nomor Sertifikat</label>
+                <input
+                  type="text"
+                  value={formData.noSertifikat}
+                  onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                  placeholder="Opsional, Auto jika kosong"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="font-bold text-slate-900 block mb-1">Judul Ciptaan</label>
               <input

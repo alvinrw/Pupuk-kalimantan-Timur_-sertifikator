@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { EquipmentModule } from './modules/equipment/equipment.module';
@@ -19,6 +20,7 @@ import { CsvImportModule } from './modules/csv-import/csv-import.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    ScheduleModule.forRoot(),
     DatabaseModule,
     AuthModule,
     EquipmentModule,

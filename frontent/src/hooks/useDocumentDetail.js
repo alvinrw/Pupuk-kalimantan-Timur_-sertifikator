@@ -9,21 +9,23 @@ import {
   createCertificateForMasterItem,
   updateCertificate,
   deleteCertificate,
-  updateMasterItem
+  updateMasterItem,
+  updateNotificationSetting
 } from '../services/masterItemsService';
-import { UPLOAD_ENDPOINT, getFullFileUrl } from '../config/api';
+import { API_BASE, UPLOAD_ENDPOINT, getFullFileUrl } from '../config/api';
 
 export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired }) {
   // ──────────────────────────────────────────────────────────────────
   // INITIAL COMPUTED VALUES
   // ──────────────────────────────────────────────────────────────────
   const parentDoc = item?.parentDoc || item;
-  const effectiveCategoryKey = parentDoc.categoryKey || item.categoryKey || '';
+  const effectiveCategoryKey = parentDoc?.categoryKey || item?.categoryKey || '';
 
   // ──────────────────────────────────────────────────────────────────
   // MULTI-CERT HUB STATE
   // ──────────────────────────────────────────────────────────────────
-  const [linkedCerts, setLinkedCerts] = useState(item.linkedCertificates || []);
+
+  const [linkedCerts, setLinkedCerts] = useState(item?.linkedCertificates || []);
   const [isAddCertModalOpen, setIsAddCertModalOpen] = useState(false);
   const [newCertData, setNewCertData] = useState({
     jenisSertifikat: '', noSertifikat: '', instansi: '',
@@ -31,16 +33,16 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   });
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
 
-  // ──────────────────────────────────────────────────────────────────
-  // ACTIVE CERT NAVIGATION
-  // ──────────────────────────────────────────────────────────────────
   const [activeCertId, setActiveCertId] = useState(item?.currentCert?.id || item?.cert?.id || null);
 
   useEffect(() => {
     setActiveCertId(item?.currentCert?.id || item?.cert?.id || null);
   }, [item]);
 
-  const rawTargetCert = item?.currentCert || item?.cert || null;
+  const allItemCerts = item?.certificates || [];
+  const activeItemCert = allItemCerts.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status).sort((a,b) => new Date(b.expired || 0) - new Date(a.expired || 0))[0];
+
+  const rawTargetCert = item?.currentCert || item?.cert || activeItemCert || null;
   const targetCert = activeCertId
     ? (linkedCerts.find(c => c.id === activeCertId) || rawTargetCert)
     : rawTargetCert;
@@ -74,6 +76,7 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
+
     lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
     user: targetCert?.instansi || item.user || item.issuer || 'Umum',
     status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
@@ -85,9 +88,27 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     masaBerlaku: item.masaBerlaku || '5 Tahun',
     terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
     berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
-    keterangan: targetCert?.instansi || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
-    fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || '')
+    keterangan: targetCert?.keterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
+    fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
+    namaSertifikat: isSingleCertScope ? (targetCert?.namaSertifikat || '') : (item.namaSertifikat || '')
   });
+
+  // ──────────────────────────────────────────────────────────────────
+  // REMINDER & NOTIFICATION STATE
+  // ──────────────────────────────────────────────────────────────────
+  const [reminderEnabled, setReminderEnabled] = useState(item.notificationSetting ? item.notificationSetting.isEnabled : true);
+  const [triggerType, setTriggerType] = useState(item.notificationSetting ? (item.notificationSetting.triggerType || 'DAYS') : 'DAYS');
+  const [reminderDays, setReminderDays] = useState(item.notificationSetting ? item.notificationSetting.triggerDays : 30);
+  const [triggerDate, setTriggerDate] = useState(item.notificationSetting && item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
+
+  useEffect(() => {
+    if (item && item.notificationSetting) {
+      setReminderEnabled(item.notificationSetting.isEnabled);
+      setTriggerType(item.notificationSetting.triggerType || 'DAYS');
+      setReminderDays(item.notificationSetting.triggerDays);
+      setTriggerDate(item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
+    }
+  }, [item]);
 
   // Sync formData whenever targetCert changes (navigasi antar sertifikat)
   useEffect(() => {
@@ -235,7 +256,21 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     e.preventDefault();
     try {
       let fileUrl = null;
-      if (selectedUploadFile) {
+      if (uploadData.tempUrl) {
+        // Move from temp to final
+        const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tempUrl: uploadData.tempUrl })
+        });
+        if (moveRes.ok) {
+          const json = await moveRes.json();
+          fileUrl = json?.data?.url || null;
+        } else {
+          throw new Error('Gagal memindahkan file dari temporary ke final storage');
+        }
+      } else if (selectedUploadFile) {
+        // Fallback if somehow there's no tempUrl (e.g. upload failed previously)
         const fd = new FormData();
         fd.append('file', selectedUploadFile);
         const uploadRes = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd });
@@ -343,8 +378,81 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     e.preventDefault();
     try {
       const targetId = item.MasterId || item.id;
-      const updated = await updateMasterItem(targetId, formData);
-      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, ...updated, id: item.id });
+      
+      let payload = {};
+      if (isEquipment) {
+        // - title is jenisPeralatan (e.g. Bejana Tekan)
+        // - code is merekItem (e.g. HE-102)
+        payload = {
+          title: formData.jenisPeralatan,
+          code: formData.merekItem,
+          unitLocation: formData.lokasi,
+          status: formData.status,
+          issueDate: formData.terbit || null,
+          expiryDate: formData.berakhir || null,
+          keterangan: JSON.stringify({
+            tipe: formData.tipe || '',
+            nomorSeri: formData.nomorSeri || '',
+            penanggungJawab: formData.user || '',
+            noSertifikat: formData.noSertifikat || '',
+            namaSertifikat: formData.namaSertifikat || '',
+            keteranganAsli: formData.keterangan || ''
+          })
+        };
+      } else {
+        // - title is merekItem or title
+        // - code is code or noSertifikat
+        payload = {
+          title: formData.merekItem || formData.title || '',
+          code: formData.code || formData.noSertifikat || '',
+          unitLocation: formData.lokasi || '',
+          status: formData.status,
+          issueDate: formData.terbit || formData.issueDate || null,
+          expiryDate: formData.berakhir || formData.expiryDate || null,
+          keterangan: JSON.stringify({
+            namaSertifikat: formData.namaSertifikat || '',
+            keteranganAsli: formData.keterangan || ''
+          })
+        };
+      }
+
+      const updated = await updateMasterItem(targetId, payload);
+
+      // Update Active Certificate if it exists, so changes in the form also apply to the cert!
+      if (rawTargetCert && rawTargetCert.id) {
+        await updateCertificate(rawTargetCert.id, {
+          namaSertifikat: formData.namaSertifikat,
+          noSertifikat: formData.noSertifikat || formData.code,
+          instansi: formData.user,
+          terbit: formData.terbit || formData.issueDate,
+          expired: formData.berakhir || formData.expiryDate,
+          status: formData.status
+        });
+      }
+
+      // Save notification settings
+      await updateNotificationSetting(targetId, {
+        isEnabled: reminderEnabled,
+        triggerType: triggerType,
+        triggerDays: parseInt(reminderDays) || 30,
+        triggerDate: triggerType === 'DATE' ? triggerDate : null
+      });
+
+      if (onSaveUpdate) {
+        onSaveUpdate({
+          ...item,
+          ...formData,
+          ...updated,
+          id: item.id,
+          namaSertifikat: formData.namaSertifikat,
+          notificationSetting: {
+            isEnabled: reminderEnabled,
+            triggerType: triggerType,
+            triggerDays: parseInt(reminderDays) || 30,
+            triggerDate: triggerType === 'DATE' ? triggerDate : null
+          }
+        });
+      }
       setIsEditing(false);
     } catch (err) {
       console.error('Failed to update master item:', err);
@@ -543,5 +651,9 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     isRenewExemptModalOpen, setIsRenewExemptModalOpen,
     renewExemptDate, setRenewExemptDate, isRenewingExempt, confirmRenewExempt,
     localDocumentStatus,
+    reminderEnabled, setReminderEnabled,
+    triggerType, setTriggerType,
+    reminderDays, setReminderDays,
+    triggerDate, setTriggerDate,
   };
 }

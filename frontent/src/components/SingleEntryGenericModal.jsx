@@ -11,7 +11,8 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
     certificateNo: '',
     issueDate: new Date().toISOString().split('T')[0],
     expiryDate: '2028-12-31',
-    status: 'Aktif'
+    status: 'Aktif',
+    namaSertifikat: ''
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
@@ -34,6 +35,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
             setFormData(prev => ({
               ...prev,
               title: ocrData.namaPeralatan || prev.title,
+              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
               certificateNo: ocrData.noSertifikat || '',
               issueDate: ocrData.terbit || '',
               expiryDate: ocrData.expired || '',
@@ -73,6 +75,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
       berakhir: formData.expiryDate,
       keterangan: sertifikatMode === 'tanpa' ? "Tidak Perlu Sertifikat" : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : "Input Manual Baru"),
       documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
+      namaSertifikat: formData.namaSertifikat
     });
 
     setFormData({
@@ -83,7 +86,8 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
       certificateNo: '',
       issueDate: new Date().toISOString().split('T')[0],
       expiryDate: '2028-12-31',
-      status: 'Aktif'
+      status: 'Aktif',
+      namaSertifikat: ''
     });
     setSelectedFile(null);
     onClose();
@@ -209,7 +213,20 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Nama Sertifikat</label>
+              <input
+                type="text"
+                value={formData.namaSertifikat}
+                onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                placeholder="Contoh: Izin Lingkungan, SLF"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-4">
             <div>
               <label className="font-bold text-slate-900 block mb-1">Instansi Penerbit / User</label>
               <input

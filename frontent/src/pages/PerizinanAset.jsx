@@ -265,6 +265,7 @@ export default function PerizinanAset({ title, subtitle }) {
         await createCertificateForMasterItem({
           itemId: targetItemId,
           jenisSertifikat: newItem.purpose || 'Sertifikat Aset',
+          namaSertifikat: newItem.namaSertifikat || undefined,
           noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
           status: 'Aktif',
           terbit: newItem.submissionDate || undefined,

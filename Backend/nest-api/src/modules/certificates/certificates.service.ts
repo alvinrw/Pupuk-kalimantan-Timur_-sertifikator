@@ -13,6 +13,11 @@ export class CertificatesService {
     });
 
     if (createCertificateDto.itemId) {
+      await this.prisma.reminderNotification.updateMany({
+        where: { itemId: createCertificateDto.itemId, isResolved: false },
+        data: { isResolved: true, resolvedAt: new Date() },
+      }).catch(() => {});
+
       await this.prisma.masterItem.update({
         where: { id: createCertificateDto.itemId },
         data: { documentStatus: 'COMPLETED' },
@@ -40,11 +45,20 @@ export class CertificatesService {
   }
 
   async update(id: string, updateCertificateDto: UpdateCertificateDto) {
-    await this.findOne(id);
-    return this.prisma.certificate.update({
+    const cert = await this.findOne(id);
+    const result = await this.prisma.certificate.update({
       where: { id },
       data: updateCertificateDto,
     });
+
+    if (cert.itemId) {
+      await this.prisma.reminderNotification.updateMany({
+        where: { itemId: cert.itemId, isResolved: false },
+        data: { isResolved: true, resolvedAt: new Date() },
+      }).catch(() => {});
+    }
+
+    return result;
   }
 
   async remove(id: string) {

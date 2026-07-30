@@ -13,6 +13,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
     validityPeriod: new Date().toISOString().split('T')[0],
     condition: 'Baik',
     description: '',
+    namaSertifikat: '',
     noSertifikat: ''
   });
 
@@ -34,6 +35,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
           if (ocrData) {
             setFormData(prev => ({
               ...prev,
+              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
               noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
               submissionDate: ocrData.terbit || prev.submissionDate,
               validityPeriod: ocrData.expired || prev.validityPeriod,
@@ -55,6 +57,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
       ...formData,
       file: sertifikatMode === 'dengan' ? selectedFile : null,
       id: `ASET-MANUAL-${Date.now()}`,
+      namaSertifikat: formData.namaSertifikat,
       noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `ASET-CERT-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT")),
       hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
       documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
@@ -71,6 +74,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
       validityPeriod: new Date().toISOString().split('T')[0],
       condition: 'Baik',
       description: '',
+      namaSertifikat: '',
       noSertifikat: ''
     });
     setSelectedFile(null);
@@ -167,9 +171,20 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 gap-4 mb-4">
             <div>
-              <label className="font-bold text-slate-900 block mb-1">Tanggal Awal Pengajuan</label>
+              <label className="font-bold text-slate-900 block mb-1">Nama Sertifikat</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+                value={formData.namaSertifikat}
+                onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                placeholder="Contoh: Sertifikat HGB, Izin Lingkungan"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">Tanggal Awal Pengajuan</label>
               <input
                 type="date"
                 value={formData.submissionDate}
@@ -187,6 +202,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
               />
             </div>
+          </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

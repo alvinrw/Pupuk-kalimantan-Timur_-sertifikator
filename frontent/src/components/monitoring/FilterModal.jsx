@@ -89,6 +89,8 @@ export default function FilterModal({
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs cursor-pointer"
             >
               <option value="All">Semua Rentang Hari</option>
+              <option value="today">Hari Ini (Due Today)</option>
+              <option value="7">1 Minggu (&le; 7 Hari)</option>
               <option value="expired">Expired (≤ 0 Hari)</option>
               <option value="urgent">Urgent (≤ {customUrgentDays || 30} Hari)</option>
               <option value="60">2 Bulan (≤ 60 Hari)</option>

@@ -14,6 +14,7 @@ import {
   UploadCloud, Trash2, RefreshCw, AlertTriangle, Loader2,
   ChevronDown, Settings
 } from 'lucide-react';
+import { updateNotificationSetting } from '../services/masterItemsService';
 
 // Hook & Config
 import { useDocumentDetail } from '../hooks/useDocumentDetail';
@@ -60,6 +61,10 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
     isRenewExemptModalOpen, setIsRenewExemptModalOpen,
     renewExemptDate, setRenewExemptDate, isRenewingExempt, confirmRenewExempt,
     localDocumentStatus,
+    reminderEnabled, setReminderEnabled,
+    triggerType, setTriggerType,
+    reminderDays, setReminderDays,
+    triggerDate, setTriggerDate,
   } = hook;
 
   // ─── Sisa hari kalkulasi ───
@@ -109,7 +114,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
                 {isSingleCertScope
                   ? (targetCert?.jenisSertifikat || formData.jenisPeralatan || formData.merekItem)
-                  : formData.merekItem}
+                  : (formData.namaSertifikat || formData.merekItem)}
               </h2>
               {isSingleCertScope && (
                 <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-bold font-mono-data">
@@ -138,7 +143,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             <span>Aksi</span>
             <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} />
           </button>
-          
+
           {isActionMenuOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
               {!isEditing ? (
@@ -224,6 +229,16 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   <span>Hapus Data Item (Sertifikat)</span>
                 </button>
               )}
+
+              <div className="h-px bg-slate-100 my-1 mx-2"></div>
+
+              <button
+                onClick={() => { setIsDeleteDialogOpen(true); setIsActionMenuOpen(false); }}
+                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
+              >
+                <Trash2 className="w-4 h-4 text-slate-400 group-hover:text-rose-500" />
+                <span>Hapus Data Ini</span>
+              </button>
             </div>
           )}
         </div>
@@ -277,9 +292,9 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               {!isHaki && (
                 <>
                   {[
+                    { label: 'Nama Sertifikat', key: 'namaSertifikat' },
                     { label: 'Tipe / Kode', key: 'tipe' },
                     { label: 'Nomor Seri / Tag', key: 'nomorSeri' },
-                    { label: 'Kapasitas SWL / Tekanan', key: 'kapasitas' },
                     { label: 'Lokasi / Unit Pabrik', key: 'lokasi', bold: true },
                     { label: 'User / Dept Penanggung Jawab', key: 'user' },
                   ].map(({ label, key, bold }) => (
@@ -334,6 +349,15 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
                 />
               </div>
+              {!isHaki && (
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1.5">Tanggal Terbit / Berlaku</label>
+                  <input type="date" value={formData.terbit}
+                    onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data"
+                  />
+                </div>
+              )}
               <div>
                 <label className="font-bold text-slate-800 block mb-1.5 text-rose-700">{isHaki ? 'Kapan Berakhir' : 'Tanggal Expired'}</label>
                 <input type="text" value={formData.berakhir} placeholder="YYYY-MM-DD atau Seumur Hidup"
@@ -341,17 +365,107 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
                 />
               </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1.5">{isHaki ? 'Instansi Penerbit / Keterangan HAKI' : 'Keterangan & Catatan Pengujian'}</label>
+                <textarea value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} rows={3}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                />
+              </div>
             </div>
 
-            <div>
-              <label className="font-bold text-slate-800 block mb-1.5">{isHaki ? 'Instansi Penerbit / Keterangan HAKI' : 'Keterangan & Catatan Pengujian'}</label>
-              <textarea value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} rows={3}
-                className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
-              />
+            {/* Seksi Pengaturan Pengingat (Edit Mode) */}
+            <div className="mt-4 pt-4 border-t border-slate-200">
+              <label className="font-bold text-slate-800 block mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider font-mono-data">
+                <span></span> Pengaturan Pengingat & Notifikasi
+              </label>
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="editReminderEnabled"
+                    checked={reminderEnabled}
+                    onChange={async (e) => {
+                      const isChecked = e.target.checked;
+                      setReminderEnabled(isChecked);
+                      // Auto-save just the toggle to ensure it persists even without clicking Simpan
+                      try {
+                        const tId = item.MasterId || item.id;
+                        await updateNotificationSetting(tId, {
+                          isEnabled: isChecked,
+                          triggerType: triggerType,
+                          triggerDays: parseInt(reminderDays) || 30,
+                          triggerDate: triggerType === 'DATE' ? triggerDate : null
+                        });
+                        if (item && item.notificationSetting) {
+                          item.notificationSetting.isEnabled = isChecked;
+                        }
+                      } catch(err) {
+                        console.error('Auto-save failed:', err);
+                      }
+                    }}
+                    className="rounded border-slate-300 accent-[#005ea4] h-4 w-4 cursor-pointer"
+                  />
+                  <label htmlFor="editReminderEnabled" className="text-xs text-slate-700 font-bold select-none cursor-pointer">
+                    Aktifkan Pengingat Notifikasi untuk Dokumen ini
+                  </label>
+                </div>
+                {reminderEnabled && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tipe Pemicu</label>
+                      <select
+                        value={triggerType}
+                        onChange={(e) => setTriggerType(e.target.value)}
+                        className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
+                      >
+                        <option value="DAYS">Berdasarkan Sisa Hari (H-)</option>
+                        <option value="DATE">Berdasarkan Tanggal Spesifik</option>
+                      </select>
+                    </div>
+                    {triggerType === 'DAYS' ? (
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={reminderDays}
+                          onChange={(e) => setReminderDays(e.target.value === '' ? '' : parseInt(e.target.value))}
+                          className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                        />
+                      </div>
+                    ) : (
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tanggal Pemicu</label>
+                        <input
+                          type="date"
+                          value={triggerDate}
+                          onChange={(e) => setTriggerDate(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
-              <button type="button" onClick={() => setIsEditing(false)} className="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors cursor-pointer">Batal</button>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setIsEditing(false);
+                  if (item && item.notificationSetting) {
+                    setReminderEnabled(item.notificationSetting.isEnabled);
+                    setTriggerType(item.notificationSetting.triggerType || 'DAYS');
+                    setReminderDays(item.notificationSetting.triggerDays);
+                    setTriggerDate(item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
+                  }
+                }} 
+                className="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
               <button type="submit" className="px-6 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer">
                 <Save className="w-4 h-4" />
                 <span>Simpan Perubahan Data</span>
@@ -388,12 +502,15 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 {[
                   { label: 'Merek / Nama Item', val: formData.merekItem, cls: 'font-bold text-slate-900 text-sm' },
                   { label: 'Jenis Peralatan', val: formData.jenisPeralatan, cls: 'font-bold text-[#005ea4]' },
+                  { label: 'Nama Sertifikat', val: formData.namaSertifikat || '-', cls: 'font-bold text-slate-800' },
+                  { label: 'Tipe / Kode', val: formData.tipe || '-', cls: 'font-bold text-slate-800' },
+                  { label: 'Nomor Seri / Tag', val: formData.nomorSeri || '-', cls: 'font-bold text-slate-800' },
                   { label: 'Unit Pabrik / Lokasi', val: formData.lokasi, cls: 'font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 inline-block' },
+                  { label: 'User / Dept PJ (Penanggung Jawab)', val: formData.user || 'Dept. Operasi', cls: 'font-bold text-slate-800' },
                   { label: 'Status Fisik Operasional', val: formData.status, cls: 'font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block' },
-                  { label: 'Tipe / Kode', val: formData.tipe, cls: 'font-bold text-slate-800' },
-                  { label: 'Nomor Seri / Tag', val: formData.nomorSeri, cls: 'font-bold text-slate-800' },
-                  { label: 'Kapasitas SWL / Beban', val: formData.kapasitas || '-', cls: 'font-bold text-slate-800' },
-                  { label: 'User / Dept PJ', val: formData.user || 'Dept. Operasi', cls: 'font-bold text-slate-800' },
+                  { label: 'No. Sertifikat Active', val: displayNoSert, cls: 'font-bold text-[#005ea4]' },
+                  { label: 'Tanggal Terbit', val: formData.terbit || '-', cls: 'font-bold text-slate-800' },
+                  { label: 'Tanggal Expired', val: displayExpired, cls: 'font-bold text-rose-700' },
                 ].map(({ label, val, cls }) => (
                   <div key={label}>
                     <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
@@ -402,6 +519,91 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 ))}
               </div>
             )}
+          </div>
+
+          {/* SECTION 1.5: NOTIFICATION SETTINGS (Read-only Mode) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-4">
+            <h4 className="font-bold text-sm text-slate-900 border-b border-slate-200 pb-3 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-[#005ea4]" />
+              <span>Pengaturan Notifikasi & Deadline</span>
+            </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2.5 h-2.5 rounded-full ${reminderEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                  <span className="text-xs font-bold text-slate-700">
+                    Status Pengingat: {reminderEnabled ? 'Aktif' : 'Nonaktif'}
+                  </span>
+                </div>
+                {reminderEnabled ? (
+                  <div className="text-xs text-slate-500 font-mono-data space-y-1">
+                    {(() => {
+                      const today = new Date();
+                      today.setHours(0,0,0,0);
+                      
+                      if (triggerType === 'DAYS') {
+                        const expiryDate = formData.berakhir && formData.berakhir !== '-' ? new Date(formData.berakhir) : null;
+                        let activeDate = null;
+                        let isPastDays = false;
+                        
+                        if (expiryDate) {
+                          activeDate = new Date(expiryDate);
+                          activeDate.setDate(activeDate.getDate() - (reminderDays || 30));
+                          activeDate.setHours(0,0,0,0);
+                          isPastDays = activeDate <= today;
+                        }
+
+                        if (isPastDays) {
+                          return (
+                            <>
+                              <p>Reminder <span className="font-bold text-emerald-600">SUDAH AKTIF</span> sejak H-{reminderDays || 30} sebelum kedaluwarsa ({activeDate ? activeDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}).</p>
+                              <p>Reminder ini akan terus ditampilkan hingga sertifikat diperpanjang.</p>
+                            </>
+                          );
+                        } else {
+                          return (
+                            <>
+                              <p>Reminder <span className="font-bold text-[#005ea4]">akan mulai aktif</span> pada H-{reminderDays || 30} sebelum tanggal kedaluwarsa{activeDate ? ` (${activeDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })})` : ''}.</p>
+                              <p>Setelah melewati waktu tersebut, reminder akan <span className="font-bold text-emerald-600">aktif</span> dan tetap ditampilkan hingga diperpanjang.</p>
+                            </>
+                          );
+                        }
+                      } else {
+                        const tDate = triggerDate ? new Date(triggerDate) : null;
+                        if (tDate) tDate.setHours(0,0,0,0);
+                        const isPastDate = tDate && tDate <= today;
+                        
+                        if (isPastDate) {
+                          return (
+                            <>
+                              <p>Reminder <span className="font-bold text-emerald-600">SUDAH AKTIF</span> sejak tanggal <span className="font-bold text-[#005ea4]">{tDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>.</p>
+                              <p>Reminder ini akan terus ditampilkan hingga sertifikat diperpanjang.</p>
+                            </>
+                          );
+                        } else {
+                          return (
+                            <>
+                              <p>Reminder <span className="font-bold text-[#005ea4]">akan mulai aktif</span> pada <span className="font-bold text-[#005ea4]">{tDate ? tDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</span>.</p>
+                              <p>Setelah tanggal tersebut, reminder akan <span className="font-bold text-emerald-600">aktif</span> dan tetap ditampilkan hingga sertifikat diperpanjang.</p>
+                            </>
+                          );
+                        }
+                      }
+                    })()}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 font-mono-data">
+                    Sistem tidak akan mengirimkan notifikasi pengingat untuk dokumen ini.
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-xs font-bold text-[#005ea4] hover:bg-blue-50 border border-slate-200 rounded-xl transition-colors cursor-pointer"
+              >
+                Ubah Pengaturan
+              </button>
+            </div>
           </div>
 
           {/* SECTION 2: CERT LEGAL STATUS */}
@@ -438,14 +640,22 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 </span>
                 <span className="text-xs text-[#005ea4] font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
               </h4>
-              <div className="grid grid-cols-2 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#f8fafc] p-4 rounded-xl border border-blue-100">
+                <div>
+                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Nama Sertifikat</span>
+                  <span className="font-bold text-slate-850 text-sm block">{formData.namaSertifikat || primaryCert?.namaSertifikat || '-'}</span>
+                </div>
                 <div>
                   <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat Active</span>
-                  <span className="font-bold text-[#005ea4] text-base">{displayNoSert}</span>
+                  <span className="font-bold text-[#005ea4] text-sm block">{displayNoSert}</span>
+                </div>
+                <div>
+                  <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Terbit</span>
+                  <span className="font-bold text-slate-850 text-sm block">{formData.terbit || primaryCert?.terbit || '-'}</span>
                 </div>
                 <div>
                   <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired (Kadaluarsa)</span>
-                  <span className="font-bold text-rose-700 text-base">{displayExpired}</span>
+                  <span className="font-bold text-rose-700 text-sm block">{displayExpired}</span>
                 </div>
               </div>
               <div className="pt-3 flex items-center justify-between text-xs border-t border-blue-200/80">
@@ -658,6 +868,16 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           </div>
         </div>
       )}
+      {/* MODAL CONFIRM DELETE MASTER ITEM */}
+      <ModalConfirm
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        title="Hapus Alat Ini?"
+        message={`Data alat dan semua sertifikat historinya akan dihapus permanen.`}
+        confirmText="Hapus Permanen"
+        onConfirm={handleDeleteMasterItem}
+        isProcessing={isDeleting}
+      />
     </div>
   );
 }
