@@ -360,12 +360,31 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
         {/* Modal Footer */}
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg">
+          <button 
+            onClick={onClose} 
+            disabled={isUploading}
+            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Batal
           </button>
           {activeTab === 'upload' && step === 'preview' && (
-            <button onClick={handleConfirmImport} className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
-              Simpan ke Database
+            <button 
+              onClick={handleConfirmImport} 
+              disabled={isUploading}
+              className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all ${
+                isUploading 
+                  ? 'bg-slate-400 cursor-not-allowed' 
+                  : 'bg-[#005ea4] hover:bg-[#004881]'
+              }`}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Menyimpan...</span>
+                </>
+              ) : (
+                <span>Simpan ke Database</span>
+              )}
             </button>
           )}
         </div>

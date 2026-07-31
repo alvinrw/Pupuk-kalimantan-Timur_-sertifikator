@@ -434,9 +434,12 @@ export function useMonitoring() {
 
   const countExpired = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
   const countUrgent = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= (parseInt(customUrgentDays) || 30) && c.workflowStatus !== 'decommissioned').length;
-  const countValid = allCertificates.filter(c => (c.sisaHari === null || c.sisaHari > (parseInt(customUrgentDays) || 30)) && c.workflowStatus !== 'decommissioned').length;
+  const countValid = allCertificates.filter(c => (c.sisaHari === null || c.sisaHari > (parseInt(customUrgentDays) || 30)) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length;
   const countInProgress = allCertificates.filter(c => c.workflowStatus === 'in_progress').length;
   const countDecommissioned = allCertificates.filter(c => c.workflowStatus === 'decommissioned').length;
+  const countTanpaSertifikat = allCertificates.filter(c => c.workflowStatus === 'exempt').length;
+  const countAdaSertifikat = allCertificates.filter(c => c.workflowStatus !== 'exempt' && c.workflowStatus !== 'decommissioned').length;
+  const countTotal = allCertificates.length;
 
   return {
     searchTerm, setSearchTerm,
@@ -489,6 +492,6 @@ export function useMonitoring() {
     resetFilters,
 
     // Counts
-    counts: { countExpired, countUrgent, countValid, countInProgress, countDecommissioned }
+    counts: { countExpired, countUrgent, countValid, countInProgress, countDecommissioned, countTanpaSertifikat, countAdaSertifikat, countTotal }
   };
 }

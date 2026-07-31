@@ -4,17 +4,19 @@ import {
   FileCheck2,
   Clock,
   CheckCircle2,
-  XCircle,
-  Activity,
   Filter,
   X,
   RotateCcw,
-  Check,
   Loader2,
-  RotateCw,
   FileMinus,
-  Wrench,
-  Power
+  Ban,
+  Database,
+  FileX,
+  Search,
+  Download,
+  Calendar,
+  FileSpreadsheet,
+  FileText
 } from 'lucide-react';
 import {
   BarChart,
@@ -32,12 +34,15 @@ import { getMasterItems } from '../services/masterItemsService';
 
 export default function Dashboard() {
   const [filterKategori, setFilterKategori] = useState('All');
-  const [filterUnitPabrik, setFilterUnitPabrik] = useState('All');
-  const [filterStatusOperasional, setFilterStatusOperasional] = useState('All');
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  
-  // Custom Urgent Threshold
   const [customUrgentDays, setCustomUrgentDays] = useState(30);
+
+  // States untuk filter Tanggal Terbit di bagian bawah
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [filterKategoriBawah, setFilterKategoriBawah] = useState('All');
 
   const [rawItems, setRawItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +62,7 @@ export default function Dashboard() {
     loadData();
   }, []);
 
+  // Memetakan semua items ke format flat untuk dashboard
   const allDashboardItems = useMemo(() => {
     const calcDiff = (dStr) => {
       if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return -999;
@@ -97,8 +103,20 @@ export default function Dashboard() {
       const rawExp = primaryCert?.expired || item.expiryDate;
       const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
       const hari = calcDiff(dateVal);
-      
+
       const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
+
+      const rawTerbit = primaryCert?.terbit || item.createdAt;
+      // Dapatkan string YYYY-MM-DD
+      let tglTerbit = '-';
+      if (rawTerbit) {
+        try {
+          const dObj = new Date(rawTerbit);
+          if (!isNaN(dObj.getTime())) {
+            tglTerbit = dObj.toISOString().slice(0, 10);
+          }
+        } catch (_) {}
+      }
 
       flattened.push({
         id: item.id,
@@ -107,62 +125,53 @@ export default function Dashboard() {
         unit: item.unitLocation || 'Umum',
         opStatus: item.status || 'Aktif',
         sisaHari: hari,
-        workflowStatus: wfStatus
+        workflowStatus: wfStatus,
+        merekItem: item.title || '-',
+        nomorSeriTipe: item.code || '-',
+        nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.code || '-'),
+        tglExpired: dateVal,
+        tglTerbit: tglTerbit
       });
     });
     return flattened;
   }, [rawItems]);
 
-  const activeFilterCount = useMemo(() => {
-    let count = 0;
-    if (filterKategori !== 'All') count++;
-    if (filterUnitPabrik !== 'All') count++;
-    if (filterStatusOperasional !== 'All') count++;
-    return count;
-  }, [filterKategori, filterUnitPabrik, filterStatusOperasional]);
-
   const filteredItems = useMemo(() => {
     return allDashboardItems.filter(item => {
       const matchKategori = filterKategori === 'All' || item.kategori === filterKategori;
-      const matchUnit = filterUnitPabrik === 'All' || item.unit === filterUnitPabrik;
-      const matchOp = filterStatusOperasional === 'All' || item.opStatus === filterStatusOperasional;
-      return matchKategori && matchUnit && matchOp;
+      return matchKategori;
     });
-  }, [allDashboardItems, filterKategori, filterUnitPabrik, filterStatusOperasional]);
+  }, [allDashboardItems, filterKategori]);
 
   const stats = useMemo(() => {
     const threshold = parseInt(customUrgentDays) || 30;
-    
-    // Legalitas Stats
+
     const expired = filteredItems.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
     const urgent = filteredItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length;
     const valid = filteredItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length;
-    
-    const totalActive = filteredItems.filter(c => c.workflowStatus !== 'decommissioned').length;
-    
-    // Operasional Fisik & Workflow Stats
-    const inProgress = filteredItems.filter(c => c.workflowStatus === 'in_progress').length;
+
     const decommissioned = filteredItems.filter(c => c.workflowStatus === 'decommissioned').length;
     const exempt = filteredItems.filter(c => c.workflowStatus === 'exempt').length;
-    
-    const opAktif = filteredItems.filter(c => c.opStatus === 'Aktif' || c.opStatus === 'Proses').length;
-    const opRusak = filteredItems.filter(c => c.opStatus === 'Rusak').length;
-    const opRepair = filteredItems.filter(c => c.opStatus === 'Repair').length;
+    const total = filteredItems.length;
+    const totalActive = filteredItems.filter(c => c.workflowStatus !== 'decommissioned').length;
 
-    return { 
-      expired, urgent, valid, totalActive, threshold,
-      inProgress, decommissioned, exempt,
-      opAktif, opRusak, opRepair 
+    return {
+      expired, urgent, valid, threshold,
+      decommissioned, exempt, total, totalActive
     };
   }, [filteredItems, customUrgentDays]);
 
-  const statusPieData = [
-    { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
-    { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
+  const getCategoryOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.kategori))];
+
+  // Data Pie Chart (bulat-bulat)
+  const statusPieData = useMemo(() => [
+    { name: 'Sertifikat Aktif', value: stats.valid, color: '#10B981' },
+    { name: 'Tanpa Sertifikat', value: stats.exempt, color: '#94A3B8' },
     { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
-  ];
+  ], [stats]);
 
+  // Data Bar Chart (pemetaan per kategori)
   const categoryBarData = useMemo(() => {
     const threshold = parseInt(customUrgentDays) || 30;
     const categories = Array.from(new Set(allDashboardItems.map(i => i.kategori)));
@@ -170,22 +179,97 @@ export default function Dashboard() {
       const catItems = filteredItems.filter(i => i.kategori === cat);
       return {
         name: cat,
-        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned').length,
+        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length,
         Urgent: catItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length,
         Expired: catItems.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length,
       };
     }).filter(u => u.Valid > 0 || u.Urgent > 0 || u.Expired > 0 || filterKategori === u.name);
   }, [filteredItems, allDashboardItems, filterKategori, customUrgentDays]);
 
-  const resetFilters = () => {
-    setFilterKategori('All');
-    setFilterUnitPabrik('All');
-    setFilterStatusOperasional('All');
-    setCustomUrgentDays(30);
+  // Filtering untuk list tabel Terbit di bagian bawah
+  const displayedIssuedCertificates = useMemo(() => {
+    return filteredItems.filter(item => {
+      // 1. Filter by Search Query
+      if (searchTerm) {
+        const q = searchTerm.toLowerCase();
+        const matchesSearch =
+          item.merekItem.toLowerCase().includes(q) ||
+          item.jenis.toLowerCase().includes(q) ||
+          item.nomorSeriTipe.toLowerCase().includes(q) ||
+          item.nomorSertifikat.toLowerCase().includes(q);
+        if (!matchesSearch) return false;
+      }
+
+      // 2. Filter by Date Range Terbit
+      if (isDateFilterActive) {
+        if (!item.tglTerbit || item.tglTerbit === '-') return false;
+        const pubDate = new Date(item.tglTerbit);
+        if (isNaN(pubDate.getTime())) return false;
+
+        if (dateRangeStart) {
+          const start = new Date(dateRangeStart + '-01');
+          if (pubDate < start) return false;
+        }
+        if (dateRangeEnd) {
+          const [ey, em] = dateRangeEnd.split('-').map(Number);
+          const end = new Date(ey, em, 0); // hari terakhir di bulan tersebut
+          if (pubDate > end) return false;
+        }
+      }
+      // 3. Filter by Category khusus Bawah
+      if (filterKategoriBawah !== 'All') {
+        if (item.kategori !== filterKategoriBawah) return false;
+      }
+
+      return true;
+    });
+  }, [filteredItems, searchTerm, dateRangeStart, dateRangeEnd, isDateFilterActive, filterKategoriBawah]);
+
+  const handleApplyDateFilter = () => {
+    setIsDateFilterActive(!!(dateRangeStart || dateRangeEnd));
   };
 
-  const getCategoryOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.kategori))];
-  const getUnitOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.unit))];
+  const handleResetDateFilter = () => {
+    setDateRangeStart('');
+    setDateRangeEnd('');
+    setIsDateFilterActive(false);
+  };
+
+  // Export handlers
+  const handleExportCSV = () => {
+    const headers = ['No', 'Kategori', 'Jenis', 'Merek/Nama', 'No Seri', 'No Sertifikat', 'Tgl Terbit', 'Tgl Expired', 'Status'];
+    const rows = displayedIssuedCertificates.map((doc, idx) => [
+      idx + 1,
+      doc.kategori || '-',
+      doc.jenis || '-',
+      doc.merekItem || '-',
+      doc.nomorSeriTipe || '-',
+      doc.nomorSertifikat || '-',
+      doc.tglTerbit !== '-' ? doc.tglTerbit : '-',
+      doc.tglExpired !== '-' ? doc.tglExpired : '-',
+      doc.workflowStatus || '-'
+    ]);
+    const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const handleExportJSON = () => {
+    const blob = new Blob([JSON.stringify(displayedIssuedCertificates, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
 
   if (isLoading) {
     return (
@@ -196,8 +280,15 @@ export default function Dashboard() {
     );
   }
 
+  const indicators = [
+    { label: 'Non-Sertifikat', value: stats.exempt, color: '#64748B' },
+    { label: 'Afkir / Non-Aktif', value: stats.decommissioned, color: '#0f172a' },
+    { label: 'Sertifikat Aktif', value: stats.valid, color: '#10B981' },
+    { label: 'Expired', value: stats.expired, color: '#EF4444' },
+  ];
+
   return (
-    <div className="p-6 md:p-8 space-y-8 font-sans-clean max-w-[1600px] mx-auto bg-slate-50/50 min-h-screen">
+    <div className="p-6 md:p-8 space-y-8 font-sans-clean max-w-[1400px] mx-auto bg-slate-50/50 min-h-screen">
       {/* HEADER */}
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 pb-6 border-b border-slate-200">
         <div className="space-y-2">
@@ -205,143 +296,129 @@ export default function Dashboard() {
             Dashboard Overview
           </h1>
           <p className="text-slate-500 font-mono-data text-xs md:text-sm max-w-2xl leading-relaxed">
-            Ringkasan status legalitas dan operasional fisik seluruh aset, peralatan pabrik, proyek, dan dokumen HAKI.
+            Ringkasan status legalitas dan operasional seluruh aset, peralatan pabrik, proyek, dan dokumen HAKI.
           </p>
         </div>
 
+        {/* Inline Filter Kategori */}
         <div className="flex flex-wrap items-center gap-3">
-          {activeFilterCount > 0 && (
-            <button
-              onClick={resetFilters}
-              className="flex items-center gap-2 px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-500" />
+            <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
+            <select
+              value={filterKategori}
+              onChange={(e) => setFilterKategori(e.target.value)}
+              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
             >
-              <RotateCcw className="w-3.5 h-3.5" /> Reset Filter ({activeFilterCount})
+              {getCategoryOptions().map(cat => (
+                <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {filterKategori !== 'All' && (
+            <button
+              onClick={() => setFilterKategori('All')}
+              className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset
             </button>
           )}
-          
-          <button
-            onClick={() => setIsFilterModalOpen(true)}
-            className={`flex items-center gap-2 px-4 py-2 font-bold text-xs rounded-lg transition-all shadow-xs ${
-              activeFilterCount > 0 ? 'bg-[#005ea4] text-white hover:bg-[#004881]' : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
-            }`}
-          >
-            <Filter className="w-4 h-4" />
-            <span>Filter Data Global</span>
-            {activeFilterCount > 0 && <span className="w-5 h-5 bg-white text-[#005ea4] rounded-full text-[10px] ml-1 flex items-center justify-center">{activeFilterCount}</span>}
-          </button>
         </div>
       </div>
 
-
-
-      {/* STATISTIK UTAMA */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        
-        {/* Kolom Kiri: Status Legalitas */}
-        <div className="lg:col-span-7 space-y-4">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider font-mono-data">
-            <FileCheck2 className="w-4 h-4 text-[#005ea4]" />
-            Status Legalitas Sertifikat
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs relative overflow-hidden group hover:border-[#005ea4] transition-colors">
-              <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-50 rounded-full group-hover:bg-emerald-100 transition-colors z-0"></div>
-              <div className="relative z-10 flex flex-col space-y-1">
-                <span className="text-emerald-800 font-mono-data text-xs font-bold uppercase flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Valid
-                </span>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-emerald-600">{stats.valid}</span>
-                  <span className="text-xs text-emerald-700 font-mono-data mb-1.5 font-bold">item</span>
-                </div>
-              </div>
+      {/* SUMMARY CARDS — 6 cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+        {/* Card 1: Urgent */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-col space-y-2">
+            <div className="flex items-center gap-1 text-slate-500">
+              <Clock className="w-3.5 h-3.5 shrink-0" />
+              <span className="font-mono-data text-[10px] font-bold uppercase">Urgent ≤</span>
+              <input
+                type="number"
+                value={customUrgentDays}
+                onChange={(e) => setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-12 px-1.5 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
+              />
+              <span className="font-mono-data text-[10px] font-bold uppercase">Hr</span>
             </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs relative overflow-hidden group hover:border-amber-400 transition-colors">
-              <div className="absolute -right-6 -top-6 w-32 h-32 bg-amber-500/10 rounded-full transition-colors z-0"></div>
-              <div className="relative z-10 flex flex-col space-y-1">
-                <div className="flex items-center gap-1 mb-1 relative z-20">
-                  <span className="text-amber-800 font-mono-data text-[10px] sm:text-[11px] font-bold uppercase flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 hidden sm:block" /> Urgent &le;
-                  </span>
-                  <input
-                    type="number"
-                    value={customUrgentDays}
-                    onChange={(e) => setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-10 px-1 py-0.5 text-xs font-bold text-amber-900 bg-amber-100/50 border border-amber-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-amber-500"
-                  />
-                  <span className="text-amber-800 font-mono-data text-[10px] sm:text-[11px] font-bold uppercase">Hr</span>
-                </div>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-amber-600">{stats.urgent}</span>
-                  <span className="text-xs text-amber-700 font-mono-data mb-1.5 font-bold">item</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs relative overflow-hidden group hover:border-rose-400 transition-colors">
-              <div className="absolute right-0 bottom-0 w-24 h-24 bg-rose-500/10 rounded-tl-full transition-colors z-0"></div>
-              <div className="relative z-10 flex flex-col space-y-1">
-                <span className="text-rose-800 font-mono-data text-xs font-bold uppercase flex items-center gap-1.5 mt-1.5 mb-0.5">
-                  <AlertTriangle className="w-3.5 h-3.5" /> Expired
-                </span>
-                <div className="flex items-end gap-2">
-                  <span className="text-4xl font-extrabold text-rose-600">{stats.expired}</span>
-                  <span className="text-xs text-rose-700 font-mono-data mb-1.5 font-bold">item</span>
-                </div>
-              </div>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.urgent}</span>
+              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
           </div>
         </div>
 
-        {/* Kolom Kanan: Operasional Fisik & Administratif */}
-        <div className="lg:col-span-5 space-y-4">
-          <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm uppercase tracking-wider font-mono-data">
-            <Activity className="w-4 h-4 text-[#005ea4]" />
-            Status Operasional Fisik & Berkas
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4 gap-3 h-[116px]">
-            
-            {/* Fisik Aktif */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
-              <span className="text-emerald-700 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
-                <Power className="w-3 h-3 shrink-0" /> Fisik Aktif
-              </span>
-              <span className="text-2xl font-extrabold text-emerald-600">{stats.opAktif}</span>
+        {/* Card 2: Sertifikat Aktif */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-col space-y-2">
+            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Aktif
+            </span>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.valid}</span>
+              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
+          </div>
+        </div>
 
-            {/* Rusak / Repair */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
-              <span className="text-rose-700 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
-                <Wrench className="w-3 h-3 shrink-0" /> Rusak/Repair
-              </span>
-              <span className="text-2xl font-extrabold text-rose-600">{stats.opRusak + stats.opRepair}</span>
+        {/* Card 3: Non-Sertifikat */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-col space-y-2">
+            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
+              <FileX className="w-3.5 h-3.5" /> Non-Sertifikat
+            </span>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.exempt}</span>
+              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
+          </div>
+        </div>
 
-            {/* In Progress */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
-              <span className="text-amber-700 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
-                <RotateCw className="w-3 h-3 shrink-0" /> In Progress
-              </span>
-              <span className="text-2xl font-extrabold text-amber-600">{stats.inProgress}</span>
+        {/* Card 4: Expired */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-col space-y-2">
+            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" /> Expired
+            </span>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.expired}</span>
+              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
+          </div>
+        </div>
 
-            {/* Non Sertifikat */}
-            <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs flex flex-col justify-center transition-colors">
-              <span className="text-slate-600 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1 mb-1 leading-tight">
-                <FileMinus className="w-3 h-3 shrink-0" /> Non Sertifikat
-              </span>
-              <span className="text-2xl font-extrabold text-slate-700">{stats.exempt}</span>
+        {/* Card 5: Non-Aktif / Afkir */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-col space-y-2">
+            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
+              <Ban className="w-3.5 h-3.5" /> Non-Aktif / Afkir
+            </span>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.decommissioned}</span>
+              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
+          </div>
+        </div>
 
+        {/* Card 6: Total Keseluruhan */}
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-col space-y-2">
+            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
+              <Database className="w-3.5 h-3.5" /> Total Keseluruhan
+            </span>
+            <div className="flex items-end gap-1">
+              <span className="text-3xl font-extrabold text-slate-800">{stats.total}</span>
+              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* CHART VISUALISASI */}
+      {/* CHART VISUALISASI (BULAT-BULAT & PEMETAAN KATEGORI) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Pie Chart */}
+        {/* Pie Chart (Bulat-bulat) */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs flex flex-col relative overflow-hidden">
           <h3 className="font-bold text-slate-800 text-sm mb-4 relative z-10">Distribusi Status Sertifikat</h3>
           <div className="flex-1 min-h-[250px] relative z-10">
@@ -362,7 +439,7 @@ export default function Dashboard() {
                 <Tooltip formatter={(value) => [`${value} Item`, 'Jumlah']} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
               </PieChart>
             </ResponsiveContainer>
-            
+
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-3xl font-extrabold text-slate-800">{stats.totalActive}</span>
               <span className="text-[10px] text-slate-500 font-mono-data font-bold">Total Aktif</span>
@@ -385,18 +462,15 @@ export default function Dashboard() {
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs col-span-1 lg:col-span-2 flex flex-col relative overflow-hidden">
           <div className="flex items-center justify-between mb-6 relative z-10">
             <h3 className="font-bold text-slate-800 text-sm">Pemetaan Status per Kategori Perizinan</h3>
-            {filterKategori !== 'All' && (
-              <span className="text-[10px] px-2 py-1 bg-blue-50 text-[#005ea4] border border-blue-200 rounded font-bold">Filtered: {filterKategori}</span>
-            )}
           </div>
-          
+
           <div className="flex-1 min-h-[250px] w-full relative z-10">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={categoryBarData} margin={{ top: 10, right: 10, left: -20, bottom: 40 }}>
-                <XAxis 
-                  dataKey="name" 
-                  tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'monospace' }} 
-                  axisLine={false} 
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10, fill: '#64748B', fontFamily: 'monospace' }}
+                  axisLine={false}
                   tickLine={false}
                   interval={0}
                   angle={-15}
@@ -414,57 +488,214 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* FILTER MODAL */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 font-sans-clean animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Filter className="w-5 h-5 text-amber-400" />
-                <div>
-                  <h3 className="font-bold text-base">Filter Kategori & Data</h3>
-                  <p className="text-xs text-slate-400 font-mono-data">Sesuaikan data yang ingin ditampilkan</p>
-                </div>
-              </div>
-              <button onClick={() => setIsFilterModalOpen(false)} className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"><X className="w-5 h-5" /></button>
+
+      {/* FITUR BARU DI BAGIAN BAWAH: RENTANG BULAN TERBIT & TABEL sertifikat terbit */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        
+        {/* Toolbar & Filter Tanggal Terbit */}
+        <div className="p-5 border-b border-slate-200 bg-slate-50/50 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-[#005ea4]" />
+              <h3 className="text-sm font-bold text-slate-800">Daftar Sertifikat Terbit</h3>
+              <span className="text-[11px] font-bold text-[#005ea4] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+                {displayedIssuedCertificates.length} Sertifikat Terbit
+              </span>
             </div>
-            
-            {/* Modal Body */}
-            <div className="p-6 space-y-5 text-xs font-mono-data">
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">1. Kategori Perizinan Utama</label>
-                <select value={filterKategori} onChange={(e) => setFilterKategori(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer">
-                  {getCategoryOptions().map(cat => <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>)}
-                </select>
+
+            <div className="flex items-center gap-2">
+              {/* Search input */}
+              <div className="relative w-56">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Cari item, seri, nomor sertifikat..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
+                />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-800 mb-1.5">2. Status Fisik Peralatan</label>
-                <select value={filterStatusOperasional} onChange={(e) => setFilterStatusOperasional(e.target.value)} className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer">
-                  <option value="All">Semua Status Fisik Operasional</option>
-                  <option value="Aktif">Aktif (Operasional Normal)</option>
-                  <option value="Repair">Repair (Dalam Perbaikan/Overhaul)</option>
-                  <option value="Rusak">Rusak (Out of Service / Tidak Laik)</option>
-                  <option value="Afkir">Afkir (Decommissioned)</option>
-                </select>
+              {/* Export button */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowExportMenu(prev => !prev)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-xs transition-colors font-mono-data"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export
+                </button>
+                {showExportMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-25 overflow-hidden w-44">
+                      <button
+                        onClick={handleExportCSV}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        Export CSV / Excel
+                      </button>
+                      <button
+                        onClick={handleExportJSON}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
+                      >
+                        <FileText className="w-4 h-4 text-blue-600" />
+                        Export JSON
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
-            
-            {/* Modal Footer */}
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-              <button type="button" onClick={() => { resetFilters(); setIsFilterModalOpen(false); }} className="px-3.5 py-2 text-rose-700 hover:bg-rose-50 border border-rose-200 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-colors font-mono-data">
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Reset Filter</span>
-              </button>
-              <button type="button" onClick={() => setIsFilterModalOpen(false)} className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-xs transition-colors font-mono-data cursor-pointer">
-                <Check className="w-4 h-4" />
-                <span>Terapkan Filter</span>
-              </button>
+          </div>
+
+          {/* Date range & Category inputs */}
+          <div className="flex flex-wrap items-end gap-6 pt-2">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-600 font-mono-data">Rentang Bulan Terbit:</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Dari</span>
+                  <input
+                    type="month"
+                    value={dateRangeStart}
+                    onChange={(e) => setDateRangeStart(e.target.value)}
+                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                  />
+                </div>
+                <span className="text-slate-400 text-xs mt-4">s.d.</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Sampai</span>
+                  <input
+                    type="month"
+                    value={dateRangeEnd}
+                    onChange={(e) => setDateRangeEnd(e.target.value)}
+                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5 mt-4">
+                  <button
+                    onClick={handleApplyDateFilter}
+                    className="px-3.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-lg transition-colors font-mono-data shadow-xs"
+                  >
+                    Terapkan
+                  </button>
+                  {isDateFilterActive && (
+                    <button
+                      onClick={handleResetDateFilter}
+                      className="px-2 py-1 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1"
+                    >
+                      <X className="w-3 h-3" /> Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Dropdown Filter Jenis khusus Tabel Terbit Bawah */}
+            <div className="flex items-center gap-2">
+              <Filter className="w-3.5 h-3.5 text-slate-400" />
+              <div className="flex flex-col">
+                <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Kategori / Jenis Perizinan</span>
+                <select
+                  value={filterKategoriBawah}
+                  onChange={(e) => setFilterKategoriBawah(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
+                >
+                  <option value="All">Semua Jenis</option>
+                  {getCategoryOptions().filter(cat => cat !== 'All').map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              {filterKategoriBawah !== 'All' && (
+                <button
+                  onClick={() => setFilterKategoriBawah('All')}
+                  className="mt-4 text-[11px] font-bold text-rose-600 hover:underline"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
         </div>
-      )}
+
+        {/* Tabel Data */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
+                <th className="py-3 px-4 text-center font-bold">NO.</th>
+                <th className="py-3 px-4 font-bold text-[#005ea4]">KATEGORI DOKUMEN</th>
+                <th className="py-3 px-4 font-bold">JENIS PERIZINAN / ALAT</th>
+                <th className="py-3 px-4 font-bold">MEREK / NAMA ITEM</th>
+                <th className="py-3 px-4 font-bold">NOMOR SERI / TAG</th>
+                <th className="py-3 px-4 font-bold">NO. SERTIFIKAT</th>
+                <th className="py-3 px-4 font-bold">TANGGAL TERBIT</th>
+                <th className="py-3 px-4 font-bold">TANGGAL EXPIRATION</th>
+                <th className="py-3 px-4 font-bold text-center">STATUS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-xs">
+              {displayedIssuedCertificates.length > 0 ? (
+                displayedIssuedCertificates.map((item, index) => {
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="py-3 px-4 text-center font-mono-data font-bold text-slate-500">
+                        {index + 1}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-[#005ea4]">
+                        {item.kategori}
+                      </td>
+                      <td className="py-3 px-4 font-medium text-slate-800">
+                        {item.jenis}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {item.merekItem}
+                      </td>
+                      <td className="py-3 px-4 font-mono-data text-slate-600">
+                        {item.nomorSeriTipe}
+                      </td>
+                      <td className="py-3 px-4 font-mono-data text-slate-800">
+                        {item.nomorSertifikat}
+                      </td>
+                      <td className="py-3 px-4 font-mono-data font-bold text-slate-700">
+                        {item.tglTerbit !== '-' ? item.tglTerbit : '-'}
+                      </td>
+                      <td className="py-3 px-4 font-mono-data font-bold text-slate-900">
+                        {item.tglExpired !== '-' ? item.tglExpired : '-'}
+                      </td>
+                      <td className="py-3 px-4 text-center font-mono-data font-bold">
+                        {item.workflowStatus === 'decommissioned' ? (
+                          <span className="text-slate-400">Non-Aktif</span>
+                        ) : item.workflowStatus === 'exempt' ? (
+                          <span className="text-indigo-600">Catatan Khusus</span>
+                        ) : item.sisaHari !== null && item.sisaHari <= 0 ? (
+                          <span className="text-rose-600">Expired</span>
+                        ) : item.sisaHari !== null && item.sisaHari <= customUrgentDays ? (
+                          <span className="text-amber-600">Urgent</span>
+                        ) : (
+                          <span className="text-emerald-600">Aktif</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={9} className="py-10 text-center text-slate-500 font-mono-data">
+                    Tidak ada sertifikat yang terbit pada kriteria/rentang ini.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

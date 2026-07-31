@@ -22,8 +22,20 @@ export default function TugasTerdekat() {
   // Filter & Sort State
   const [activeFilter, setActiveFilter] = useState('Semua');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('prioritas'); // prioritas, terdekat, expired, nama
-  
+  const [sortBy, setSortBy] = useState('prioritas'); // prioritas, terdekat_terjauh, terjauh_terdekat, expired, nama
+  const [filterCategory, setFilterCategory] = useState('All');
+
+  const getCategoryLabel = (key) => {
+    switch (key) {
+      case 'peralatan-pabrik': return 'Perizinan Peralatan Pabrik';
+      case 'perizinan-aset': return 'Perizinan Aset';
+      case 'perizinan-proyek': return 'Perizinan Proyek';
+      case 'perizinan-produk': return 'Perizinan Produk';
+      case 'administrasi-lainnya': return 'Administrasi Lainnya';
+      default: return 'Lainnya';
+    }
+  };
+
   // Navigation State
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
 
@@ -67,6 +79,20 @@ export default function TugasTerdekat() {
     }
   };
 
+  // Helper format sisa hari
+  const formatSisaHari = (sisa) => {
+    if (sisa === 0) return <span className="text-amber-600 font-bold">Hari Ini</span>;
+    if (sisa < 0) return <span className="text-rose-600 font-bold">Lewat {Math.abs(sisa)} Hari</span>;
+    return <span className="text-slate-700 font-bold">H-{sisa}</span>;
+  };
+
+  // Helper format sisa deadline
+  const formatSisaDeadline = (sisa) => {
+    if (sisa === 0) return <span className="text-amber-600 font-bold">Hari Ini</span>;
+    if (sisa < 0) return <span className="text-rose-600 font-bold">Overdue ({Math.abs(sisa)} Hari)</span>;
+    return <span className="text-[#005ea4] font-bold">H-{sisa}</span>;
+  };
+
   // Filter Logic (Frontend only filters the data provided by Backend)
   let filteredTasks = data.allTasks.filter(t => {
     if (searchQuery) {
@@ -79,31 +105,36 @@ export default function TugasTerdekat() {
       }
     }
 
+    if (filterCategory !== 'All' && t.categoryKey !== filterCategory) {
+      return false;
+    }
+
     if (activeFilter === 'Semua') return true;
-    if (activeFilter === 'Reminder Aktif') return t.isTriggered;
+    if (activeFilter === 'Reminder Aktif') return t.isNotificationEnabled;
     if (activeFilter === 'Expired') return t.statusReminder === 'Expired';
     if (activeFilter === 'Hari Ini') return t.statusReminder === 'Mulai Hari Ini';
-
-    // We don't have explicit minggu/bulan tags per task from backend yet, 
-    // but we can fallback to 'isTriggered' or simply 'Semua' for now, 
-    // or we can just filter by stats if backend provided them. 
-    // For simplicity, assuming backend already provided 'isTriggered'.
-    if (activeFilter === 'Belum Aktif') return !t.isTriggered;
+    if (activeFilter === 'Minggu Ini') return t.isMingguIni;
+    if (activeFilter === 'Bulan Ini') return t.isBulanIni;
+    if (activeFilter === 'Belum Aktif') return !t.isNotificationEnabled;
 
     return true;
   });
 
   // Sort Logic
+  console.log("Current sortBy state:", sortBy);
   filteredTasks.sort((a, b) => {
     if (sortBy === 'prioritas') {
       if (a.prioritas !== b.prioritas) return a.prioritas - b.prioritas;
       return a.sisaHari - b.sisaHari;
     }
-    if (sortBy === 'terdekat') {
-      return a.sisaHari - b.sisaHari;
+    if (sortBy === 'terdekat_terjauh' || sortBy === 'terdekat') {
+      return a.sisaHariReminder - b.sisaHariReminder;
+    }
+    if (sortBy === 'terjauh_terdekat') {
+      return b.sisaHariReminder - a.sisaHariReminder;
     }
     if (sortBy === 'expired') {
-      return new Date(a.tanggalExpired).getTime() - new Date(b.tanggalExpired).getTime();
+      return b.sisaHari - a.sisaHari;
     }
     if (sortBy === 'nama') {
       return (a.namaPeralatan || '').localeCompare(b.namaPeralatan || '');
@@ -169,7 +200,7 @@ export default function TugasTerdekat() {
       </div>
 
       {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div
           onClick={() => setActiveFilter('Reminder Aktif')}
           className={`bg-white p-4 rounded-xl border cursor-pointer hover:border-[#005ea4] transition-colors ${activeFilter === 'Reminder Aktif' ? 'border-[#005ea4] ring-1 ring-[#005ea4]' : 'border-slate-200'}`}
@@ -178,19 +209,18 @@ export default function TugasTerdekat() {
           <div className="text-2xl font-bold text-[#005ea4]">{data.stats?.aktif || 0}</div>
         </div>
         <div
-          onClick={() => setActiveFilter('Hari Ini')}
-          className={`bg-white p-4 rounded-xl border cursor-pointer hover:border-amber-400 transition-colors ${activeFilter === 'Hari Ini' ? 'border-amber-400 ring-1 ring-amber-400' : 'border-slate-200'}`}
+          onClick={() => setActiveFilter('Minggu Ini')}
+          className={`bg-white p-4 rounded-xl border cursor-pointer hover:border-[#005ea4] transition-colors ${activeFilter === 'Minggu Ini' ? 'border-[#005ea4] ring-1 ring-[#005ea4]' : 'border-slate-200'}`}
         >
-          <div className="text-sm text-slate-500 mb-1">Mulai Hari Ini</div>
-          <div className="text-2xl font-bold text-amber-600">{data.stats?.hariIni || 0}</div>
-        </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 opacity-70">
           <div className="text-sm text-slate-500 mb-1">Minggu Ini</div>
-          <div className="text-2xl font-bold text-slate-700">{data.stats?.mingguIni || 0}</div>
+          <div className="text-2xl font-bold text-[#005ea4]">{data.stats?.mingguIni || 0}</div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 opacity-70">
+        <div
+          onClick={() => setActiveFilter('Bulan Ini')}
+          className={`bg-white p-4 rounded-xl border cursor-pointer hover:border-[#005ea4] transition-colors ${activeFilter === 'Bulan Ini' ? 'border-[#005ea4] ring-1 ring-[#005ea4]' : 'border-slate-200'}`}
+        >
           <div className="text-sm text-slate-500 mb-1">Bulan Ini</div>
-          <div className="text-2xl font-bold text-slate-700">{data.stats?.bulanIni || 0}</div>
+          <div className="text-2xl font-bold text-[#005ea4]">{data.stats?.bulanIni || 0}</div>
         </div>
         <div
           onClick={() => setActiveFilter('Expired')}
@@ -249,7 +279,7 @@ export default function TugasTerdekat() {
         {/* Toolbar */}
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between gap-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            {['Semua', 'Reminder Aktif', 'Hari Ini', 'Belum Aktif', 'Expired'].map(f => (
+            {['Semua', 'Reminder Aktif', 'Hari Ini', 'Minggu Ini', 'Bulan Ini', 'Belum Aktif', 'Expired'].map(f => (
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
@@ -274,17 +304,6 @@ export default function TugasTerdekat() {
                 className="pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4] focus:outline-none w-full sm:w-64"
               />
             </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#005ea4] appearance-none pr-8 bg-white"
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 24 24\' stroke=\'%2364748b\'%3E%3Cpath stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M19 9l-7 7-7-7\'%3E%3C/path%3E%3C/svg%3E")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1em' }}
-            >
-              <option value="prioritas">Sort: Prioritas Tertinggi</option>
-              <option value="terdekat">Sort: Reminder Terdekat</option>
-              <option value="expired">Sort: Tanggal Expired</option>
-              <option value="nama">Sort: Nama Peralatan</option>
-            </select>
           </div>
         </div>
 
@@ -293,12 +312,56 @@ export default function TugasTerdekat() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-100 border-b border-slate-200 text-xs text-slate-600 uppercase tracking-wider">
-                <th className="p-3 font-bold">Prioritas</th>
+                <th className="p-3 font-bold text-center w-24">Prioritas</th>
                 <th className="p-3 font-bold">Peralatan / Aset</th>
+                <th className="p-3 font-bold">
+                  <div className="flex items-center justify-between gap-2 min-w-[200px]">
+                    <span>Kategori / Jenis Perizinan</span>
+                    <select
+                      value={filterCategory}
+                      onChange={(e) => setFilterCategory(e.target.value)}
+                      className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-24 text-slate-700 normal-case"
+                    >
+                      <option value="All">Semua</option>
+                      <option value="peralatan-pabrik">Peralatan Pabrik</option>
+                      <option value="perizinan-aset">Aset</option>
+                      <option value="administrasi-lainnya">Administrasi</option>
+                      <option value="perizinan-proyek">Proyek</option>
+                      <option value="perizinan-produk">Produk</option>
+                    </select>
+                  </div>
+                </th>
                 <th className="p-3 font-bold">Lokasi & PIC</th>
                 <th className="p-3 font-bold">Sertifikat</th>
                 <th className="p-3 font-bold">Tgl Mulai Reminder</th>
                 <th className="p-3 font-bold">Tgl Expired</th>
+                <th className="p-3 font-bold">
+                  <div className="flex items-center justify-between gap-2 min-w-[140px]">
+                    <span>Sisa Expired</span>
+                    <select
+                      value={sortBy === 'expired' || sortBy === 'prioritas' || sortBy === 'nama' ? sortBy : 'prioritas'}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-24 text-slate-700 normal-case"
+                    >
+                      <option value="prioritas">Prioritas</option>
+                      <option value="expired">Expired Date</option>
+                      <option value="nama">Nama Aset</option>
+                    </select>
+                  </div>
+                </th>
+                <th className="p-3 font-bold">
+                  <div className="flex items-center justify-between gap-2 min-w-[140px]">
+                    <span>Sisa Deadline</span>
+                    <select
+                      value={sortBy === 'terdekat_terjauh' || sortBy === 'terjauh_terdekat' ? sortBy : 'terdekat_terjauh'}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-20 text-slate-700 normal-case"
+                    >
+                      <option value="terdekat_terjauh">Terdekat</option>
+                      <option value="terjauh_terdekat">Terjauh</option>
+                    </select>
+                  </div>
+                </th>
                 <th className="p-3 font-bold">Status</th>
                 <th className="p-3 font-bold text-center">Aksi</th>
               </tr>
@@ -306,13 +369,13 @@ export default function TugasTerdekat() {
             <tbody className="divide-y divide-slate-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500 text-sm">
+                  <td colSpan="11" className="p-8 text-center text-slate-500 text-sm">
                     Memuat data tugas...
                   </td>
                 </tr>
               ) : filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="p-8 text-center text-slate-500 text-sm">
+                  <td colSpan="11" className="p-8 text-center text-slate-500 text-sm">
                     Tidak ada data tugas yang sesuai dengan filter.
                   </td>
                 </tr>
@@ -328,6 +391,11 @@ export default function TugasTerdekat() {
                       <div className="font-bold text-slate-800 text-xs">{task.namaPeralatan}</div>
                     </td>
                     <td className="p-3">
+                      <span className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-200 whitespace-nowrap">
+                        {getCategoryLabel(task.categoryKey)}
+                      </span>
+                    </td>
+                    <td className="p-3">
                       <div className="font-bold text-slate-800 text-xs">{task.unitPabrik}</div>
                       <div className="text-[10px] text-slate-500 font-mono-data">{task.penanggungJawab}</div>
                     </td>
@@ -340,6 +408,12 @@ export default function TugasTerdekat() {
                     </td>
                     <td className="p-3 text-xs text-rose-600 font-bold font-mono-data">
                       {task.tanggalExpired}
+                    </td>
+                    <td className="p-3 text-xs font-bold font-mono-data">
+                      {formatSisaHari(task.sisaHari)}
+                    </td>
+                    <td className="p-3 text-xs font-bold font-mono-data">
+                      {formatSisaDeadline(task.sisaHariReminder)}
                     </td>
                     <td className="p-3">
                       <span className={`px-2.5 py-1 text-[10px] font-bold border rounded-lg whitespace-nowrap ${getBadgeStyle(task.statusReminder)}`}>

@@ -154,7 +154,7 @@ export class MasterItemsService implements OnModuleInit {
 
     const items = await this.prisma.masterItem.findMany({
       where: {
-        documentStatus: { not: 'EXEMPT' },
+        documentStatus: 'COMPLETED',
         status: 'Aktif',
       },
       include: {
@@ -212,20 +212,28 @@ export class MasterItemsService implements OnModuleInit {
       let isTriggered = false;
       let activeDate = new Date();
 
-      if (triggerType === 'DATE' && triggerDate) {
-        const tDate = new Date(triggerDate);
-        tDate.setHours(0, 0, 0, 0);
-        isTriggered = today >= tDate;
-        activeDate = tDate;
+      if (isEnabled) {
+        if (triggerType === 'DATE' && triggerDate) {
+          const tDate = new Date(triggerDate);
+          tDate.setHours(0, 0, 0, 0);
+          isTriggered = today >= tDate;
+          activeDate = tDate;
+        } else {
+          isTriggered = sisaHari <= triggerDays;
+          activeDate = new Date(expiry);
+          activeDate.setDate(activeDate.getDate() - triggerDays);
+          activeDate.setHours(0,0,0,0);
+        }
       } else {
-        isTriggered = sisaHari <= triggerDays;
+        isTriggered = false;
         activeDate = new Date(expiry);
         activeDate.setDate(activeDate.getDate() - triggerDays);
         activeDate.setHours(0,0,0,0);
       }
 
       const isExpired = sisaHari < 0;
-      const isMulaiHariIni = activeDate.getTime() === today.getTime();
+      const isMulaiHariIni = isEnabled && activeDate.getTime() === today.getTime();
+      const sisaHariReminder = Math.ceil((activeDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
       let priority = 5;
       let statusBadge = "Belum Aktif";
@@ -246,12 +254,15 @@ export class MasterItemsService implements OnModuleInit {
         }
       }
 
+      const isMingguIni = activeDate >= startOfWeek && activeDate <= endOfWeek;
+      const isBulanIni = activeDate >= startOfMonth && activeDate <= endOfMonth;
+
       // Fill stats
-      if (isTriggered) stats.aktif++;
+      if (isEnabled) stats.aktif++;
       if (isExpired) stats.expired++;
       if (isMulaiHariIni) stats.hariIni++;
-      if (activeDate >= startOfWeek && activeDate <= endOfWeek) stats.mingguIni++;
-      if (activeDate >= startOfMonth && activeDate <= endOfMonth) stats.bulanIni++;
+      if (isMingguIni) stats.mingguIni++;
+      if (isBulanIni) stats.bulanIni++;
 
       // Parse metadata for penanggung jawab
       let meta: any = {};
@@ -268,6 +279,7 @@ export class MasterItemsService implements OnModuleInit {
         namaPeralatan: item.title,
         unitPabrik: item.unitLocation || 'Umum',
         lokasi: item.unitLocation || 'Umum',
+        categoryKey: item.categoryKey,
         namaSertifikat: primaryCert?.namaSertifikat || primaryCert?.jenisSertifikat || '-',
         nomorSertifikat: primaryCert?.noSertifikat || '-',
         tanggalMulaiReminder: activeDate.toISOString().split('T')[0],
@@ -275,7 +287,11 @@ export class MasterItemsService implements OnModuleInit {
         statusReminder: statusBadge,
         penanggungJawab: penanggungJawab,
         sisaHari: sisaHari,
+        sisaHariReminder: sisaHariReminder,
         isTriggered: isTriggered,
+        isNotificationEnabled: isEnabled,
+        isMingguIni: isMingguIni,
+        isBulanIni: isBulanIni,
         rawItem: item
       });
     }
@@ -286,7 +302,7 @@ export class MasterItemsService implements OnModuleInit {
       return a.sisaHari - b.sisaHari;
     });
 
-    const bannerTasks = allTasks.filter(t => t.prioritas <= 4).slice(0, 5);
+    const bannerTasks = allTasks.filter(t => t.sisaHari < 0 || t.sisaHariReminder <= 0).slice(0, 5);
 
     return {
       stats,

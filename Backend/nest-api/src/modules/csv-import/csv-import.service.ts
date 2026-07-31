@@ -38,6 +38,7 @@ export class CsvImportService {
     try {
       if (type === 'master_items') {
         const existingItems = await this.prisma.masterItem.findMany({
+          where: targetCategoryKey ? { categoryKey: targetCategoryKey } : undefined,
           select: {
             id: true,
             code: true,
