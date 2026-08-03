@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, resolveMasterItemExemption, createMasterItem, createCertificateForMasterItem } from '../services/masterItemsService';
 
 export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,12 +39,20 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     return '';
   }, [categoryName, title]);
 
+  const formatStatus = (rawStatus) => {
+    if (currentCategoryKey === 'perizinan-proyek') {
+      if (rawStatus === 'Spare') return 'Selesai';
+      if (rawStatus === 'Rusak') return 'Ditunda';
+    }
+    return rawStatus || 'Aktif';
+  };
+
   const loadData = async () => {
     try {
       setIsLoading(true);
       const data = await getMasterItems(currentCategoryKey);
       
-      const mapped = data.map(doc => {
+      const mapped = data.map((doc, index) => {
         const certs = doc.certificates || [];
         const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
 
@@ -53,7 +61,11 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           primaryCert = activeCerts.slice().sort((a, b) => {
             const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
             const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            return dB - dA;
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
           })[0];
         } else if (certs.length > 0) {
           primaryCert = certs[0];
@@ -72,6 +84,21 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
         const actualJenisAset = meta.tipe || doc.jenisPeralatan || meta.jenisAset || doc.categoryKey || (categoryName?.toLowerCase().includes('aset') ? 'Perizinan Aset' : categoryName?.toLowerCase().includes('proyek') ? 'Perizinan Proyek' : 'Perizinan Produk');
 
+        const formatToDDMMYYYY = (rawDateStr) => {
+          if (!rawDateStr || rawDateStr === '-') return '-';
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+          try {
+            const dObj = new Date(rawDateStr);
+            if (!isNaN(dObj.getTime())) {
+              const dd = String(dObj.getDate()).padStart(2, '0');
+              const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+              const yyyy = dObj.getFullYear();
+              return `${dd}/${mm}/${yyyy}`;
+            }
+          } catch (_) {}
+          return rawDateStr;
+        };
+
         return {
           id: doc.id,
           MasterId: doc.id,
@@ -82,20 +109,24 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           jenisPeralatan: actualJenisAset,
           namaItem: doc.title || '-',
           merekItem: doc.title,
-          code: doc.code || '-',
-          certificateNo: primaryCert?.noSertifikat || meta.noSertifikat || '-',
+          code: doc.code || "-",
+          no: index + 1,
+          hasSertifikat: certs.length > 0 ? "Ada" : "Tidak Ada",
+          hasPdf: !!primaryCert?.fileUrl,
+          fileUrl: primaryCert?.fileUrl || null,
+          certificateNo: primaryCert?.noSertifikat || meta.noSertifikat || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-'),
           unitLocation: doc.unitLocation || '-',
           unit: doc.unitLocation || '-',
           luasM2: doc.luasM2 || "0",
           luasHa: doc.luasHa || "0",
           peruntukan: doc.peruntukan || "-",
-          issueDate: primaryCert?.terbit || doc.issueDate || (doc.createdAt ? doc.createdAt.substring(0, 10) : '-'),
-          expiryDate: primaryCert?.expired || doc.expiryDate || "-",
+          issueDate: formatToDDMMYYYY(primaryCert?.terbit || doc.issueDate || '-'),
+          expiryDate: formatToDDMMYYYY(primaryCert?.expired || doc.expiryDate || "-"),
           kondisi: doc.status || "Baik",
           description: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
           keterangan: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
           namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
-          status: doc.status || "Aktif",
+          status: formatStatus(doc.status),
           user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
           documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
@@ -227,8 +258,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       const matchesHasSertifikat = filterHasSertifikat === 'All'
         ? true
         : filterHasSertifikat === 'ada'
-        ? doc.documentStatus !== 'EXEMPT'
-        : doc.documentStatus === 'EXEMPT';
+        ? (doc.documentStatus === 'COMPLETED' && !!doc.fileUrl)
+        : filterHasSertifikat === 'tidak'
+        ? doc.documentStatus === 'EXEMPT'
+        : (doc.documentStatus === 'PENDING_DOC' || (doc.documentStatus === 'COMPLETED' && !doc.fileUrl));
 
       return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus && matchesHasSertifikat;
     });
@@ -242,9 +275,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
       if (certs.length > 0) {
         certs.forEach((cert, idx) => {
-          const noCert = doc.documentStatus === 'EXEMPT'
-            ? 'Tanpa Sertifikat'
-            : (cert.noSertifikat || cert.noIzin || '-');
+          const noCert = cert.noSertifikat || cert.noIzin || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
 
           rows.push({
             rowId: `${doc.id}-cert-${cert.id || idx}`,
@@ -255,16 +286,14 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
             issueDate: cert.terbit || doc.createdAt || '-',
             expiryDate: cert.expired || doc.expiryDate || '-',
-            status: cert.status || doc.status || 'Aktif',
+            status: formatStatus(cert.status || doc.status || 'Aktif'),
             hasPdf: !!cert.fileUrl,
             fileUrl: cert.fileUrl || null,
             namaSertifikat: cert.namaSertifikat || cert.jenisSertifikat || '-'
           });
         });
       } else {
-        const noCert = doc.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (doc.certificateNo || '-');
+        const noCert = doc.certificateNo || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
 
         rows.push({
           rowId: `${doc.id}-primary`,
@@ -275,7 +304,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           issuer: doc.user || doc.description || 'Umum',
           issueDate: doc.createdAt || '-',
           expiryDate: doc.expiryDate || '-',
-          status: doc.status || 'Aktif',
+          status: formatStatus(doc.status || 'Aktif'),
           hasPdf: !!doc.fileUrl,
           fileUrl: doc.fileUrl || null,
           namaSertifikat: '-'
@@ -301,9 +330,54 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     }, 800);
   };
 
-  const handleSingleAdded = async () => {
-    setIsSingleModalOpen(false);
-    await loadData();
+  const handleSingleAdded = async (newItem) => {
+    try {
+      const extraData = {
+        tipe: newItem.tipe || '',
+        nomorSeri: newItem.code || '',
+        penanggungJawab: newItem.user || 'Umum',
+        noSertifikat: newItem.noSertifikat || '',
+        namaSertifikat: newItem.namaSertifikat || '',
+        keteranganAsli: newItem.keterangan || '-'
+      };
+
+      const createdItem = await createMasterItem({
+        title: newItem.title || 'Unknown Item',
+        code: newItem.code || '-',
+        categoryKey: currentCategoryKey,
+        unitLocation: newItem.unitLocation || 'Umum',
+        status: newItem.status || 'Aktif',
+        keterangan: JSON.stringify(extraData),
+        issueDate: newItem.terbit || undefined,
+        expiryDate: newItem.expired || undefined,
+        luasM2: newItem.luasM2 || undefined,
+        luasHa: newItem.luasHa || undefined,
+        peruntukan: newItem.peruntukan || undefined,
+        documentStatus: newItem.documentStatus || 'COMPLETED',
+      });
+
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      if ((newItem.documentStatus === 'COMPLETED' || !newItem.documentStatus) && targetItemId) {
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
+          namaSertifikat: newItem.namaSertifikat || undefined,
+          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.terbit || undefined,
+          expired: newItem.expired || undefined,
+          fileUrl: newItem.fileUrl || null,
+        });
+      }
+
+      setIsSingleModalOpen(false);
+      setActiveMainTab('main');
+      await loadData();
+    } catch (error) {
+      console.error("Gagal menambahkan data:", error);
+      alert("Gagal menyimpan data ke database!");
+    }
   };
 
   const getRowStatusStyle = (doc) => {

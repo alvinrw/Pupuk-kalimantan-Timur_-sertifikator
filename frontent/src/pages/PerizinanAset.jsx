@@ -231,11 +231,11 @@ export default function PerizinanAset({ title, subtitle }) {
         unitLocation: newItem.location || newItem.lokasi || 'Umum',
         status: newItem.condition || newItem.status || 'Aktif',
         keterangan: newItem.keterangan || newItem.description || '-',
-        issueDate: newItem.submissionDate || undefined,
-        expiryDate: newItem.validityPeriod || undefined,
-        luasM2: newItem.areaSqm || undefined,
-        luasHa: newItem.areaHa || undefined,
-        peruntukan: newItem.purpose || undefined,
+        issueDate: newItem.terbit || undefined,
+        expiryDate: newItem.expired || undefined,
+        luasM2: newItem.luasM2 || undefined,
+        luasHa: newItem.luasHa || undefined,
+        peruntukan: newItem.peruntukan || undefined,
         documentStatus: newItem.documentStatus
       });
       
@@ -262,16 +262,17 @@ export default function PerizinanAset({ title, subtitle }) {
 
         await createCertificateForMasterItem({
           itemId: targetItemId,
-          jenisSertifikat: newItem.purpose || 'Sertifikat Aset',
+          jenisSertifikat: newItem.namaSertifikat || 'Sertifikat Aset',
           namaSertifikat: newItem.namaSertifikat || undefined,
           noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
           status: 'Aktif',
-          terbit: newItem.submissionDate || undefined,
-          expired: newItem.validityPeriod || undefined,
+          terbit: newItem.terbit || undefined,
+          expired: newItem.expired || undefined,
           fileUrl: fileUrl,
         });
       }
 
+      setActiveMainTab('main');
       loadData();
     } catch (error) {
       console.error(error);

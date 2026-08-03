@@ -36,7 +36,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
   // Upload History State (Strictly real history from API/localStorage)
   const [uploadHistory, setUploadHistory] = useState(() => {
     try {
-      const saved = localStorage.getItem('csv_upload_history');
+      const saved = localStorage.getItem(`csv_upload_history_${categoryKey}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -55,6 +55,11 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     const fetchHistory = async () => {
       try {
         const logs = await getCsvHistory(categoryKey);
+        if (logs === null) {
+          // Do nothing if API failed
+          return;
+        }
+        
         if (logs && logs.length > 0) {
           const mappedLogs = logs.map(log => {
             let detail = {};
@@ -88,11 +93,11 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
   React.useEffect(() => {
     try {
-      localStorage.setItem('csv_upload_history', JSON.stringify(uploadHistory));
+      localStorage.setItem(`csv_upload_history_${categoryKey}`, JSON.stringify(uploadHistory));
     } catch (e) {
       console.error("Failed to save upload history:", e);
     }
-  }, [uploadHistory]);
+  }, [uploadHistory, categoryKey]);
 
   if (!isOpen) return null;
 

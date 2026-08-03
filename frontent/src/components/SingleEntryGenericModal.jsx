@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { FolderGit2, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { FolderGit2, Building2, ClipboardList, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
@@ -7,15 +7,15 @@ import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess, categoryName }) {
   const [formData, setFormData] = useState({
     title: '',
-    categoryKey: 'perizinan-proyek',
+    tipe: '',
     code: '',
-    unitLocation: 'Area Pabrik NPK Cluster 2',
+    unitLocation: '',
     luasM2: '',
     luasHa: '',
-    peruntukan: 'Izin Lingkungan AMDAL & Pertek Wastewater',
-    penanggungJawab: 'Departemen Proyek & Lingkungan',
+    peruntukan: '',
+    penanggungJawab: '',
     status: 'Aktif',
-    namaSertifikat: 'Surat Keputusan (SK) AMDAL / Pertek',
+    namaSertifikat: '',
     noSertifikat: '',
     terbit: '',
     expired: '',
@@ -33,7 +33,100 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
 
   const fileInputRef = useRef(null);
 
+  const isAset = categoryName?.toLowerCase().includes('aset');
+  const isProduk = categoryName?.toLowerCase().includes('produk');
+  const isProyek = !isAset && !isProduk;
+
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        title: '',
+        tipe: '',
+        code: '',
+        unitLocation: isAset 
+          ? 'Kawasan Industri Bontang' 
+          : isProduk 
+          ? 'Pabrik 5 Fertilizer' 
+          : 'Area Pabrik NPK Cluster 2',
+        luasM2: isAset ? '1500000' : '',
+        luasHa: isAset ? '150.0' : '',
+        peruntukan: isAset 
+          ? 'Area Industri & Kompleks Pabrik' 
+          : isProduk 
+          ? 'Sertifikasi SNI & Halal Produk Komersil' 
+          : 'Izin Lingkungan AMDAL & Pertek Wastewater',
+        penanggungJawab: isAset 
+          ? 'Departemen Aset & Umum' 
+          : isProduk 
+          ? 'Departemen Penjaminan Mutu' 
+          : 'Departemen Proyek & Lingkungan',
+        status: 'Aktif',
+        namaSertifikat: isAset 
+          ? 'Sertifikat Hak Guna Bangunan (HGB)' 
+          : isProduk 
+          ? 'Sertifikat Standar Nasional Indonesia (SNI)' 
+          : 'Surat Keputusan (SK) AMDAL / Pertek',
+        noSertifikat: '',
+        terbit: '',
+        expired: '',
+        keterangan: ''
+      });
+      setSelectedFile(null);
+      setTempUrl(null);
+      setOcrSuccess(false);
+      setOcrErrorMsg('');
+    }
+  }, [isOpen, categoryName]);
+
   if (!isOpen) return null;
+
+  const labels = {
+    title: `Input Data ${categoryName || 'Perizinan'} Baru`,
+    subtitle: isAset 
+      ? 'Lengkapi informasi aset beserta dokumen sertifikat kepemilikan/HGB' 
+      : isProduk 
+      ? 'Lengkapi informasi produk beserta dokumen sertifikat SNI/Halal' 
+      : 'Lengkapi informasi proyek beserta dokumen SK / Sertifikat Izin Lingkungan',
+    nameLabel: isAset ? 'Nama Aset' : isProduk ? 'Nama Produk' : 'Nama Proyek',
+    namePlaceholder: isAset 
+      ? 'Contoh: Gedung Kantor Pusat Bontang' 
+      : isProduk 
+      ? 'Contoh: Pupuk NPK 16-16-16' 
+      : 'Contoh: Izin Amdal Ekspansi Pabrik NPK Cluster 2',
+    jenisLabel: isAset ? 'Jenis Aset' : isProduk ? 'Jenis Produk' : 'Kategori Proyek',
+    jenisPlaceholder: isAset 
+      ? 'Contoh: Tanah / Bangunan' 
+      : isProduk 
+      ? 'Contoh: Pupuk / Bahan Chemical' 
+      : 'Contoh: Amdal / Pertek Lingkungan',
+    codeLabel: isAset ? 'Nomor Seri Asset' : isProduk ? 'Kode Produk' : 'Kode Proyek',
+    codePlaceholder: isAset 
+      ? 'Contoh: AST-BPN-001' 
+      : isProduk 
+      ? 'Contoh: PRD-NPK-001' 
+      : 'Contoh: PRJ-ENV-001',
+    locationLabel: isAset ? 'Lokasi Aset' : isProduk ? 'Unit Pengelola' : 'Lokasi / Area Proyek',
+    locationPlaceholder: isAset 
+      ? 'Contoh: Kawasan Industri Bontang' 
+      : isProduk 
+      ? 'Contoh: Pabrik 5 Fertilizer' 
+      : 'Contoh: Area Pabrik NPK Cluster 2',
+    userLabel: 'Penanggung Jawab',
+    userPlaceholder: isAset 
+      ? 'Contoh: Departemen Aset & Umum' 
+      : isProduk 
+      ? 'Contoh: Departemen Penjaminan Mutu' 
+      : 'Contoh: Departemen Proyek & Lingkungan',
+    statusLabel: isAset ? 'Status Aset' : isProduk ? 'Status Produk' : 'Status Proyek',
+    statusOptionSpare: isProyek ? 'Selesai' : 'Spare',
+    statusOptionRusak: isProyek ? 'Ditunda' : 'Rusak',
+    pdfLabel: isAset ? 'File PDF Sertifikat Aset' : isProduk ? 'File PDF Sertifikat Produk' : 'File PDF SK / Sertifikat Proyek',
+    noPdfMessage: isAset 
+      ? 'Aset ini dicatat tanpa dokumen sertifikat terlampir.' 
+      : isProduk 
+      ? 'Produk ini dicatat tanpa dokumen sertifikat terlampir.' 
+      : 'Proyek ini dicatat tanpa dokumen sertifikat terlampir.'
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -70,21 +163,24 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
       }
     }
 
+    const systemCategoryKey = isProduk ? 'perizinan-produk' : isAset ? 'perizinan-aset' : 'perizinan-proyek';
+    const idPrefix = isAset ? 'AST' : isProduk ? 'PRD' : 'PRJ';
+
     onAddSuccess({
       ...formData,
       file: sertifikatMode === 'dengan' ? selectedFile : null,
       fileUrl: finalUrl,
-      id: `PRJ-MANUAL-${Date.now()}`,
-      categoryKey: formData.categoryKey || 'perizinan-proyek',
+      id: `${idPrefix}-MANUAL-${Date.now()}`,
+      categoryKey: systemCategoryKey,
       title: formData.title,
       merekItem: formData.title,
-      jenisPeralatan: categoryName || 'Perizinan Proyek',
-      code: formData.code || `PRJ-${Math.floor(1000 + Math.random() * 9000)}`,
+      jenisPeralatan: categoryName || (isAset ? 'Aset & Bangunan' : isProduk ? 'Sertifikasi Produk' : 'Perizinan Proyek'),
+      code: formData.code || `${idPrefix}-${Math.floor(1000 + Math.random() * 9000)}`,
       unitLocation: formData.unitLocation,
       user: formData.penanggungJawab,
       status: formData.status,
       namaSertifikat: formData.namaSertifikat,
-      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `SK-KLHK-${Math.floor(100 + Math.random() * 900)}` : "BELUM_ADA_SERTIFIKAT")),
+      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `${idPrefix}-KLHK-${Math.floor(100 + Math.random() * 900)}` : "BELUM_ADA_SERTIFIKAT")),
       terbit: formData.terbit || new Date().toISOString().split('T')[0],
       expired: formData.expired || '',
       hasCertificatePdf: sertifikatMode === 'dengan' && (!!selectedFile || !!finalUrl),
@@ -92,24 +188,6 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
       keterangan: sertifikatMode === 'tanpa' ? "Tidak Perlu Sertifikat" : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : (formData.keterangan || "Data Manual Input"))
     });
 
-    setFormData({
-      title: '',
-      categoryKey: 'perizinan-proyek',
-      code: '',
-      unitLocation: 'Area Pabrik NPK Cluster 2',
-      luasM2: '',
-      luasHa: '',
-      peruntukan: 'Izin Lingkungan AMDAL & Pertek Wastewater',
-      penanggungJawab: 'Departemen Proyek & Lingkungan',
-      status: 'Aktif',
-      namaSertifikat: 'Surat Keputusan (SK) AMDAL / Pertek',
-      noSertifikat: '',
-      terbit: '',
-      expired: '',
-      keterangan: ''
-    });
-    setSelectedFile(null);
-    setTempUrl(null);
     onClose();
   };
 
@@ -119,7 +197,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
       onClose={onClose}
       title={`Input Data ${categoryName || 'Perizinan Proyek'} Baru`}
       subtitle="Lengkapi informasi proyek beserta dokumen SK / Sertifikat Izin Lingkungan"
-      headerIcon={FolderGit2}
+      headerIcon={isAset ? Building2 : isProduk ? ClipboardList : FolderGit2}
       formId="singleEntryGenericForm"
       onSubmit={handleSubmit}
       submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile)}
@@ -151,41 +229,41 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
         </button>
       </div>
 
-      {/* SECTION 1: DATA UTAMA PROYEK */}
+      {/* SECTION 1: DATA UTAMA */}
       <div className="space-y-4">
-        <h4 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2">Bagian 1: Data Utama Proyek</h4>
+        <h4 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2">Bagian 1: Data Utama</h4>
         
         <div>
           <label className="font-bold text-slate-700 block mb-1">
-            Nama Proyek / Perizinan Proyek <span className="text-rose-500">*</span>
+            {labels.nameLabel} <span className="text-rose-500">*</span>
           </label>
           <input
             type="text" required
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            placeholder="Contoh: Izin Amdal Ekspansi Pabrik NPK Cluster 2"
+            placeholder={labels.namePlaceholder}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Kategori / Jenis Proyek <span className="text-rose-500">*</span></label>
+            <label className="font-bold text-slate-700 block mb-1">{labels.jenisLabel} <span className="text-rose-500">*</span></label>
             <input
               type="text" required
-              value={formData.categoryKey}
-              onChange={(e) => setFormData({ ...formData, categoryKey: e.target.value })}
-              placeholder="Contoh: Amdal / Pertek Lingkungan"
+              value={formData.tipe}
+              onChange={(e) => setFormData({ ...formData, tipe: e.target.value })}
+              placeholder={labels.jenisPlaceholder}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
             />
           </div>
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Kode / Identitas Proyek</label>
+            <label className="font-bold text-slate-700 block mb-1">{labels.codeLabel}</label>
             <input
               type="text"
               value={formData.code}
               onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-              placeholder="Contoh: PRJ-ENV-001"
+              placeholder={labels.codePlaceholder}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
             />
           </div>
@@ -193,22 +271,22 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Lokasi / Area Proyek <span className="text-rose-500">*</span></label>
+            <label className="font-bold text-slate-700 block mb-1">{labels.locationLabel} <span className="text-rose-500">*</span></label>
             <input
               type="text" required
               value={formData.unitLocation}
               onChange={(e) => setFormData({ ...formData, unitLocation: e.target.value })}
-              placeholder="Contoh: Area Pabrik NPK Cluster 2"
+              placeholder={labels.locationPlaceholder}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
             />
           </div>
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Penanggung Jawab</label>
+            <label className="font-bold text-slate-700 block mb-1">{labels.userLabel}</label>
             <input
               type="text"
               value={formData.penanggungJawab}
               onChange={(e) => setFormData({ ...formData, penanggungJawab: e.target.value })}
-              placeholder="Contoh: Departemen Lingkungan Hidup"
+              placeholder={labels.userPlaceholder}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
             />
           </div>
@@ -249,15 +327,15 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
         </div>
 
         <div>
-          <label className="font-bold text-slate-700 block mb-1">Status Proyek</label>
+          <label className="font-bold text-slate-700 block mb-1">{labels.statusLabel}</label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-[#005ea4]"
           >
             <option value="Aktif">Aktif</option>
-            <option value="Nonaktif">Nonaktif</option>
-            <option value="Selesai">Selesai</option>
+            <option value="Spare">{labels.statusOptionSpare}</option>
+            <option value="Rusak">{labels.statusOptionRusak}</option>
           </select>
         </div>
       </div>
@@ -270,12 +348,12 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
         
         {sertifikatMode === 'tanpa' ? (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-800 font-medium">Proyek ini dicatat tanpa dokumen sertifikat terlampir.</p>
+            <p className="text-xs text-amber-800 font-medium">{labels.noPdfMessage}</p>
           </div>
         ) : (
           <>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">File PDF SK / Sertifikat Proyek <span className="text-rose-500">*</span></label>
+              <label className="text-xs font-bold text-slate-700 block">{labels.pdfLabel} <span className="text-rose-500">*</span></label>
               <div
                 onClick={() => {
                   if (isUploadingTemp || isScanningOcr) return;
@@ -344,7 +422,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
                 <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
                 <div className="flex flex-col items-center">
                   <span className="text-xs font-bold text-[#005ea4]">
-                    {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih File PDF SK / Sertifikat'}
+                    {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : `Pilih ${labels.pdfLabel}`}
                   </span>
                   <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
                 </div>
@@ -391,7 +469,7 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
                 type="text" required
                 value={formData.noSertifikat}
                 onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                placeholder="Contoh: SK-KLHK-881"
+                placeholder={isAset ? "Contoh: HGB-BPN-123" : isProduk ? "Contoh: SNI-123-2026" : "Contoh: SK-KLHK-881"}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
               />
             </div>

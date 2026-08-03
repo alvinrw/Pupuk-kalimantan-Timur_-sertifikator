@@ -30,10 +30,10 @@ import ModalUploadCert from '../components/document-detail/ModalUploadCert';
 import ModalAddLinkedCert from '../components/document-detail/ModalAddLinkedCert';
 import ModalEditHistoryRow from '../components/document-detail/ModalEditHistoryRow';
 
-export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission, onDeleteSuccess, onRefreshRequired, hideLinkedCertificates }) {
+export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuickRenew, onQuickDecommission, onDeleteSuccess, onRefreshRequired, hideLinkedCertificates, initialCertId }) {
   if (!item) return null;
 
-  const hook = useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired });
+  const hook = useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired, initialCertId });
   const {
     parentDoc, effectiveCategoryKey, targetCert, isSingleCertScope,
     isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
@@ -307,16 +307,28 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                     </div>
                   ))}
                   <div>
-                    <label className="font-bold text-slate-800 block mb-1.5">Status Fisik Operasional</label>
+                    <label className="font-bold text-slate-800 block mb-1.5">
+                      {effectiveCategoryKey === 'perizinan-proyek' ? 'Status Proyek' : 'Status Fisik Operasional'}
+                    </label>
                     <select
                       value={formData.status}
                       onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                       className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
                     >
-                      <option value="Aktif">Aktif (Normal)</option>
-                      <option value="Spare">Spare (Cadangan)</option>
-                      <option value="Repair">Repair (Overhaul)</option>
-                      <option value="Rusak">Rusak (Out of Service)</option>
+                      {effectiveCategoryKey === 'perizinan-proyek' ? (
+                        <>
+                          <option value="Aktif">Aktif</option>
+                          <option value="Spare">Selesai</option>
+                          <option value="Rusak">Ditunda</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="Aktif">Aktif (Normal)</option>
+                          <option value="Spare">Spare (Cadangan)</option>
+                          <option value="Repair">Repair (Overhaul)</option>
+                          <option value="Rusak">Rusak (Out of Service)</option>
+                        </>
+                      )}
                     </select>
                   </div>
                 </>
@@ -506,7 +518,13 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   { label: 'Nomor Seri / Tag', val: formData.nomorSeri || '-', cls: 'font-bold text-slate-800' },
                   { label: 'Unit Pabrik / Lokasi', val: formData.lokasi, cls: 'font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 inline-block' },
                   { label: 'User / Dept PJ (Penanggung Jawab)', val: formData.user || 'Dept. Operasi', cls: 'font-bold text-slate-800' },
-                  { label: 'Status Fisik Operasional', val: formData.status, cls: 'font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block' },
+                  { 
+                    label: effectiveCategoryKey === 'perizinan-proyek' ? 'Status Proyek' : 'Status Fisik Operasional', 
+                    val: effectiveCategoryKey === 'perizinan-proyek'
+                      ? (formData.status === 'Spare' ? 'Selesai' : formData.status === 'Rusak' ? 'Ditunda' : formData.status)
+                      : (formData.status === 'Spare' ? 'Spare (Cadangan)' : formData.status === 'Rusak' ? 'Rusak (Out of Service)' : formData.status), 
+                    cls: 'font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block' 
+                  },
                   { label: 'No. Sertifikat Active', val: displayNoSert, cls: 'font-bold text-[#005ea4]' },
                   { label: 'Tanggal Terbit', val: formData.terbit || '-', cls: 'font-bold text-slate-800' },
                   { label: 'Tanggal Expired', val: displayExpired, cls: 'font-bold text-rose-700' },

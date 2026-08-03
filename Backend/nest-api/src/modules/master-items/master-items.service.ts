@@ -155,11 +155,14 @@ export class MasterItemsService implements OnModuleInit {
     const items = await this.prisma.masterItem.findMany({
       where: {
         documentStatus: 'COMPLETED',
-        status: 'Aktif',
       },
       include: {
         notificationSetting: true,
-        certificates: true
+        certificates: {
+          include: {
+            notificationSetting: true
+          }
+        }
       }
     });
 
@@ -181,38 +184,37 @@ export class MasterItemsService implements OnModuleInit {
     const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
     for (const item of items) {
-      const setting = item.notificationSetting;
-      const isEnabled = setting ? setting.isEnabled : true;
-      if (!isEnabled) continue; // Skip disabled reminders
-
       const certs = item.certificates || [];
       const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
-      let primaryCert = null;
-      if (activeCerts.length > 0) {
-        primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          return dB - dA;
-        })[0];
+
+      // Parse metadata for penanggung jawab
+      let meta: any = {};
+      try {
+        meta = JSON.parse(item.keterangan || '{}');
+      } catch (e) {
+        meta = { keteranganAsli: item.keterangan };
       }
+      const penanggungJawab = meta.penanggungJawab || item.unitLocation || 'Dept. Operasi';
 
-      const expiryStr = primaryCert?.expired || item.expiryDate;
-      if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') continue; // Skip if no expiry
+      const evaluateTarget = (expiryStr: string | null, targetSetting: any, displayName: string, displayNo: string, certId?: string) => {
+        if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') return;
 
-      const expiry = new Date(expiryStr);
-      if (isNaN(expiry.getTime())) continue;
-      expiry.setHours(0, 0, 0, 0);
+        const expiry = new Date(expiryStr);
+        if (isNaN(expiry.getTime())) return;
+        expiry.setHours(0, 0, 0, 0);
 
-      const sisaHari = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
-      const triggerType = setting ? setting.triggerType : 'DAYS';
-      const triggerDays = setting?.triggerDays ?? 30; // default H-30
-      const triggerDate = setting?.triggerDate;
+        const sisaHari = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        const isEnabled = targetSetting ? targetSetting.isEnabled : (item.notificationSetting ? item.notificationSetting.isEnabled : true);
+        if (!isEnabled) return; // Skip if disabled
 
-      let isTriggered = false;
-      let activeDate = new Date();
+        const triggerType = targetSetting ? targetSetting.triggerType : (item.notificationSetting ? item.notificationSetting.triggerType : 'DAYS');
+        const triggerDays = targetSetting ? targetSetting.triggerDays : (item.notificationSetting?.triggerDays ?? 30);
+        const triggerDate = targetSetting ? targetSetting.triggerDate : item.notificationSetting?.triggerDate;
 
-      if (isEnabled) {
+        let isTriggered = false;
+        let activeDate = new Date();
+
         if (triggerType === 'DATE' && triggerDate) {
           const tDate = new Date(triggerDate);
           tDate.setHours(0, 0, 0, 0);
@@ -224,76 +226,82 @@ export class MasterItemsService implements OnModuleInit {
           activeDate.setDate(activeDate.getDate() - triggerDays);
           activeDate.setHours(0,0,0,0);
         }
-      } else {
-        isTriggered = false;
-        activeDate = new Date(expiry);
-        activeDate.setDate(activeDate.getDate() - triggerDays);
-        activeDate.setHours(0,0,0,0);
-      }
 
-      const isExpired = sisaHari < 0;
-      const isMulaiHariIni = isEnabled && activeDate.getTime() === today.getTime();
-      const sisaHariReminder = Math.ceil((activeDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const isExpired = sisaHari < 0;
+        const isMulaiHariIni = isEnabled && activeDate.getTime() === today.getTime();
+        const sisaHariReminder = Math.ceil((activeDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-      let priority = 5;
-      let statusBadge = "Belum Aktif";
+        let priority = 5;
+        let statusBadge = "Belum Aktif";
 
-      if (isExpired) {
-        priority = 1;
-        statusBadge = "Expired";
-      } else if (isTriggered) {
-        if (sisaHari <= 14) {
-          priority = 2;
-          statusBadge = "Segera Expired";
-        } else if (isMulaiHariIni) {
-          priority = 3;
-          statusBadge = "Mulai Hari Ini";
-        } else {
-          priority = 4;
-          statusBadge = "Reminder Aktif";
+        if (isExpired) {
+          priority = 1;
+          statusBadge = "Expired";
+        } else if (isTriggered) {
+          if (sisaHari <= 14) {
+            priority = 2;
+            statusBadge = "Segera Expired";
+          } else if (isMulaiHariIni) {
+            priority = 3;
+            statusBadge = "Mulai Hari Ini";
+          } else {
+            priority = 4;
+            statusBadge = "Reminder Aktif";
+          }
         }
+
+        const isMingguIni = activeDate >= startOfWeek && activeDate <= endOfWeek;
+        const isBulanIni = activeDate >= startOfMonth && activeDate <= endOfMonth;
+
+        // Fill stats
+        if (isEnabled) stats.aktif++;
+        if (isExpired) stats.expired++;
+        if (isMulaiHariIni) stats.hariIni++;
+        if (isMingguIni) stats.mingguIni++;
+        if (isBulanIni) stats.bulanIni++;
+
+        allTasks.push({
+          id: item.id,
+          certificateId: certId || null,
+          prioritas: priority,
+          namaPeralatan: item.title,
+          unitPabrik: item.unitLocation || 'Umum',
+          lokasi: item.unitLocation || 'Umum',
+          categoryKey: item.categoryKey,
+          namaSertifikat: displayName,
+          nomorSertifikat: displayNo,
+          tanggalMulaiReminder: activeDate.toISOString().split('T')[0],
+          tanggalExpired: expiry.toISOString().split('T')[0],
+          statusReminder: statusBadge,
+          penanggungJawab: penanggungJawab,
+          sisaHari: sisaHari,
+          sisaHariReminder: sisaHariReminder,
+          isTriggered: isTriggered,
+          isNotificationEnabled: isEnabled,
+          isMingguIni: isMingguIni,
+          isBulanIni: isBulanIni,
+          rawItem: item
+        });
+      };
+
+      if (activeCerts.length > 0) {
+        for (const cert of activeCerts) {
+          evaluateTarget(
+            cert.expired,
+            cert.notificationSetting,
+            cert.namaSertifikat || cert.jenisSertifikat || '-',
+            cert.noSertifikat || '-',
+            cert.id
+          );
+        }
+      } else {
+        evaluateTarget(
+          item.expiryDate,
+          item.notificationSetting,
+          '-',
+          item.code || '-'
+        );
       }
-
-      const isMingguIni = activeDate >= startOfWeek && activeDate <= endOfWeek;
-      const isBulanIni = activeDate >= startOfMonth && activeDate <= endOfMonth;
-
-      // Fill stats
-      if (isEnabled) stats.aktif++;
-      if (isExpired) stats.expired++;
-      if (isMulaiHariIni) stats.hariIni++;
-      if (isMingguIni) stats.mingguIni++;
-      if (isBulanIni) stats.bulanIni++;
-
-      // Parse metadata for penanggung jawab
-      let meta: any = {};
-      try {
-        meta = JSON.parse(item.keterangan || '{}');
-      } catch (e) {
-        meta = { keteranganAsli: item.keterangan };
-      }
-      const penanggungJawab = meta.penanggungJawab || item.unitLocation || 'Dept. Operasi';
-
-      allTasks.push({
-        id: item.id,
-        prioritas: priority,
-        namaPeralatan: item.title,
-        unitPabrik: item.unitLocation || 'Umum',
-        lokasi: item.unitLocation || 'Umum',
-        categoryKey: item.categoryKey,
-        namaSertifikat: primaryCert?.namaSertifikat || primaryCert?.jenisSertifikat || '-',
-        nomorSertifikat: primaryCert?.noSertifikat || '-',
-        tanggalMulaiReminder: activeDate.toISOString().split('T')[0],
-        tanggalExpired: expiry.toISOString().split('T')[0],
-        statusReminder: statusBadge,
-        penanggungJawab: penanggungJawab,
-        sisaHari: sisaHari,
-        sisaHariReminder: sisaHariReminder,
-        isTriggered: isTriggered,
-        isNotificationEnabled: isEnabled,
-        isMingguIni: isMingguIni,
-        isBulanIni: isBulanIni,
-        rawItem: item
-      });
     }
 
     // Sort by priority, then by sisaHari (closest to expiry first)
@@ -312,94 +320,109 @@ export class MasterItemsService implements OnModuleInit {
   }
 
   async runDeadlineCheck() {
-    console.log('[SCHEDULER] Running daily deadline check for MasterItems...');
+    console.log('[SCHEDULER] Running daily deadline check for MasterItems and Certificates...');
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     const items = await this.prisma.masterItem.findMany({
       where: {
         documentStatus: { not: 'EXEMPT' },
-        status: 'Aktif',
       },
       include: {
         notificationSetting: true,
-        certificates: true
+        certificates: {
+          include: {
+            notificationSetting: true
+          }
+        }
       }
     });
 
     let triggeredCount = 0;
 
     for (const item of items) {
-      const setting = item.notificationSetting;
-      // Default enabled to true if setting is not yet defined
-      const isEnabled = setting ? setting.isEnabled : true;
-      if (!isEnabled) continue;
-
       const certs = item.certificates || [];
       const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
-      let primaryCert = null;
-      if (activeCerts.length > 0) {
-        primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          return dB - dA;
-        })[0];
-      }
 
-      const expiryStr = primaryCert?.expired || item.expiryDate;
-      if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') continue;
+      const evaluateAndSave = async (expiryStr: string | null, targetSetting: any, displayName: string, displayNo: string, certId?: string) => {
+        if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') return;
 
-      const expiry = new Date(expiryStr);
-      if (isNaN(expiry.getTime())) continue;
-      expiry.setHours(0, 0, 0, 0);
+        const expiry = new Date(expiryStr);
+        if (isNaN(expiry.getTime())) return;
+        expiry.setHours(0, 0, 0, 0);
 
-      const sisaHari = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
-      const triggerType = setting ? setting.triggerType : 'DAYS';
-      const triggerDays = setting?.triggerDays ?? 30; // default H-30
-      const triggerDate = setting?.triggerDate;
+        const sisaHari = Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        const isEnabled = targetSetting ? targetSetting.isEnabled : (item.notificationSetting ? item.notificationSetting.isEnabled : true);
+        if (!isEnabled) return; // Skip if disabled
 
-      let isTriggered = false;
-      if (triggerType === 'DATE' && triggerDate) {
-        const tDate = new Date(triggerDate);
-        tDate.setHours(0, 0, 0, 0);
-        isTriggered = today >= tDate;
-      } else {
-        isTriggered = sisaHari <= triggerDays;
-      }
+        const triggerType = targetSetting ? targetSetting.triggerType : (item.notificationSetting ? item.notificationSetting.triggerType : 'DAYS');
+        const triggerDays = targetSetting ? targetSetting.triggerDays : (item.notificationSetting?.triggerDays ?? 30);
+        const triggerDate = targetSetting ? targetSetting.triggerDate : item.notificationSetting?.triggerDate;
 
-      if (isTriggered) {
-        let msg = '';
-        if (sisaHari === 0) {
-          msg = `Peringatan: Dokumen "${item.title}" (${primaryCert?.noSertifikat || item.code || '-'}) habis masa berlaku HARI INI!`;
-        } else if (sisaHari < 0) {
-          msg = `Peringatan: Dokumen "${item.title}" (${primaryCert?.noSertifikat || item.code || '-'}) sudah EXPIRED sejak ${Math.abs(sisaHari)} hari yang lalu!`;
+        let isTriggered = false;
+        if (triggerType === 'DATE' && triggerDate) {
+          const tDate = new Date(triggerDate);
+          tDate.setHours(0, 0, 0, 0);
+          isTriggered = today >= tDate;
         } else {
-          msg = `Peringatan: Dokumen "${item.title}" (${primaryCert?.noSertifikat || item.code || '-'}) akan kadaluarsa dalam ${sisaHari} hari (Deadline: ${expiryStr.substring(0, 10)}).`;
+          isTriggered = sisaHari <= triggerDays;
         }
 
-        const existingReminder = await this.prisma.reminderNotification.findFirst({
-          where: {
-            itemId: item.id,
-            isResolved: false
+        if (isTriggered && isEnabled) {
+          let msg = '';
+          if (sisaHari === 0) {
+            msg = `Peringatan: Dokumen "${item.title}" - "${displayName}" (${displayNo}) habis masa berlaku HARI INI!`;
+          } else if (sisaHari < 0) {
+            msg = `Peringatan: Dokumen "${item.title}" - "${displayName}" (${displayNo}) sudah EXPIRED sejak ${Math.abs(sisaHari)} hari yang lalu!`;
+          } else {
+            msg = `Peringatan: Dokumen "${item.title}" - "${displayName}" (${displayNo}) akan kadaluarsa dalam ${sisaHari} hari (Deadline: ${expiryStr.substring(0, 10)}).`;
           }
-        });
 
-        if (!existingReminder) {
-          await this.prisma.reminderNotification.create({
-            data: {
+          const existingReminder = await this.prisma.reminderNotification.findFirst({
+            where: {
               itemId: item.id,
-              message: msg,
+              certificateId: certId || null,
               isResolved: false
             }
           });
-          triggeredCount++;
-        } else {
-          await this.prisma.reminderNotification.update({
-            where: { id: existingReminder.id },
-            data: { message: msg }
-          });
+
+          if (!existingReminder) {
+            await this.prisma.reminderNotification.create({
+              data: {
+                itemId: item.id,
+                certificateId: certId || null,
+                message: msg,
+                isResolved: false
+              }
+            });
+            triggeredCount++;
+          } else {
+            await this.prisma.reminderNotification.update({
+              where: { id: existingReminder.id },
+              data: { message: msg }
+            });
+          }
         }
+      };
+
+      if (activeCerts.length > 0) {
+        for (const cert of activeCerts) {
+          await evaluateAndSave(
+            cert.expired,
+            cert.notificationSetting,
+            cert.namaSertifikat || cert.jenisSertifikat || '-',
+            cert.noSertifikat || '-',
+            cert.id
+          );
+        }
+      } else {
+        await evaluateAndSave(
+          item.expiryDate,
+          item.notificationSetting,
+          '-',
+          item.code || '-'
+        );
       }
     }
 

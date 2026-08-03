@@ -42,7 +42,7 @@ export const getCsvHistory = async (categoryKey = '') => {
     return response.data;
   } catch (error) {
     console.error('Error fetching CSV history:', error);
-    return [];
+    return null;
   }
 };
 

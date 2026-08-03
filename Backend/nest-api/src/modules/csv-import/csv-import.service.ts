@@ -132,6 +132,7 @@ export class CsvImportService {
 
             let rawCode = getVal(row, [
               'nomor seri asset', 'nomor seri aset', 'nomor_seri_asset',
+              'nomor seri proyek', 'nomor_seri_proyek', 'nomor seri produk', 'nomor_seri_produk',
               'nomor seri', 'nomor_seri', 'no seri', 'sn',
               'kode proyek', 'kode produk', 'code', 'kode',
               'merek / nama peralatan', 'tipe'
@@ -157,8 +158,8 @@ export class CsvImportService {
             let lokasi = getVal(row, ['lokasi', 'unit location', 'unitlocation', 'area']);
             let rawLocation = (unitPabrik && lokasi) ? `${unitPabrik} - ${lokasi}` : (unitPabrik || lokasi || 'Umum');
 
-            const cleanTipe = getVal(row, ['tipe', 'jenis aset', 'jenis peralatan', 'jenis ciptaan', 'jenis produk', 'kategori proyek']);
-            const cleanNoSeri = getVal(row, ['nomor seri asset', 'nomor seri aset', 'nomor seri', 'nomor_seri', 'sn']);
+            const cleanTipe = getVal(row, ['tipe', 'jenis aset', 'jenis peralatan', 'jenis ciptaan', 'jenis produk', 'jenis proyek', 'kategori proyek']);
+            const cleanNoSeri = getVal(row, ['nomor seri asset', 'nomor seri aset', 'nomor seri proyek', 'nomor seri produk', 'nomor seri', 'nomor_seri', 'sn']);
             const cleanPenanggungJawab = getVal(row, ['penanggung jawab', 'penanggung_jawab', 'user', 'instansi']);
             const cleanNoSertifikat = getVal(row, ['no. sertifikat', 'no sertifikat', 'nomor sertifikat', 'nosertifikat']);
             const cleanNamaSertifikat = getVal(row, ['nama sertifikat', 'namasertifikat', 'nama_sertifikat']);
@@ -198,19 +199,31 @@ export class CsvImportService {
             const issueDateVal = getVal(row, ['tanggal terbit', 'tanggal_terbit', 'terbit', 'issuedate', 'tanggal awal pengajuan']) || row.issueDate || null;
             const expiryDateVal = getVal(row, ['tanggal berakhir', 'tanggal_berakhir', 'expired', 'expirydate', 'masa berlaku']) || row.expiryDate || null;
 
+            let importStatus = getVal(row, ['status']) || row.status || 'Aktif';
+            if (rawCategory === 'perizinan-proyek' || String(rawCategory).toLowerCase().includes('proyek')) {
+              const cleanSt = String(importStatus).trim().toLowerCase();
+              if (cleanSt === 'selesai') {
+                importStatus = 'Spare';
+              } else if (cleanSt === 'ditunda') {
+                importStatus = 'Rusak';
+              } else if (cleanSt === 'aktif') {
+                importStatus = 'Aktif';
+              }
+            }
+
             const dataToSave = {
               code: rawCode,
               title: rawTitle,
               categoryKey: rawCategory,
               unitLocation: rawLocation,
-              status: getVal(row, ['status']) || row.status || 'Aktif',
+              status: importStatus,
               luasM2: luasM2Val,
               luasHa: luasHaVal,
               peruntukan: peruntukanVal,
               issueDate: issueDateVal,
               expiryDate: expiryDateVal,
               keterangan: jsonKeterangan,
-              documentStatus: existing ? existing.documentStatus : (cleanNoSertifikat && cleanNoSertifikat !== '-' ? 'COMPLETED' : 'PENDING_DOC'),
+              documentStatus: existing ? existing.documentStatus : 'PENDING_DOC',
               updatedAt: new Date()
             };
 

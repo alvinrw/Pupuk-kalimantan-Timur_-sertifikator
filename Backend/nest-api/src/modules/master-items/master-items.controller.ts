@@ -61,7 +61,7 @@ export class MasterItemsController {
   @Put(':id/notification-setting')
   updateNotificationSetting(
     @Param('id') itemId: string,
-    @Body() body: { isEnabled: boolean; triggerType: string; triggerDays: number; triggerDate?: string | null },
+    @Body() body: { isEnabled: boolean; triggerType: string; triggerDays: number; triggerDate?: string | null; certificateId?: string | null },
   ) {
     return this.masterItemsService.updateNotificationSetting(itemId, body);
   }

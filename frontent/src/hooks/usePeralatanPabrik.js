@@ -72,7 +72,11 @@ export function usePeralatanPabrik() {
           primaryCert = activeCerts.slice().sort((a, b) => {
             const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
             const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            return dB - dA;
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
           })[0];
         } else if (certs.length > 0) {
           primaryCert = certs[0];
@@ -89,12 +93,28 @@ export function usePeralatanPabrik() {
           meta = { keteranganAsli: item.keterangan };
         }
 
-        const noCert = item.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (primaryCert?.noSertifikat || primaryCert?.noIzin || meta.noSertifikat || '-');
+        const formatToDDMMYYYY = (rawDateStr) => {
+          if (!rawDateStr || rawDateStr === '-') return '-';
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+          try {
+            const dObj = new Date(rawDateStr);
+            if (!isNaN(dObj.getTime())) {
+              const dd = String(dObj.getDate()).padStart(2, '0');
+              const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+              const yyyy = dObj.getFullYear();
+              return `${dd}/${mm}/${yyyy}`;
+            }
+          } catch (_) {}
+          return rawDateStr;
+        };
 
-        const terbitVal = primaryCert?.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-');
-        const expiredVal = primaryCert?.expired || item.expiryDate || '-';
+        const noCert = primaryCert?.noSertifikat || primaryCert?.noIzin || meta.noSertifikat || (item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
+
+        const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
+        const terbitVal = formatToDDMMYYYY(rawTerbit);
+        
+        const rawExpired = primaryCert?.expired || item.expiryDate || '-';
+        const expiredVal = formatToDDMMYYYY(rawExpired);
 
         return {
           id: item.id,
@@ -241,8 +261,10 @@ export function usePeralatanPabrik() {
       const matchesHasSertifikat = filterHasSertifikat === 'All'
         ? true
         : filterHasSertifikat === 'ada'
-        ? item.documentStatus !== 'EXEMPT'
-        : item.documentStatus === 'EXEMPT';
+        ? (item.documentStatus === 'COMPLETED' && !!item.fileUrl)
+        : filterHasSertifikat === 'tidak'
+        ? item.documentStatus === 'EXEMPT'
+        : (item.documentStatus === 'PENDING_DOC' || (item.documentStatus === 'COMPLETED' && !item.fileUrl));
 
       return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus && matchesHasSertifikat;
     });
@@ -269,7 +291,7 @@ export function usePeralatanPabrik() {
         namaSertifikat: item.namaSertifikat || '-',
         documentStatus: item.documentStatus,
         exemptionNote: item.exemptionNote,
-        hasPdf: item.hasCertificatePdf !== false
+        hasPdf: item.hasPdf
       });
 
       if (item.linkedCertificates && Array.isArray(item.linkedCertificates)) {
@@ -286,7 +308,7 @@ export function usePeralatanPabrik() {
             keterangan: lc.instansi || item.keterangan,
             status: lc.status || 'Aktif',
             namaSertifikat: lc.namaSertifikat || '-',
-            hasPdf: lc.hasPdf !== false
+            hasPdf: !!lc.fileUrl
           });
         });
       }
@@ -379,6 +401,7 @@ export function usePeralatanPabrik() {
       }
 
       setIsSingleModalOpen(false);
+      setActiveMainTab('main');
       await loadData();
     } catch (error) {
       console.error("Gagal menambahkan data:", error);

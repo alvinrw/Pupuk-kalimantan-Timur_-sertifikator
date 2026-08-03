@@ -94,29 +94,40 @@ export default function Dashboard() {
         primaryCert = activeCerts.slice().sort((a, b) => {
           const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
           const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          return dB - dA;
+          if (dA !== dB) return dB - dA;
+          const hasPdfA = !!a.fileUrl;
+          const hasPdfB = !!b.fileUrl;
+          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
         })[0];
       } else if (certs.length > 0) {
         primaryCert = certs[0];
       }
 
+      const formatToDDMMYYYY = (rawDateStr) => {
+        if (!rawDateStr || rawDateStr === '-') return '-';
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+        try {
+          const dObj = new Date(rawDateStr);
+          if (!isNaN(dObj.getTime())) {
+            const dd = String(dObj.getDate()).padStart(2, '0');
+            const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+            const yyyy = dObj.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+          }
+        } catch (_) {}
+        return rawDateStr;
+      };
+
       const rawExp = primaryCert?.expired || item.expiryDate;
       const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
       const hari = calcDiff(dateVal);
+      const tglExpiredFormatted = formatToDDMMYYYY(dateVal);
 
       const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
 
-      const rawTerbit = primaryCert?.terbit || item.createdAt;
-      // Dapatkan string YYYY-MM-DD
-      let tglTerbit = '-';
-      if (rawTerbit) {
-        try {
-          const dObj = new Date(rawTerbit);
-          if (!isNaN(dObj.getTime())) {
-            tglTerbit = dObj.toISOString().slice(0, 10);
-          }
-        } catch (_) {}
-      }
+      const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
+      const tglTerbitFormatted = formatToDDMMYYYY(rawTerbit);
 
       flattened.push({
         id: item.id,
@@ -128,9 +139,9 @@ export default function Dashboard() {
         workflowStatus: wfStatus,
         merekItem: item.title || '-',
         nomorSeriTipe: item.code || '-',
-        nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.code || '-'),
-        tglExpired: dateVal,
-        tglTerbit: tglTerbit
+        nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
+        tglExpired: tglExpiredFormatted,
+        tglTerbit: tglTerbitFormatted
       });
     });
     return flattened;
@@ -637,7 +648,6 @@ export default function Dashboard() {
                 <th className="py-3 px-4 font-bold">NO. SERTIFIKAT</th>
                 <th className="py-3 px-4 font-bold">TANGGAL TERBIT</th>
                 <th className="py-3 px-4 font-bold">TANGGAL EXPIRATION</th>
-                <th className="py-3 px-4 font-bold text-center">STATUS</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -669,25 +679,12 @@ export default function Dashboard() {
                       <td className="py-3 px-4 font-mono-data font-bold text-slate-900">
                         {item.tglExpired !== '-' ? item.tglExpired : '-'}
                       </td>
-                      <td className="py-3 px-4 text-center font-mono-data font-bold">
-                        {item.workflowStatus === 'decommissioned' ? (
-                          <span className="text-slate-400">Non-Aktif</span>
-                        ) : item.workflowStatus === 'exempt' ? (
-                          <span className="text-indigo-600">Catatan Khusus</span>
-                        ) : item.sisaHari !== null && item.sisaHari <= 0 ? (
-                          <span className="text-rose-600">Expired</span>
-                        ) : item.sisaHari !== null && item.sisaHari <= customUrgentDays ? (
-                          <span className="text-amber-600">Urgent</span>
-                        ) : (
-                          <span className="text-emerald-600">Aktif</span>
-                        )}
-                      </td>
                     </tr>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="py-10 text-center text-slate-500 font-mono-data">
+                  <td colSpan={8} className="py-10 text-center text-slate-500 font-mono-data">
                     Tidak ada sertifikat yang terbit pada kriteria/rentang ini.
                   </td>
                 </tr>

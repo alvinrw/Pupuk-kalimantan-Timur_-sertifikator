@@ -203,16 +203,30 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">Status Fisik Operasional</label>
+                  <label className="font-bold text-slate-800 block mb-1">
+                    {(item.categoryKey === 'perizinan-proyek' || (item.categoryKey || '').toLowerCase().includes('proyek') || (item.jenisPeralatan || '').toLowerCase().includes('proyek') || (item.kategoriDokumen || '').toLowerCase().includes('proyek'))
+                      ? 'Status Proyek'
+                      : 'Status Fisik Operasional'}
+                  </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
                   >
-                    <option value="Aktif">Aktif (Normal)</option>
-                    <option value="Spare">Spare (Cadangan)</option>
-                    <option value="Repair">Repair (Overhaul)</option>
-                    <option value="Rusak">Rusak (Out of Service)</option>
+                    {(item.categoryKey === 'perizinan-proyek' || (item.categoryKey || '').toLowerCase().includes('proyek') || (item.jenisPeralatan || '').toLowerCase().includes('proyek') || (item.kategoriDokumen || '').toLowerCase().includes('proyek')) ? (
+                      <>
+                        <option value="Aktif">Aktif</option>
+                        <option value="Spare">Selesai</option>
+                        <option value="Rusak">Ditunda</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="Aktif">Aktif (Normal)</option>
+                        <option value="Spare">Spare (Cadangan)</option>
+                        <option value="Repair">Repair (Overhaul)</option>
+                        <option value="Rusak">Rusak (Out of Service)</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -313,9 +327,13 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">Status Operasional Fisik</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">
+                      {(item.categoryKey === 'perizinan-proyek' || (item.categoryKey || '').toLowerCase().includes('proyek') || (item.jenisPeralatan || '').toLowerCase().includes('proyek') || (item.kategoriDokumen || '').toLowerCase().includes('proyek')) ? 'Status Proyek' : 'Status Operasional Fisik'}
+                    </span>
                     <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block mt-0.5">
-                      {formData.status}
+                      {(item.categoryKey === 'perizinan-proyek' || (item.categoryKey || '').toLowerCase().includes('proyek') || (item.jenisPeralatan || '').toLowerCase().includes('proyek') || (item.kategoriDokumen || '').toLowerCase().includes('proyek'))
+                        ? (formData.status === 'Spare' ? 'Selesai' : formData.status === 'Rusak' ? 'Ditunda' : formData.status)
+                        : (formData.status === 'Spare' ? 'Spare (Cadangan)' : formData.status === 'Rusak' ? 'Rusak (Out of Service)' : formData.status)}
                     </span>
                   </div>
                 </div>

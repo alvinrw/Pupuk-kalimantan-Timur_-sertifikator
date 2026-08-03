@@ -130,6 +130,7 @@ export default function PeralatanTable({
                       <option value="All">Semua</option>
                       <option value="ada">Ada</option>
                       <option value="tidak">Tidak Ada</option>
+                      <option value="belum">Belum Upload PDF</option>
                     </select>
                   </div>
                 </th>
@@ -222,10 +223,10 @@ export default function PeralatanTable({
                       )}
                     {isVisible("hasSertifikat") && (
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        {item.documentStatus === 'PENDING_DOC' ? (
+                        {item.documentStatus === 'PENDING_DOC' || (!row.hasPdf && item.documentStatus !== 'EXEMPT') ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                             <FileWarning className="w-3 h-3" />
-                            Belum Upload
+                            Belum Upload PDF
                           </span>
                         ) : item.documentStatus === 'EXEMPT' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
@@ -253,7 +254,7 @@ export default function PeralatanTable({
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100/80 text-indigo-800 border border-indigo-300 shadow-2xs cursor-help"
                           >
                             <ShieldAlert className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Tanpa Sertifikat</span>
+                            <span>{row.noSertifikat}</span>
                           </span>
                         ) : (
                           <>

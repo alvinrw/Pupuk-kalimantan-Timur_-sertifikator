@@ -38,6 +38,7 @@ export default function TugasTerdekat() {
 
   // Navigation State
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
+  const [selectedCertId, setSelectedCertId] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -110,12 +111,12 @@ export default function TugasTerdekat() {
     }
 
     if (activeFilter === 'Semua') return true;
-    if (activeFilter === 'Reminder Aktif') return t.isNotificationEnabled;
+    if (activeFilter === 'Reminder Aktif') return t.isTriggered;
     if (activeFilter === 'Expired') return t.statusReminder === 'Expired';
     if (activeFilter === 'Hari Ini') return t.statusReminder === 'Mulai Hari Ini';
     if (activeFilter === 'Minggu Ini') return t.isMingguIni;
     if (activeFilter === 'Bulan Ini') return t.isBulanIni;
-    if (activeFilter === 'Belum Aktif') return !t.isNotificationEnabled;
+    if (activeFilter === 'Belum Aktif') return !t.isTriggered;
 
     return true;
   });
@@ -170,15 +171,20 @@ export default function TugasTerdekat() {
     return (
       <DocumentDetailPage 
         item={selectedDetailDoc}
+        initialCertId={selectedCertId}
         onBack={() => {
           setSelectedDetailDoc(null);
+          setSelectedCertId(null);
           fetchData(); // Refresh data in case something was resolved
         }}
         onSaveUpdate={(updatedItem) => {
           setSelectedDetailDoc(updatedItem);
           fetchData();
         }}
-        onDeleteSuccess={() => setSelectedDetailDoc(null)}
+        onDeleteSuccess={() => {
+          setSelectedDetailDoc(null);
+          setSelectedCertId(null);
+        }}
         onRefreshRequired={fetchData}
       />
     );
@@ -262,7 +268,10 @@ export default function TugasTerdekat() {
                     <Calendar className="w-3.5 h-3.5" /> Expired: {t.tanggalExpired}
                   </div>
                   <button 
-                    onClick={() => setSelectedDetailDoc(t.rawItem)}
+                    onClick={() => {
+                      setSelectedDetailDoc(t.rawItem);
+                      setSelectedCertId(t.certificateId);
+                    }}
                     className="bg-rose-100 hover:bg-rose-200 text-rose-700 text-[10px] px-2 py-1 rounded font-bold uppercase transition-colors shrink-0"
                   >
                     Detail
@@ -423,7 +432,10 @@ export default function TugasTerdekat() {
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => setSelectedDetailDoc(task.rawItem)}
+                          onClick={() => {
+                            setSelectedDetailDoc(task.rawItem);
+                            setSelectedCertId(task.certificateId);
+                          }}
                           className="p-1.5 text-slate-400 hover:text-[#005ea4] hover:bg-blue-50 rounded transition-colors" title="Lihat Detail & Perpanjang"
                         >
                           <Eye className="w-4 h-4" />

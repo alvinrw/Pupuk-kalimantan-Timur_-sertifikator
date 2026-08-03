@@ -14,7 +14,7 @@ import {
 } from '../services/masterItemsService';
 import { API_BASE, UPLOAD_ENDPOINT, getFullFileUrl } from '../config/api';
 
-export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired }) {
+export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired, initialCertId }) {
   // ──────────────────────────────────────────────────────────────────
   // INITIAL COMPUTED VALUES
   // ──────────────────────────────────────────────────────────────────
@@ -33,11 +33,11 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   });
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
 
-  const [activeCertId, setActiveCertId] = useState(item?.currentCert?.id || item?.cert?.id || null);
+  const [activeCertId, setActiveCertId] = useState(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
 
   useEffect(() => {
-    setActiveCertId(item?.currentCert?.id || item?.cert?.id || null);
-  }, [item]);
+    setActiveCertId(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
+  }, [item, initialCertId]);
 
   const allItemCerts = item?.certificates || [];
   const activeItemCert = allItemCerts.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status).sort((a,b) => new Date(b.expired || 0) - new Date(a.expired || 0))[0];
@@ -115,7 +115,20 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   });
 
   useEffect(() => {
-    if (item) {
+    let hasLoadedSetting = false;
+
+    if (targetCert) {
+      const setting = targetCert.notificationSetting || targetCert.rawCert?.notificationSetting;
+      if (setting) {
+        setReminderEnabled(setting.isEnabled !== false);
+        setTriggerType(setting.triggerType || 'DAYS');
+        setReminderDays(setting.triggerDays ?? 30);
+        setTriggerDate(setting.triggerDate ? setting.triggerDate.substring(0, 10) : '');
+        hasLoadedSetting = true;
+      }
+    }
+
+    if (!hasLoadedSetting && item) {
       if (item.notificationSetting) {
         setReminderEnabled(item.notificationSetting.isEnabled !== false);
         setTriggerType(item.notificationSetting.triggerType || 'DAYS');
@@ -123,20 +136,21 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
         setTriggerDate(item.notificationSetting.triggerDate ? item.notificationSetting.triggerDate.substring(0, 10) : '');
       } else if (item.reminderEnabled !== undefined) {
         setReminderEnabled(!!item.reminderEnabled);
+      } else {
+        setReminderEnabled(true);
+        setTriggerType('DAYS');
+        setReminderDays(30);
+        setTriggerDate('');
       }
     }
-  }, [item]);
+  }, [item, targetCert]);
 
   const handleToggleReminder = async (newVal) => {
     const isChecked = typeof newVal === 'boolean' ? newVal : !reminderEnabled;
     setReminderEnabled(isChecked);
-    if (item) {
-      if (!item.notificationSetting) {
-        item.notificationSetting = {};
-      }
-      item.notificationSetting.isEnabled = isChecked;
-      item.reminderEnabled = isChecked;
-    }
+    
+    const targetCertId = targetCert?.id || targetCert?.rawCert?.id || null;
+
     try {
       const targetId = item?.MasterId || item?.id;
       if (targetId) {
@@ -144,20 +158,13 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
           isEnabled: isChecked,
           triggerType: triggerType,
           triggerDays: parseInt(reminderDays) || 30,
-          triggerDate: triggerType === 'DATE' ? triggerDate : null
+          triggerDate: triggerType === 'DATE' ? triggerDate : null,
+          certificateId: targetCertId
         });
       }
-      if (onSaveUpdate) {
-        onSaveUpdate({
-          ...item,
-          notificationSetting: {
-            ...item?.notificationSetting,
-            isEnabled: isChecked,
-            triggerType: triggerType,
-            triggerDays: parseInt(reminderDays) || 30,
-            triggerDate: triggerType === 'DATE' ? triggerDate : null
-          }
-        });
+      await fetchHistory();
+      if (onRefreshRequired) {
+        onRefreshRequired();
       }
     } catch (err) {
       console.error('Failed to toggle reminder setting:', err);
@@ -506,12 +513,20 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
       }
 
       // Save notification settings
+      const targetCertId = targetCert?.id || targetCert?.rawCert?.id || null;
       await updateNotificationSetting(targetId, {
         isEnabled: reminderEnabled,
         triggerType: triggerType,
         triggerDays: parseInt(reminderDays) || 30,
-        triggerDate: triggerType === 'DATE' ? triggerDate : null
+        triggerDate: triggerType === 'DATE' ? triggerDate : null,
+        certificateId: targetCertId
       });
+
+      await fetchHistory();
+
+      if (onRefreshRequired) {
+        onRefreshRequired();
+      }
 
       if (onSaveUpdate) {
         onSaveUpdate({
@@ -581,7 +596,19 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     try {
       setIsDeleting(true);
       const targetId = item.MasterId || item.id;
-      await deleteMasterItem(targetId);
+      
+      const isGenericCategory = [
+        'perizinan-aset',
+        'perizinan-proyek',
+        'perizinan-produk'
+      ].includes(effectiveCategoryKey);
+
+      if (isGenericCategory && targetCert?.id) {
+        await deleteCertificate(targetCert.id);
+      } else {
+        await deleteMasterItem(targetId);
+      }
+      
       setIsDeleteDialogOpen(false);
       if (onDeleteSuccess) onDeleteSuccess(); else onBack();
     } catch (error) {

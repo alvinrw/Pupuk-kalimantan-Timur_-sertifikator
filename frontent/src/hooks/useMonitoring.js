@@ -77,6 +77,14 @@ export function useMonitoring() {
          return 'completed';
       };
 
+      const formatStatus = (rawStatus, catKey) => {
+        if (catKey === 'perizinan-proyek') {
+          if (rawStatus === 'Spare') return 'Selesai';
+          if (rawStatus === 'Rusak') return 'Ditunda';
+        }
+        return rawStatus || 'Aktif';
+      };
+
       const flattened = [];
       data.forEach(item => {
         if (item.documentStatus === 'PENDING_DOC') return; // Skip staging items
@@ -89,15 +97,37 @@ export function useMonitoring() {
           primaryCert = activeCerts.slice().sort((a, b) => {
             const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
             const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            return dB - dA;
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
           })[0];
         } else if (certs.length > 0) {
           primaryCert = certs[0];
         }
 
-        const rawExp = primaryCert?.expired || item.expiryDate;
-        const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
-        const hari = calcDiff(dateVal);
+        const formatToDDMMYYYY = (rawDateStr) => {
+          if (!rawDateStr || rawDateStr === '-') return '-';
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+          try {
+            const dObj = new Date(rawDateStr);
+            if (!isNaN(dObj.getTime())) {
+              const dd = String(dObj.getDate()).padStart(2, '0');
+              const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+              const yyyy = dObj.getFullYear();
+              return `${dd}/${mm}/${yyyy}`;
+            }
+          } catch (_) {}
+          return rawDateStr;
+        };
+
+        const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
+        const terbitVal = formatToDDMMYYYY(rawTerbit);
+        
+        const rawExpired = primaryCert?.expired || item.expiryDate || '-';
+        const expiredVal = formatToDDMMYYYY(rawExpired);
+        const hari = calcDiff(rawExpired && rawExpired !== '2030-01-01' && rawExpired !== '-' ? rawExpired : '-');
 
         flattened.push({
           id: item.id,
@@ -115,15 +145,15 @@ export function useMonitoring() {
           kapasitas: '-',
           lokasi: item.unitLocation || 'Umum',
           unitPabrik: item.unitLocation || 'Umum',
-          status: item.status || 'Aktif',
-          statusOperasional: item.status || 'Aktif',
+          status: formatStatus(item.status, item.categoryKey),
+          statusOperasional: formatStatus(item.status, item.categoryKey),
           documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
-          tglTerbit: primaryCert?.terbit || item.createdAt,
-          tglExpired: dateVal,
+          tglTerbit: terbitVal,
+          tglExpired: expiredVal,
           sisaHari: hari,
           statusLegal: calcStatus(hari),
-          nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.code || '-'),
+          nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
           namaSertifikat: primaryCert?.namaSertifikat || item.namaSertifikat || '-',
           instansiPenerbit: primaryCert?.instansi || '-',
           nomorSK: '-',

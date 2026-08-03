@@ -8,6 +8,41 @@ export class CertificatesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createCertificateDto: CreateCertificateDto) {
+    if (createCertificateDto.itemId && createCertificateDto.noSertifikat) {
+      const existingCert = await this.prisma.certificate.findFirst({
+        where: {
+          itemId: createCertificateDto.itemId,
+          noSertifikat: createCertificateDto.noSertifikat,
+          OR: [
+            { fileUrl: null },
+            { fileUrl: '' }
+          ]
+        }
+      });
+
+      if (existingCert) {
+        const cert = await this.prisma.certificate.update({
+          where: { id: existingCert.id },
+          data: {
+            ...createCertificateDto,
+            jenisSertifikat: createCertificateDto.jenisSertifikat || existingCert.jenisSertifikat || 'Sertifikat Utama'
+          },
+        });
+
+        await this.prisma.reminderNotification.updateMany({
+          where: { itemId: createCertificateDto.itemId, isResolved: false },
+          data: { isResolved: true, resolvedAt: new Date() },
+        }).catch(() => {});
+
+        await this.prisma.masterItem.update({
+          where: { id: createCertificateDto.itemId },
+          data: { documentStatus: 'COMPLETED' },
+        }).catch(() => {});
+
+        return cert;
+      }
+    }
+
     const cert = await this.prisma.certificate.create({
       data: {
         ...createCertificateDto,

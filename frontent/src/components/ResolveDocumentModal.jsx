@@ -7,6 +7,12 @@ import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 
 export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onResolveSuccess, onSuccess }) {
   const activeDoc = doc || item;
+  const isValidVal = (val) => val && val !== '-' && String(val).trim() !== '';
+  const hasExistingCertDetails = activeDoc ? (
+    isValidVal(activeDoc.noSertifikat || activeDoc.certificateNo) && 
+    isValidVal(activeDoc.terbit || activeDoc.tanggalInspeksi) && 
+    isValidVal(activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir)
+  ) : false;
 
   const [formData, setFormData] = useState({
     namaSertifikat: '',
@@ -251,25 +257,31 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                         setIsUploadingTemp(false);
                       }
 
-                      try {
-                        setIsScanningOcr(true);
-                        const ocrData = await scanPdfDocument(file);
-                        if (ocrData) {
-                          setFormData(prev => ({
-                            ...prev,
-                            namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
-                            noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
-                            terbit: ocrData.terbit || prev.terbit || '',
-                            expired: ocrData.expired || prev.expired || '',
-                            instansi: ocrData.instansi || prev.instansi || ''
-                          }));
-                          setOcrSuccess(true);
-                          setOcrErrorMsg((!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) ? "AI tidak mendeteksi data. Silakan isi form manual." : "");
+                      const hasExistingCertDetails = !!(activeDoc.noSertifikat || activeDoc.certificateNo) && 
+                                                    !!(activeDoc.terbit || activeDoc.tanggalInspeksi) && 
+                                                    !!(activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir);
+
+                      if (!hasExistingCertDetails) {
+                        try {
+                          setIsScanningOcr(true);
+                          const ocrData = await scanPdfDocument(file);
+                          if (ocrData) {
+                            setFormData(prev => ({
+                              ...prev,
+                              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
+                              noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
+                              terbit: ocrData.terbit || prev.terbit || '',
+                              expired: ocrData.expired || prev.expired || '',
+                              instansi: ocrData.instansi || prev.instansi || ''
+                            }));
+                            setOcrSuccess(true);
+                            setOcrErrorMsg((!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) ? "AI tidak mendeteksi data. Silakan isi form manual." : "");
+                          }
+                        } catch (err) {
+                          setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
+                        } finally {
+                          setIsScanningOcr(false);
                         }
-                      } catch (err) {
-                        setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
-                      } finally {
-                        setIsScanningOcr(false);
                       }
                     }
                   }
@@ -318,56 +330,88 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
             )}
           </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
-            <input
-              type="text"
-              value={formData.namaSertifikat}
-              onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
-            <input
-              type="text" required
-              value={formData.noSertifikat}
-              onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
-              <input
-                type="date"
-                value={formData.terbit}
-                onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-              />
+          {hasExistingCertDetails ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Detail Sertifikat Terdaftar</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">No. Sertifikat</span>
+                  <span className="font-bold text-[#005ea4]">{formData.noSertifikat || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Nama Sertifikat</span>
+                  <span className="font-bold text-slate-800">{formData.namaSertifikat || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Terbit</span>
+                  <span className="font-bold text-slate-800">{formData.terbit || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Expired</span>
+                  <span className="font-bold text-rose-700">{formData.expired || '-'}</span>
+                </div>
+                {formData.instansi && (
+                  <div className="col-span-2">
+                    <span className="text-slate-400 block text-[10px] uppercase">Instansi Penerbit</span>
+                    <span className="font-bold text-slate-800">{formData.instansi}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Expired</label>
-              <input
-                type="date"
-                value={formData.expired}
-                onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
+                <input
+                  type="text"
+                  value={formData.namaSertifikat}
+                  onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
+                />
+              </div>
 
-          <div>
-            <label className="text-xs font-bold text-slate-700 block mb-1">Instansi Penerbit</label>
-            <input
-              type="text"
-              value={formData.instansi}
-              onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
-          </div>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
+                <input
+                  type="text" required
+                  value={formData.noSertifikat}
+                  onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
+                  <input
+                    type="date"
+                    value={formData.terbit}
+                    onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Expired</label>
+                  <input
+                    type="date"
+                    value={formData.expired}
+                    onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Instansi Penerbit</label>
+                <input
+                  type="text"
+                  value={formData.instansi}
+                  onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                />
+              </div>
+            </>
+          )}
         </div>
       )}
 

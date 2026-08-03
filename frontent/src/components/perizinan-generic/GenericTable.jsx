@@ -122,6 +122,7 @@ export default function GenericTable({
                         <option value="All">Semua</option>
                         <option value="ada">Ada</option>
                         <option value="tidak">Tidak Ada</option>
+                        <option value="belum">Belum Upload PDF</option>
                       </select>
                     </div>
                   </th>
@@ -253,10 +254,10 @@ export default function GenericTable({
 
                       {isVisible("hasSertifikat") && (
                         <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          {doc.documentStatus === 'PENDING_DOC' ? (
+                          {doc.documentStatus === 'PENDING_DOC' || (!row.hasPdf && doc.documentStatus !== 'EXEMPT') ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                               <FileWarning className="w-3 h-3" />
-                              Belum Upload
+                              Belum Upload PDF
                             </span>
                           ) : doc.documentStatus === 'EXEMPT' ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
