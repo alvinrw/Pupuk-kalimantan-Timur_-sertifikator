@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { PlusCircle, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
-import { scanPdfDocument } from '../services/ocrService';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { PlusCircle, Save, Upload, FileCheck, Loader2, X } from 'lucide-react';
 import { API_BASE } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 
@@ -13,17 +12,33 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
   });
 
   const [selectedFile, setSelectedFile] = useState(null);
-  const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
-  
-  // OCR & Temp Upload States
-  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [sertifikatMode, setSertifikatMode] = useState('dengan');
+
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
-  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
-  const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  // Drag-to-OCR scan mode state
+  const [scanMode, setScanMode] = useState(null); // 'noSertifikat' | 'terbit' | 'expired' | null
+
+  // Date validation errors
+  const [dateErrors, setDateErrors] = useState({ terbit: false, expired: false });
+
+  // Lazy-loaded PdfCanvasOcrViewer
+  const [PdfCanvasOcrViewer, setPdfCanvasOcrViewer] = useState(null);
 
   const fileInputRef = useRef(null);
 
+  // ─── Load PdfCanvasOcrViewer saat modal dibuka ─────────────────────────────
+  useEffect(() => {
+    if (isOpen && !PdfCanvasOcrViewer) {
+      import('./common/PdfCanvasOcrViewer').then(mod => {
+        setPdfCanvasOcrViewer(() => mod.default);
+      });
+    }
+  }, [isOpen]);
+
+  // ─── Reset state saat modal ditutup ───────────────────────────────────────
   useEffect(() => {
     if (!isOpen) {
       setFormData({
@@ -35,17 +50,116 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       setSelectedFile(null);
       setTempUrl(null);
       setSertifikatMode('dengan');
-      setIsScanningOcr(false);
       setIsUploadingTemp(false);
-      setOcrErrorMsg('');
-      setOcrSuccess(false);
+      setScanMode(null);
+      setDateErrors({ terbit: false, expired: false });
     }
   }, [isOpen]);
 
+  // ─── Utility: format tanggal ──────────────────────────────────────────────
+  const isoToDisplay = (iso) => {
+    if (!iso || iso.length < 10) return '';
+    const [year, month, day] = iso.split('-');
+    return `${day}/${month}/${year}`;
+  };
+
+  const displayToIso = (d) => {
+    if (!d || !d.includes('/')) return '';
+    const [day, month, year] = d.split('/');
+    if (!day || !month || !year || year.length !== 4) return '';
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+  };
+
+  const isValidDisplay = (val) => {
+    if (!val) return true;
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(val);
+  };
+
+  const handleDateInput = (field, value) => {
+    let v = value.replace(/[^0-9/]/g, '');
+    if (v.length === 2 && !v.includes('/') && (formData[field] || '').length < 2) v += '/';
+    else if (v.length === 5 && v.split('/').length === 2) v += '/';
+    setFormData(prev => ({ ...prev, [field]: v }));
+    setDateErrors(prev => ({ ...prev, [field]: v.length > 0 && !isValidDisplay(v) }));
+  };
+
+  const handleDateBlur = (field, value) => {
+    setDateErrors(prev => ({ ...prev, [field]: value.length > 0 && !isValidDisplay(value) }));
+  };
+
+  // ─── Proses file PDF (upload temp untuk preview) ─────────────────────────
+  // Auto-OCR DIHAPUS — OCR hanya via tombol 🎯 drag-select manual
+  const processFile = useCallback(async (file) => {
+    if (!file) return;
+    setSelectedFile(file);
+    setTempUrl(null);
+    setScanMode(null);
+
+    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+      try {
+        setIsUploadingTemp(true);
+        const fdTemp = new FormData();
+        fdTemp.append('file', file);
+        const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
+          method: 'POST', body: fdTemp
+        });
+        if (uploadRes.ok) {
+          const json = await uploadRes.json();
+          setTempUrl(json.data.url);
+        }
+      } catch (err) {
+        console.error('Upload temp error:', err);
+      } finally {
+        setIsUploadingTemp(false);
+      }
+    }
+  }, []);
+
+
+  // ─── Drag-and-drop file handlers ──────────────────────────────────────────
+  const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
+  const handleDragLeave = (e) => { e.preventDefault(); setIsDragging(false); };
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) processFile(file);
+  };
+
+  // ─── Callback dari PdfCanvasOcrViewer setelah drag-select + OCR ──────────
+  const handleOcrResult = useCallback(async (fieldKey, rawText) => {
+    const { parseDate, parseCertificateNumber } = await import('../utils/ocrTextParser');
+
+    if (fieldKey === 'noSertifikat') {
+      const certNo = parseCertificateNumber(rawText);
+      if (certNo) {
+        setFormData(prev => ({ ...prev, noSertifikat: certNo }));
+      } else {
+        const cleaned = rawText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 80);
+        if (cleaned) setFormData(prev => ({ ...prev, noSertifikat: cleaned }));
+      }
+    } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
+      const parsed = parseDate(rawText);
+      if (parsed) {
+        setFormData(prev => ({ ...prev, [fieldKey]: parsed.display }));
+        setDateErrors(prev => ({ ...prev, [fieldKey]: false }));
+      }
+    }
+    setScanMode(null);
+  }, []);
+
+  // ─── Submit handler ───────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    let finalUrl = null;
 
+    const terbitValid = isValidDisplay(formData.terbit) || !formData.terbit;
+    const expiredValid = isValidDisplay(formData.expired) || !formData.expired;
+    if (!terbitValid || !expiredValid) {
+      setDateErrors({ terbit: !terbitValid, expired: !expiredValid });
+      return;
+    }
+
+    let finalUrl = null;
     if (sertifikatMode === 'dengan') {
       if (tempUrl) {
         try {
@@ -58,41 +172,70 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
             const json = await moveRes.json();
             finalUrl = json.data?.url || null;
           }
-        } catch(err) {
-          console.error("Gagal move file", err);
-        }
+        } catch (err) { console.error('Gagal move file', err); }
       } else if (selectedFile) {
         try {
           const fd = new FormData();
           fd.append('file', selectedFile);
-          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, {
-            method: 'POST',
-            body: fd
-          });
+          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, { method: 'POST', body: fd });
           if (uploadRes.ok) {
             const json = await uploadRes.json();
             finalUrl = json.data?.url || null;
           }
-        } catch(err) {}
+        } catch (err) {}
       }
     }
 
+    const terbitIso = displayToIso(formData.terbit) || formData.terbit;
+    const expiredIso = displayToIso(formData.expired) || formData.expired;
+
     onAddSuccess({
       ...formData,
+      terbit: terbitIso,
+      expired: expiredIso,
       file: sertifikatMode === 'dengan' ? selectedFile : null,
       fileUrl: finalUrl,
       id: `EQ-MANUAL-${Date.now()}`,
-      namaSertifikat: formData.namaSertifikat,
-      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : "BELUM_ADA_SERTIFIKAT")),
-      tanggalInspeksi: formData.terbit || new Date().toISOString().split('T')[0],
-      terbit: formData.terbit || new Date().toISOString().split('T')[0],
-      berakhir: formData.expired || '',
+      noSertifikat: sertifikatMode === 'tanpa' ? 'Tanpa Sertifikat' : (formData.noSertifikat || (selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : 'BELUM_ADA_SERTIFIKAT')),
+      tanggalInspeksi: terbitIso || new Date().toISOString().split('T')[0],
+      berakhir: expiredIso || '',
       hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
       documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
-      keterangan: sertifikatMode === 'tanpa' ? "Tidak Perlu Sertifikat" : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : "Data Manual Input")
+      keterangan: sertifikatMode === 'tanpa' ? 'Tidak Perlu Sertifikat' : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : 'Data Manual Input')
     });
-
     onClose();
+  };
+
+  // ─── Tombol Scan (🎯) per field ────────────────────────────────────────────
+  const ScanButton = ({ fieldKey, label }) => {
+    const isActive = scanMode === fieldKey;
+    const baseClass = 'shrink-0 w-7 h-7 rounded-lg border flex items-center justify-center transition-all text-xs font-bold';
+    const colorMap = {
+      noSertifikat: { idle: 'text-[#005ea4] bg-[#005ea4]/10 hover:bg-[#005ea4]/20 border-[#005ea4]/30', active: 'text-white bg-[#005ea4] border-[#005ea4]' },
+      terbit: { idle: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border-emerald-200', active: 'text-white bg-emerald-600 border-emerald-600' },
+      expired: { idle: 'text-rose-700 bg-rose-50 hover:bg-rose-100 border-rose-200', active: 'text-white bg-rose-600 border-rose-600' },
+    };
+    const disabledClass = 'opacity-30 cursor-not-allowed bg-slate-100 border-slate-200 text-slate-400';
+
+    return (
+      <button
+        type="button"
+        title={!tempUrl ? 'Upload PDF dulu' : (isActive ? 'Klik untuk batal scan' : `Scan area PDF untuk ${label}`)}
+        onClick={() => { if (tempUrl) setScanMode(isActive ? null : fieldKey); }}
+        disabled={!tempUrl}
+        className={`${baseClass} ${!tempUrl ? disabledClass : isActive ? colorMap[fieldKey].active : colorMap[fieldKey].idle} cursor-pointer`}
+      >
+        {isActive ? (
+          <X className="w-3.5 h-3.5" />
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
+            <line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/>
+          </svg>
+        )}
+      </button>
+    );
   };
 
   return (
@@ -104,19 +247,27 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       headerIcon={PlusCircle}
       formId="singleEntryForm"
       onSubmit={handleSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile)}
+      submitDisabled={isUploadingTemp || (sertifikatMode === 'dengan' && !selectedFile)}
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={tempUrl}
+      rightPanelContent={
+        PdfCanvasOcrViewer ? (
+          <PdfCanvasOcrViewer
+            pdfUrl={tempUrl}
+            scanMode={scanMode}
+            onScanComplete={handleOcrResult}
+            onScanCancel={() => setScanMode(null)}
+          />
+        ) : null
+      }
     >
       {/* Mode Toggle */}
       <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
         <button
           type="button"
           onClick={() => setSertifikatMode('dengan')}
-          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-            sertifikatMode === 'dengan' ? 'bg-white text-[#005ea4] shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
+          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${sertifikatMode === 'dengan' ? 'bg-white text-[#005ea4] shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
         >
           <FileCheck className="w-4 h-4" />
           <span>Dengan Sertifikat (PDF)</span>
@@ -124,9 +275,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
         <button
           type="button"
           onClick={() => setSertifikatMode('tanpa')}
-          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-            sertifikatMode === 'tanpa' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
+          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${sertifikatMode === 'tanpa' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'}`}
         >
           <X className="w-4 h-4 text-amber-600" />
           <span>Tanpa Sertifikat</span>
@@ -136,90 +285,67 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       {/* SECTION 1: MASTER DATA */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2">Bagian 1: Data Utama Aset</h4>
-        
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="font-bold text-slate-700 block mb-1">Merek / Nama Peralatan <span className="text-rose-500">*</span></label>
-            <input
-              type="text" required
-              value={formData.merekItem}
+            <input type="text" required value={formData.merekItem}
               onChange={(e) => setFormData({ ...formData, merekItem: e.target.value })}
               placeholder="Contoh: Crane Kapasitas 5T"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
           <div>
             <label className="font-bold text-slate-700 block mb-1">Jenis Peralatan <span className="text-rose-500">*</span></label>
-            <input
-              type="text" required
-              value={formData.jenisPeralatan}
+            <input type="text" required value={formData.jenisPeralatan}
               onChange={(e) => setFormData({ ...formData, jenisPeralatan: e.target.value })}
               placeholder="Contoh: Overhead Crane"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="font-bold text-slate-700 block mb-1">Tipe</label>
-            <input
-              type="text"
-              value={formData.tipe}
+            <input type="text" value={formData.tipe}
               onChange={(e) => setFormData({ ...formData, tipe: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
           <div>
             <label className="font-bold text-slate-700 block mb-1">Nomor Seri</label>
-            <input
-              type="text"
-              value={formData.nomorSeri}
+            <input type="text" value={formData.nomorSeri}
               onChange={(e) => setFormData({ ...formData, nomorSeri: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="font-bold text-slate-700 block mb-1">Unit Pabrik</label>
-            <input
-              type="text"
-              value={formData.unitPabrik}
+            <input type="text" value={formData.unitPabrik}
               onChange={(e) => setFormData({ ...formData, unitPabrik: e.target.value })}
               placeholder="Contoh: Pabrik 1A"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
           <div>
             <label className="font-bold text-slate-700 block mb-1">Lokasi</label>
-            <input
-              type="text"
-              value={formData.lokasiDetail}
+            <input type="text" value={formData.lokasiDetail}
               onChange={(e) => setFormData({ ...formData, lokasiDetail: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="font-bold text-slate-700 block mb-1">Penanggung Jawab</label>
-            <input
-              type="text"
-              value={formData.penanggungJawab}
+            <input type="text" value={formData.penanggungJawab}
               onChange={(e) => setFormData({ ...formData, penanggungJawab: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-            />
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
           <div>
             <label className="font-bold text-slate-700 block mb-1">Status</label>
-            <select
-              value={formData.status}
+            <select value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-[#005ea4]"
-            >
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-[#005ea4]">
               <option value="Aktif">Aktif</option>
               <option value="Spare">Spare</option>
               <option value="Rusak">Rusak</option>
@@ -233,162 +359,148 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
         <h4 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2 mt-6">
           Bagian 2: {sertifikatMode === 'dengan' ? 'Data Dokumen Sertifikat' : 'Pengecualian Sertifikat'}
         </h4>
-        
+
         {sertifikatMode === 'tanpa' ? (
           <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
             <p className="text-xs text-amber-800 font-medium">Aset ini dicatat tanpa dokumen sertifikat terlampir.</p>
           </div>
         ) : (
           <>
+            {/* File Upload Area */}
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat <span className="text-rose-500">*</span></label>
               <div
-                onClick={() => {
-                  if (isUploadingTemp || isScanningOcr) return;
-                  fileInputRef.current?.click();
-                }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => { if (!isUploadingTemp) fileInputRef.current?.click(); }}
                 className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
-                  (isUploadingTemp || isScanningOcr) 
-                    ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-70' 
-                    : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50 cursor-pointer'
-                }`}
+                  isDragging ? 'border-[#005ea4] bg-blue-50' : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50'
+                } ${isUploadingTemp ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
               >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".pdf"
-                  onChange={async (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      setSelectedFile(file);
-                      setTempUrl(null);
-                      setOcrSuccess(false);
-
-                      if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
-                        try {
-                          setIsUploadingTemp(true);
-                          const fdTemp = new FormData();
-                          fdTemp.append('file', file);
-                          const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
-                            method: 'POST',
-                            body: fdTemp
-                          });
-                          if (uploadRes.ok) {
-                            const json = await uploadRes.json();
-                            setTempUrl(json.data.url);
-                          }
-                        } catch (err) {
-                          console.error('Upload temp error:', err);
-                        } finally {
-                          setIsUploadingTemp(false);
-                        }
-
-                        try {
-                          setIsScanningOcr(true);
-                          const ocrData = await scanPdfDocument(file);
-                          if (ocrData) {
-                            setFormData(prev => ({
-                              ...prev,
-                              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
-                              noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
-                              terbit: ocrData.terbit || prev.terbit || '',
-                              expired: ocrData.expired || prev.expired || '',
-                            }));
-                            
-                            setOcrSuccess(true);
-                            setOcrErrorMsg((!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) ? "AI tidak mendeteksi data. Silakan isi form manual." : "");
-                          }
-                        } catch (err) {
-                          setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
-                        } finally {
-                          setIsScanningOcr(false);
-                        }
-                      }
-                    }
-                  }}
-                  className="hidden"
-                  disabled={isUploadingTemp || isScanningOcr}
-                />
+                <input ref={fileInputRef} type="file" accept=".pdf"
+                  onChange={(e) => e.target.files[0] && processFile(e.target.files[0])}
+                  className="hidden" disabled={isUploadingTemp} />
                 <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
                 <div className="flex flex-col items-center">
                   <span className="text-xs font-bold text-[#005ea4]">
-                    {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih File PDF Dokumen'}
+                    {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih / Drop File PDF Dokumen'}
                   </span>
                   <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
                 </div>
               </div>
 
-              {(isUploadingTemp || isScanningOcr) && (
+              {isUploadingTemp && (
                 <div className="flex flex-col gap-2 mt-3">
-                  {isUploadingTemp && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                      <span>Menyiapkan preview dokumen...</span>
-                    </div>
-                  )}
-                  {isScanningOcr && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                      <span>AI sedang mengekstrak data...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {ocrSuccess && !isScanningOcr && (
-                <div className="flex items-start gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 mt-2">
-                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>AI berhasil mengisi form! Verifikasi kembali dengan preview PDF.</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                    <span>Menyiapkan preview dokumen...</span>
+                  </div>
                 </div>
               )}
 
-              {ocrErrorMsg && (
-                <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{ocrErrorMsg}</span>
+              {tempUrl && (
+                <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-1">
+                  <span className="text-base leading-none">🎯</span>
+                  <span>Klik <strong>🎯</strong> di samping field untuk drag-select area PDF di kanan → auto-fill.</span>
                 </div>
               )}
             </div>
 
+            {/* Nama Sertifikat */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Nama sertifikat</label>
-              <input
-                type="text"
-                value={formData.namaSertifikat}
+              <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
+              <input type="text" value={formData.namaSertifikat}
                 onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
-              />
+                placeholder="Contoh: SKP Pesawat Angkat"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold" />
             </div>
 
+            {/* No. Sertifikat + Scan Button */}
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
-              <input
-                type="text"
-                required
-                value={formData.noSertifikat}
-                onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
-              />
+              <label className="text-xs font-bold text-slate-700 block mb-1">
+                No. Sertifikat <span className="text-rose-500">*</span>
+                {scanMode === 'noSertifikat' && (
+                  <span className="ml-2 text-[#005ea4] font-normal animate-pulse text-[10px]">— Drag area di PDF kanan →</span>
+                )}
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  required
+                  value={formData.noSertifikat}
+                  onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                  placeholder="Contoh: SKP-2024/DISNAKER/1234"
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 font-bold text-xs transition-all ${
+                    scanMode === 'noSertifikat'
+                      ? 'border-[#005ea4] ring-2 ring-[#005ea4]/30 bg-blue-50/60'
+                      : 'border-slate-300 focus:ring-[#005ea4]'
+                  }`}
+                />
+                <ScanButton fieldKey="noSertifikat" label="No. Sertifikat" />
+              </div>
             </div>
 
+            {/* Tanggal Terbit + Tanggal Berakhir + Scan Buttons */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
-                <input
-                  type="date"
-                  value={formData.terbit}
-                  onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                />
+                <label className={`text-xs font-bold block mb-1 transition-colors ${
+                  scanMode === 'terbit' ? 'text-emerald-700' : 'text-slate-700'
+                }`}>
+                  Tanggal Terbit
+                  {scanMode === 'terbit' && (
+                    <span className="ml-1 font-normal text-[10px] animate-pulse">← Drag di PDF →</span>
+                  )}
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={formData.terbit}
+                    onChange={(e) => handleDateInput('terbit', e.target.value)}
+                    onBlur={(e) => handleDateBlur('terbit', e.target.value)}
+                    placeholder="dd/mm/yyyy"
+                    maxLength={10}
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${
+                      dateErrors.terbit
+                        ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
+                        : scanMode === 'terbit'
+                          ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/50'
+                          : 'border-slate-300 focus:ring-[#005ea4]'
+                    }`}
+                  />
+                  <ScanButton fieldKey="terbit" label="Tanggal Terbit" />
+                </div>
+                {dateErrors.terbit && <p className="text-[10px] text-rose-600 mt-1">Format harus: dd/mm/yyyy</p>}
               </div>
+
               <div>
-                <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Berakhir</label>
-                <input
-                  type="date"
-                  value={formData.expired}
-                  onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                />
+                <label className={`text-xs font-bold block mb-1 transition-colors ${
+                  scanMode === 'expired' ? 'text-rose-600' : 'text-rose-700'
+                }`}>
+                  Tanggal Berakhir
+                  {scanMode === 'expired' && (
+                    <span className="ml-1 font-normal text-[10px] animate-pulse">← Drag di PDF →</span>
+                  )}
+                </label>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={formData.expired}
+                    onChange={(e) => handleDateInput('expired', e.target.value)}
+                    onBlur={(e) => handleDateBlur('expired', e.target.value)}
+                    placeholder="dd/mm/yyyy"
+                    maxLength={10}
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${
+                      dateErrors.expired
+                        ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
+                        : scanMode === 'expired'
+                          ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/50'
+                          : 'border-slate-300 focus:ring-[#005ea4]'
+                    }`}
+                  />
+                  <ScanButton fieldKey="expired" label="Tanggal Berakhir" />
+                </div>
+                {dateErrors.expired && <p className="text-[10px] text-rose-600 mt-1">Format harus: dd/mm/yyyy</p>}
               </div>
             </div>
           </>
@@ -430,23 +542,16 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
               {formData.reminderType === 'DAYS' ? (
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.reminderDays}
+                  <input type="number" min="1" value={formData.reminderDays}
                     onChange={(e) => setFormData({ ...formData, reminderDays: parseInt(e.target.value) || 30 })}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
                 </div>
               ) : (
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 block mb-1">Tanggal Pemicu</label>
-                  <input
-                    type="date"
-                    value={formData.reminderDate}
+                  <input type="date" value={formData.reminderDate}
                     onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value })}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
                 </div>
               )}
             </div>

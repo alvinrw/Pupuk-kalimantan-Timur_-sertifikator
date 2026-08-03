@@ -18,6 +18,8 @@ export default function BaseSplitScreenUploadModal({
   submitIcon: SubmitIcon,
   tempUrl,
   pdfPreviewEmptyText = 'Silakan pilih file PDF di panel sebelah kiri untuk menampilkan preview dokumen secara langsung di sini.',
+  /** Opsional: jika diisi, render komponen ini di sisi kanan (mengganti iframe default) */
+  rightPanelContent = null,
   children
 }) {
   if (!isOpen) return null;
@@ -79,29 +81,39 @@ export default function BaseSplitScreenUploadModal({
             </div>
           </div>
 
-          {/* Sisi Kanan: PDF Preview Iframe */}
-          <div className="hidden md:flex flex-col w-[55%] bg-slate-100 relative">
-            <div className="absolute top-0 inset-x-0 h-10 bg-slate-800 flex items-center px-4 text-white font-mono-data text-xs font-bold gap-2 z-10 shadow-md">
-              <FileText className="w-4 h-4" />
-              Preview PDF (Live Verification)
-            </div>
-            <div className="flex-1 w-full h-full pt-10">
-              {tempUrl ? (
-                <iframe
-                  src={`${tempUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  className="w-full h-full border-none"
-                  title="PDF Preview"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center space-y-4">
-                  <FileText className="w-16 h-16 opacity-30" />
-                  <div>
-                    <h5 className="font-bold text-slate-600">Preview Belum Tersedia</h5>
-                    <p className="text-xs mt-1 max-w-sm">{pdfPreviewEmptyText}</p>
-                  </div>
+          {/* Sisi Kanan: PDF Preview — bisa custom (PdfCanvasOcrViewer) atau iframe default */}
+          <div className="hidden md:flex flex-col w-[55%] bg-slate-100 relative overflow-hidden">
+            {rightPanelContent ? (
+              // Custom right panel (e.g. PdfCanvasOcrViewer dengan drag-to-OCR)
+              <div className="flex-1 flex flex-col w-full h-full">
+                {rightPanelContent}
+              </div>
+            ) : (
+              // Default: iframe PDF preview
+              <>
+                <div className="absolute top-0 inset-x-0 h-10 bg-slate-800 flex items-center px-4 text-white font-mono-data text-xs font-bold gap-2 z-10 shadow-md">
+                  <FileText className="w-4 h-4" />
+                  Preview PDF (Live Verification)
                 </div>
-              )}
-            </div>
+                <div className="flex-1 w-full h-full pt-10">
+                  {tempUrl ? (
+                    <iframe
+                      src={`${tempUrl}#toolbar=0&navpanes=0&scrollbar=0`}
+                      className="w-full h-full border-none"
+                      title="PDF Preview"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center space-y-4">
+                      <FileText className="w-16 h-16 opacity-30" />
+                      <div>
+                        <h5 className="font-bold text-slate-600">Preview Belum Tersedia</h5>
+                        <p className="text-xs mt-1 max-w-sm">{pdfPreviewEmptyText}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
