@@ -1,8 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  PencilIcon, 
-  TrashIcon 
-} from '@heroicons/react/24/outline';
 import {
   Search,
   PlusCircle,

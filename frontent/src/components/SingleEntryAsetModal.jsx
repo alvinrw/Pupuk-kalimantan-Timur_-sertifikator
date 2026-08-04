@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Building2, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
+import { Building2, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
+import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
 
 export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) {
   const [formData, setFormData] = useState({
@@ -28,8 +29,33 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
   const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [scanMode, setScanMode] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
+  const handleOcrResult = async (fieldKey, rawText) => {
+    try {
+      const { parseDate, parseCertificateNumber } = await import('../utils/ocrTextParser');
+      
+      if (fieldKey === 'noSertifikat') {
+        const certNo = parseCertificateNumber(rawText);
+        setFormData(prev => ({ ...prev, noSertifikat: certNo || rawText.replace(/\n+/g, ' ').trim() }));
+      } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
+        const parsed = parseDate(rawText);
+        if (parsed) {
+          setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
+        } else {
+          setOcrErrorMsg(`Gagal mendeteksi tanggal untuk ${fieldKey}.`);
+        }
+      }
+      
+      setOcrSuccess(true);
+      setScanMode(null);
+    } catch (err) {
+      console.error("Gagal memproses hasil OCR:", err);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -105,6 +131,8 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
     });
     setSelectedFile(null);
     setTempUrl(null);
+    setScanMode(null);
+    setOcrSuccess(false);
     onClose();
   };
 
@@ -121,6 +149,16 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={tempUrl}
+      rightPanelContent={
+        tempUrl ? (
+          <PdfCanvasOcrViewer
+            pdfUrl={tempUrl}
+            scanMode={scanMode}
+            onScanComplete={handleOcrResult}
+            onScanCancel={() => setScanMode(null)}
+          />
+        ) : null
+      }
     >
       {/* Mode Toggle */}
       <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
@@ -279,26 +317,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                         } finally {
                           setIsUploadingTemp(false);
                         }
-
-                        try {
-                          setIsScanningOcr(true);
-                          const ocrData = await scanPdfDocument(file);
-                          if (ocrData) {
-                            setFormData(prev => ({
-                              ...prev,
-                              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
-                              noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
-                              terbit: ocrData.terbit || prev.terbit || '',
-                              expired: ocrData.expired || prev.expired || '',
-                            }));
-                            setOcrSuccess(true);
-                            setOcrErrorMsg((!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) ? "AI tidak mendeteksi data. Silakan isi form manual." : "");
-                          }
-                        } catch (err) {
-                          setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
-                        } finally {
-                          setIsScanningOcr(false);
-                        }
+                        // Fitur auto-scan keseluruhan dimatikan agar instan
                       }
                     }
                   }}

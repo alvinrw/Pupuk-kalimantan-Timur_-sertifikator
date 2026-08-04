@@ -148,14 +148,30 @@ export default function UploadRenewalModal({
             {isOcrScanning && (
               <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 flex items-center gap-2 text-[11px] animate-pulse">
                 <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>ÃƒÂ¢Ã…Â¡Ã‚Â¡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
+                <span>⚡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
               </div>
+            )}
 
             {ocrSuccess && (
               <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 flex items-center gap-2 text-[11px]">
                 <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
+                <span>✓ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
               </div>
+            )}
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">
+                2. Nomor Sertifikat Baru <span className="text-[10px] font-normal text-slate-500">(Auto-OCR / Editable)</span>
+              </label>
+              <input
+                type="text"
+                value={newCertNumber}
+                onChange={(e) => setNewCertNumber(e.target.value)}
+                placeholder="Nomor SK / Sertifikat baru..."
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-bold text-slate-900 text-xs"
+              />
+            </div>
 
               <div className="grid grid-cols-3 gap-3">
                 <div>

@@ -240,13 +240,15 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
           <p className="text-xs text-amber-800 font-medium">Dokumen ini ditandai pengecualian (tidak membutuhkan lampiran berkas fisik PDF).</p>
           <div>
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-              <FileWarning className="w-5 h-5 text-amber-500" />
-              Perbaiki / Lengkapi Dokumen
-            </h3>
-            <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-              {itemCode} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â <span className="font-bold text-slate-800">{itemTitle}</span>
-            </p>
+            <label className="text-xs font-bold text-amber-900 block mb-1">Catatan Pengecualian / Alasan <span className="text-rose-500">*</span></label>
+            <textarea
+              rows={2}
+              required
+              value={formData.keterangan}
+              onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+              placeholder="Contoh: Tidak membutuhkan izin sesuai peraturan..."
+              className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs"
+            />
           </div>
         </div>
       ) : (
@@ -335,32 +337,48 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             </div>
 
-          {/* Form Opsi A: Unggah PDF Sertifikat */}
-          {option === 'upload' && (
-            <form onSubmit={handleUploadSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Opsional)</label>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
-                  }}
-                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                    className="hidden"
-                  />
-                  <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
-                  <span className="text-xs font-bold text-[#005ea4] block">
-                    {selectedFile ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
+            {(isUploadingTemp || isScanningOcr) && (
+              <div className="flex flex-col gap-2 mt-3">
+                {isUploadingTemp && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                    <span>Menyiapkan preview dokumen...</span>
+                  </div>
+                )}
+                {isScanningOcr && (
+                  <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                    <span>AI sedang mengekstrak data...</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+
+
+            {ocrErrorMsg && (
+              <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{ocrErrorMsg}</span>
+              </div>
+            )}
+          </div>
+
+          {hasExistingCertDetails ? (
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
+              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Detail Sertifikat Terdaftar</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">No. Sertifikat</span>
+                  <span className="font-bold text-[#005ea4]">{formData.noSertifikat || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Nama Sertifikat</span>
+                  <span className="font-bold text-slate-800">{formData.namaSertifikat || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Terbit</span>
+                  <span className="font-bold text-slate-800">{formData.terbit || '-'}</span>
                 </div>
                 <div>
                   <span className="text-slate-400 block text-[10px] uppercase">Tanggal Expired</span>

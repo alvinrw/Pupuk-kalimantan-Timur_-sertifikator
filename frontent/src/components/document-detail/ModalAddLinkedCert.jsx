@@ -345,13 +345,8 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                 disabled={isSubmitting || isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !pdfFile)}
                 className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs shadow-xs"
               >
-                <Upload className="w-3.5 h-3.5 text-[#005ea4]" />
-                <span>Pilih Berkas PDF</span>
-              </label>
-              {certData.pdfName
-                ? <span className="block text-emerald-700 font-bold text-[11px] mt-1.5">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Terpilih: {certData.pdfName}</span>
-                : <span className="block text-slate-400 text-[10px] mt-1">Format: PDF (Opsional)</span>
-              }
+                {isSubmitting ? 'Menyimpan...' : 'Simpan Sertifikat'}
+              </button>
             </div>
           </div>
 

@@ -171,9 +171,9 @@ export default function Dashboard() {
   const statusPieData = [
     { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
     { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
-    { name: `Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
+    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
-  ], [stats]);
+  ];
 
   // Data Bar Chart (pemetaan per kategori)
   const categoryBarData = useMemo(() => {
@@ -504,12 +504,9 @@ export default function Dashboard() {
         <MonitoringAnggaran />
       </div>
 
-      {/* FILTER MODAL */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 font-sans-clean animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+      {/* FILTER TOOLBAR */}
+      <div className="bg-white rounded-2xl shadow-sm w-full overflow-hidden border border-slate-200 mb-6">
+        <div className="px-6 py-4 bg-slate-800 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Dari</span>
@@ -573,11 +570,10 @@ export default function Dashboard() {
                   Reset
                 </button>
               )}
-            </div>
-          </div>
         </div>
+      </div>
 
-        {/* Tabel Data */}
+      {/* Tabel Data */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -635,6 +631,5 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
-    </div>
   );
 }
