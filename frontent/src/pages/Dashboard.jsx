@@ -9,14 +9,9 @@ import {
   RotateCcw,
   Loader2,
   FileMinus,
-  Ban,
-  Database,
-  FileX,
-  Search,
-  Download,
-  Calendar,
-  FileSpreadsheet,
-  FileText
+  Wrench,
+  Power,
+  Wallet
 } from 'lucide-react';
 import {
   BarChart,
@@ -31,6 +26,7 @@ import {
   Legend
 } from 'recharts';
 import { getMasterItems } from '../services/masterItemsService';
+import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';
 
 export default function Dashboard() {
   const [filterKategori, setFilterKategori] = useState('All');
@@ -172,13 +168,10 @@ export default function Dashboard() {
     };
   }, [filteredItems, customUrgentDays]);
 
-  const getCategoryOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.kategori))];
-
-  // Data Pie Chart (bulat-bulat)
-  const statusPieData = useMemo(() => [
-    { name: 'Sertifikat Aktif', value: stats.valid, color: '#10B981' },
-    { name: 'Tanpa Sertifikat', value: stats.exempt, color: '#94A3B8' },
-    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
+  const statusPieData = [
+    { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
+    { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
+    { name: `Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
   ], [stats]);
 
@@ -491,7 +484,7 @@ export default function Dashboard() {
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                 <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
+                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hr)`} />
                 <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -499,75 +492,24 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* MONITORING ANGGARAN */}
+      <div className="pt-8 mt-8 border-t border-slate-200">
+        <div className="mb-6">
+          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
+            <Wallet className="w-6 h-6 text-[#005ea4]" />
+            Anggaran & Iuran
+          </h2>
+          <p className="text-sm text-slate-500 font-medium ml-8">Ringkasan serapan dan rincian iuran keanggotaan.</p>
+        </div>
+        <MonitoringAnggaran />
+      </div>
 
-      {/* FITUR BARU DI BAGIAN BAWAH: RENTANG BULAN TERBIT & TABEL sertifikat terbit */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
-        
-        {/* Toolbar & Filter Tanggal Terbit */}
-        <div className="p-5 border-b border-slate-200 bg-slate-50/50 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-[#005ea4]" />
-              <h3 className="text-sm font-bold text-slate-800">Daftar Sertifikat Terbit</h3>
-              <span className="text-[11px] font-bold text-[#005ea4] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-                {displayedIssuedCertificates.length} Sertifikat Terbit
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Search input */}
-              <div className="relative w-56">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Cari item, seri, nomor sertifikat..."
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-                />
-              </div>
-
-              {/* Export button */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowExportMenu(prev => !prev)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-xs transition-colors font-mono-data"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-                {showExportMenu && (
-                  <>
-                    <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                    <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-25 overflow-hidden w-44">
-                      <button
-                        onClick={handleExportCSV}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors"
-                      >
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                        Export CSV / Excel
-                      </button>
-                      <button
-                        onClick={handleExportJSON}
-                        className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors border-t border-slate-100"
-                      >
-                        <FileText className="w-4 h-4 text-blue-600" />
-                        Export JSON
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Date range & Category inputs */}
-          <div className="flex flex-wrap items-end gap-6 pt-2">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="text-[11px] font-bold text-slate-600 font-mono-data">Rentang Bulan Terbit:</span>
-              </div>
+      {/* FILTER MODAL */}
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 font-sans-clean animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="flex flex-col">
                   <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Dari</span>

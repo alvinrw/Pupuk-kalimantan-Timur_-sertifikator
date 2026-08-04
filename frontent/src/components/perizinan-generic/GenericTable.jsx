@@ -50,11 +50,11 @@ export default function GenericTable({
       {/* Main Table */}
       <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-center border-collapse">
             <thead>
-              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider">
+              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider text-center align-middle">
                 {activeMainTab === 'staging' && (
-                  <th className="py-3.5 px-3 w-10 text-center">
+                  <th className="py-3.5 px-3 w-10 text-center align-middle">
                     <input
                       type="checkbox"
                       checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
@@ -63,10 +63,10 @@ export default function GenericTable({
                     />
                   </th>
                 )}
-                {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap">NO.</th>}
+                {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>}
 
                 {isVisible("namaItem") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900">
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900 text-center align-middle">
                     {isAsetCategory
                       ? 'NAMA ASET'
                       : categoryName?.toLowerCase().includes('proyek')
@@ -75,18 +75,10 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {isVisible("code") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">
-                    {isAsetCategory
-                      ? "NOMOR SERI ASSET"
-                      : categoryName?.toLowerCase().includes('proyek')
-                      ? "KODE PROYEK"
-                      : "KODE PRODUK"}
-                  </th>
-                )}
+                {!isAsetCategory && isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">KODE PERIZINAN</th>}
 
-                {isVisible("jenisItem") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
+                {!isAsetCategory && isVisible("jenisItem") && (
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
                     <div className="flex items-center gap-1.5">
                       <span>
                         {isAsetCategory
@@ -98,7 +90,7 @@ export default function GenericTable({
                       <select
                         value={filterJenis}
                         onChange={(e) => setFilterJenis(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
+                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
                       >
                         <option value="All">Semua</option>
                         {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
@@ -109,41 +101,16 @@ export default function GenericTable({
                   </th>
                 )}
 
-
-                {isVisible("hasSertifikat") && (
-                  <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>ADA SERTIFIKAT</span>
-                      <select
-                        value={filterHasSertifikat}
-                        onChange={(e) => setFilterHasSertifikat(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
-                      >
-                        <option value="All">Semua</option>
-                        <option value="ada">Ada</option>
-                        <option value="tidak">Tidak Ada</option>
-                        <option value="belum">Belum Upload PDF</option>
-                      </select>
-                    </div>
-                  </th>
-                )}
-                {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA SERTIFIKAT</th>}
-                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4]">NOMOR SERTIFIKAT</th>}
+                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">NOMOR SERTIFIKAT</th>}
 
                 {isVisible("unit") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
-                    <div className="flex items-center gap-1.5">
-                      <span>
-                        {isAsetCategory
-                          ? "LOKASI"
-                          : categoryName?.toLowerCase().includes('proyek')
-                          ? "LOKASI PROYEK"
-                          : "UNIT PENGELOLA"}
-                      </span>
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span>LOKASI</span>
                       <select
                         value={filterLokasi}
                         onChange={(e) => setFilterLokasi(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
+                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
                       >
                         <option value="All">Semua</option>
                         {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
@@ -154,20 +121,26 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">PENANGGUNG JAWAB</th>}
-                {!isAsetCategory && isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TERBIT</th>}
-                {!isAsetCategory && isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">EXPIRED</th>}
-                {isAsetCategory && isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KONDISI</th>}
-                {isAsetCategory && isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
+                {isAsetCategory && isVisible("luasM2") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">LUAS (MÃƒâ€šÃ‚Â²)</th>}
+                {isAsetCategory && isVisible("luasHa") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">LUAS (HA)</th>}
+                {isAsetCategory && isVisible("peruntukan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">PERUNTUKAN</th>}
+
+                {!isAsetCategory && isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">INSTANSI / USER</th>}
+                
+                {isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">{isAsetCategory ? "TANGGAL AWAL PENGAJUAN" : "TERBIT"}</th>}
+                {isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">{isAsetCategory ? "MASA BERLAKU PRODUK" : "EXPIRED"}</th>}
+
+                {isAsetCategory && isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KONDISI</th>}
+                {isAsetCategory && isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KETERANGAN</th>}
 
                 {isVisible("status") && (
-                  <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
+                  <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
                     <div className="flex items-center justify-center gap-1.5">
                       <span>STATUS</span>
                       <select
                         value={filterStatus}
                         onChange={(e) => setFilterStatus(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
+                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
                       >
                         <option value="All">Semua</option>
                         {uniqueStatus.filter(s => s !== 'All').map((s, idx) => (
@@ -177,8 +150,6 @@ export default function GenericTable({
                     </div>
                   </th>
                 )}
-
-                <th className="py-3.5 px-4 font-bold text-right whitespace-nowrap">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -219,7 +190,7 @@ export default function GenericTable({
                         </td>
                       )}
                       {isVisible("no") && (
-                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
                           {index + 1}
                         </td>
                       )}
@@ -227,66 +198,38 @@ export default function GenericTable({
                       {isVisible("namaItem") && (
                         <td
                           onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans ${
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans text-center align-middle ${
                             isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
                           }`}
-                          title={`Klik untuk Lihat Detail — ${namaItemLabel}`}
+                          title={`Klik untuk Lihat Detail ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${namaItemLabel}`}
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center gap-2">
                             <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.hasPdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
                             <span className="max-w-[220px] truncate block">{docNamaItem}</span>
                           </div>
                         </td>
                       )}
 
-                      {isVisible("code") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                      {!isAsetCategory && isVisible("code") && (
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {docCode}
                         </td>
                       )}
 
-                      {isVisible("jenisItem") && (
-                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-slate-700'}`}>
-                          {row.jenisCert || doc.jenisPeralatan || doc.categoryKey || '-'}
-                        </td>
-                      )}
-
-
-                      {isVisible("hasSertifikat") && (
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          {doc.documentStatus === 'PENDING_DOC' || (!row.hasPdf && doc.documentStatus !== 'EXEMPT') ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                              <FileWarning className="w-3 h-3" />
-                              Belum Upload PDF
-                            </span>
-                          ) : doc.documentStatus === 'EXEMPT' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                              <XCircle className="w-3 h-3" />
-                              Tidak Ada
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Ada
-                            </span>
-                          )}
-                        </td>
-                      )}
-
-                      {isVisible("namaSertifikat") && (
-                        <td className="py-3.5 px-4 font-semibold whitespace-nowrap text-slate-800">
-                          {row.namaSertifikat || '-'}
+                      {!isAsetCategory && isVisible("jenisItem") && (
+                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                          {docJenis}
                         </td>
                       )}
 
                       {isVisible("certificateNo") && (
                         <td
                           onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                          className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline ${
+                          className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline text-center align-middle ${
                             isAfkir ? 'text-slate-200' : 'text-[#005ea4]'
                           }`}
                         >
-                          <div className="flex items-start gap-1.5">
+                          <div className="flex items-start justify-center gap-1.5">
                             <FileCheck className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${row.hasPdf ? 'text-emerald-600' : 'text-slate-400'}`} />
                             <div>
                               <span className="block">{docCert}</span>
@@ -296,37 +239,55 @@ export default function GenericTable({
                       )}
 
                       {isVisible("unit") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-semibold">
+                        <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-center align-middle">
                           {docUnit}
                         </td>
                       )}
 
-                      {isVisible("user") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
+                      {isAsetCategory && isVisible("luasM2") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800 text-center align-middle">
+                          {doc.luasM2 || doc.kapasitas || '12.000 mÃƒâ€šÃ‚Â²'}
+                        </td>
+                      )}
+
+                      {isAsetCategory && isVisible("luasHa") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800 text-center align-middle">
+                          {doc.luasHa || '1,2 Ha'}
+                        </td>
+                      )}
+
+                      {isAsetCategory && isVisible("peruntukan") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
+                          {doc.peruntukan || doc.title || doc.merekItem || 'Fasilitas Industrial'}
+                        </td>
+                      )}
+
+                      {!isAsetCategory && isVisible("user") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
                           {docUser}
                         </td>
                       )}
 
-                      {!isAsetCategory && isVisible("issueDate") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap">
+                      {isVisible("issueDate") && (
+                        <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
                           {docIssue}
                         </td>
                       )}
 
-                      {!isAsetCategory && isVisible("expiryDate") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
+                      {isVisible("expiryDate") && (
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
                           {docExpiry}
                         </td>
                       )}
 
                       {isAsetCategory && isVisible("kondisi") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700">
+                        <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700 text-center align-middle">
                           {doc.kondisi || (isAfkir ? 'Afkir / Non-Aktif' : isExpired ? 'Perlu Re-sertifikasi' : 'Baik & Layak')}
                         </td>
                       )}
 
                       {isAsetCategory && isVisible("keterangan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px] max-w-[300px] truncate" title={doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? doc.exemptionNote : ''}>
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px] max-w-[300px] truncate text-center align-middle" title={doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? doc.exemptionNote : ''}>
                           {doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? (
                             <span className="text-amber-700 font-semibold italic">{doc.exemptionNote}</span>
                           ) : (
@@ -350,26 +311,6 @@ export default function GenericTable({
                           </span>
                         </td>
                       )}
-
-                      <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
-                        {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
-                          <button
-                            onClick={() => setResolveTargetItem(doc)}
-                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <FileWarning className="w-3.5 h-3.5" />
-                            <span>Perbaiki / Lengkapi</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                            className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors font-mono-data"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Lihat Detail</span>
-                          </button>
-                        )}
-                      </td>
                     </tr>
                   );
                 })

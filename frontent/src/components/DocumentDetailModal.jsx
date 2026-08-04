@@ -68,7 +68,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-mono-data truncate max-w-md">
-                {formData.merekItem} — ({formData.lokasi})
+                {formData.merekItem} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ({formData.lokasi})
               </p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
             <form onSubmit={handleSave} className="space-y-4 font-mono-data">
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>Mode Edit Data Dokumen — Perbarui informasi spesifikasi dan perizinan di bawah ini:</span>
+                <span>Mode Edit Data Dokumen ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Perbarui informasi spesifikasi dan perizinan di bawah ini:</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -421,7 +421,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 font-mono-data">
-          <span className="text-slate-500 text-xs">Aplikasi Sertifikator • PT Pupuk Kaltim</span>
+          <span className="text-slate-500 text-xs">Aplikasi Sertifikator ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ PT Pupuk Kaltim</span>
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"

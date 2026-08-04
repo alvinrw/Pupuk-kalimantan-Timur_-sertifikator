@@ -1,5 +1,5 @@
 /**
- * ModalConfirm — Reusable generic confirmation modal.
+ * ModalConfirm ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Reusable generic confirmation modal.
  * Menggantikan 5 blok modal konfirmasi yang hampir identik di DocumentDetailPage.
  *
  * Props:

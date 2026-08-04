@@ -116,37 +116,22 @@ model MonitoringLog {
   @@map("monitoring_logs")
 }
 
-model NotificationSetting {
-  id              String       @id @default(uuid())
-  itemId          String?      @unique // Relasi 1-to-1 ke MasterItem (opsional)
-  certificateId   String?      @unique // Relasi 1-to-1 ke Certificate (opsional)
-  isEnabled       Boolean      @default(true)
-  triggerType     String       @default("DAYS") // "DAYS" atau "DATE"
-  triggerDays     Int          @default(30)     // Pemicu H-30, H-7, dll.
-  triggerDate     DateTime?                    // Tanggal spesifik pemicu notifikasi
-  lastTriggeredAt DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+model IuranKeanggotaan {
+  id          String   @id @default(uuid())
+  nomer       String?
+  kompartemen String?
+  unitKerja   String?
+  asosiasi    String?
+  periode     String?
+  nominal     Float?
+  status      String?  @default("Belum Lunas")
+  statusPembayaran String? @default("Belum Lunas")
+  nama        String?
+  npk         String?
+  keterangan  String?
 
-  // Relasi
-  item            MasterItem?  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  certificate     Certificate? @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  @@map("notification_settings")
-}
-
-model ReminderNotification {
-  id            String       @id @default(uuid())
-  itemId        String?      // Relasi ke MasterItem (opsional)
-  certificateId String?      // Relasi ke Certificate (opsional)
-  message       String
-  isResolved    Boolean      @default(false)
-  createdAt     DateTime     @default(now())
-  resolvedAt    DateTime?
-
-  // Relasi
-  item          MasterItem?  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  certificate   Certificate? @relation(fields: [certificateId], references: [id], onDelete: Cascade)
-
-  @@map("reminder_notifications")
+  @@map("iuran_keanggotaan")
 }

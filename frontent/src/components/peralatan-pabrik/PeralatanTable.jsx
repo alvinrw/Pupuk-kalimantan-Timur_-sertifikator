@@ -22,7 +22,7 @@ export default function PeralatanTable({
   return (
     <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-center border-collapse">
           <thead>
             <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
               {activeMainTab === 'staging' && (
@@ -35,17 +35,17 @@ export default function PeralatanTable({
                   />
                 </th>
               )}
-              {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap">NO.</th>}
+              {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">NO.</th>}
 
               {/* JENIS PERALATAN PABRIK */}
               {isVisible("jenisPeralatan") && (
-                <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
-                  <div className="flex items-center gap-1.5">
+                <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                  <div className="flex items-center justify-center gap-1.5">
                     <span>JENIS PERALATAN PABRIK</span>
                     <select
                       value={filterJenis}
                       onChange={(e) => setFilterJenis(e.target.value)}
-                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs"
+                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
                     >
                       <option value="All">Semua</option>
                       {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
@@ -56,19 +56,19 @@ export default function PeralatanTable({
                 </th>
               )}
 
-              {isVisible("merekItem") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">MEREK/ITEM</th>}
-              {isVisible("tipe") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TIPE</th>}
-              {isVisible("nomorSeri") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NOMOR SERI</th>}
+              {isVisible("merekItem") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">MEREK/ITEM</th>}
+              {isVisible("tipe") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TIPE</th>}
+              {isVisible("nomorSeri") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">NOMOR SERI</th>}
+              {isVisible("kapasitas") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KAPASITAS</th>}
 
-              {/* LOKASI */}
               {isVisible("lokasi") && (
-                <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
-                  <div className="flex items-center gap-1.5">
+                <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                  <div className="flex items-center justify-center gap-1.5">
                     <span>LOKASI</span>
                     <select
                       value={filterLokasi}
                       onChange={(e) => setFilterLokasi(e.target.value)}
-                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs"
+                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
                     >
                       <option value="All">Semua</option>
                       {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
@@ -79,15 +79,14 @@ export default function PeralatanTable({
                 </th>
               )}
 
-              {/* USER */}
               {isVisible("user") && (
-                <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
-                  <div className="flex items-center gap-1.5">
+                <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                  <div className="flex items-center justify-center gap-1.5">
                     <span>USER</span>
                     <select
                       value={filterUser}
                       onChange={(e) => setFilterUser(e.target.value)}
-                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs"
+                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
                     >
                       <option value="All">Semua</option>
                       {uniqueUser.filter(u => u !== 'All').map((u, idx) => (
@@ -98,15 +97,14 @@ export default function PeralatanTable({
                 </th>
               )}
 
-              {/* STATUS */}
               {isVisible("status") && (
-                <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
+                <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
                   <div className="flex items-center justify-center gap-1.5">
                     <span>STATUS</span>
                     <select
                       value={filterStatus}
                       onChange={(e) => setFilterStatus(e.target.value)}
-                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs"
+                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
                     >
                       <option value="All">Semua</option>
                       <option value="Aktif">Aktif</option>
@@ -117,31 +115,12 @@ export default function PeralatanTable({
                 </th>
               )}
 
-
-              {isVisible("hasSertifikat") && (
-                <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
-                  <div className="flex items-center justify-center gap-1.5">
-                    <span>ADA SERTIFIKAT</span>
-                    <select
-                      value={filterHasSertifikat}
-                      onChange={(e) => setFilterHasSertifikat(e.target.value)}
-                      className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs"
-                    >
-                      <option value="All">Semua</option>
-                      <option value="ada">Ada</option>
-                      <option value="tidak">Tidak Ada</option>
-                      <option value="belum">Belum Upload PDF</option>
-                    </select>
-                  </div>
-                </th>
-              )}
-
-              {isVisible("noSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NO. SERTIFIKAT</th>}
-              {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">NAMA SERTIFIKAT</th>}
-              {isVisible("terbit") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TERBIT</th>}
-              {isVisible("berakhir") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">BERAKHIR</th>}
-              {isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KETERANGAN</th>}
-              <th className="py-3.5 px-4 font-bold text-right whitespace-nowrap">AKSI</th>
+              {isVisible("noSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>}
+              {isVisible("tanggalInspeksi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TANGGAL INSPEKSI</th>}
+              {isVisible("terbit") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TERBIT</th>}
+              {isVisible("berakhir") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">BERAKHIR</th>}
+              {isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KETERANGAN</th>}
+              <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">AKSI</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs">
@@ -171,14 +150,14 @@ export default function PeralatanTable({
                       </td>
                     )}
                     {isVisible("jenisPeralatan") && (
-                      <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                      <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                         <span>{row.jenisPeralatan}</span>
                       </td>
                     )}
                     {isVisible("merekItem") && (
                       <td
                         onClick={() => setDetailModalItem(item)}
-                        className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap ${
+                        className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap text-center align-middle ${
                           isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
                         }`}
                         title="Klik untuk Lihat Detail"
@@ -187,27 +166,32 @@ export default function PeralatanTable({
                       </td>
                     )}
                     {isVisible("tipe") && (
-                      <td className="py-3.5 px-4 font-semibold whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle">
                         {item.tipe}
                       </td>
                     )}
                     {isVisible("nomorSeri") && (
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
                         {item.nomorSeri}
                       </td>
                     )}
+                    {isVisible("kapasitas") && (
+                      <td className="py-3.5 px-4 font-medium whitespace-nowrap text-center align-middle">
+                        {item.kapasitas}
+                      </td>
+                    )}
                     {isVisible("lokasi") && (
-                      <td className="py-3.5 px-4 font-medium whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-medium whitespace-nowrap text-center align-middle">
                         {item.lokasi}
                       </td>
                     )}
                     {isVisible("user") && (
-                      <td className="py-3.5 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
                         {item.user}
                       </td>
                     )}
                     {isVisible("status") && (
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
                         <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
                             isAfkir
                               ? 'bg-slate-800 text-white border-slate-600'
@@ -242,7 +226,7 @@ export default function PeralatanTable({
                       </td>
                     )}
                     {isVisible("noSertifikat") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center gap-1.5">
+                      <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center justify-center gap-1.5 align-middle">
                         {row.documentStatus === 'PENDING_DOC' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                             <FileWarning className="w-3 h-3 text-amber-500" />
@@ -264,28 +248,27 @@ export default function PeralatanTable({
                         )}
                       </td>
                     )}
-                  {isVisible("namaSertifikat") && (
-                    <td className="py-3.5 px-4 font-mono-data font-bold text-slate-700 whitespace-nowrap">
-                      {row.namaSertifikat || '-'}
+                  {isVisible("tanggalInspeksi") && (
+                    <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap text-center align-middle">
+                      {row.tanggalInspeksi}
                     </td>
                   )}
                   {isVisible("terbit") && (
-                    <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap">
+                    <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap text-center align-middle">
                       {row.terbit}
                     </td>
                   )}
                   {isVisible("berakhir") && (
-                    <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap">
+                    <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap text-center align-middle">
                       {row.berakhir}
                     </td>
                   )}
                   {isVisible("keterangan") && (
-                    <td className="py-3.5 px-4 text-slate-700 font-medium whitespace-nowrap">
+                    <td className="py-3.5 px-4 text-slate-700 font-medium whitespace-nowrap text-center align-middle">
                       {row.keterangan}
                     </td>
                   )}
-
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
+                  <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
                     {row.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
                       <button
                         onClick={() => setResolveTargetItem(item)}

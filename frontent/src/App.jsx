@@ -10,7 +10,7 @@ import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import PerizinanAset from './pages/PerizinanAset';
 import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
 import InformasiLainnya from './pages/InformasiLainnya';
-import TugasTerdekat from './pages/TugasTerdekat';
+import IuranKeanggotaan from './pages/IuranKeanggotaan';
 
 import {
   mockStats,
@@ -85,10 +85,7 @@ export default function App() {
             onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
-      case 'administrasi-lainnya':
-        return (
-          <AdministrasiLainnya />
-        );
+
       case 'perizinan-proyek':
         return (
           <PerizinanGeneric
@@ -111,8 +108,8 @@ export default function App() {
         return <RiwayatPerpanjangan />;
       case 'informasi-lainnya':
         return <InformasiLainnya />;
-      case 'tugas-terdekat':
-        return <TugasTerdekat />;
+      case 'iuran-keanggotaan':
+        return <IuranKeanggotaan />;
       default:
         return (
           <Dashboard

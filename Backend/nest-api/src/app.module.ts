@@ -13,6 +13,7 @@ import { CertificatesModule } from './modules/certificates/certificates.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DocumentHistoryModule } from './modules/document-history/document-history.module';
 import { CsvImportModule } from './modules/csv-import/csv-import.module';
+import { IuranKeanggotaanModule } from './modules/iuran-keanggotaan/iuran-keanggotaan.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { CsvImportModule } from './modules/csv-import/csv-import.module';
     MonitoringModule,
     DocumentHistoryModule,
     CsvImportModule,
+    IuranKeanggotaanModule,
   ],
   controllers: [],
   providers: [],

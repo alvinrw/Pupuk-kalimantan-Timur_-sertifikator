@@ -203,7 +203,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Impor CSV — <span className="text-[#005ea4]">{currentCategoryTitle}</span>
+                Impor CSV ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â <span className="text-[#005ea4]">{currentCategoryTitle}</span>
               </h3>
               <p className="text-xs text-slate-500 font-mono-data">
                 Unggah berkas CSV khusus untuk modul perizinan {currentCategoryTitle}
@@ -339,7 +339,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                         )}
                       </div>
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
-                        {item.uploadDate} — Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                        {item.uploadDate} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
                         <button 

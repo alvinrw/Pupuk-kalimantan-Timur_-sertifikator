@@ -24,9 +24,6 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
           data.setDetailModalItem(null);
           data.loadData();
         }}
-        onRefreshRequired={() => {
-          data.loadData();
-        }}
       />
     );
   }

@@ -2,7 +2,7 @@ import React from 'react';
 import { Filter, X, RotateCcw, Check } from 'lucide-react';
 
 /**
- * FilterModal — Pop-up filter modal untuk MonitoringSertifikasi.
+ * FilterModal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pop-up filter modal untuk MonitoringSertifikasi.
  */
 export default function FilterModal({
   isOpen, onClose, onReset,
@@ -89,14 +89,12 @@ export default function FilterModal({
               className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] text-xs cursor-pointer"
             >
               <option value="All">Semua Rentang Hari</option>
-              <option value="today">Hari Ini (Due Today)</option>
-              <option value="7">1 Minggu (&le; 7 Hari)</option>
-              <option value="expired">Expired (≤ 0 Hari)</option>
-              <option value="urgent">Urgent (≤ {customUrgentDays || 30} Hari)</option>
-              <option value="60">2 Bulan (≤ 60 Hari)</option>
-              <option value="90">3 Bulan (≤ 90 Hari)</option>
-              <option value="180">6 Bulan (≤ 180 Hari)</option>
-              <option value="365">1 Tahun (≤ 365 Hari)</option>
+              <option value="expired">Expired (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ 0 Hari)</option>
+              <option value="urgent">Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ {customUrgentDays || 30} Hari)</option>
+              <option value="60">2 Bulan (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ 60 Hari)</option>
+              <option value="90">3 Bulan (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ 90 Hari)</option>
+              <option value="180">6 Bulan (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ 180 Hari)</option>
+              <option value="365">1 Tahun (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ 365 Hari)</option>
             </select>
           </div>
 

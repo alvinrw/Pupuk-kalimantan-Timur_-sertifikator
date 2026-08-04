@@ -25,7 +25,7 @@ import HistoryModal from '../components/HistoryModal';
 import SingleEntryCiptaanModal from '../components/SingleEntryCiptaanModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem, deleteMasterItem } from '../services/masterItemsService';
 
 export default function AdministrasiLainnya() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -308,10 +308,19 @@ export default function AdministrasiLainnya() {
     setOpenActionRowId(null);
   };
 
-  const confirmDeleteRow = () => {
-    setCiptaanList(prev => prev.filter(item => item.id !== pendingDeleteRowId));
-    setRowConfirmModalOpen(false);
-    setPendingDeleteRowId(null);
+  const confirmDeleteRow = async () => {
+    if (!pendingDeleteRowId) return;
+    try {
+      await deleteMasterItem(pendingDeleteRowId);
+      setCiptaanList(prev => prev.filter(item => item.id !== pendingDeleteRowId));
+      alert("Baris berhasil dihapus dari database.");
+    } catch (error) {
+      console.error(error);
+      alert("Gagal menghapus baris dari database.");
+    } finally {
+      setRowConfirmModalOpen(false);
+      setPendingDeleteRowId(null);
+    }
   };
 
   // Ganti Target Sertifikat Handler
@@ -411,7 +420,7 @@ export default function AdministrasiLainnya() {
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Kelola / Impor Dokumen</span>
-            <ChevronDown className="w-3.5 h-3.5" />
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Unified Popover Menu */}
@@ -573,11 +582,11 @@ export default function AdministrasiLainnya() {
       {/* Table with Custom 6 Columns & Header Filters */}
       <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-center border-collapse">
             <thead>
-              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
+              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none text-center align-middle">
                 {activeMainTab === 'staging' && (
-                  <th className="py-3.5 px-3 w-10 text-center">
+                  <th className="py-3.5 px-3 w-10 text-center align-middle">
                     <input
                       type="checkbox"
                       checked={filteredData.length > 0 && selectedStagingIds.length === filteredData.length}
@@ -586,18 +595,18 @@ export default function AdministrasiLainnya() {
                     />
                   </th>
                 )}
-                {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap">NO.</th>}
-                {isVisible("judulCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">JUDUL CIPTAAN</th>}
+                {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">NO.</th>}
+                {isVisible("judulCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">JUDUL CIPTAAN</th>}
                 
                 {/* JENIS CIPTAAN FILTER */}
                 {isVisible("jenisCiptaan") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
-                    <div className="flex items-center gap-1.5">
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>JENIS CIPTAAN</span>
                       <select
                         value={filterJenis}
                         onChange={(e) => setFilterJenis(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer"
+                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
                       >
                         <option value="All">Semua</option>
                         {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
@@ -608,7 +617,7 @@ export default function AdministrasiLainnya() {
                   </th>
                 )}
 
-                {isVisible("tanggalCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">TANGGAL CIPTAAN</th>}
+                {isVisible("tanggalCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TANGGAL CIPTAAN</th>}
 
                 {/* SERTIFIKAT FILTER */}
                 {isVisible("hasSertifikat") && (
@@ -630,8 +639,8 @@ export default function AdministrasiLainnya() {
 
                 {/* MASA BERLAKU FILTER */}
                 {isVisible("masaBerlaku") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60">
-                    <div className="flex items-center gap-1.5">
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                    <div className="flex items-center justify-center gap-1.5">
                       <span>MASA BERLAKU</span>
                       <select
                         value={filterMasa}
@@ -647,8 +656,8 @@ export default function AdministrasiLainnya() {
                   </th>
                 )}
 
-                {isVisible("kapanBerakhir") && <th className="py-3.5 px-4 font-bold whitespace-nowrap">KAPAN BERAKHIR</th>}
-                <th className="py-3.5 px-4 font-bold text-right whitespace-nowrap">AKSI</th>
+                {isVisible("kapanBerakhir") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KAPAN BERAKHIR</th>}
+                <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -660,7 +669,7 @@ export default function AdministrasiLainnya() {
                   return (
                     <tr key={item.id} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
                       {activeMainTab === 'staging' && (
-                        <td className="py-3.5 px-3 text-center">
+                        <td className="py-3.5 px-3 text-center align-middle">
                           <input
                             type="checkbox"
                             checked={selectedStagingIds.includes(item.id || item.MasterId)}
@@ -670,26 +679,26 @@ export default function AdministrasiLainnya() {
                         </td>
                       )}
                       {isVisible("no") && (
-                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
                           {index + 1}
                         </td>
                       )}
                       {isVisible("judulCiptaan") && (
                         <td
                           onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
-                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap ${
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap text-center align-middle ${
                             isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
                           }`}
                           title="Klik untuk Lihat Detail"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center justify-center gap-2">
                             <FileCheck className={`w-3.5 h-3.5 ${item.hasCertificatePdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
                             <span>{item.judulCiptaan}</span>
                           </div>
                         </td>
                       )}
                       {isVisible("jenisCiptaan") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                           {item.jenisCiptaan}
                         </td>
                       )}
@@ -712,38 +721,31 @@ export default function AdministrasiLainnya() {
                         </td>
                       )}
                     {isVisible("tanggalCiptaan") && (
-                      <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap text-center align-middle">
                         {item.tanggalCiptaan}
                       </td>
                     )}
                     {isVisible("masaBerlaku") && (
-                      <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap text-center align-middle">
                         {item.masaBerlaku}
                       </td>
                     )}
                     {isVisible("kapanBerakhir") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap text-center align-middle">
                         {item.kapanBerakhir}
                       </td>
                     )}
-
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
-                      {item.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
-                        <button
-                          onClick={() => setResolveTargetItem(item)}
-                          className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                        >
-                          <FileWarning className="w-3.5 h-3.5" />
-                          <span>Perbaiki / Lengkapi</span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
-                          className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          requestDeleteRow(item.id || item.MasterId);
+                        }}
+                        className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
+                        title="Hapus Data"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 );

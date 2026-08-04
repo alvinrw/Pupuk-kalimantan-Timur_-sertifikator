@@ -1,5 +1,9 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { X, UploadCloud, Save, Upload, Loader2, AlertTriangle, FileText, CheckCircle, Crosshair } from 'lucide-react';
+/**
+ * ModalUploadCert ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal unggah / koreksi berkas PDF manual.
+ * Dipisah dari DocumentDetailPage (sebelumnya ~160 baris inline).
+ */
+import React, { useRef, useState } from 'react';
+import { X, UploadCloud, Save, Upload, Loader2 } from 'lucide-react';
 import { scanPdfDocument } from '../../services/ocrService';
 import { API_BASE } from '../../config/api';
 import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
@@ -73,7 +77,9 @@ export default function ModalUploadCert({
                 {uploadData.target === 'current' ? 'Koreksi Sertifikat Aktif (Human Verification)' : 'Unggah Arsip Berkas PDF (Human Verification)'}
               </h4>
               <p className="text-[11px] text-blue-300 font-mono-data">
-                Silakan verifikasi hasil pembacaan AI dengan dokumen PDF asli di sebelah kanan.
+                {uploadData.target === 'current'
+                  ? 'Buat versi baru ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â versi lama otomatis masuk histori'
+                  : 'Tambahkan riwayat berkas ke daftar histori sertifikat'}
               </p>
             </div>
           </div>
@@ -82,103 +88,59 @@ export default function ModalUploadCert({
           </button>
         </div>
 
-        {/* Modal Body: Split Screen */}
-        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
-          
-          {/* Sisi Kiri: Form Input & OCR */}
-          <div className="w-full md:w-[45%] flex flex-col min-h-0 border-r border-slate-200">
-            <form id="uploadCertForm" onSubmit={onSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs font-mono-data">
-              {isSingleCertScope && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs mb-2">
-                  <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
-                </div>
-              )}
+        {/* Modal Form */}
+        <form onSubmit={onSubmit} className="p-6 space-y-4 text-xs font-mono-data">
+          {isSingleCertScope && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs">
+              <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Direvisi)' : 'Arsip (tambah ke histori)'}
+            </div>
+          )}
 
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
-                <div
-                  onClick={() => {
-                    if (isUploadingTemp || isScanningOcr) return;
-                    manualFileInputRef.current?.click();
-                  }}
-                  className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
-                    (isUploadingTemp || isScanningOcr) 
-                      ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-70' 
-                      : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50 cursor-pointer'
-                  }`}
-                >
-                  <input
-                    ref={manualFileInputRef}
-                    type="file"
-                    accept=".pdf"
-                    onChange={async (e) => {
-                      const file = e.target.files[0];
-                      if (file) {
-                        setSelectedUploadFile(file);
-                        setUploadData(prev => ({ ...prev, fileName: file.name, tempUrl: null }));
-                        setOcrSuccess(false);
+          <div>
+            <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
+            <div
+              onClick={() => manualFileInputRef.current?.click()}
+              className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center bg-slate-50 hover:bg-blue-50/50 cursor-pointer transition-colors"
+            >
+              <input
+                ref={manualFileInputRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg"
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setSelectedUploadFile(file);
+                    setUploadData(prev => ({ ...prev, fileName: file.name }));
 
-                        if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
-                          try {
-                            // 1. Upload Temporary ke MinIO
-                            setIsUploadingTemp(true);
-                            const fdTemp = new FormData();
-                            fdTemp.append('file', file);
-                            const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
-                              method: 'POST',
-                              body: fdTemp
-                            });
-                            if (uploadRes.ok) {
-                              const json = await uploadRes.json();
-                              setUploadData(prev => ({ ...prev, tempUrl: json.data.url }));
-                            } else {
-                              console.error('Failed to upload temp file');
-                            }
-                          } catch (err) {
-                            console.error('Upload temp error:', err);
-                          } finally {
-                            setIsUploadingTemp(false);
-                          }
-                          // Fitur AI Auto-Extract keseluruhan saat upload kita matikan
-                          // agar Preview instan muncul. User akan pakai tombol 🎯 per field.
+                    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+                      try {
+                        setIsScanningOcr(true);
+                        const ocrData = await scanPdfDocument(file);
+                        if (ocrData) {
+                          setUploadData(prev => ({
+                            ...prev,
+                            noSertifikat: ocrData.noSertifikat || prev.noSertifikat,
+                            terbit: ocrData.terbit || prev.terbit,
+                            expired: ocrData.expired || prev.expired,
+                            instansi: ocrData.instansi || prev.instansi,
+                          }));
                         }
                       }
-                    }}
-                    className="hidden"
-                    disabled={isUploadingTemp || isScanningOcr}
-                  />
-                  <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
-                  <span className="text-xs font-bold text-[#005ea4] block">
-                    {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Ganti / Pilih File PDF'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">Hanya menerima format PDF</span>
-                </div>
-
-                {(isUploadingTemp || isScanningOcr) && (
-                  <div className="flex flex-col gap-2 mt-3">
-                    {isUploadingTemp && (
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                        <span>Menyiapkan preview dokumen...</span>
-                      </div>
-                    )}
-                    {isScanningOcr && (
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                        <span>AI sedang memindai & mengekstrak data dari dokumen...</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-                
-
-
-                {ocrErrorMsg && (
-                  <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
-                    <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>{ocrErrorMsg}</span>
-                  </div>
-                )}
+                    }
+                  }
+                }}
+                className="hidden"
+              />
+              <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+              <span className="text-xs font-bold text-[#005ea4] block">
+                {selectedUploadFile ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
+              </span>
+              <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
+            </div>
+            {isScanningOcr && (
+              <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse mt-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>AI OCR sedang memindai & mengunduh metadata dokumen...</span>
               </div>
 
               <div>

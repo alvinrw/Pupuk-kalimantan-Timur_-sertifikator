@@ -1,7 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Link2, Upload, ShieldAlert, Loader2, AlertTriangle, FileText, CheckCircle } from 'lucide-react';
-import { scanPdfDocument } from '../../services/ocrService';
-import { API_BASE } from '../../config/api';
+/**
+ * ModalAddLinkedCert ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal tambah sertifikat terhubung baru.
+ * Dipisah dari DocumentDetailPage (sebelumnya ~200 baris inline).
+ */
+import React, { useState } from 'react';
+import { X, Link2, CheckSquare, Upload } from 'lucide-react';
+import { UPLOAD_ENDPOINT } from '../../config/api';
 
 export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
   const [certData, setCertData] = useState({
@@ -342,9 +345,13 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                 disabled={isSubmitting || isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !pdfFile)}
                 className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs shadow-xs"
               >
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                <span>Simpan Sertifikat</span>
-              </button>
+                <Upload className="w-3.5 h-3.5 text-[#005ea4]" />
+                <span>Pilih Berkas PDF</span>
+              </label>
+              {certData.pdfName
+                ? <span className="block text-emerald-700 font-bold text-[11px] mt-1.5">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Terpilih: {certData.pdfName}</span>
+                : <span className="block text-slate-400 text-[10px] mt-1">Format: PDF (Opsional)</span>
+              }
             </div>
           </div>
 

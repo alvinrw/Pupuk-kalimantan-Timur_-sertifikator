@@ -350,9 +350,36 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
               <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
               <input
                 type="text"
-                value={formData.namaSertifikat}
-                onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="misal: Kawasan Industri Kaltim Zone 1"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Luas (mÃƒâ€šÃ‚Â²)</label>
+              <input
+                type="number"
+                value={formData.areaSqm}
+                onChange={(e) => setFormData({ ...formData, areaSqm: e.target.value })}
+                placeholder="100000"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-mono-data"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="font-bold text-slate-900 block mb-1">Luas (Ha)</label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.areaHa}
+                onChange={(e) => setFormData({ ...formData, areaHa: e.target.value })}
+                placeholder="10"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-mono-data"
+                required
               />
             </div>
 

@@ -108,8 +108,12 @@ export default function PerizinanAset({ title, subtitle }) {
     { key: "namaSertifikat", label: "Nama Sertifikat" },
     { key: "certificateNo", label: "Nomor Sertifikat" },
     { key: "location", label: "Lokasi" },
-    { key: "user", label: "Penanggung Jawab" },
-    { key: "condition", label: "Status" },
+    { key: "areaSqm", label: "Luas (mÃƒâ€šÃ‚Â²)" },
+    { key: "areaHa", label: "Luas (Ha)" },
+    { key: "purpose", label: "Peruntukan" },
+    { key: "submissionDate", label: "Tanggal Awal Pengajuan" },
+    { key: "validityPeriod", label: "Masa Berlaku Produk" },
+    { key: "condition", label: "Kondisi" },
     { key: "description", label: "Keterangan" },
   ];
 
@@ -335,7 +339,7 @@ export default function PerizinanAset({ title, subtitle }) {
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Kelola / Impor Dokumen</span>
-            <ChevronDown className="w-3.5 h-3.5" />
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Unified Popover Menu */}
@@ -499,11 +503,11 @@ export default function PerizinanAset({ title, subtitle }) {
       {/* Table */}
       <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse whitespace-nowrap">
+          <table className="w-full text-center border-collapse whitespace-nowrap">
             <thead>
-              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
+              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none align-middle text-center">
                 {activeMainTab === 'staging' && (
-                  <th className="py-3.5 px-3 w-10 text-center">
+                  <th className="py-3.5 px-3 w-10 text-center align-middle">
                     <input
                       type="checkbox"
                       checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
@@ -512,14 +516,16 @@ export default function PerizinanAset({ title, subtitle }) {
                     />
                   </th>
                 )}
-                {isVisible("title") && <th className="py-3.5 px-4 font-bold">Nama Aset</th>}
-                {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold">Nama Sertifikat</th>}
-                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold">Nomor Sertifikat</th>}
-                {isVisible("location") && <th className="py-3.5 px-4 font-bold">Lokasi</th>}
-                {isVisible("user") && <th className="py-3.5 px-4 font-bold">Penanggung Jawab</th>}
-                {isVisible("condition") && <th className="py-3.5 px-4 font-bold">Status</th>}
-                {isVisible("description") && <th className="py-3.5 px-4 font-bold">Keterangan</th>}
-                <th className="py-3.5 px-4 font-bold text-right">AKSI</th>
+                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold text-center align-middle">Nomer Sertifikat</th>}
+                {isVisible("location") && <th className="py-3.5 px-4 font-bold text-center align-middle">Lokasi</th>}
+                {isVisible("areaSqm") && <th className="py-3.5 px-4 font-bold text-center align-middle">Luas (mÃƒâ€šÃ‚Â²)</th>}
+                {isVisible("areaHa") && <th className="py-3.5 px-4 font-bold text-center align-middle">Luas (Ha)</th>}
+                {isVisible("purpose") && <th className="py-3.5 px-4 font-bold text-center align-middle">Peruntukan</th>}
+                {isVisible("submissionDate") && <th className="py-3.5 px-4 font-bold text-center align-middle">Tanggal Awal Pengajuan</th>}
+                {isVisible("validityPeriod") && <th className="py-3.5 px-4 font-bold text-center align-middle">Masa Berlaku Produk</th>}
+                {isVisible("condition") && <th className="py-3.5 px-4 font-bold text-center align-middle">Kondisi</th>}
+                {isVisible("description") && <th className="py-3.5 px-4 font-bold text-center align-middle">Keterangan</th>}
+                <th className="py-3.5 px-4 font-bold text-center align-middle">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -528,7 +534,7 @@ export default function PerizinanAset({ title, subtitle }) {
                 return (
                   <tr key={row.rowId} className="hover:bg-slate-50/80 transition-colors font-mono-data">
                     {activeMainTab === 'staging' && (
-                      <td className="py-3.5 px-3 text-center">
+                      <td className="py-3.5 px-3 text-center align-middle">
                         <input
                           type="checkbox"
                           checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
@@ -540,44 +546,54 @@ export default function PerizinanAset({ title, subtitle }) {
                     {isVisible("title") && (
                       <td
                         onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                        className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline"
+                        className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline text-center align-middle"
                       >
                         <span>{doc.merekItem || doc.title}</span>
                       </td>
                     )}
-                    {isVisible("namaSertifikat") && (
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
-                        {row.cert?.namaSertifikat || doc.namaSertifikat || '-'}
-                      </td>
-                    )}
-                    {isVisible("certificateNo") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-slate-800">
-                        {row.certificateNo}
-                      </td>
-                    )}
                     {isVisible("location") && (
-                      <td className="py-3.5 px-4 font-bold text-slate-900">
+                      <td className="py-3.5 px-4 font-bold text-slate-900 text-center align-middle">
                         {row.location}
                       </td>
                     )}
-                    {isVisible("user") && (
-                      <td className="py-3.5 px-4 text-slate-700">
-                        {doc.user || doc.penanggungJawab || 'Departemen Utility'}
+                    {isVisible("areaSqm") && (
+                      <td className="py-3.5 px-4 font-mono-data text-center text-slate-700 align-middle">
+                        {row.areaSqm}
+                      </td>
+                    )}
+                    {isVisible("areaHa") && (
+                      <td className="py-3.5 px-4 font-mono-data text-center text-slate-700 align-middle">
+                        {row.areaHa}
+                      </td>
+                    )}
+                    {isVisible("purpose") && (
+                      <td className="py-3.5 px-4 text-center align-middle">
+                        {row.purpose}
+                      </td>
+                    )}
+                    {isVisible("submissionDate") && (
+                      <td className="py-3.5 px-4 font-mono-data text-center text-slate-700 align-middle">
+                        {row.submissionDate}
+                      </td>
+                    )}
+                    {isVisible("validityPeriod") && (
+                      <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 text-center align-middle">
+                        {row.validityPeriod}
                       </td>
                     )}
                     {isVisible("condition") && (
-                      <td className="py-3.5 px-4 text-slate-700">
+                      <td className="py-3.5 px-4 text-center align-middle">
                         <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
                           {row.condition}
                         </span>
                       </td>
                     )}
                     {isVisible("description") && (
-                      <td className="py-3.5 px-4 text-slate-700 truncate max-w-[150px]" title={row.description}>
+                      <td className="py-3.5 px-4 text-slate-700 truncate max-w-[150px] text-center align-middle" title={row.description}>
                         {row.description}
                       </td>
                     )}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap font-mono-data">
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
                       {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
                         <button
                           onClick={() => setResolveTargetItem(doc)}
