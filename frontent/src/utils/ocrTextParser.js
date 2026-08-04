@@ -40,16 +40,27 @@ export function parseDate(rawText) {
     .replace(/(\d)[oO]\b/g, '$10')
     .replace(/\bO(?=\d)/g, '0');
 
-  // Format: "10 Juli 2024" atau "10 Juli, 2024"
+  // Format: "10 Juli 2024" atau "OF April 2028" atau "11April 2026" (tanpa spasi)
   const wordMatch = clean.match(
-    /(\d{1,2})\s+([A-Za-z]+)\s*,?\s*(\d{4})/
+    /([A-Za-z0-9]{1,2})\s*([A-Za-z]+)\s*,?\s*(\d{4})/
   );
   if (wordMatch) {
-    const day = wordMatch[1].padStart(2, '0');
+    // OCR Confusion Mapping untuk Hari (Day)
+    let rawDay = wordMatch[1].toUpperCase();
+    const mapConfusion = { 'O':'0', 'F':'7', 'I':'1', 'L':'1', 'S':'5', 'G':'6', 'Z':'2', 'B':'8', 'A':'4', 'T':'7' };
+    let fixedDay = '';
+    for (let char of rawDay) {
+      fixedDay += mapConfusion[char] || char;
+    }
+    
+    // Hapus karakter yang bukan angka setelah mapping
+    fixedDay = fixedDay.replace(/[^0-9]/g, '');
+
+    const day = fixedDay.padStart(2, '0');
     const monthKey = wordMatch[2].toLowerCase();
     const year = wordMatch[3];
     const month = MONTH_MAP[monthKey];
-    if (month && parseInt(day) <= 31 && parseInt(year) >= 2000) {
+    if (month && parseInt(day) >= 1 && parseInt(day) <= 31 && parseInt(year) >= 2000) {
       return { display: `${day}/${month}/${year}`, iso: `${year}-${month}-${day}` };
     }
   }
@@ -71,6 +82,23 @@ export function parseDate(rawText) {
     const year = dmyMatch[3];
     if (parseInt(month) <= 12 && parseInt(day) <= 31 && parseInt(year) >= 2000) {
       return { display: `${day}/${month}/${year}`, iso: `${year}-${month}-${day}` };
+    }
+  }
+
+  // FUZZY MATCH: Jika hari benar-benar hilang/hancur (misal "juni2025" atau "April 2026")
+  // Kita selamatkan Bulan dan Tahunnya, paksa hari jadi 01, dan flag isFuzzy = true
+  const fuzzyMatch = clean.match(/([A-Za-z]{3,})\s*(\d{4})/);
+  if (fuzzyMatch) {
+    const monthKey = fuzzyMatch[1].toLowerCase();
+    const year = fuzzyMatch[2];
+    const month = MONTH_MAP[monthKey];
+    if (month && parseInt(year) >= 2000) {
+      return { 
+        display: `01/${month}/${year}`, 
+        iso: `${year}-${month}-01`,
+        isFuzzy: true,
+        rawMonthYear: `${fuzzyMatch[1]} ${year}`
+      };
     }
   }
 

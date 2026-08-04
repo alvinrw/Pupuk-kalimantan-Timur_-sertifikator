@@ -1,18 +1,7 @@
-/**
- * PdfCanvasOcrViewer.jsx
- * 
- * Komponen PDF Viewer berbasis canvas (pdfjs-dist) dengan fitur Drag-to-Select + OCR (tesseract.js).
- * Menggantikan <iframe> agar konten PDF bisa diakses dan di-crop untuk OCR.
- *
- * Props:
- * - pdfUrl: string - URL PDF yang akan dirender (dari MinIO)
- * - scanMode: 'noSertifikat' | 'terbit' | 'expired' | null - field yang sedang ditarget scan
- * - onScanComplete: (fieldKey: string, rawText: string) => void - callback hasil OCR
- * - onScanCancel: () => void - callback saat scan dibatalkan
- */
-
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { FileText, ChevronLeft, ChevronRight, Crosshair, Loader2, X, ScanLine } from 'lucide-react';
+import { FileText, ChevronLeft, ChevronRight, Crosshair, Loader2, X, ScanLine, ZoomIn, ZoomOut } from 'lucide-react';
+import { API_BASE } from '../../config/api';
+import 'pdfjs-dist/web/pdf_viewer.css';
 
 // Label yang ditampilkan di overlay saat scan mode aktif
 const SCAN_LABELS = {
@@ -34,13 +23,14 @@ export default function PdfCanvasOcrViewer({
   onScanCancel,
 }) {
   const canvasRef = useRef(null);
-  const overlayRef = useRef(null);
   const pdfDocRef = useRef(null);
+  const textLayerRef = useRef(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isOcrRunning, setIsOcrRunning] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(1); // UI Zoom Level
   const [error, setError] = useState(null);
   const [ocrStatusMsg, setOcrStatusMsg] = useState('');
 
@@ -59,10 +49,7 @@ export default function PdfCanvasOcrViewer({
         setIsLoading(true);
         setError(null);
 
-        // Dynamic import untuk code-splitting
         const pdfjsLib = await import('pdfjs-dist');
-        
-        // Set worker path (menggunakan CDN untuk kemudahan, juga bisa lokal)
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
         const loadingTask = pdfjsLib.getDocument({
@@ -77,7 +64,8 @@ export default function PdfCanvasOcrViewer({
         pdfDocRef.current = pdfDoc;
         setTotalPages(pdfDoc.numPages);
         setCurrentPage(1);
-        await renderPage(pdfDoc, 1);
+        setZoomLevel(1); // Reset zoom
+        await renderPage(pdfDoc, 1, 1);
       } catch (err) {
         if (!cancelled) {
           console.error('PDF load error:', err);
@@ -92,30 +80,35 @@ export default function PdfCanvasOcrViewer({
     return () => { cancelled = true; };
   }, [pdfUrl]);
 
-  // ─── Re-render saat halaman berubah ───────────────────────────────────────
+  // ─── Re-render saat halaman berubah atau zoom ─────────────────────────────
   useEffect(() => {
     if (pdfDocRef.current && currentPage) {
-      renderPage(pdfDocRef.current, currentPage);
+      renderPage(pdfDocRef.current, currentPage, zoomLevel);
     }
-  }, [currentPage]);
+  }, [currentPage, zoomLevel]);
 
   // ─── Render halaman PDF ke canvas ─────────────────────────────────────────
-  const renderPage = async (pdfDoc, pageNum) => {
+  const renderPage = async (pdfDoc, pageNum, currentZoom) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const page = await pdfDoc.getPage(pageNum);
-    const container = canvas.parentElement;
-    const containerWidth = container?.clientWidth || 600;
+    
+    // Gunakan scrollContainer (parent dari wrapper) untuk referensi baseScale
+    // agar ukurannya tidak ikut membesar secara rekursif saat canvas membesar.
+    const wrapper = canvas.parentElement;
+    const scrollContainer = wrapper?.parentElement;
+    const containerWidth = (scrollContainer?.clientWidth || 600) - 32; // kurangi padding
 
     const viewport = page.getViewport({ scale: 1 });
-    const scale = containerWidth / viewport.width;
-    const scaledViewport = page.getViewport({ scale });
+    const baseScale = containerWidth / viewport.width;
+    const finalScale = baseScale * currentZoom;
+
+    const scaledViewport = page.getViewport({ scale: finalScale });
 
     canvas.width = scaledViewport.width;
     canvas.height = scaledViewport.height;
 
-    // Sync ukuran selection canvas
     if (selectionCanvasRef.current) {
       selectionCanvasRef.current.width = scaledViewport.width;
       selectionCanvasRef.current.height = scaledViewport.height;
@@ -123,6 +116,27 @@ export default function PdfCanvasOcrViewer({
 
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+
+    // ─── Render Text Layer untuk Native Selection ───
+    try {
+      if (textLayerRef.current) {
+        textLayerRef.current.innerHTML = '';
+        const textContent = await page.getTextContent();
+        const pdfjsLib = await import('pdfjs-dist');
+        textLayerRef.current.style.setProperty('--scale-factor', finalScale);
+        textLayerRef.current.style.setProperty('--user-unit', '1');
+        textLayerRef.current.style.setProperty('--total-scale-factor', finalScale);
+
+        const textLayer = new pdfjsLib.TextLayer({
+          textContentSource: textContent,
+          container: textLayerRef.current,
+          viewport: scaledViewport,
+        });
+        await textLayer.render();
+      }
+    } catch (e) {
+      console.warn('Text layer render failed:', e);
+    }
   };
 
   // ─── Drag-to-Select Logic ──────────────────────────────────────────────────
@@ -154,20 +168,15 @@ export default function PdfCanvasOcrViewer({
 
     const color = SCAN_COLORS[scanMode] || '#005ea4';
 
-    // Overlay gelap di luar selection
     ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(0, 0, selCanvas.width, selCanvas.height);
-
-    // Clear area selection
     ctx.clearRect(x, y, w, h);
 
-    // Border selection
     ctx.strokeStyle = color;
     ctx.lineWidth = 2.5;
     ctx.setLineDash([6, 3]);
     ctx.strokeRect(x, y, w, h);
 
-    // Corner handles
     ctx.setLineDash([]);
     ctx.fillStyle = color;
     const handleSize = 6;
@@ -201,63 +210,91 @@ export default function PdfCanvasOcrViewer({
     const w = Math.abs(d.endX - d.startX);
     const h = Math.abs(d.endY - d.startY);
 
-    // Minimum area
     if (w < 20 || h < 10) {
       const selCanvas = selectionCanvasRef.current;
       if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
       return;
     }
 
-    // Crop area dari main canvas
     const mainCanvas = canvasRef.current;
     if (!mainCanvas) return;
 
+    // ─── OCR Pre-processing Pipeline (Super Melek) ───
+    // 1. Upscaling 4x agar teks super tajam + Margin (Padding)
+    const scaleFactor = 4;
+    const padding = 40; // Tesseract sangat butuh "ruang bernafas" (margin putih) di pinggiran teks
+    
     const cropCanvas = document.createElement('canvas');
-    cropCanvas.width = w;
-    cropCanvas.height = h;
+    cropCanvas.width = (w * scaleFactor) + (padding * 2);
+    cropCanvas.height = (h * scaleFactor) + (padding * 2);
     const cropCtx = cropCanvas.getContext('2d');
-    cropCtx.drawImage(mainCanvas, x, y, w, h, 0, 0, w, h);
+    
+    // Fill canvas dengan warna putih bersih sebagai background (padding)
+    cropCtx.fillStyle = '#ffffff';
+    cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+    
+    // Biarkan smoothing menyala (default) karena PaddleOCR butuh garis anti-aliasing yang halus
+    // cropCtx.imageSmoothingEnabled = false; 
+    
+    // Gambar potongan PDF di tengah-tengah area padding
+    cropCtx.drawImage(mainCanvas, x, y, w, h, padding, padding, w * scaleFactor, h * scaleFactor);
 
-    // Jalankan Tesseract OCR
+    // Filter Binarization (Hitam-Putih paksa) DIHAPUS.
+    // PaddleOCR adalah AI Deep Learning yang dilatih dengan gambar RGB asli. 
+    // Memaksanya jadi hitam putih murni justru merusak akurasi garis bawah dan huruf miring!
+    // ─────────────────────────────────────────────────
+
     try {
       setIsOcrRunning(true);
-      setOcrStatusMsg('Membaca area yang dipilih...');
+      setOcrStatusMsg('Mengirim gambar ke Backend AI (PaddleOCR)...');
 
-      const Tesseract = await import('tesseract.js');
-      const { data: { text } } = await Tesseract.recognize(
-        cropCanvas,
-        'ind+eng',
-        {
-          logger: (m) => {
-            if (m.status === 'recognizing text') {
-              setOcrStatusMsg(`Memindai... ${Math.round(m.progress * 100)}%`);
-            }
-          },
+      // Convert canvas ke Blob untuk dikirim via FormData
+      cropCanvas.toBlob(async (blob) => {
+        try {
+          console.log('Mengirim crop image ke backend... Size:', blob.size, 'bytes');
+          const fd = new FormData();
+          fd.append('file', blob, 'crop.png');
+          
+          setOcrStatusMsg('Sedang memindai dengan AI...');
+          // Gunakan 127.0.0.1 untuk mencegah masalah resolusi IPv6 'localhost' di Windows
+          const res = await fetch(`http://127.0.0.1:8000/api/v1/ocr/ocr-crop`, {
+            method: 'POST',
+            body: fd
+          });
+          
+          console.log('Response status:', res.status);
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.detail || 'Gagal OCR backend');
+          
+          setOcrStatusMsg('Selesai!');
+          console.log('OCR Result:', json);
+          onScanComplete(scanMode, json.data?.text || '');
+        } catch (err) {
+          console.error('Backend OCR Fetch error:', err.message, err);
+          setOcrStatusMsg(`Error: ${err.message}`);
+          setTimeout(() => setOcrStatusMsg(''), 4000);
+        } finally {
+          setIsOcrRunning(false);
+          const selCanvas = selectionCanvasRef.current;
+          if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
         }
-      );
+      }, 'image/png');
 
-      setOcrStatusMsg('Selesai!');
-      onScanComplete(scanMode, text);
     } catch (err) {
-      console.error('Tesseract OCR error:', err);
-      setOcrStatusMsg('OCR gagal. Coba pilih area lebih besar.');
-      setTimeout(() => setOcrStatusMsg(''), 3000);
-    } finally {
+      console.error('Canvas toBlob error:', err);
       setIsOcrRunning(false);
-      // Clear selection overlay
-      const selCanvas = selectionCanvasRef.current;
-      if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
+      setOcrStatusMsg('Gagal memproses gambar crop.');
+      setTimeout(() => setOcrStatusMsg(''), 3000);
     }
   }, [scanMode, onScanComplete]);
 
-  // ─── Render ────────────────────────────────────────────────────────────────
   const activeScanColor = scanMode ? SCAN_COLORS[scanMode] : '#005ea4';
   const activeScanLabel = scanMode ? SCAN_LABELS[scanMode] : '';
 
   return (
     <div className="flex flex-col w-full h-full">
       {/* Toolbar */}
-      <div className="h-10 bg-slate-800 flex items-center justify-between px-4 text-white shrink-0 gap-2">
+      <div className="h-10 bg-slate-800 flex items-center px-4 text-white shrink-0 gap-2">
         <div className="flex items-center gap-2 text-xs font-bold font-mono-data">
           <FileText className="w-4 h-4" />
           {scanMode ? (
@@ -268,9 +305,31 @@ export default function PdfCanvasOcrViewer({
             <span>Preview PDF (Live Verification)</span>
           )}
         </div>
+
+        {/* Zoom Controls */}
+        {pdfUrl && !isLoading && (
+          <div className="flex items-center gap-1 bg-slate-700/50 rounded-lg p-0.5 ml-auto">
+            <button
+              onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.25))}
+              className="p-1 hover:bg-slate-600 rounded text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Zoom Out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </button>
+            <span className="text-[10px] font-bold w-9 text-center font-mono-data">{Math.round(zoomLevel * 100)}%</span>
+            <button
+              onClick={() => setZoomLevel(z => Math.min(3, z + 0.25))}
+              className="p-1 hover:bg-slate-600 rounded text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Zoom In"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Page navigation */}
         {totalPages > 1 && (
-          <div className="flex items-center gap-1 text-xs font-mono-data">
+          <div className="flex items-center gap-1 text-xs font-mono-data ml-2 border-l border-slate-600 pl-3">
             <button
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage <= 1}
@@ -318,29 +377,41 @@ export default function PdfCanvasOcrViewer({
           </div>
         )}
 
-        {/* Main PDF canvas */}
-        <canvas ref={canvasRef} className="block w-full" style={{ display: pdfUrl ? 'block' : 'none' }} />
-
-        {/* Overlay canvas untuk drag selection — mounted di atas main canvas */}
         {pdfUrl && (
+        <div className="relative w-max h-max mx-auto shadow-xl" style={{ lineHeight: 0 }}>
+          <canvas ref={canvasRef} className="block bg-white shadow-xl" />
+
+          <div 
+            ref={textLayerRef}
+            className="textLayer"
+            style={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              right: 0,
+              bottom: 0,
+              pointerEvents: scanMode ? 'none' : 'auto',
+            }}
+          />
+
           <canvas
             ref={selectionCanvasRef}
-            className="absolute top-0 left-0 w-full"
-            style={{
-              cursor: scanMode && !isOcrRunning ? 'crosshair' : 'default',
-              opacity: scanMode ? 1 : 0,
-              pointerEvents: scanMode ? 'all' : 'none',
-              zIndex: 10,
+            className="absolute top-0 left-0"
+            style={{ 
+              cursor: scanMode ? 'crosshair' : 'default',
+              pointerEvents: scanMode ? 'auto' : 'none'
             }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
           />
+        </div>
         )}
 
         {/* OCR Running overlay */}
         {isOcrRunning && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-30">
+          <div className="fixed inset-0 flex flex-col items-center justify-center bg-black/60 z-50">
             <div className="bg-white rounded-2xl shadow-xl p-6 flex flex-col items-center gap-3 max-w-xs text-center">
               <ScanLine className="w-8 h-8 text-[#005ea4] animate-pulse" />
               <p className="font-bold text-sm text-slate-800">Memindai Area...</p>
@@ -352,11 +423,9 @@ export default function PdfCanvasOcrViewer({
           </div>
         )}
 
-        {/* Scan mode instruction overlay hint (hanya saat scanMode aktif, sebelum drag) */}
+        {/* Scan mode instruction overlay hint */}
         {scanMode && !isOcrRunning && pdfUrl && (
-          <div
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none"
-          >
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
             <div
               className="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-white text-xs font-bold font-mono-data"
               style={{ backgroundColor: activeScanColor + 'ee' }}

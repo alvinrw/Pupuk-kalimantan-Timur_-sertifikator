@@ -63,32 +63,8 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     return `${day}/${month}/${year}`;
   };
 
-  const displayToIso = (d) => {
-    if (!d || !d.includes('/')) return '';
-    const [day, month, year] = d.split('/');
-    if (!day || !month || !year || year.length !== 4) return '';
-    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-  };
 
-  const isValidDisplay = (val) => {
-    if (!val) return true;
-    return /^\d{2}\/\d{2}\/\d{4}$/.test(val);
-  };
-
-  const handleDateInput = (field, value) => {
-    let v = value.replace(/[^0-9/]/g, '');
-    if (v.length === 2 && !v.includes('/') && (formData[field] || '').length < 2) v += '/';
-    else if (v.length === 5 && v.split('/').length === 2) v += '/';
-    setFormData(prev => ({ ...prev, [field]: v }));
-    setDateErrors(prev => ({ ...prev, [field]: v.length > 0 && !isValidDisplay(v) }));
-  };
-
-  const handleDateBlur = (field, value) => {
-    setDateErrors(prev => ({ ...prev, [field]: value.length > 0 && !isValidDisplay(value) }));
-  };
-
-  // ─── Proses file PDF (upload temp untuk preview) ─────────────────────────
-  // Auto-OCR DIHAPUS — OCR hanya via tombol 🎯 drag-select manual
+  // ─── Proses file PDF (Upload Temp & Ekstraksi AI Otomatis) ──────────────
   const processFile = useCallback(async (file) => {
     if (!file) return;
     setSelectedFile(file);
@@ -98,17 +74,21 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
       try {
         setIsUploadingTemp(true);
+        
         const fdTemp = new FormData();
         fdTemp.append('file', file);
+        
         const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
           method: 'POST', body: fdTemp
         });
+        
         if (uploadRes.ok) {
           const json = await uploadRes.json();
           setTempUrl(json.data.url);
         }
+
       } catch (err) {
-        console.error('Upload temp error:', err);
+        console.error('Upload temp / AI Extractor error:', err);
       } finally {
         setIsUploadingTemp(false);
       }
@@ -133,16 +113,29 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     if (fieldKey === 'noSertifikat') {
       const certNo = parseCertificateNumber(rawText);
       if (certNo) {
+        console.log(`✅ [Frontend] Berhasil memasukkan Nomor Sertifikat: ${certNo}`);
         setFormData(prev => ({ ...prev, noSertifikat: certNo }));
       } else {
         const cleaned = rawText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 80);
+        console.warn(`⚠️ [Frontend] Nomor Sertifikat tidak valid/berantakan, dimasukkan paksa teks asli: "${cleaned}"`);
         if (cleaned) setFormData(prev => ({ ...prev, noSertifikat: cleaned }));
       }
     } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
       const parsed = parseDate(rawText);
       if (parsed) {
-        setFormData(prev => ({ ...prev, [fieldKey]: parsed.display }));
-        setDateErrors(prev => ({ ...prev, [fieldKey]: false }));
+        console.log(`✅ [Frontend] Berhasil membaca Tanggal (${fieldKey}): ${parsed.display} -> Dimasukkan ke kalender sebagai ${parsed.iso}`);
+        setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
+        
+        if (parsed.isFuzzy) {
+          setDateErrors(prev => ({ ...prev, [fieldKey]: `Hari tidak terbaca, diset otomatis 1 ${parsed.rawMonthYear}. Harap betulkan!` }));
+        } else {
+          setDateErrors(prev => ({ ...prev, [fieldKey]: false }));
+        }
+      } else {
+        // Fallback untuk type="date"
+        const cleaned = rawText.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 30);
+        console.error(`❌ [Frontend] Gagal mendeteksi tanggal untuk (${fieldKey}). Teks dari AI: "${cleaned}"`);
+        setDateErrors(prev => ({ ...prev, [fieldKey]: cleaned ? `Gagal OCR: "${cleaned}"` : true }));
       }
     }
     setScanMode(null);
@@ -152,8 +145,8 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const terbitValid = isValidDisplay(formData.terbit) || !formData.terbit;
-    const expiredValid = isValidDisplay(formData.expired) || !formData.expired;
+    const terbitValid = !!formData.terbit;
+    const expiredValid = !!formData.expired;
     if (!terbitValid || !expiredValid) {
       setDateErrors({ terbit: !terbitValid, expired: !expiredValid });
       return;
@@ -186,8 +179,8 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       }
     }
 
-    const terbitIso = displayToIso(formData.terbit) || formData.terbit;
-    const expiredIso = displayToIso(formData.expired) || formData.expired;
+    const terbitIso = formData.terbit;
+    const expiredIso = formData.expired;
 
     onAddSuccess({
       ...formData,
@@ -454,12 +447,12 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                 </label>
                 <div className="flex gap-2 items-center">
                   <input
-                    type="text"
+                    type="date"
                     value={formData.terbit}
-                    onChange={(e) => handleDateInput('terbit', e.target.value)}
-                    onBlur={(e) => handleDateBlur('terbit', e.target.value)}
-                    placeholder="dd/mm/yyyy"
-                    maxLength={10}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, terbit: e.target.value }));
+                      setDateErrors(prev => ({ ...prev, terbit: false }));
+                    }}
                     className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${
                       dateErrors.terbit
                         ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
@@ -470,7 +463,11 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                   />
                   <ScanButton fieldKey="terbit" label="Tanggal Terbit" />
                 </div>
-                {dateErrors.terbit && <p className="text-[10px] text-rose-600 mt-1">Format harus: dd/mm/yyyy</p>}
+                {dateErrors.terbit && (
+                  <p className="text-[10px] text-rose-600 mt-1">
+                    {typeof dateErrors.terbit === 'string' ? dateErrors.terbit : 'Wajib diisi'}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -484,12 +481,12 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                 </label>
                 <div className="flex gap-2 items-center">
                   <input
-                    type="text"
+                    type="date"
                     value={formData.expired}
-                    onChange={(e) => handleDateInput('expired', e.target.value)}
-                    onBlur={(e) => handleDateBlur('expired', e.target.value)}
-                    placeholder="dd/mm/yyyy"
-                    maxLength={10}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, expired: e.target.value }));
+                      setDateErrors(prev => ({ ...prev, expired: false }));
+                    }}
                     className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${
                       dateErrors.expired
                         ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
@@ -500,7 +497,11 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                   />
                   <ScanButton fieldKey="expired" label="Tanggal Berakhir" />
                 </div>
-                {dateErrors.expired && <p className="text-[10px] text-rose-600 mt-1">Format harus: dd/mm/yyyy</p>}
+                {dateErrors.expired && (
+                  <p className="text-[10px] text-rose-600 mt-1">
+                    {typeof dateErrors.expired === 'string' ? dateErrors.expired : 'Wajib diisi'}
+                  </p>
+                )}
               </div>
             </div>
           </>

@@ -2,9 +2,48 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 import shutil
 import os
 import uuid
-from app.extractors.fire_alarm import extract_fire_alarm_cert
+from app.extractors.fire_alarm import extract_fire_alarm_cert, ocr_engine
 
 router = APIRouter()
+
+@router.post("/ocr-crop")
+async def ocr_crop(file: UploadFile = File(...)):
+    """
+    Endpoint menerima file gambar (crop dari frontend) dan menjalankan OCR (PaddleOCR).
+    Mengembalikan raw text hasil OCR.
+    """
+    if not file.content_type.startswith('image/'):
+        raise HTTPException(status_code=400, detail="File harus berupa gambar")
+    
+    temp_img = f"temp_crop_{uuid.uuid4().hex}_{file.filename}"
+    with open(temp_img, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    try:
+        # Eksekusi AI OCR (PaddleOCR)
+        res, _ = ocr_engine(temp_img)
+        lines = [item[1].strip() for item in res] if res else []
+        full_text = "\n".join(lines)
+        
+        # Tambahkan Log ke Terminal supaya kelihatan apa yang dibaca AI
+        print(f"\n[{uuid.uuid4().hex[:6]}] 🎯 Hasil Crop OCR (PaddleOCR):")
+        print("--------------------------------------------------")
+        print(full_text if full_text else "(Area Kosong / Tidak terbaca teks)")
+        print("--------------------------------------------------\n")
+        
+        return {
+            "statusCode": 200,
+            "message": "Berhasil mengekstrak teks dari gambar crop",
+            "data": {
+                "text": full_text
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        if os.path.exists(temp_img):
+            os.remove(temp_img)
+
 
 @router.post("/process-pdf")
 async def process_pdf(file: UploadFile = File(...)):
