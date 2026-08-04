@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles } from 'lucide-react';
+import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE } from '../config/api';
 import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting } from '../services/masterItemsService';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
+import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
 
 export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onResolveSuccess, onSuccess }) {
   const activeDoc = doc || item;
@@ -36,6 +37,33 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
   const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [scanMode, setScanMode] = useState(null);
+
+  // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
+  const handleOcrResult = async (fieldKey, rawText) => {
+    try {
+      const { parseDate, parseCertificateNumber } = await import('../utils/ocrTextParser');
+      
+      if (fieldKey === 'noSertifikat') {
+        const certNo = parseCertificateNumber(rawText);
+        setFormData(prev => ({ ...prev, noSertifikat: certNo || rawText.replace(/\n+/g, ' ').trim() }));
+      } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
+        const parsed = parseDate(rawText);
+        if (parsed) {
+          setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
+        } else {
+          setOcrErrorMsg(`Gagal mendeteksi tanggal untuk ${fieldKey}.`);
+        }
+      } else if (fieldKey === 'instansi') {
+        setFormData(prev => ({ ...prev, instansi: rawText.replace(/\n+/g, ' ').trim() }));
+      }
+      
+      setOcrSuccess(true);
+      setScanMode(null);
+    } catch (err) {
+      console.error("Gagal memproses hasil OCR:", err);
+    }
+  };
 
   const fileInputRef = useRef(null);
 
@@ -60,6 +88,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       setIsUploadingTemp(false);
       setOcrErrorMsg('');
       setOcrSuccess(false);
+      setScanMode(null);
     }
   }, [isOpen, activeDoc]);
 
@@ -172,6 +201,16 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       submitText="Simpan & Selesaikan"
       submitIcon={Save}
       tempUrl={tempUrl || activeDoc.fileUrl}
+      rightPanelContent={
+        (tempUrl || activeDoc.fileUrl) ? (
+          <PdfCanvasOcrViewer
+            pdfUrl={tempUrl || activeDoc.fileUrl}
+            scanMode={scanMode}
+            onScanComplete={handleOcrResult}
+            onScanCancel={() => setScanMode(null)}
+          />
+        ) : null
+      }
     >
       {/* Mode Toggle */}
       <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
@@ -315,12 +354,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             )}
             
-            {ocrSuccess && !isScanningOcr && (
-              <div className="flex items-start gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 mt-2">
-                <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" />
-                <span>AI berhasil mengekstrak data! Verifikasi kembali dengan preview PDF di sebelah kanan.</span>
-              </div>
-            )}
+
 
             {ocrErrorMsg && (
               <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
@@ -359,58 +393,121 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             </div>
           ) : (
-            <>
+            <div className="space-y-3">
+
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
                 <input
                   type="text"
                   value={formData.namaSertifikat}
                   onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
+                  placeholder="Contoh: SKP Pesawat Angkat"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
                 />
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
-                <input
-                  type="text" required
-                  value={formData.noSertifikat}
-                  onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={formData.noSertifikat}
+                    onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                  {sertifikatMode === 'dengan' && (
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'noSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
-                  <input
-                    type="date"
-                    value={formData.terbit}
-                    onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date"
+                      value={formData.terbit}
+                      onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                      className="w-full px-2 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
+                    />
+                    {sertifikatMode === 'dengan' && (
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'terbit' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Expired</label>
-                  <input
-                    type="date"
-                    value={formData.expired}
-                    onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date"
+                      value={formData.expired}
+                      onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
+                      className="w-full px-2 py-2 bg-white border border-rose-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-500"
+                    />
+                    {sertifikatMode === 'dengan' && (
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'expired' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                      }`}
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1">Instansi Penerbit</label>
-                <input
-                  type="text"
-                  value={formData.instansi}
-                  onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.instansi}
+                    onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                  {sertifikatMode === 'dengan' && (
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'instansi' ? null : 'instansi')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'instansi' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                  )}
+                </div>
               </div>
-            </>
+            </div>
           )}
         </div>
       )}
