@@ -2,7 +2,8 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import * as csv from 'csv-parser';
 import { Readable } from 'stream';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
+import * as xlsx from 'xlsx';
 
 @Injectable()
 export class CsvImportService {
@@ -10,15 +11,25 @@ export class CsvImportService {
 
   async processCsv(file: any, type: string, targetCategoryKey?: string) {
     const results: any[] = [];
+    const fileName = file.originalname || '';
+    const isExcel = fileName.toLowerCase().endsWith('.xlsx') || fileName.toLowerCase().endsWith('.xls');
 
-    // Parse CSV from memory buffer
-    await new Promise((resolve, reject) => {
-      Readable.from(file.buffer)
-        .pipe(csv())
-        .on('data', (data) => results.push(data))
-        .on('end', resolve)
-        .on('error', reject);
-    });
+    if (isExcel) {
+      const workbook = xlsx.read(file.buffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const json = xlsx.utils.sheet_to_json(sheet, { raw: false }) as any[];
+      results.push(...json);
+    } else {
+      // Parse CSV from memory buffer
+      await new Promise((resolve, reject) => {
+        Readable.from(file.buffer)
+          .pipe(csv())
+          .on('data', (data) => results.push(data))
+          .on('end', resolve)
+          .on('error', reject);
+      });
+    }
 
     if (results.length === 0) {
       throw new HttpException('CSV is empty', HttpStatus.BAD_REQUEST);
@@ -27,17 +38,79 @@ export class CsvImportService {
     try {
       if (type === 'master_items') {
         const existingItems = await this.prisma.masterItem.findMany({
-          select: { id: true, code: true, title: true, unitLocation: true, categoryKey: true }
+          where: targetCategoryKey ? { categoryKey: targetCategoryKey } : undefined,
+          select: {
+            id: true,
+            code: true,
+            title: true,
+            unitLocation: true,
+            categoryKey: true,
+            keterangan: true,
+            updatedAt: true
+          }
         });
 
-        const existingById = new Map(existingItems.filter(e => e.id).map(e => [e.id, e]));
-        const existingByCode = new Map(existingItems.filter(e => e.code && e.code !== '-').map(e => [e.code, e]));
-        const existingByFallback = new Map(
-          existingItems.map(e => [
-            `${(e.title || '').trim().toLowerCase()}_${(e.unitLocation || '').trim().toLowerCase()}_${(e.categoryKey || '').trim().toLowerCase()}`,
-            e
-          ])
-        );
+        // Helper untuk lookup case-insensitive
+        const getVal = (r: any, keys: string[]) => {
+          const k = Object.keys(r).find(key => {
+            const cleanKey = String(key).trim().toLowerCase();
+            return keys.some(target => cleanKey === target.toLowerCase() || cleanKey.replace(/\s+/g, '') === target.toLowerCase().replace(/\s+/g, ''));
+          });
+          return k ? String(r[k]).trim() : '';
+        };
+
+        // Helper untuk generate MD5 hash dari 6 kolom utama
+        const generateRowHash = (
+          code: string,
+          title: string,
+          namaSertifikat: string,
+          tipe: string,
+          nomorSeri: string,
+          unitLocation: string,
+        ): string => {
+          const clean = (val: string) => (val || '').trim().toLowerCase();
+          const combined = [
+            clean(code),
+            clean(title),
+            clean(namaSertifikat),
+            clean(tipe),
+            clean(nomorSeri),
+            clean(unitLocation)
+          ].join('|');
+
+          return createHash('md5').update(combined).digest('hex');
+        };
+
+        // Bangun hash map dari data yang sudah ada di sistem
+        const hashMap = new Map<string, any>();
+        for (const item of existingItems) {
+          let tipe = '';
+          let nomorSeri = '';
+          let namaSertifikat = '';
+          try {
+            if (item.keterangan && item.keterangan.startsWith('{')) {
+              const meta = JSON.parse(item.keterangan);
+              tipe = meta.tipe || '';
+              nomorSeri = meta.nomorSeri || '';
+              namaSertifikat = meta.namaSertifikat || '';
+            }
+          } catch (e) {}
+
+          const hash = generateRowHash(
+            item.code || '',
+            item.title || '',
+            namaSertifikat,
+            tipe,
+            nomorSeri,
+            item.unitLocation || ''
+          );
+
+          // Jika ada beberapa data duplikat di DB, simpan yang paling baru (updatedAt paling akhir)
+          const existingInMap = hashMap.get(hash);
+          if (!existingInMap || new Date(item.updatedAt) > new Date(existingInMap.updatedAt)) {
+            hashMap.set(hash, item);
+          }
+        }
 
         let successCount = 0;
         let failCount = 0;
@@ -49,45 +122,109 @@ export class CsvImportService {
         for (let i = 0; i < results.length; i++) {
           const row = results[i];
           try {
-            let rawTitle = (row.title || row.nama || row.jenisPeralatan || '').trim();
-            if (!rawTitle) rawTitle = '-';
+            let rawTitle = getVal(row, [
+              'nama aset', 'nama_aset', 'namaaset',
+              'merek / nama peralatan', 'merek/nama peralatan', 'nama peralatan', 'nama_peralatan',
+              'nama produk', 'judul ciptaan', 'judul_ciptaan', 'nama proyek', 'nama perizinan proyek',
+              'jenis peralatan', 'jenis_peralatan',
+              'title', 'nama', 'name'
+            ]);
 
-            let rawCode = (row.code || row.merek || row.kode || '').trim();
-            if (!rawCode) rawCode = '-';
+            let rawCode = getVal(row, [
+              'nomor seri asset', 'nomor seri aset', 'nomor_seri_asset',
+              'nomor seri proyek', 'nomor_seri_proyek', 'nomor seri produk', 'nomor_seri_produk',
+              'nomor seri', 'nomor_seri', 'no seri', 'sn',
+              'kode proyek', 'kode produk', 'code', 'kode',
+              'merek / nama peralatan', 'tipe'
+            ]);
 
-            const rawCategory = targetCategoryKey || row.categoryKey || 'peralatan-pabrik';
-            const rawLocation = (row.unitLocation || row.lokasi || 'Umum').trim();
-
-            let existing = null;
-            if (row.id && existingById.has(row.id)) {
-              existing = existingById.get(row.id);
-            } else if (rawCode !== '-' && existingByCode.has(rawCode)) {
-              existing = existingByCode.get(rawCode);
-            } else {
-              const fallbackKey = `${rawTitle.toLowerCase()}_${rawLocation.toLowerCase()}_${rawCategory.toLowerCase()}`;
-              if (existingByFallback.has(fallbackKey)) {
-                existing = existingByFallback.get(fallbackKey);
-              }
+            if (!rawTitle && rawCode) {
+              rawTitle = rawCode;
+            } else if (rawTitle && !rawCode) {
+              rawCode = rawTitle;
             }
+
+            if (!rawTitle && !rawCode) {
+              continue; // Skip baris kosong atau baris panduan Excel
+            }
+
+            if (rawTitle.toLowerCase().includes('keterangan kolom') || rawTitle.toLowerCase().includes('keterangan_kolom')) {
+              continue; // Skip baris keterangan di template Excel
+            }
+
+            const rawCategory = targetCategoryKey || getVal(row, ['categorykey', 'category', 'kategori']) || 'peralatan-pabrik';
+            
+            let unitPabrik = getVal(row, ['unit pabrik', 'unit_pabrik', 'unit']);
+            let lokasi = getVal(row, ['lokasi', 'unit location', 'unitlocation', 'area']);
+            let rawLocation = (unitPabrik && lokasi) ? `${unitPabrik} - ${lokasi}` : (unitPabrik || lokasi || 'Umum');
+
+            const cleanTipe = getVal(row, ['tipe', 'jenis aset', 'jenis peralatan', 'jenis ciptaan', 'jenis produk', 'jenis proyek', 'kategori proyek']);
+            const cleanNoSeri = getVal(row, ['nomor seri asset', 'nomor seri aset', 'nomor seri proyek', 'nomor seri produk', 'nomor seri', 'nomor_seri', 'sn']);
+            const cleanPenanggungJawab = getVal(row, ['penanggung jawab', 'penanggung_jawab', 'user', 'instansi']);
+            const cleanNoSertifikat = getVal(row, ['no. sertifikat', 'no sertifikat', 'nomor sertifikat', 'nosertifikat']);
+            const cleanNamaSertifikat = getVal(row, ['nama sertifikat', 'namasertifikat', 'nama_sertifikat']);
+            const cleanKeteranganAsli = getVal(row, ['keterangan', 'description']);
+
+            const extraData = {
+              tipe: cleanTipe,
+              nomorSeri: cleanNoSeri,
+              penanggungJawab: cleanPenanggungJawab,
+              noSertifikat: cleanNoSertifikat,
+              namaSertifikat: cleanNamaSertifikat,
+              keteranganAsli: cleanKeteranganAsli
+            };
+            const jsonKeterangan = JSON.stringify(extraData);
+
+            // Hitung hash baris baru
+            const newRowHash = generateRowHash(
+              rawCode,
+              rawTitle,
+              cleanNamaSertifikat,
+              cleanTipe,
+              cleanNoSeri,
+              rawLocation
+            );
+
+            // Bandingkan dengan DB hash map
+            const existing = hashMap.get(newRowHash);
 
             const isDuplicate = !!existing;
             if (isDuplicate) duplicateCount++;
 
             const idToUse = existing ? existing.id : (row.id || randomUUID());
 
+            const luasM2Val = getVal(row, ['luas (m²)', 'luas m2', 'luasm2', 'luas_m2']) || (row.luasM2 != null ? String(row.luasM2) : null);
+            const luasHaVal = getVal(row, ['luas (ha)', 'luas ha', 'luasha', 'luas_ha']) || (row.luasHa != null ? String(row.luasHa) : null);
+            const peruntukanVal = getVal(row, ['peruntukan', 'peruntukan lahan']) || row.peruntukan || null;
+            const issueDateVal = getVal(row, ['tanggal terbit', 'tanggal_terbit', 'terbit', 'issuedate', 'tanggal awal pengajuan']) || row.issueDate || null;
+            const expiryDateVal = getVal(row, ['tanggal berakhir', 'tanggal_berakhir', 'expired', 'expirydate', 'masa berlaku']) || row.expiryDate || null;
+
+            let importStatus = getVal(row, ['status']) || row.status || 'Aktif';
+            if (rawCategory === 'perizinan-proyek' || String(rawCategory).toLowerCase().includes('proyek')) {
+              const cleanSt = String(importStatus).trim().toLowerCase();
+              if (cleanSt === 'selesai') {
+                importStatus = 'Spare';
+              } else if (cleanSt === 'ditunda') {
+                importStatus = 'Rusak';
+              } else if (cleanSt === 'aktif') {
+                importStatus = 'Aktif';
+              }
+            }
+
             const dataToSave = {
               code: rawCode,
               title: rawTitle,
-              categoryKey: targetCategoryKey || row.categoryKey || 'peralatan-pabrik',
-              unitLocation: row.unitLocation || row.lokasi || 'Umum',
-              status: row.status || 'Aktif',
-              luasM2: row.luasM2 != null ? String(row.luasM2) : null,
-              luasHa: row.luasHa != null ? String(row.luasHa) : null,
-              peruntukan: row.peruntukan || null,
-              issueDate: row.issueDate || null,
-              expiryDate: row.expiryDate || null,
-              keterangan: row.keterangan || null,
-              documentStatus: 'PENDING_DOC',
+              categoryKey: rawCategory,
+              unitLocation: rawLocation,
+              status: importStatus,
+              luasM2: luasM2Val,
+              luasHa: luasHaVal,
+              peruntukan: peruntukanVal,
+              issueDate: issueDateVal,
+              expiryDate: expiryDateVal,
+              keterangan: jsonKeterangan,
+              documentStatus: existing ? existing.documentStatus : 'PENDING_DOC',
+              updatedAt: new Date()
             };
 
             if (existing) {
@@ -102,6 +239,23 @@ export class CsvImportService {
                   ...dataToSave
                 }
               });
+            }
+
+            if (cleanNoSertifikat && cleanNoSertifikat !== '-' && cleanNoSertifikat !== 'Tanpa Sertifikat') {
+              try {
+                await this.prisma.certificate.create({
+                  data: {
+                    itemId: idToUse,
+                    jenisSertifikat: cleanTipe || 'Sertifikat Utama',
+                    namaSertifikat: cleanNamaSertifikat || 'Sertifikat Master',
+                    noSertifikat: cleanNoSertifikat,
+                    instansi: cleanPenanggungJawab || 'Instansi Penerbit',
+                    terbit: issueDateVal || '',
+                    expired: expiryDateVal || '',
+                    status: 'Aktif'
+                  }
+                });
+              } catch(e) {}
             }
             
             if (!isDuplicate) {
@@ -132,7 +286,7 @@ export class CsvImportService {
               fileName: file.originalname || 'uploaded_file.csv',
               totalRows,
               successCount,
-              duplicateCount, // Duplicate count here means "Updated records"
+              duplicateCount,
               failCount,
               failedRows,
               importedIds,
@@ -144,7 +298,7 @@ export class CsvImportService {
         });
 
         return {
-          message: `Impor CSV selesai: ${successCount} Berhasil, ${duplicateCount} Duplikat, ${failCount} Gagal.`,
+          message: `Impor CSV selesai: ${successCount} Berhasil, ${duplicateCount} Duplikat (Diperbarui), ${failCount} Gagal.`,
           totalRows,
           successCount,
           duplicateCount,

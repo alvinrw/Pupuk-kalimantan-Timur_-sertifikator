@@ -1,5 +1,5 @@
 import 'multer';
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { DocumentHistoryService } from './document-history.service';
@@ -47,4 +47,38 @@ export class DocumentHistoryController {
       data: uploadResult,
     };
   }
+
+  @Post('upload-temp')
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (!file.mimetype.match(/\/(pdf|jpg|jpeg|png)$/)) {
+        return cb(new BadRequestException('Format file tidak didukung!'), false);
+      }
+      cb(null, true);
+    }
+  }))
+  async uploadTempFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('File tidak ditemukan!');
+    const uploadResult = await this.documentHistoryService.uploadTempFile(file);
+    return {
+      statusCode: 201,
+      message: 'File berhasil diunggah ke temporary storage!',
+      data: uploadResult,
+    };
+  }
+
+  @Post('move-temp')
+  async moveTemp(@Body() body: { tempUrl: string }) {
+    if (!body || !body.tempUrl) {
+      throw new BadRequestException('tempUrl wajib diberikan');
+    }
+    const finalUrl = await this.documentHistoryService.moveTempToFinal(body.tempUrl);
+    return {
+      statusCode: 200,
+      message: 'File berhasil dipindahkan ke final storage',
+      data: { url: finalUrl }
+    };
+  }
+
 }

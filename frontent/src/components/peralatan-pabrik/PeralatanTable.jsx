@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileWarning, ShieldAlert, FileCheck, Eye, Check } from 'lucide-react';
+import { FileWarning, ShieldAlert, FileCheck, Eye, Check, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function PeralatanTable({
   activeMainTab,
@@ -13,6 +13,7 @@ export default function PeralatanTable({
   filterLokasi, setFilterLokasi,
   filterUser, setFilterUser,
   filterStatus, setFilterStatus,
+  filterHasSertifikat, setFilterHasSertifikat,
   uniqueJenis, uniqueLokasi, uniqueUser,
   setDetailModalItem,
   setResolveTargetItem,
@@ -204,6 +205,26 @@ export default function PeralatanTable({
                           </span>
                         </td>
                       )}
+                    {isVisible("hasSertifikat") && (
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        {item.documentStatus === 'PENDING_DOC' || (!row.hasPdf && item.documentStatus !== 'EXEMPT') ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            <FileWarning className="w-3 h-3" />
+                            Belum Upload PDF
+                          </span>
+                        ) : item.documentStatus === 'EXEMPT' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                            <XCircle className="w-3 h-3" />
+                            Tidak Ada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Ada
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {isVisible("noSertifikat") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center justify-center gap-1.5 align-middle">
                         {row.documentStatus === 'PENDING_DOC' ? (
@@ -217,7 +238,7 @@ export default function PeralatanTable({
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100/80 text-indigo-800 border border-indigo-300 shadow-2xs cursor-help"
                           >
                             <ShieldAlert className="w-3.5 h-3.5 text-indigo-600" />
-                            <span>Tanpa Sertifikat</span>
+                            <span>{row.noSertifikat}</span>
                           </span>
                         ) : (
                           <>

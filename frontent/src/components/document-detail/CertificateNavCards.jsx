@@ -14,25 +14,6 @@ export default function CertificateNavCards({
   onAddCert,
   onDeleteCert,
 }) {
-  const groupedCertCount = Object.keys(
-    linkedCerts.reduce((acc, c) => { acc[c.jenisSertifikat || 'Generic'] = true; return acc; }, {})
-  ).length;
-
-  const groupedCertsByType = Object.values(
-    linkedCerts.reduce((acc, cert) => {
-      const jenis = cert.jenisSertifikat || 'Generic';
-      if (!acc[jenis]) acc[jenis] = [];
-      acc[jenis].push(cert);
-      return acc;
-    }, {})
-  ).map(group =>
-    group.sort((a, b) => {
-      if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
-      if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
-      return new Date(b.createdAt || b.terbit || 0) - new Date(a.createdAt || a.terbit || 0);
-    })[0]
-  );
-
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
       {/* Header */}
@@ -40,7 +21,7 @@ export default function CertificateNavCards({
         <div>
           <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
             <Link2 className="w-5 h-5 text-[#005ea4]" />
-            <span>Sertifikat Terhubung ({groupedCertCount} Dokumen)</span>
+            <span>Sertifikat Terhubung ({linkedCerts.length} Dokumen)</span>
           </h4>
           <p className="text-xs text-slate-500 font-mono-data mt-0.5">
             Klik kartu untuk berpindah detail sertifikat yang aktif dilihat
@@ -64,7 +45,7 @@ export default function CertificateNavCards({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {groupedCertsByType.map((cert) => {
+          {linkedCerts.map((cert) => {
             const isActive = activeCertId === cert.id;
             const certStatusLower = (cert.status || '').toLowerCase();
             const certIsExpired = certStatusLower === 'expired';
@@ -108,14 +89,14 @@ export default function CertificateNavCards({
                 <button
                   onClick={(e) => { e.stopPropagation(); onDeleteCert(cert.id); }}
                   className="absolute top-3 right-3 p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                  title="Hapus Sertifikat Terhubung"
+                  title="Hapus Sertifikat Terhubung Ini"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
 
                 <div className="pr-6">
-                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Jenis Sertifikat</span>
-                  <span className="font-bold text-slate-900 text-[13px] leading-tight block mt-0.5">{cert.jenisSertifikat}</span>
+                  <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Nama Sertifikat</span>
+                  <span className="font-bold text-slate-900 text-[13px] leading-tight block mt-0.5">{cert.namaSertifikat || cert.jenisSertifikat || 'Sertifikat Terhubung'}</span>
                 </div>
 
                 <div>

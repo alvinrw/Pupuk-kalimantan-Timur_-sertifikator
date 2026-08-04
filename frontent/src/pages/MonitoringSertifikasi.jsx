@@ -3,7 +3,6 @@ import { Activity, Filter, Loader2, Search } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
 import { useMonitoring } from '../hooks/useMonitoring';
 import MonitoringSummaryCards from '../components/monitoring/MonitoringSummaryCards';
-import MonitoringFilterModal from '../components/monitoring/MonitoringFilterModal';
 import MonitoringActionModals from '../components/monitoring/MonitoringActionModals';
 import MonitoringHistorySidebar from '../components/monitoring/MonitoringHistorySidebar';
 
@@ -11,20 +10,16 @@ export default function MonitoringSertifikasi() {
   const monitoringData = useMonitoring();
   const m = monitoringData;
   const {
-    // Basic state
     searchTerm, setSearchTerm,
     expiryTab, setExpiryTab,
     selectedDetailDoc, setSelectedDetailDoc,
-    
-    // Derived state
+    activeReminders,
     activeFilterCount,
     filteredCertificates,
     allCertificates,
     uniqueKategori,
     uniqueUnitPabrik,
     isLoading,
-    
-    // Handlers
     fetchMonitoringData,
     resetFilters,
     openCompleteModal,
@@ -35,14 +30,96 @@ export default function MonitoringSertifikasi() {
     setAllCertificates
   } = monitoringData;
 
+  // Inline filter state (bukan modal)
+  const [filterKategori, setFilterKategoriLocal] = useState('All');
+
+  // Custom Date Range state
+  const [dateRangeStart, setDateRangeStart] = useState('');
+  const [dateRangeEnd, setDateRangeEnd] = useState('');
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+
+  // Export dropdown state
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // Sync filterKategori ke hook
+  const handleKategoriChange = (val) => {
+    setFilterKategoriLocal(val);
+    monitoringData.setFilterKategori(val);
+  };
+
+  const handleApplyDateFilter = () => {
+    setIsDateFilterActive(!!(dateRangeStart || dateRangeEnd));
+  };
+
+  const handleResetDateFilter = () => {
+    setDateRangeStart('');
+    setDateRangeEnd('');
+    setIsDateFilterActive(false);
+  };
+
+  // Filter by date range (applied on top of filteredCertificates from hook)
+  const displayedCertificates = React.useMemo(() => {
+    if (!isDateFilterActive || (!dateRangeStart && !dateRangeEnd)) return filteredCertificates;
+    return filteredCertificates.filter(item => {
+      if (!item.tglExpired || item.tglExpired === '-') return false;
+      const expDate = new Date(item.tglExpired);
+      if (isNaN(expDate)) return false;
+      if (dateRangeStart) {
+        const start = new Date(dateRangeStart + '-01');
+        if (expDate < start) return false;
+      }
+      if (dateRangeEnd) {
+        // end of that month
+        const [ey, em] = dateRangeEnd.split('-').map(Number);
+        const end = new Date(ey, em, 0); // last day of month
+        if (expDate > end) return false;
+      }
+      return true;
+    });
+  }, [filteredCertificates, isDateFilterActive, dateRangeStart, dateRangeEnd]);
+
+  // Export handlers
+  const handleExportCSV = () => {
+    const headers = ['No', 'Kategori', 'Jenis', 'Unit', 'Merek/Nama', 'No Seri', 'No Sertifikat', 'Tgl Expired', 'Sisa Hari', 'Status'];
+    const rows = displayedCertificates.map((doc, idx) => [
+      idx + 1,
+      doc.kategoriDokumen || doc.kategori || '-',
+      doc.jenisItem || '-',
+      doc.unitPabrik || '-',
+      doc.merekItem || doc.title || '-',
+      doc.nomorSeriTipe || '-',
+      doc.nomorSertifikat || '-',
+      doc.tglExpired !== '-' ? doc.tglExpired : '-',
+      doc.sisaHari !== null ? doc.sisaHari : '-',
+      doc.workflowStatus || '-'
+    ]);
+    const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `monitoring_sertifikasi_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
+  const handleExportJSON = () => {
+    const blob = new Blob([JSON.stringify(displayedCertificates, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `monitoring_sertifikasi_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setShowExportMenu(false);
+  };
+
   if (selectedDetailDoc) {
     return (
       <DocumentDetailPage
         item={m.selectedDetailDoc}
-        onBack={() => {
-          m.setSelectedDetailDoc(null);
-          m.fetchMonitoringData();
-        }}
+        onBack={() => { m.setSelectedDetailDoc(null); m.fetchMonitoringData(); }}
         onSaveUpdate={(updatedDoc) => {
           const updateItem = (d) => {
             const newStatus = updatedDoc.status || d.status;
@@ -56,7 +133,6 @@ export default function MonitoringSertifikasi() {
             else if (lowerSt === 'aktif' || lowerSt === 'completed') calcWf = isExempt ? 'exempt' : 'completed';
             return { ...d, ...updatedDoc, status: newStatus, statusOperasional: newStatus, workflowStatus: calcWf, id: d.id };
           };
-
           m.setAllCertificates(prev => prev.map(d => {
             const isMatch = d.MasterId === updatedDoc.MasterId || (d.id === updatedDoc.id && !d.MasterId);
             return isMatch ? updateItem(d) : d;
@@ -78,9 +154,6 @@ export default function MonitoringSertifikasi() {
     );
   }
 
-  // ============================================================
-  // LOADING STATE
-  // ============================================================
   if (m.isLoading) {
     return (
       <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-slate-500 space-y-4">
@@ -90,12 +163,11 @@ export default function MonitoringSertifikasi() {
     );
   }
 
-  // ============================================================
-  // MAIN RENDER
-  // ============================================================
+  const kategoriOptions = ['All', ...new Set(allCertificates.map(c => c.kategoriDokumen || c.categoryKey || '').filter(Boolean))];
+
   return (
-    <div className="p-8 space-y-8 font-sans-clean max-w-7xl mx-auto">
-      {/* Header Title & Top Filter Button */}
+    <div className="p-8 space-y-6 font-sans-clean max-w-7xl mx-auto">
+      {/* HEADER */}
       <div className="pb-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="font-bold text-2xl text-slate-900 flex items-center gap-2 tracking-tight">
@@ -107,27 +179,34 @@ export default function MonitoringSertifikasi() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          {m.activeFilterCount > 0 && (
-            <span className="text-xs text-slate-500 font-mono-data font-bold hidden sm:inline">
-              Showing {m.filteredCertificates.length} of {m.allCertificates.length} items
-            </span>
+        {/* Inline Filter Kategori */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-500 shrink-0" />
+            <select
+              value={monitoringData.filterKategori}
+              onChange={(e) => handleKategoriChange(e.target.value)}
+              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
+            >
+              {kategoriOptions.map(cat => (
+                <option key={cat} value={cat}>{cat === 'All' ? 'Semua Kategori Perizinan' : cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => { resetFilters(); setFilterKategoriLocal('All'); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors font-mono-data"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset ({activeFilterCount})
+            </button>
           )}
-          <button
-            onClick={() => monitoringData.setIsFilterModalOpen(true)}
-            className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-colors font-mono-data cursor-pointer"
-          >
-            <Filter className="w-4 h-4 text-white" />
-            <span>Filter Kategori & Data</span>
-            {m.activeFilterCount > 0 && (
-              <span className="w-5 h-5 bg-amber-400 text-slate-900 rounded-full text-[10px] flex items-center justify-center font-extrabold ml-1 shadow-2xs">
-                {m.activeFilterCount}
-              </span>
-            )}
-          </button>
         </div>
       </div>
 
+      {/* SUMMARY CARDS */}
       <MonitoringSummaryCards
         counts={monitoringData.counts}
             expiryTab={monitoringData.expiryTab}
@@ -138,37 +217,87 @@ export default function MonitoringSertifikasi() {
 
       {/* MONITORING TABLE */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-        <div className="p-4 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
-          <div className="flex items-center gap-2 font-mono-data">
-            <span className="text-xs font-bold text-slate-800">Daftar Dokumen Sertifikasi</span>
-            <span className="text-[11px] font-bold text-[#005ea4] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
-              {filteredCertificates.length} Data Ditampilkan
-            </span>
+
+        {/* Table toolbar */}
+        <div className="p-4 border-b border-slate-200 space-y-3 bg-slate-50/50">
+
+          {/* Row 1: Title + Search + Export */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 font-mono-data">
+              <span className="text-xs font-bold text-slate-800">Daftar Dokumen Sertifikasi</span>
+              <span className="text-[11px] font-bold text-[#005ea4] bg-blue-50 px-2.5 py-0.5 rounded border border-blue-200">
+                {displayedCertificates.length} Data Ditampilkan
+              </span>
+              {isDateFilterActive && (
+                <span className="text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  Filter Tanggal Aktif
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Search */}
+              <div className="relative w-56">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Cari item, seri, nomor sertifikat..."
+                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
+                />
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 flex-1 justify-end min-w-[280px]">
-            {activeFilterCount > 0 && (
-              <button
-                onClick={resetFilters}
-                className="text-xs font-bold text-rose-700 hover:underline px-2.5 py-1 bg-rose-50 rounded border border-rose-200 font-mono-data transition-colors"
-              >
-                Reset Filter ({activeFilterCount})
-              </button>
-            )}
-
-            <div className="relative w-64">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Cari item, seri, nomor sertifikat..."
-                className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-              />
+          {/* Row 2: Custom Date Range Filter */}
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="text-[11px] font-bold text-slate-600 font-mono-data">Rentang Bulan Expired:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <label className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Dari (Bulan/Tahun)</label>
+                <input
+                  type="month"
+                  value={dateRangeStart}
+                  onChange={(e) => setDateRangeStart(e.target.value)}
+                  className="px-2 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                />
+              </div>
+              <span className="text-slate-400 text-xs mt-4">s.d.</span>
+              <div className="flex flex-col">
+                <label className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Sampai (Bulan/Tahun)</label>
+                <input
+                  type="month"
+                  value={dateRangeEnd}
+                  onChange={(e) => setDateRangeEnd(e.target.value)}
+                  className="px-2 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                />
+              </div>
+              <div className="flex items-center gap-1.5 mt-4">
+                <button
+                  onClick={handleApplyDateFilter}
+                  className="px-3 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-lg transition-colors font-mono-data"
+                >
+                  Terapkan
+                </button>
+                {isDateFilterActive && (
+                  <button
+                    onClick={handleResetDateFilter}
+                    className="px-2 py-1 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" /> Clear
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-center border-collapse">
             <thead>
@@ -186,8 +315,8 @@ export default function MonitoringSertifikasi() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {filteredCertificates.length > 0 ? (
-                filteredCertificates.map((doc, index) => {
+              {displayedCertificates.length > 0 ? (
+                displayedCertificates.map((doc, index) => {
                   const isInProgress = doc.workflowStatus === 'in_progress';
                   const isDecommissioned = doc.workflowStatus === 'decommissioned';
                   const isExempt = doc.workflowStatus === 'exempt';
@@ -195,8 +324,6 @@ export default function MonitoringSertifikasi() {
                   let rowStyleClass = "hover:bg-slate-50/80 transition-colors";
                   if (isDecommissioned) {
                     rowStyleClass = "bg-[#0f172a] text-slate-100 transition-colors hover:bg-slate-800";
-                  } else if (isExempt) {
-                    rowStyleClass = "bg-indigo-50/40 text-indigo-900 border-l-4 border-l-indigo-500 hover:bg-indigo-50/70 transition-colors";
                   } else if (isInProgress) {
                     rowStyleClass = "bg-amber-50/70 hover:bg-amber-100/70 text-slate-900 transition-colors";
                   } else if (doc.sisaHari !== null && doc.sisaHari <= 0) {
@@ -222,7 +349,6 @@ export default function MonitoringSertifikasi() {
                           {doc.unitPabrik || doc.unit || doc.lokasi || '-'}
                         </span>
                       </td>
-
                       <td
                         onClick={() => setSelectedDetailDoc(doc)}
                         className={`py-3 px-3 font-bold hover:text-[#005ea4] cursor-pointer hover:underline whitespace-nowrap text-center align-middle ${isDecommissioned ? 'text-white' : 'text-slate-900'}`}
@@ -262,7 +388,7 @@ export default function MonitoringSertifikasi() {
                         ) : doc.sisaHari !== null && doc.sisaHari <= (parseInt(monitoringData.customUrgentDays) || 30) ? (
                           <span className="text-amber-600">&lt; {monitoringData.customUrgentDays || 30} Hari</span>
                         ) : (
-                          <span className="text-emerald-600">Valid</span>
+                          <span className="text-emerald-600">Aktif</span>
                         )}
                       </td>
 
@@ -273,7 +399,7 @@ export default function MonitoringSertifikasi() {
                               onClick={() => openCompleteModal(doc)}
                               className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-md shadow-2xs cursor-pointer transition-colors"
                             >
-                              Selesai & Upload
+                              Selesai &amp; Upload
                             </button>
                             <button
                               onClick={() => handleCancelAction(doc.id)}
@@ -320,24 +446,6 @@ export default function MonitoringSertifikasi() {
           </table>
         </div>
       </div>
-
-      <MonitoringFilterModal
-        isOpen={monitoringData.isFilterModalOpen}
-        onClose={() => monitoringData.setIsFilterModalOpen(false)}
-        filterKategori={monitoringData.filterKategori}
-        setFilterKategori={monitoringData.setFilterKategori}
-        filterUnitPabrik={monitoringData.filterUnitPabrik}
-        setFilterUnitPabrik={monitoringData.setFilterUnitPabrik}
-        filterStatusOperasional={monitoringData.filterStatusOperasional}
-        setFilterStatusOperasional={monitoringData.setFilterStatusOperasional}
-        filterRentangHari={monitoringData.filterRentangHari}
-        setFilterRentangHari={monitoringData.setFilterRentangHari}
-        allCertificates={allCertificates}
-        uniqueUnitPabrik={uniqueUnitPabrik}
-        customUrgentDays={monitoringData.customUrgentDays}
-        filteredCertificatesCount={filteredCertificates.length}
-        resetFilters={resetFilters}
-      />
 
       <MonitoringHistorySidebar
         selectedHistoryItem={monitoringData.selectedHistoryItem}

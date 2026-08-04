@@ -54,6 +54,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
+        { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList },
         { id: "informasi-lainnya", label: "Informasi Lainnya", icon: HelpCircle },
       ]
     }

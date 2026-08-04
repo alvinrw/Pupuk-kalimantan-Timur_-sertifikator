@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, resolveMasterItemExemption, createMasterItem, createCertificateForMasterItem } from '../services/masterItemsService';
 
 export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -13,6 +13,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [filterJenis, setFilterJenis] = useState('All');
   const [filterLokasi, setFilterLokasi] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterHasSertifikat, setFilterHasSertifikat] = useState('All'); // 'All' | 'ada' | 'tidak'
 
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
@@ -38,39 +39,100 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     return '';
   }, [categoryName, title]);
 
+  const formatStatus = (rawStatus) => {
+    if (currentCategoryKey === 'perizinan-proyek') {
+      if (rawStatus === 'Spare') return 'Selesai';
+      if (rawStatus === 'Rusak') return 'Ditunda';
+    }
+    return rawStatus || 'Aktif';
+  };
+
   const loadData = async () => {
     try {
       setIsLoading(true);
       const data = await getMasterItems(currentCategoryKey);
       
-      const mapped = data.map(doc => {
+      const mapped = data.map((doc, index) => {
         const certs = doc.certificates || [];
+        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          })[0];
+        } else if (certs.length > 0) {
+          primaryCert = certs[0];
+        }
+
+        let meta = {};
+        try {
+          if (doc.keterangan && doc.keterangan.startsWith('{')) {
+            meta = JSON.parse(doc.keterangan);
+          } else {
+            meta = { keteranganAsli: doc.keterangan };
+          }
+        } catch (e) {
+          meta = { keteranganAsli: doc.keterangan };
+        }
+
+        const actualJenisAset = meta.tipe || doc.jenisPeralatan || meta.jenisAset || doc.categoryKey || (categoryName?.toLowerCase().includes('aset') ? 'Perizinan Aset' : categoryName?.toLowerCase().includes('proyek') ? 'Perizinan Proyek' : 'Perizinan Produk');
+
+        const formatToDDMMYYYY = (rawDateStr) => {
+          if (!rawDateStr || rawDateStr === '-') return '-';
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+          try {
+            const dObj = new Date(rawDateStr);
+            if (!isNaN(dObj.getTime())) {
+              const dd = String(dObj.getDate()).padStart(2, '0');
+              const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+              const yyyy = dObj.getFullYear();
+              return `${dd}/${mm}/${yyyy}`;
+            }
+          } catch (_) {}
+          return rawDateStr;
+        };
+
         return {
           id: doc.id,
           MasterId: doc.id,
           title: doc.title || '-',
           categoryKey: doc.categoryKey,
           kategoriDokumen: doc.categoryKey,
-          jenisItem: doc.title || '-',
+          jenisItem: actualJenisAset,
+          jenisPeralatan: actualJenisAset,
           namaItem: doc.title || '-',
           merekItem: doc.title,
-          code: doc.code || '-',
-          certificateNo: doc.certificateNo || doc.code || '-',
+          code: doc.code || "-",
+          no: index + 1,
+          hasSertifikat: certs.length > 0 ? "Ada" : "Tidak Ada",
+          hasPdf: !!primaryCert?.fileUrl,
+          fileUrl: primaryCert?.fileUrl || null,
+          certificateNo: primaryCert?.noSertifikat || meta.noSertifikat || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-'),
           unitLocation: doc.unitLocation || '-',
           unit: doc.unitLocation || '-',
-          luasM2: doc.areaSqm || "0",
-          luasHa: doc.areaHa || "0",
+          luasM2: doc.luasM2 || "0",
+          luasHa: doc.luasHa || "0",
           peruntukan: doc.peruntukan || "-",
-          issueDate: doc.createdAt,
-          expiryDate: doc.expiryDate || "-",
+          issueDate: formatToDDMMYYYY(primaryCert?.terbit || doc.issueDate || '-'),
+          expiryDate: formatToDDMMYYYY(primaryCert?.expired || doc.expiryDate || "-"),
           kondisi: doc.status || "Baik",
-          description: doc.description || "-",
-          keterangan: doc.description || "-",
-          status: doc.status || "Aktif",
-          user: "Umum",
-          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          description: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
+          keterangan: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
+          namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
+          status: formatStatus(doc.status),
+          user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
+          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
-          linkedCertificates: certs
+          linkedCertificates: certs,
+          notificationSetting: doc.notificationSetting || null,
+          reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true
         };
       });
       setDocuments(mapped);
@@ -85,31 +147,32 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     loadData();
   }, [categoryName]);
 
+  const isProyek = categoryName?.toLowerCase().includes('proyek');
+  const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
+
   const defaultColumns = [
-    { key: "no", label: "No." },
-    { key: "namaItem", label: "Nama Produk / Proyek" },
-    { key: "code", label: "Kode / Tag Perizinan" },
-    { key: "jenisItem", label: "Jenis Perizinan" },
-    { key: "certificateNo", label: "No. Sertifikat" },
-    { key: "unit", label: "Unit Pabrik / Lokasi" },
-    { key: "user", label: "User / Instansi" },
-    { key: "issueDate", label: "Terbit" },
-    { key: "expiryDate", label: "Expired" },
-    { key: "status", label: "Status" }
+    { key: "no", label: "NO." },
+    { key: "namaItem", label: isProyek ? "NAMA PROYEK" : isProduk ? "NAMA PRODUK" : "NAMA ITEM" },
+    { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
+    { key: "code", label: isProyek ? "KODE PROYEK" : isProduk ? "KODE PRODUK" : "KODE REGISTRASI" },
+    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
+    { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
+    { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
+    { key: "unit", label: isProyek ? "LOKASI PROYEK" : isProduk ? "UNIT PENGELOLA" : "LOKASI" },
+    { key: "user", label: "PENANGGUNG JAWAB" },
+    { key: "status", label: "STATUS" }
   ];
 
   const asetColumns = [
     { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
+    { key: "code", label: "NOMOR SERI ASSET" },
+    { key: "jenisItem", label: "JENIS ASET" },
+    { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
     { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
+    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
     { key: "unit", label: "LOKASI" },
-    { key: "luasM2", label: "LUAS (M²)" },
-    { key: "luasHa", label: "LUAS (HA)" },
-    { key: "peruntukan", label: "PERUNTUKAN" },
-    { key: "issueDate", label: "TANGGAL AWAL PENGAJUAN" },
-    { key: "expiryDate", label: "MASA BERLAKU PRODUK" },
-    { key: "kondisi", label: "KONDISI" },
-    { key: "keterangan", label: "KETERANGAN" },
+    { key: "user", label: "PENANGGUNG JAWAB" },
     { key: "status", label: "STATUS" }
   ];
 
@@ -144,6 +207,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   };
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
+
+  useEffect(() => {
+    setVisibleColumnKeys(allColumns.map(c => c.key));
+  }, [isAsetCategory, categoryName, title]);
 
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>
@@ -188,74 +255,62 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       const matchesJenis = filterJenis === 'All' || jenisStr === filterJenis;
       const matchesLokasi = filterLokasi === 'All' || unitStr === filterLokasi;
       const matchesStatus = filterStatus === 'All' || statusStr === filterStatus;
+      const matchesHasSertifikat = filterHasSertifikat === 'All'
+        ? true
+        : filterHasSertifikat === 'ada'
+        ? (doc.documentStatus === 'COMPLETED' && !!doc.fileUrl)
+        : filterHasSertifikat === 'tidak'
+        ? doc.documentStatus === 'EXEMPT'
+        : (doc.documentStatus === 'PENDING_DOC' || (doc.documentStatus === 'COMPLETED' && !doc.fileUrl));
 
-      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus;
+      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus && matchesHasSertifikat;
     });
-  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, activeMainTab]);
+  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, filterHasSertifikat, activeMainTab]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
     filteredDocs.forEach((doc) => {
       const certs = doc.linkedCertificates || [];
+      const assetCategory = doc.jenisPeralatan || doc.categoryKey || categoryName || 'Perizinan Aset';
+
       if (certs.length > 0) {
-        const certGroups = {};
-        certs.forEach(cert => {
-          const jenis = cert.jenisSertifikat || doc.title || categoryName || 'Generic';
-          if (!certGroups[jenis]) {
-            certGroups[jenis] = [];
-          }
-          certGroups[jenis].push(cert);
-        });
-
-        Object.values(certGroups).forEach((group, idx) => {
-          const sortedGroup = [...group].sort((a, b) => {
-            if (a.status === 'Aktif' && b.status !== 'Aktif') return -1;
-            if (b.status === 'Aktif' && a.status !== 'Aktif') return 1;
-            const dateA = new Date(a.createdAt || a.terbit || 0);
-            const dateB = new Date(b.createdAt || b.terbit || 0);
-            return dateB - dateA;
-          });
-          const cert = sortedGroup[0];
-
-          const noCert = doc.documentStatus === 'EXEMPT'
-            ? 'Tanpa Sertifikat'
-            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
+        certs.forEach((cert, idx) => {
+          const noCert = cert.noSertifikat || cert.noIzin || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
 
           rows.push({
             rowId: `${doc.id}-cert-${cert.id || idx}`,
             parentDoc: doc,
             cert: cert,
             certNo: noCert,
-            jenisCert: cert.jenisSertifikat || doc.title || categoryName || 'Generic',
+            jenisCert: assetCategory,
             issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
-            issueDate: cert.terbit || doc.createdAt,
+            issueDate: cert.terbit || doc.createdAt || '-',
             expiryDate: cert.expired || doc.expiryDate || '-',
-            status: cert.status || doc.status || 'Aktif',
+            status: formatStatus(cert.status || doc.status || 'Aktif'),
             hasPdf: !!cert.fileUrl,
-            fileUrl: cert.fileUrl || null
+            fileUrl: cert.fileUrl || null,
+            namaSertifikat: cert.namaSertifikat || cert.jenisSertifikat || '-'
           });
         });
       } else {
-        const noCert = doc.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (doc.certificateNo || doc.code || '-');
+        const noCert = doc.certificateNo || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
 
         rows.push({
           rowId: `${doc.id}-primary`,
           parentDoc: doc,
           cert: null,
           certNo: noCert,
-          jenisCert: doc.title || categoryName || 'Generic',
+          jenisCert: assetCategory,
           issuer: doc.user || doc.description || 'Umum',
-          issueDate: doc.createdAt,
+          issueDate: doc.createdAt || '-',
           expiryDate: doc.expiryDate || '-',
-          status: doc.status || 'Aktif',
+          status: formatStatus(doc.status || 'Aktif'),
           hasPdf: !!doc.fileUrl,
-          fileUrl: doc.fileUrl || null
+          fileUrl: doc.fileUrl || null,
+          namaSertifikat: '-'
         });
       }
     });
-
     return rows;
   }, [filteredDocs, categoryName]);
 
@@ -267,12 +322,62 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     selectAllColumns();
   };
 
-  const handleCsvImported = () => {
-    loadData();
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
   };
 
-  const handleSingleAdded = (newItem) => {
-    setDocuments(prev => [newItem, ...prev]);
+  const handleSingleAdded = async (newItem) => {
+    try {
+      const extraData = {
+        tipe: newItem.tipe || '',
+        nomorSeri: newItem.code || '',
+        penanggungJawab: newItem.user || 'Umum',
+        noSertifikat: newItem.noSertifikat || '',
+        namaSertifikat: newItem.namaSertifikat || '',
+        keteranganAsli: newItem.keterangan || '-'
+      };
+
+      const createdItem = await createMasterItem({
+        title: newItem.title || 'Unknown Item',
+        code: newItem.code || '-',
+        categoryKey: currentCategoryKey,
+        unitLocation: newItem.unitLocation || 'Umum',
+        status: newItem.status || 'Aktif',
+        keterangan: JSON.stringify(extraData),
+        issueDate: newItem.terbit || undefined,
+        expiryDate: newItem.expired || undefined,
+        luasM2: newItem.luasM2 || undefined,
+        luasHa: newItem.luasHa || undefined,
+        peruntukan: newItem.peruntukan || undefined,
+        documentStatus: newItem.documentStatus || 'COMPLETED',
+      });
+
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      if ((newItem.documentStatus === 'COMPLETED' || !newItem.documentStatus) && targetItemId) {
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
+          namaSertifikat: newItem.namaSertifikat || undefined,
+          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.terbit || undefined,
+          expired: newItem.expired || undefined,
+          fileUrl: newItem.fileUrl || null,
+        });
+      }
+
+      setIsSingleModalOpen(false);
+      setActiveMainTab('main');
+      await loadData();
+    } catch (error) {
+      console.error("Gagal menambahkan data:", error);
+      alert("Gagal menyimpan data ke database!");
+    }
   };
 
   const getRowStatusStyle = (doc) => {
@@ -300,6 +405,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     filterJenis, setFilterJenis,
     filterLokasi, setFilterLokasi,
     filterStatus, setFilterStatus,
+    filterHasSertifikat, setFilterHasSertifikat,
     isCsvModalOpen, setIsCsvModalOpen,
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,

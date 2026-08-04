@@ -64,9 +64,9 @@ export const workflowSteps = [
   },
   {
     step: 4,
-    title: "Upload Sertifikat Baru + AI OCR Scanning",
+    title: "Upload Sertifikat Baru + AI Scanning",
     icon: Sparkles,
-    desc: "Saat mengunggah sertifikat baru (PDF), AI OCR akan membantu mengekstrak Nomor SK, Tanggal Terbit, dan Expired secara otomatis agar tidak perlu mengetik manual."
+    desc: "Saat mengunggah sertifikat baru (PDF), AI akan membantu mengekstrak Nomor SK, Tanggal Terbit, dan Expired secara otomatis agar tidak perlu mengetik manual."
   },
   {
     step: 5,

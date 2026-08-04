@@ -346,6 +346,13 @@ Sistem harus dirancang agar mampu menangani.
 # Future Features
 
 - AI chatbot untuk bertanya tentang sertifikat.
+- `[x]` Modifying database schema and migrating
+  - `[x]` Add `notification_settings` and `reminder_notifications` to `schema.prisma`
+  - `[x]` Run prisma database migration
+- `[x]` Backend implementation: DTOs, controllers, services, cron job
+  - `[x]` Add NestJS endpoints for notification settings
+  - `[x]` Implement scheduler/cron job logic to check certificate deadlines daily
+  - `[x]` Handle sticky notification creation and auto-resolve logic when items are renewed/exempted
 - Auto reminder email.
 - WhatsApp notification.
 - Dashboard analytics.

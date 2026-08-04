@@ -29,9 +29,11 @@ model MasterItem {
   updatedAt    DateTime @updatedAt
 
   // Relasi
-  certificates      Certificate[]
-  permits           Permit[]
-  documentHistories DocumentHistory[]
+  certificates          Certificate[]
+  permits               Permit[]
+  documentHistories     DocumentHistory[]
+  notificationSetting   NotificationSetting?
+  reminderNotifications ReminderNotification[]
 
   @@map("master_items")
 }
@@ -40,6 +42,7 @@ model Certificate {
   id              String   @id @default(uuid())
   itemId          String   // Foreign Key
   jenisSertifikat String   // "SLF", "AMDAL", "HGB", dll.
+  namaSertifikat  String?
   noSertifikat    String?
   instansi        String?
   terbit          String?
@@ -51,8 +54,10 @@ model Certificate {
   updatedAt       DateTime @updatedAt
 
   // Definisi Relasi
-  item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  monitoringLogs  MonitoringLog[]
+  item                  MasterItem             @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  monitoringLogs        MonitoringLog[]
+  notificationSetting   NotificationSetting?
+  reminderNotifications ReminderNotification[]
 
   @@map("certificates")
 }

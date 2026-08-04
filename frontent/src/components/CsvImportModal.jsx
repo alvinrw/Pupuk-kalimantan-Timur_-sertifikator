@@ -36,7 +36,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
   // Upload History State (Strictly real history from API/localStorage)
   const [uploadHistory, setUploadHistory] = useState(() => {
     try {
-      const saved = localStorage.getItem('csv_upload_history');
+      const saved = localStorage.getItem(`csv_upload_history_${categoryKey}`);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
@@ -55,6 +55,11 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     const fetchHistory = async () => {
       try {
         const logs = await getCsvHistory(categoryKey);
+        if (logs === null) {
+          // Do nothing if API failed
+          return;
+        }
+        
         if (logs && logs.length > 0) {
           const mappedLogs = logs.map(log => {
             let detail = {};
@@ -88,11 +93,11 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
   React.useEffect(() => {
     try {
-      localStorage.setItem('csv_upload_history', JSON.stringify(uploadHistory));
+      localStorage.setItem(`csv_upload_history_${categoryKey}`, JSON.stringify(uploadHistory));
     } catch (e) {
       console.error("Failed to save upload history:", e);
     }
-  }, [uploadHistory]);
+  }, [uploadHistory, categoryKey]);
 
   if (!isOpen) return null;
 
@@ -163,7 +168,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       setStep('upload');
       setFiles([]);
       if (anySuccess && onImportSuccess) {
-        onImportSuccess();
+        await onImportSuccess();
       }
       onClose();
     } catch (error) {
@@ -241,7 +246,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
         <div className="p-6">
           {activeTab === 'upload' && (
             <>
-              <input type="file" ref={fileInputRef} accept=".csv" multiple className="hidden" onChange={handleFileChange} />
+              <input type="file" ref={fileInputRef} accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" multiple className="hidden" onChange={handleFileChange} />
               
               {step === 'upload' && (
                 <>
@@ -251,13 +256,13 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                   >
                     <FileSpreadsheet className="w-10 h-10 text-[#005ea4] mb-2" />
                     <p className="text-sm font-bold text-slate-800 mb-1">
-                      Klik atau Tarik Berkas CSV ke Sini
+                      Klik atau Tarik Berkas CSV / Excel ke Sini
                     </p>
                     <p className="text-xs text-slate-500 mb-4">
                       Format mendukung CSV / Excel gabungan multi-unit
                     </p>
                     <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
-                      Pilih Berkas CSV
+                      Pilih Berkas CSV / Excel
                     </span>
                   </div>
                 </>
@@ -267,7 +272,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                 <div className="space-y-3">
                   <div className="space-y-2">
                     <span className="font-bold text-slate-800 text-xs font-mono-data block">
-                      Berkas CSV Terpilih ({files.length})
+                      Berkas Terpilih ({files.length})
                     </span>
                     <div className="max-h-[160px] overflow-y-auto space-y-2 pr-1">
                       {files.map((f, i) => (
@@ -360,12 +365,31 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
         {/* Modal Footer */}
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg">
+          <button 
+            onClick={onClose} 
+            disabled={isUploading}
+            className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             Batal
           </button>
           {activeTab === 'upload' && step === 'preview' && (
-            <button onClick={handleConfirmImport} className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
-              Simpan ke Database
+            <button 
+              onClick={handleConfirmImport} 
+              disabled={isUploading}
+              className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all ${
+                isUploading 
+                  ? 'bg-slate-400 cursor-not-allowed' 
+                  : 'bg-[#005ea4] hover:bg-[#004881]'
+              }`}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Menyimpan...</span>
+                </>
+              ) : (
+                <span>Simpan ke Database</span>
+              )}
             </button>
           )}
         </div>

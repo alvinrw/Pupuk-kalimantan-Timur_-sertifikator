@@ -7,6 +7,11 @@ import { UpdateMasterItemDto } from './dto/update-master-item.dto';
 export class MasterItemsController {
   constructor(private readonly masterItemsService: MasterItemsService) {}
 
+  @Post('reminders/trigger')
+  triggerDeadlineCheck() {
+    return this.masterItemsService.runDeadlineCheck();
+  }
+
   @Post()
   create(@Body() createMasterItemDto: CreateMasterItemDto) {
     return this.masterItemsService.create(createMasterItemDto);
@@ -18,6 +23,16 @@ export class MasterItemsController {
     @Query('search') search?: string,
   ) {
     return this.masterItemsService.findAll(categoryKey, search);
+  }
+
+  @Get('reminders/tasks')
+  getTaskCenterData() {
+    return this.masterItemsService.getTaskCenterData();
+  }
+
+  @Get('reminders/active')
+  findActiveReminders() {
+    return this.masterItemsService.findActiveReminders();
   }
 
   @Get(':id')
@@ -41,6 +56,14 @@ export class MasterItemsController {
     @Body('note') note: string,
   ) {
     return this.masterItemsService.resolveExemption(id, note);
+  }
+
+  @Put(':id/notification-setting')
+  updateNotificationSetting(
+    @Param('id') itemId: string,
+    @Body() body: { isEnabled: boolean; triggerType: string; triggerDays: number; triggerDate?: string | null; certificateId?: string | null },
+  ) {
+    return this.masterItemsService.updateNotificationSetting(itemId, body);
   }
 }
 

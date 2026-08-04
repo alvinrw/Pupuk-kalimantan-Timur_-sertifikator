@@ -50,7 +50,7 @@ export default function PerizinanAset({ title, subtitle }) {
           description: doc.description || "-",
           submissionDate: doc.createdAt,
           validityPeriod: doc.expiryDate || "-",
-          documentStatus: doc.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs
         };
@@ -104,7 +104,9 @@ export default function PerizinanAset({ title, subtitle }) {
   };
 
   const allColumns = [
-    { key: "certificateNo", label: "Nomer Sertifikat" },
+    { key: "title", label: "Nama Aset" },
+    { key: "namaSertifikat", label: "Nama Sertifikat" },
+    { key: "certificateNo", label: "Nomor Sertifikat" },
     { key: "location", label: "Lokasi" },
     { key: "areaSqm", label: "Luas (mÃƒâ€šÃ‚Â²)" },
     { key: "areaHa", label: "Luas (Ha)" },
@@ -195,8 +197,12 @@ export default function PerizinanAset({ title, subtitle }) {
     );
   }, [filteredDocs, searchTerm]);
 
-  const handleCsvImported = () => {
-    loadData();
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
   };
 
   const handleZipMatched = async (extractedList) => {
@@ -213,7 +219,7 @@ export default function PerizinanAset({ title, subtitle }) {
         });
       }
       loadData();
-      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP OCR!`);
+      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP AI!`);
     } catch (err) {
       console.error(err);
       alert("Terjadi kesalahan saat menyimpan data Batch ZIP!");
@@ -229,11 +235,11 @@ export default function PerizinanAset({ title, subtitle }) {
         unitLocation: newItem.location || newItem.lokasi || 'Umum',
         status: newItem.condition || newItem.status || 'Aktif',
         keterangan: newItem.keterangan || newItem.description || '-',
-        issueDate: newItem.submissionDate || undefined,
-        expiryDate: newItem.validityPeriod || undefined,
-        luasM2: newItem.areaSqm || undefined,
-        luasHa: newItem.areaHa || undefined,
-        peruntukan: newItem.purpose || undefined,
+        issueDate: newItem.terbit || undefined,
+        expiryDate: newItem.expired || undefined,
+        luasM2: newItem.luasM2 || undefined,
+        luasHa: newItem.luasHa || undefined,
+        peruntukan: newItem.peruntukan || undefined,
         documentStatus: newItem.documentStatus
       });
       
@@ -260,15 +266,17 @@ export default function PerizinanAset({ title, subtitle }) {
 
         await createCertificateForMasterItem({
           itemId: targetItemId,
-          jenisSertifikat: newItem.purpose || 'Sertifikat Aset',
+          jenisSertifikat: newItem.namaSertifikat || 'Sertifikat Aset',
+          namaSertifikat: newItem.namaSertifikat || undefined,
           noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
           status: 'Aktif',
-          terbit: newItem.submissionDate || undefined,
-          expired: newItem.validityPeriod || undefined,
+          terbit: newItem.terbit || undefined,
+          expired: newItem.expired || undefined,
           fileUrl: fileUrl,
         });
       }
 
+      setActiveMainTab('main');
       loadData();
     } catch (error) {
       console.error(error);
@@ -284,7 +292,9 @@ export default function PerizinanAset({ title, subtitle }) {
         onSaveUpdate={(updatedDoc) => {
           setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
           setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+          loadData();
         }}
+        onRefreshRequired={loadData}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan untuk aset ${id}.`);
         }}
@@ -533,12 +543,12 @@ export default function PerizinanAset({ title, subtitle }) {
                         />
                       </td>
                     )}
-                    {isVisible("certificateNo") && (
+                    {isVisible("title") && (
                       <td
                         onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
                         className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline text-center align-middle"
                       >
-                        <span>{row.certificateNo}</span>
+                        <span>{doc.merekItem || doc.title}</span>
                       </td>
                     )}
                     {isVisible("location") && (

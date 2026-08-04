@@ -76,8 +76,6 @@ export default function MonitoringTable({
                 let rowStyleClass = "hover:bg-slate-50/80 transition-colors";
                 if (isDecommissioned) {
                   rowStyleClass = "bg-[#0f172a] text-slate-100 transition-colors hover:bg-slate-800";
-                } else if (isExempt) {
-                  rowStyleClass = "bg-indigo-50/40 text-indigo-900 border-l-4 border-l-indigo-500 hover:bg-indigo-50/70 transition-colors";
                 } else if (isInProgress) {
                   rowStyleClass = "bg-amber-50/70 hover:bg-amber-100/70 text-slate-900 transition-colors";
                 } else if (doc.sisaHari <= 0) {

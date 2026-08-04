@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption } from '../services/masterItemsService';
+import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
 
 export function usePeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -9,6 +9,7 @@ export function usePeralatanPabrik() {
   const [filterLokasi, setFilterLokasi] = useState('All');
   const [filterUser, setFilterUser] = useState('All');
   const [filterStatus, setFilterStatus] = useState('All');
+  const [filterHasSertifikat, setFilterHasSertifikat] = useState('All'); // 'All' | 'ada' | 'tidak'
 
   // Modals & Popovers
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
@@ -44,12 +45,12 @@ export function usePeralatanPabrik() {
     { key: "merekItem", label: "Merek/Item" },
     { key: "tipe", label: "Tipe" },
     { key: "nomorSeri", label: "Nomor Seri" },
-    { key: "kapasitas", label: "Kapasitas" },
     { key: "lokasi", label: "Lokasi" },
     { key: "user", label: "User" },
     { key: "status", label: "Status" },
+    { key: "hasSertifikat", label: "Ada Sertifikat" },
+    { key: "namaSertifikat", label: "Nama Sertifikat" },
     { key: "noSertifikat", label: "No. Sertifikat" },
-    { key: "tanggalInspeksi", label: "Tanggal Inspeksi" },
     { key: "terbit", label: "Terbit" },
     { key: "berakhir", label: "Berakhir" },
     { key: "keterangan", label: "Keterangan" },
@@ -71,18 +72,49 @@ export function usePeralatanPabrik() {
           primaryCert = activeCerts.slice().sort((a, b) => {
             const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
             const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            return dB - dA;
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
           })[0];
         } else if (certs.length > 0) {
           primaryCert = certs[0];
         }
 
-        const noCert = item.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (primaryCert?.noSertifikat || primaryCert?.noIzin || '-');
+        let meta = {};
+        try {
+          if (item.keterangan && item.keterangan.startsWith('{')) {
+            meta = JSON.parse(item.keterangan);
+          } else {
+            meta = { keteranganAsli: item.keterangan };
+          }
+        } catch (e) {
+          meta = { keteranganAsli: item.keterangan };
+        }
 
-        const terbitVal = primaryCert?.terbit || item.issueDate || (item.createdAt ? item.createdAt.substring(0, 10) : '-');
-        const expiredVal = primaryCert?.expired || item.expiryDate || '-';
+        const formatToDDMMYYYY = (rawDateStr) => {
+          if (!rawDateStr || rawDateStr === '-') return '-';
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+          try {
+            const dObj = new Date(rawDateStr);
+            if (!isNaN(dObj.getTime())) {
+              const dd = String(dObj.getDate()).padStart(2, '0');
+              const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+              const yyyy = dObj.getFullYear();
+              return `${dd}/${mm}/${yyyy}`;
+            }
+          } catch (_) {}
+          return rawDateStr;
+        };
+
+        const noCert = primaryCert?.noSertifikat || primaryCert?.noIzin || meta.noSertifikat || (item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
+
+        const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
+        const terbitVal = formatToDDMMYYYY(rawTerbit);
+        
+        const rawExpired = primaryCert?.expired || item.expiryDate || '-';
+        const expiredVal = formatToDDMMYYYY(rawExpired);
 
         return {
           id: item.id,
@@ -90,19 +122,20 @@ export function usePeralatanPabrik() {
           categoryKey: item.categoryKey,
           jenisPeralatan: item.title || 'Unknown',
           merekItem: item.code || '-',
-          tipe: '-',
-          nomorSeri: '-',
-          kapasitas: '-',
+          tipe: meta.tipe || '-',
+          nomorSeri: meta.nomorSeri || '-',
           lokasi: item.unitLocation || 'Umum',
-          user: 'Umum',
+          user: meta.penanggungJawab || 'Umum',
           status: item.status || 'Aktif',
-          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
+          namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
           noSertifikat: noCert,
-          tanggalInspeksi: terbitVal,
           terbit: terbitVal,
           berakhir: expiredVal,
-          keterangan: primaryCert?.keterangan || item.description || '-',
+          notificationSetting: item.notificationSetting || null,
+          reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true,
+          keterangan: primaryCert?.keterangan || meta.keteranganAsli || '-',
           fileUrl: primaryCert?.fileUrl || null,
           hasPdf: !!primaryCert?.fileUrl,
           certificates: certs,
@@ -177,10 +210,7 @@ export function usePeralatanPabrik() {
 
     if (isPerpanjang) return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
 
-    if (item.documentStatus === 'PENDING_DOC' || item.documentStatus === 'EXEMPT') {
-      if (item.documentStatus === 'EXEMPT') {
-        return 'bg-indigo-50/30 text-slate-800 hover:bg-indigo-50/60 border-b border-indigo-100 border-l-4 border-l-indigo-500';
-      }
+    if (item.documentStatus === 'PENDING_DOC') {
       return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
     }
 
@@ -195,7 +225,7 @@ export function usePeralatanPabrik() {
         if (diffDays <= 0) isExpired = true;
       }
     } else {
-      if (statusStr === 'aktif' || statusStr === '') isExpired = false;
+      isExpired = true;
     }
 
     if (isExpired) return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
@@ -228,14 +258,25 @@ export function usePeralatanPabrik() {
       const matchesLokasi = filterLokasi === 'All' || item.lokasi === filterLokasi;
       const matchesUser = filterUser === 'All' || item.user === filterUser;
       const matchesStatus = filterStatus === 'All' || item.status === filterStatus;
+      const matchesHasSertifikat = filterHasSertifikat === 'All'
+        ? true
+        : filterHasSertifikat === 'ada'
+        ? (item.documentStatus === 'COMPLETED' && !!item.fileUrl)
+        : filterHasSertifikat === 'tidak'
+        ? item.documentStatus === 'EXEMPT'
+        : (item.documentStatus === 'PENDING_DOC' || (item.documentStatus === 'COMPLETED' && !item.fileUrl));
 
-      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus;
+      return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesUser && matchesStatus && matchesHasSertifikat;
     });
-  }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus]);
+  }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus, filterHasSertifikat]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
     filteredData.forEach((item) => {
+      let terbitVal = item.terbit || item.issueDate || '-';
+      let berakhirVal = item.berakhir || item.expiryDate || '-';
+      let statusVal = item.status || 'Aktif';
+
       rows.push({
         rowId: `${item.id}-primary`,
         parentItem: item,
@@ -243,13 +284,14 @@ export function usePeralatanPabrik() {
         noSertifikat: item.noSertifikat || item.certificateNo || '-',
         jenisPeralatan: item.jenisPeralatan || item.jenisItem || 'Peralatan Pabrik',
         tanggalInspeksi: item.tanggalInspeksi || item.issueDate || '-',
-        terbit: item.terbit || item.issueDate || '-',
-        berakhir: item.berakhir || item.expiryDate || '-',
+        terbit: terbitVal,
+        berakhir: berakhirVal,
         keterangan: item.keterangan || item.user || 'Instansi Terkait',
-        status: item.status || 'Aktif',
+        status: statusVal,
+        namaSertifikat: item.namaSertifikat || '-',
         documentStatus: item.documentStatus,
         exemptionNote: item.exemptionNote,
-        hasPdf: item.hasCertificatePdf !== false
+        hasPdf: item.hasPdf
       });
 
       if (item.linkedCertificates && Array.isArray(item.linkedCertificates)) {
@@ -265,7 +307,8 @@ export function usePeralatanPabrik() {
             berakhir: lc.expired || '-',
             keterangan: lc.instansi || item.keterangan,
             status: lc.status || 'Aktif',
-            hasPdf: lc.hasPdf !== false
+            namaSertifikat: lc.namaSertifikat || '-',
+            hasPdf: !!lc.fileUrl
           });
         });
       }
@@ -273,19 +316,93 @@ export function usePeralatanPabrik() {
     return rows;
   }, [filteredData]);
 
+  const handleCsvImported = async () => {
+    setActiveMainTab('staging');
+    await loadData();
+    setTimeout(() => {
+      loadData();
+    }, 800);
+  };
+
   const handleSingleAdded = async (newItem) => {
     try {
-      await createMasterItem({
-        title: newItem.merekItem || newItem.equipmentName || 'Unknown Item',
-        code: newItem.nomorSeri || newItem.tagNumber || '-',
+      const extraData = {
+        tipe: newItem.tipe || '',
+        nomorSeri: newItem.nomorSeri || '',
+        penanggungJawab: newItem.penanggungJawab || 'Dept. Operasi Pabrik 1A',
+        noSertifikat: newItem.noSertifikat || '',
+        namaSertifikat: newItem.namaSertifikat || '',
+        keteranganAsli: ''
+      };
+      
+      let locationStr = newItem.unitPabrik || 'Umum';
+      if (newItem.unitPabrik && newItem.lokasiDetail) {
+        locationStr = `${newItem.unitPabrik} - ${newItem.lokasiDetail}`;
+      } else if (newItem.lokasiDetail) {
+        locationStr = newItem.lokasiDetail;
+      }
+
+      const createdItem = await createMasterItem({
+        title: newItem.jenisPeralatan || 'Unknown Item',
+        code: newItem.merekItem || '-',
         categoryKey: 'peralatan-pabrik',
-        unitLocation: newItem.lokasi || newItem.plantUnit || 'Umum',
-        status: newItem.status || newItem.statusSertifikasi || 'Aktif',
-        keterangan: newItem.keterangan || '-',
-        issueDate: newItem.terbit || newItem.issueDate || undefined,
-        expiryDate: newItem.berakhir || newItem.expiryDate || undefined,
+        unitLocation: locationStr,
+        status: newItem.status || 'Aktif',
+        keterangan: JSON.stringify(extraData),
+        issueDate: newItem.terbit || undefined,
+        expiryDate: newItem.berakhir || undefined,
+        documentStatus: newItem.documentStatus || 'COMPLETED',
       });
-      loadData();
+
+      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
+
+      if ((newItem.documentStatus === 'COMPLETED' || !newItem.documentStatus) && targetItemId) {
+        let fileUrl = null;
+        if (newItem.file) {
+          const formData = new FormData();
+          formData.append('file', newItem.file);
+          try {
+            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+              method: 'POST',
+              body: formData,
+            });
+            if (uploadRes.ok) {
+              const uploadJson = await uploadRes.json();
+              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
+            }
+          } catch (uploadErr) {
+            console.error("Gagal mengunggah file:", uploadErr);
+          }
+        }
+
+        await createCertificateForMasterItem({
+          itemId: targetItemId,
+          jenisSertifikat: newItem.jenisPeralatan || 'Sertifikat Peralatan',
+          namaSertifikat: newItem.namaSertifikat || undefined,
+          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+          status: 'Aktif',
+          terbit: newItem.terbit || undefined,
+          expired: newItem.berakhir || undefined,
+          fileUrl: fileUrl,
+        });
+      }
+
+      if (targetItemId) {
+        await fetch(`http://localhost:3000/api/v1/master-items/${targetItemId}/notification-setting`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            isEnabled: newItem.reminderEnabled !== false,
+            triggerType: newItem.reminderType || 'DAYS',
+            triggerDays: newItem.reminderDays || 30,
+            triggerDate: newItem.reminderType === 'DATE' ? newItem.reminderDate : null
+          })
+        }).catch(err => console.error('Error saving notification setting:', err));
+      }
+
+      setIsSingleModalOpen(false);
+      setActiveMainTab('main');
+      await loadData();
     } catch (error) {
       console.error("Gagal menambahkan data:", error);
       alert("Gagal menyimpan data ke database!");
@@ -359,6 +476,7 @@ export function usePeralatanPabrik() {
 
     alert(`Sertifikat ${reassignCertRowItem.noSertifikat} berhasil dipindahkan ke ${selectedNewTargetItem.merekItem} (${selectedNewTargetItem.tipe})!`);
     setReassignCertRowItem(null);
+    loadData();
   };
 
   const targetSearchLower = (searchTargetItemTerm || '').toLowerCase();
@@ -376,6 +494,7 @@ export function usePeralatanPabrik() {
     filterLokasi, setFilterLokasi,
     filterUser, setFilterUser,
     filterStatus, setFilterStatus,
+    filterHasSertifikat, setFilterHasSertifikat,
     isCsvModalOpen, setIsCsvModalOpen,
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,
@@ -400,7 +519,7 @@ export function usePeralatanPabrik() {
     loadData, handleBulkExempt, toggleSelectStaging, toggleSelectAllStaging,
     toggleColumn, selectAllColumns, isVisible, getRowStatusStyle,
     uniqueJenis, uniqueLokasi, uniqueUser, pendingCount, filteredData, expandedRows,
-    handleSingleAdded, handleZipMatched, requestDeleteRow, confirmDeleteRow,
+    handleSingleAdded, handleCsvImported, handleZipMatched, requestDeleteRow, confirmDeleteRow,
     openReassignTargetModal, confirmReassignTargetRow, filteredTargetEquipmentList
   };
 }

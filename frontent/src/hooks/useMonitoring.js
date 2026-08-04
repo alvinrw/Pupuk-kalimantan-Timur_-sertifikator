@@ -30,6 +30,7 @@ export function useMonitoring() {
   const [ocrSuccess, setOcrSuccess] = useState(false);
   
   const [allCertificates, setAllCertificates] = useState([]);
+  const [activeReminders, setActiveReminders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Quick Action Modals State
@@ -76,6 +77,14 @@ export function useMonitoring() {
          return 'completed';
       };
 
+      const formatStatus = (rawStatus, catKey) => {
+        if (catKey === 'perizinan-proyek') {
+          if (rawStatus === 'Spare') return 'Selesai';
+          if (rawStatus === 'Rusak') return 'Ditunda';
+        }
+        return rawStatus || 'Aktif';
+      };
+
       const flattened = [];
       data.forEach(item => {
         if (item.documentStatus === 'PENDING_DOC') return; // Skip staging items
@@ -88,15 +97,37 @@ export function useMonitoring() {
           primaryCert = activeCerts.slice().sort((a, b) => {
             const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
             const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            return dB - dA;
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
           })[0];
         } else if (certs.length > 0) {
           primaryCert = certs[0];
         }
 
-        const rawExp = primaryCert?.expired || item.expiryDate;
-        const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
-        const hari = calcDiff(dateVal);
+        const formatToDDMMYYYY = (rawDateStr) => {
+          if (!rawDateStr || rawDateStr === '-') return '-';
+          if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+          try {
+            const dObj = new Date(rawDateStr);
+            if (!isNaN(dObj.getTime())) {
+              const dd = String(dObj.getDate()).padStart(2, '0');
+              const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+              const yyyy = dObj.getFullYear();
+              return `${dd}/${mm}/${yyyy}`;
+            }
+          } catch (_) {}
+          return rawDateStr;
+        };
+
+        const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
+        const terbitVal = formatToDDMMYYYY(rawTerbit);
+        
+        const rawExpired = primaryCert?.expired || item.expiryDate || '-';
+        const expiredVal = formatToDDMMYYYY(rawExpired);
+        const hari = calcDiff(rawExpired && rawExpired !== '2030-01-01' && rawExpired !== '-' ? rawExpired : '-');
 
         flattened.push({
           id: item.id,
@@ -114,23 +145,35 @@ export function useMonitoring() {
           kapasitas: '-',
           lokasi: item.unitLocation || 'Umum',
           unitPabrik: item.unitLocation || 'Umum',
-          status: item.status || 'Aktif',
-          statusOperasional: item.status || 'Aktif',
-          documentStatus: item.documentStatus || (certs.length > 0 ? 'COMPLETED' : 'EXEMPT'),
+          status: formatStatus(item.status, item.categoryKey),
+          statusOperasional: formatStatus(item.status, item.categoryKey),
+          documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
-          tglTerbit: primaryCert?.terbit || item.createdAt,
-          tglExpired: dateVal,
+          tglTerbit: terbitVal,
+          tglExpired: expiredVal,
           sisaHari: hari,
           statusLegal: calcStatus(hari),
-          nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.code || '-'),
+          nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
+          namaSertifikat: primaryCert?.namaSertifikat || item.namaSertifikat || '-',
           instansiPenerbit: primaryCert?.instansi || '-',
           nomorSK: '-',
           keterangan: item.description || '-',
           riwayatPerpanjangan: certs,
-          workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT')
+          workflowStatus: getWfStatus(item.status, item.documentStatus || item.document_status || 'PENDING_DOC'),
+          notificationSetting: item.notificationSetting || null,
+          reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true
         });
       });
       setAllCertificates(flattened);
+      try {
+        const reminderRes = await fetch('http://localhost:3000/api/v1/master-items/reminders/active');
+        if (reminderRes.ok) {
+          const reminderJson = await reminderRes.json();
+          setActiveReminders(reminderJson);
+        }
+      } catch (err) {
+        console.error("Failed to fetch active reminders in monitoring:", err);
+      }
     } catch (err) {
       console.error("Failed to fetch MonitoringSertifikasi:", err);
     } finally {
@@ -179,7 +222,11 @@ export function useMonitoring() {
       const matchesStatusFisik = filterStatusOperasional === 'All' || item.statusOperasional === filterStatusOperasional || item.status === filterStatusOperasional;
 
       let matchesRentangHari = true;
-      if (filterRentangHari === 'expired') {
+      if (filterRentangHari === 'today') {
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari === 0;
+      } else if (filterRentangHari === '7') {
+        matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= 7;
+      } else if (filterRentangHari === 'expired') {
         matchesRentangHari = item.sisaHari !== null && item.sisaHari <= 0;
       } else if (filterRentangHari === 'urgent') {
         matchesRentangHari = item.sisaHari !== null && item.sisaHari > 0 && item.sisaHari <= (parseInt(customUrgentDays) || 30);
@@ -360,7 +407,7 @@ export function useMonitoring() {
       if (uploadedFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
-        const uploadRes = await fetch('http://localhost:3005/api/v1/document-history/upload', {
+        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
           method: 'POST',
           body: formDataUpload
         });
@@ -417,9 +464,12 @@ export function useMonitoring() {
 
   const countExpired = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length;
   const countUrgent = allCertificates.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= (parseInt(customUrgentDays) || 30) && c.workflowStatus !== 'decommissioned').length;
-  const countValid = allCertificates.filter(c => (c.sisaHari === null || c.sisaHari > (parseInt(customUrgentDays) || 30)) && c.workflowStatus !== 'decommissioned').length;
+  const countValid = allCertificates.filter(c => (c.sisaHari === null || c.sisaHari > (parseInt(customUrgentDays) || 30)) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length;
   const countInProgress = allCertificates.filter(c => c.workflowStatus === 'in_progress').length;
   const countDecommissioned = allCertificates.filter(c => c.workflowStatus === 'decommissioned').length;
+  const countTanpaSertifikat = allCertificates.filter(c => c.workflowStatus === 'exempt').length;
+  const countAdaSertifikat = allCertificates.filter(c => c.workflowStatus !== 'exempt' && c.workflowStatus !== 'decommissioned').length;
+  const countTotal = allCertificates.length;
 
   return {
     searchTerm, setSearchTerm,
@@ -450,6 +500,7 @@ export function useMonitoring() {
     inspectionDate, setInspectionDate,
     issueDate, setIssueDate,
     newExpiryDate, setNewExpiryDate,
+    activeReminders, setActiveReminders,
 
     // Derived states & functions
     fetchMonitoringData,
@@ -471,6 +522,6 @@ export function useMonitoring() {
     resetFilters,
 
     // Counts
-    counts: { countExpired, countUrgent, countValid, countInProgress, countDecommissioned }
+    counts: { countExpired, countUrgent, countValid, countInProgress, countDecommissioned, countTanpaSertifikat, countAdaSertifikat, countTotal }
   };
 }

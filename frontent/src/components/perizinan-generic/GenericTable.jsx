@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCheck, FileWarning, Eye, ShieldAlert } from 'lucide-react';
+import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 
 export default function GenericTable({
   activeMainTab,
@@ -20,6 +20,8 @@ export default function GenericTable({
   filterStatus,
   setFilterStatus,
   uniqueStatus,
+  filterHasSertifikat,
+  setFilterHasSertifikat,
   getRowStatusStyle,
   toggleSelectStaging,
   setDetailModalItem,
@@ -78,7 +80,13 @@ export default function GenericTable({
                 {!isAsetCategory && isVisible("jenisItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
                     <div className="flex items-center gap-1.5">
-                      <span>JENIS PERIZINAN</span>
+                      <span>
+                        {isAsetCategory
+                          ? "JENIS ASET"
+                          : categoryName?.toLowerCase().includes('proyek')
+                          ? "KATEGORI PROYEK"
+                          : "JENIS PRODUK"}
+                      </span>
                       <select
                         value={filterJenis}
                         onChange={(e) => setFilterJenis(e.target.value)}

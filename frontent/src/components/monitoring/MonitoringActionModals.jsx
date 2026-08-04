@@ -1,4 +1,5 @@
 import React from 'react';
+import UploadRenewalModal from './UploadRenewalModal';
 import { Ban, RotateCcw, X, UploadCloud, FileText, Loader2, Sparkles, FileCheck } from 'lucide-react';
 
 export default function MonitoringActionModals({
@@ -39,7 +40,8 @@ export default function MonitoringActionModals({
   setNewExpiryDate,
   resertifikasiNotes,
   setResertifikasiNotes,
-  handleConfirmUploadRenewal
+  handleConfirmUploadRenewal,
+  tempUrl, isUploadingTemp
 }) {
   return (
     <>

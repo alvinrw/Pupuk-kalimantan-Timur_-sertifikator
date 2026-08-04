@@ -18,12 +18,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         onSaveUpdate={(updatedDoc) => {
           data.setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc, title: updatedDoc.merekItem || d.title } : d));
           data.setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
-        }}
-        onQuickRenew={(id) => {
-          alert(`Inisiasi Perpanjangan untuk dokumen ${id}. Menuju menu Monitoring.`);
-        }}
-        onQuickDecommission={(id) => {
-          alert(`Menandai dokumen ${id} sebagai Afkir.`);
+          data.loadData();
         }}
         onDeleteSuccess={() => {
           data.setDetailModalItem(null);
@@ -89,6 +84,8 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         filterStatus={data.filterStatus}
         setFilterStatus={data.setFilterStatus}
         uniqueStatus={data.uniqueStatus}
+        filterHasSertifikat={data.filterHasSertifikat}
+        setFilterHasSertifikat={data.setFilterHasSertifikat}
         getRowStatusStyle={data.getRowStatusStyle}
         toggleSelectStaging={data.toggleSelectStaging}
         setDetailModalItem={data.setDetailModalItem}

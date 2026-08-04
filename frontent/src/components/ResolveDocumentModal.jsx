@@ -1,104 +1,244 @@
-import React, { useState, useRef } from 'react';
-import { X, Upload, FileCheck, FileWarning, AlertTriangle, ShieldAlert, CheckCircle2, FileText, Loader2 } from 'lucide-react';
-import { resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
+import { scanPdfDocument } from '../services/ocrService';
+import { API_BASE } from '../config/api';
+import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting } from '../services/masterItemsService';
+import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
+import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
 
-export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess }) {
-  const [option, setOption] = useState('upload'); // 'upload' | 'exempt'
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onResolveSuccess, onSuccess }) {
+  const activeDoc = doc || item;
+  const isValidVal = (val) => val && val !== '-' && String(val).trim() !== '';
+  const hasExistingCertDetails = activeDoc ? (
+    isValidVal(activeDoc.noSertifikat || activeDoc.certificateNo) && 
+    isValidVal(activeDoc.terbit || activeDoc.tanggalInspeksi) && 
+    isValidVal(activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir)
+  ) : false;
 
-  // Form State Opsi A (Upload PDF / Input Sertifikat)
-  const [noSertifikat, setNoSertifikat] = useState('');
-  const [jenisSertifikat, setJenisSertifikat] = useState('Riksa Uji Disnaker');
-  const [terbit, setTerbit] = useState('');
-  const [expired, setExpired] = useState('');
+  const [formData, setFormData] = useState({
+    namaSertifikat: '',
+    noSertifikat: '',
+    terbit: '',
+    expired: '',
+    instansi: '',
+    keterangan: '',
+    reminderEnabled: true,
+    reminderType: 'DAYS',
+    reminderDays: 30,
+    reminderDate: ''
+  });
+
   const [selectedFile, setSelectedFile] = useState(null);
-  const fileInputRef = useRef(null);
+  const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
+  
+  // OCR & Temp Storage States
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  const [isUploadingTemp, setIsUploadingTemp] = useState(false);
+  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
+  const [ocrSuccess, setOcrSuccess] = useState(false);
+  const [tempUrl, setTempUrl] = useState(null);
+  const [scanMode, setScanMode] = useState(null);
 
-  // Form State Opsi B (Exempt + Catatan Alasan)
-  const [exemptionNote, setExemptionNote] = useState('');
-
-  if (!isOpen || !item) return null;
-
-  const targetItemId = item.MasterId || item.id;
-  const itemTitle = item.jenisPeralatan || item.title || 'Aset';
-  const itemCode = item.merekItem || item.code || '-';
-
-  const handleExemptSubmit = async (e) => {
-    e.preventDefault();
-    if (!exemptionNote.trim()) {
-      setErrorMessage('Wajib mengisi catatan alasan mengapa aset ini tidak memerlukan sertifikat!');
-      return;
-    }
-
+  // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
+  const handleOcrResult = async (fieldKey, rawText) => {
     try {
-      setIsSubmitting(true);
-      setErrorMessage('');
-      await resolveMasterItemExemption(targetItemId, exemptionNote.trim());
-      setIsSubmitting(false);
-      onSuccess?.();
-      onClose();
+      const { parseDate, parseCertificateNumber } = await import('../utils/ocrTextParser');
+      
+      if (fieldKey === 'noSertifikat') {
+        const certNo = parseCertificateNumber(rawText);
+        setFormData(prev => ({ ...prev, noSertifikat: certNo || rawText.replace(/\n+/g, ' ').trim() }));
+      } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
+        const parsed = parseDate(rawText);
+        if (parsed) {
+          setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
+        } else {
+          setOcrErrorMsg(`Gagal mendeteksi tanggal untuk ${fieldKey}.`);
+        }
+      } else if (fieldKey === 'instansi') {
+        setFormData(prev => ({ ...prev, instansi: rawText.replace(/\n+/g, ' ').trim() }));
+      }
+      
+      setOcrSuccess(true);
+      setScanMode(null);
     } catch (err) {
-      console.error('Error resolving exemption:', err);
-      setErrorMessage(err.message || 'Gagal menyimpan catatan penanganan dokumen.');
-      setIsSubmitting(false);
+      console.error("Gagal memproses hasil OCR:", err);
     }
   };
 
-  const handleUploadSubmit = async (e) => {
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen && activeDoc) {
+      setFormData({
+        namaSertifikat: activeDoc.namaSertifikat || activeDoc.title || '',
+        noSertifikat: activeDoc.noSertifikat || activeDoc.nomorSertifikat || '',
+        terbit: activeDoc.terbit || activeDoc.tanggalInspeksi || '',
+        expired: activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir || '',
+        instansi: activeDoc.instansi || '',
+        keterangan: activeDoc.keterangan || '',
+        reminderEnabled: activeDoc.notificationSetting ? activeDoc.notificationSetting.isEnabled !== false : (activeDoc.reminderEnabled !== undefined ? activeDoc.reminderEnabled : true),
+        reminderType: activeDoc.notificationSetting ? (activeDoc.notificationSetting.triggerType || 'DAYS') : 'DAYS',
+        reminderDays: activeDoc.notificationSetting ? (activeDoc.notificationSetting.triggerDays ?? 30) : 30,
+        reminderDate: activeDoc.notificationSetting && activeDoc.notificationSetting.triggerDate ? activeDoc.notificationSetting.triggerDate.substring(0, 10) : ''
+      });
+      setSelectedFile(null);
+      setTempUrl(null);
+      setSertifikatMode(activeDoc.documentStatus === 'EXEMPT' ? 'tanpa' : 'dengan');
+      setIsScanningOcr(false);
+      setIsUploadingTemp(false);
+      setOcrErrorMsg('');
+      setOcrSuccess(false);
+      setScanMode(null);
+    }
+  }, [isOpen, activeDoc]);
+
+  if (!isOpen || !activeDoc) return null;
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!noSertifikat.trim()) {
-      setErrorMessage('Nomor Sertifikat wajib diisi!');
-      return;
+
+    let finalUrl = activeDoc.fileUrl || activeDoc.url || null;
+    if (sertifikatMode === 'dengan') {
+      if (tempUrl) {
+        try {
+          const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tempUrl })
+          });
+          if (moveRes.ok) {
+            const json = await moveRes.json();
+            finalUrl = json.data?.url || null;
+          }
+        } catch(err) {
+          console.error("Gagal move file", err);
+        }
+      } else if (selectedFile) {
+        try {
+          const fd = new FormData();
+          fd.append('file', selectedFile);
+          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, {
+            method: 'POST',
+            body: fd
+          });
+          if (uploadRes.ok) {
+            const json = await uploadRes.json();
+            finalUrl = json.data?.url || null;
+          }
+        } catch(err) {}
+      }
+    }
+
+    const targetId = activeDoc.MasterId || activeDoc.id;
+
+    if (sertifikatMode === 'tanpa') {
+      try {
+        await resolveMasterItemExemption(targetId, formData.keterangan || "Tidak Perlu Sertifikat");
+      } catch (err) {
+        console.error("Exemption resolve error:", err);
+      }
+    } else {
+      try {
+        await createCertificateForMasterItem({
+          itemId: targetId,
+          jenisSertifikat: activeDoc.jenisSertifikat || activeDoc.jenisPeralatan || activeDoc.jenisCiptaan || activeDoc.categoryKey || activeDoc.title || "Sertifikat",
+          namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat || "Sertifikat Baru",
+          noSertifikat: formData.noSertifikat,
+          instansi: formData.instansi,
+          terbit: formData.terbit,
+          expired: formData.expired,
+          fileUrl: finalUrl,
+          status: 'Aktif'
+        });
+      } catch (err) {
+        console.error("Certificate resolve error:", err);
+      }
     }
 
     try {
-      setIsSubmitting(true);
-      setErrorMessage('');
-
-      let fileUrl = null;
-      if (selectedFile) {
-        const formData = new FormData();
-        formData.append('file', selectedFile);
-
-        const uploadRes = await fetch('http://localhost:3005/api/v1/document-history/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadJson = await uploadRes.json();
-          fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
-        }
-      }
-
-      const payload = {
-        itemId: targetItemId,
-        jenisSertifikat: item.jenisPeralatan || item.jenisCiptaan || item.title || 'Sertifikat Perizinan',
-        noSertifikat: noSertifikat.trim(),
-        status: 'Aktif',
-      };
-      if (terbit) payload.terbit = terbit;
-      if (expired) payload.expired = expired;
-      if (fileUrl) payload.fileUrl = fileUrl;
-
-      await createCertificateForMasterItem(payload);
-
-      setIsSubmitting(false);
-      onSuccess?.();
-      onClose();
+      await updateNotificationSetting(targetId, {
+        isEnabled: formData.reminderEnabled,
+        triggerType: formData.reminderType,
+        triggerDays: parseInt(formData.reminderDays) || 30,
+        triggerDate: formData.reminderType === 'DATE' ? formData.reminderDate : null
+      });
     } catch (err) {
-      console.error('Error uploading certificate:', err);
-      setErrorMessage(err.message || 'Gagal menambahkan sertifikat.');
-      setIsSubmitting(false);
+      console.error("Notification setting update error:", err);
     }
+
+    const updatedData = {
+      ...activeDoc,
+      ...formData,
+      file: sertifikatMode === 'dengan' ? selectedFile : null,
+      fileUrl: finalUrl,
+      documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
+      hasCertificatePdf: sertifikatMode === 'dengan' && (!!selectedFile || !!finalUrl),
+      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || "BELUM_ADA_SERTIFIKAT"),
+      notificationSetting: {
+        isEnabled: formData.reminderEnabled,
+        triggerType: formData.reminderType,
+        triggerDays: parseInt(formData.reminderDays) || 30,
+        triggerDate: formData.reminderType === 'DATE' ? formData.reminderDate : null
+      }
+    };
+
+    if (onResolveSuccess) onResolveSuccess(updatedData);
+    if (onSuccess) onSuccess(updatedData);
+
+    onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+    <BaseSplitScreenUploadModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Selesaikan Tugas (Human Verification)"
+      subtitle={`Lengkapi & verifikasi dokumen perizinan untuk: ${activeDoc.merekItem || activeDoc.namaPeralatan || activeDoc.title || 'Item'}`}
+      headerIcon={CheckCircle2}
+      formId="resolveDocumentForm"
+      onSubmit={handleSubmit}
+      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile && !activeDoc.fileUrl)}
+      submitText="Simpan & Selesaikan"
+      submitIcon={Save}
+      tempUrl={tempUrl || activeDoc.fileUrl}
+      rightPanelContent={
+        (tempUrl || activeDoc.fileUrl) ? (
+          <PdfCanvasOcrViewer
+            pdfUrl={tempUrl || activeDoc.fileUrl}
+            scanMode={scanMode}
+            onScanComplete={handleOcrResult}
+            onScanCancel={() => setScanMode(null)}
+          />
+        ) : null
+      }
+    >
+      {/* Mode Toggle */}
+      <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+        <button
+          type="button"
+          onClick={() => setSertifikatMode('dengan')}
+          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            sertifikatMode === 'dengan' ? 'bg-white text-[#005ea4] shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <FileCheck className="w-4 h-4" />
+          <span>Dengan Sertifikat (PDF)</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSertifikatMode('tanpa')}
+          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+            sertifikatMode === 'tanpa' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <AlertTriangle className="w-4 h-4 text-amber-600" />
+          <span>Tanpa Sertifikat (Exempt)</span>
+        </button>
+      </div>
+
+      {sertifikatMode === 'tanpa' ? (
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+          <p className="text-xs text-amber-800 font-medium">Dokumen ini ditandai pengecualian (tidak membutuhkan lampiran berkas fisik PDF).</p>
           <div>
             <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
               <FileWarning className="w-5 h-5 text-amber-500" />
@@ -108,47 +248,92 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
               {itemCode} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â <span className="font-bold text-slate-800">{itemTitle}</span>
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 transition-colors">
-            <X className="w-5 h-5" />
-          </button>
         </div>
-
-        {/* Option Selector Tabs */}
-        <div className="p-6 overflow-y-auto space-y-5 bg-white">
-          <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-            <button
-              type="button"
-              onClick={() => { setOption('upload'); setErrorMessage(''); }}
-              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                option === 'upload'
-                  ? 'bg-white text-[#005ea4] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+      ) : (
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat Baru <span className="text-rose-500">*</span></label>
+            <div
+              onClick={() => {
+                if (isUploadingTemp || isScanningOcr) return;
+                fileInputRef.current?.click();
+              }}
+              className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
+                (isUploadingTemp || isScanningOcr) 
+                  ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-70' 
+                  : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50 cursor-pointer'
               }`}
             >
-              <Upload className="w-4 h-4 text-[#005ea4]" />
-              <span>Unggah Sertifikat PDF</span>
-            </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  if (file) {
+                    setSelectedFile(file);
+                    setTempUrl(null);
+                    setOcrSuccess(false);
 
-            <button
-              type="button"
-              onClick={() => { setOption('exempt'); setErrorMessage(''); }}
-              className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                option === 'exempt'
-                  ? 'bg-white text-slate-900 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <ShieldAlert className="w-4 h-4 text-amber-600" />
-              <span>Tanpa Sertifikat (Catatan)</span>
-            </button>
-          </div>
+                    if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
+                      try {
+                        setIsUploadingTemp(true);
+                        const fdTemp = new FormData();
+                        fdTemp.append('file', file);
+                        const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
+                          method: 'POST',
+                          body: fdTemp
+                        });
+                        if (uploadRes.ok) {
+                          const json = await uploadRes.json();
+                          setTempUrl(json.data.url);
+                        }
+                      } catch (err) {
+                        console.error('Upload temp error:', err);
+                      } finally {
+                        setIsUploadingTemp(false);
+                      }
 
-          {errorMessage && (
-            <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-700 font-medium">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-              <span>{errorMessage}</span>
+                      const hasExistingCertDetails = !!(activeDoc.noSertifikat || activeDoc.certificateNo) && 
+                                                    !!(activeDoc.terbit || activeDoc.tanggalInspeksi) && 
+                                                    !!(activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir);
+
+                      if (!hasExistingCertDetails) {
+                        try {
+                          setIsScanningOcr(true);
+                          const ocrData = await scanPdfDocument(file);
+                          if (ocrData) {
+                            setFormData(prev => ({
+                              ...prev,
+                              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
+                              noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
+                              terbit: ocrData.terbit || prev.terbit || '',
+                              expired: ocrData.expired || prev.expired || '',
+                              instansi: ocrData.instansi || prev.instansi || ''
+                            }));
+                            setOcrSuccess(true);
+                            setOcrErrorMsg((!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) ? "AI tidak mendeteksi data. Silakan isi form manual." : "");
+                          }
+                        } catch (err) {
+                          setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
+                        } finally {
+                          setIsScanningOcr(false);
+                        }
+                      }
+                    }
+                  }
+                }}
+                className="hidden"
+                disabled={isUploadingTemp || isScanningOcr}
+              />
+              <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-[#005ea4]">
+                  {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih / Ganti File PDF'}
+                </span>
+                <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+              </div>
             </div>
-          )}
 
           {/* Form Opsi A: Unggah PDF Sertifikat */}
           {option === 'upload' && (
@@ -177,109 +362,196 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                   </span>
                   <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
                 </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Expired</span>
+                  <span className="font-bold text-rose-700">{formData.expired || '-'}</span>
+                </div>
+                {formData.instansi && (
+                  <div className="col-span-2">
+                    <span className="text-slate-400 block text-[10px] uppercase">Instansi Penerbit</span>
+                    <span className="font-bold text-slate-800">{formData.instansi}</span>
+                  </div>
+                )}
               </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">Nomor Sertifikat / Pengesahan <span className="text-rose-500">*</span></label>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
                 <input
                   type="text"
-                  value={noSertifikat}
-                  onChange={(e) => setNoSertifikat(e.target.value)}
-                  placeholder="Contoh: 566/DISNAKER-KT/2024"
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-                  required
+                  value={formData.namaSertifikat}
+                  onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                  placeholder="Contoh: SKP Pesawat Angkat"
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
                 />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    required
+                    value={formData.noSertifikat}
+                    onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                  {sertifikatMode === 'dengan' && (
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'noSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Tanggal Terbit</label>
-                  <input
-                    type="date"
-                    value={terbit}
-                    onChange={(e) => setTerbit(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date"
+                      value={formData.terbit}
+                      onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                      className="w-full px-2 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
+                    />
+                    {sertifikatMode === 'dengan' && (
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'terbit' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700 block">Tanggal Berakhir</label>
-                  <input
-                    type="date"
-                    value={expired}
-                    onChange={(e) => setExpired(e.target.value)}
-                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                <div>
+                  <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Expired</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date"
+                      value={formData.expired}
+                      onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
+                      className="w-full px-2 py-2 bg-white border border-rose-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-500"
+                    />
+                    {sertifikatMode === 'dengan' && (
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'expired' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                      }`}
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCheck className="w-4 h-4" />}
-                  <span>Simpan Sertifikat & Pindahkan</span>
-                </button>
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Instansi Penerbit</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={formData.instansi}
+                    onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                  {sertifikatMode === 'dengan' && (
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'instansi' ? null : 'instansi')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'instansi' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                  )}
+                </div>
               </div>
-            </form>
+            </div>
           )}
+        </div>
+      )}
 
-          {/* Form Opsi B: Tanpa Sertifikat + Catatan Alasan Wajib */}
-          {option === 'exempt' && (
-            <form onSubmit={handleExemptSubmit} className="space-y-4">
-              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
-                <div className="font-bold flex items-center gap-1.5">
-                  <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
-                  Konfirmasi Tanpa Sertifikat
+      {/* SECTION NOTIFIKASI & DEADLINE */}
+      <div className="space-y-4 pt-4 border-t border-slate-200">
+        <h4 className="font-bold text-slate-900 text-xs border-b border-slate-200 pb-2 uppercase tracking-wider font-mono-data">
+          Pengaturan Notifikasi & Deadline
+        </h4>
+        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 font-mono-data">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="resolveReminderEnabled"
+              checked={formData.reminderEnabled}
+              onChange={(e) => setFormData({ ...formData, reminderEnabled: e.target.checked })}
+              className="rounded border-slate-300 accent-[#005ea4] h-4 w-4 cursor-pointer"
+            />
+            <label htmlFor="resolveReminderEnabled" className="text-xs text-slate-700 font-bold select-none cursor-pointer">
+              Aktifkan Pengingat / Notifikasi Reminder
+            </label>
+          </div>
+
+          {formData.reminderEnabled && (
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Tipe Pemicu</label>
+                <select
+                  value={formData.reminderType}
+                  onChange={(e) => setFormData({ ...formData, reminderType: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                >
+                  <option value="DAYS">Berdasarkan Sisa Hari (H-)</option>
+                  <option value="DATE">Berdasarkan Tanggal Spesifik</option>
+                </select>
+              </div>
+              {formData.reminderType === 'DAYS' ? (
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.reminderDays}
+                    onChange={(e) => setFormData({ ...formData, reminderDays: parseInt(e.target.value) || 30 })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
                 </div>
-                <p className="text-[11px] text-amber-800 leading-relaxed font-mono-data">
-                  Data ini akan dipindahkan ke **Tab Data Utama** dengan label **"Tanpa Sertifikat"**. Wajib memberikan catatan alasan yang jelas agar data tetap transparan.
-                </p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">
-                  Catatan Alasan Penanganan <span className="text-rose-500">* (Wajib)</span>
-                </label>
-                <textarea
-                  rows={4}
-                  value={exemptionNote}
-                  onChange={(e) => setExemptionNote(e.target.value)}
-                  placeholder="Contoh: Peralatan kategori Non-Wajib K3 Depnaker / Memiliki Surat Keterangan Pabrikan / Hanya Izin Usaha Lokal..."
-                  className="w-full p-3 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                  required
-                />
-              </div>
-
-              <div className="pt-2 flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5"
-                >
-                  {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  <span>Konfirmasi & Pindahkan</span>
-                </button>
-              </div>
-            </form>
+              ) : (
+                <div>
+                  <label className="text-[11px] font-bold text-slate-600 block mb-1">Tanggal Pemicu</label>
+                  <input
+                    type="date"
+                    value={formData.reminderDate}
+                    onChange={(e) => setFormData({ ...formData, reminderDate: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>
-    </div>
+    </BaseSplitScreenUploadModal>
   );
 }

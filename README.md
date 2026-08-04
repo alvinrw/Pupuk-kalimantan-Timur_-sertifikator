@@ -122,14 +122,29 @@ Buka terminal baru dan jalankan perintah berikut:
    ```
 
 5. **Jalankan Backend Server**:
+    ```bash
+    npm run start:dev
+    ```
+    Backend akan berjalan di `http://localhost:3000`.
+
+### Langkah 2: Menjalankan Backend AI OCR (Python FastAPI)
+
+Backend ini bertugas memproses gambar dari drag-and-drop Frontend menggunakan mesin AI PaddleOCR. Buka terminal baru (biarkan terminal NestJS tetap berjalan), lalu:
+
+1. **Masuk ke direktori fastapi-ocr**:
    ```bash
-   npm run start:dev
+   cd backend/fastapi-ocr
    ```
-   Backend akan berjalan di `http://localhost:3000`.
 
-### Langkah 2: Menjalankan Frontend (React)
+2. **Jalankan Server Uvicorn (FastAPI)**:
+   ```bash
+   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+   Server AI OCR akan berjalan di `http://127.0.0.1:8000`.
 
-Buka terminal baru (biarkan terminal backend tetap berjalan), lalu jalankan perintah berikut:
+### Langkah 3: Menjalankan Frontend (React)
+
+Buka terminal baru lagi, lalu jalankan perintah berikut:
 
 1. **Masuk ke direktori frontend**:
    ```bash

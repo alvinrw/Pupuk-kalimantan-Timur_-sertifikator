@@ -165,7 +165,7 @@ export default function ZipOcrModal({ isOpen, onClose, onMatchSuccess }) {
       setStep('result');
     } catch (error) {
       console.error("ZIP OCR API Error:", error);
-      alert("Gagal mengekstraksi ZIP PDF menggunakan AI OCR. Pastikan Backend FastAPI menyala di port 8000.");
+      alert("Gagal mengekstraksi ZIP PDF menggunakan AI. Pastikan Backend FastAPI menyala di port 8000.");
       setStep('upload');
     }
   };

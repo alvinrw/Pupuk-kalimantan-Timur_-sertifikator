@@ -51,8 +51,8 @@ export default function CertHistorySection({
                 <th className="py-2.5 px-3 font-bold">NO. SERTIFIKAT / SK</th>
                 <th className="py-2.5 px-3 font-bold">TGL TERBIT</th>
                 <th className="py-2.5 px-3 font-bold">TGL EXPIRED</th>
-                <th className="py-2.5 px-3 font-bold text-center">STATUS HUKUM</th>
-                <th className="py-2.5 px-3 font-bold text-right">AKSI BERKAS</th>
+                <th className="py-2.5 px-3 font-bold text-center">STATUS SERTIFIKAT</th>
+                <th className="py-2.5 px-3 font-bold text-right">AKSI </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
@@ -73,11 +73,10 @@ export default function CertHistorySection({
                     <td className="py-3 px-3 text-slate-700">{row.terbit}</td>
                     <td className="py-3 px-3 font-bold text-rose-700">{row.expired}</td>
                     <td className="py-3 px-3 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
-                        row.isCurrent
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${row.isCurrent
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
                           : 'bg-slate-200 text-slate-700 border-slate-300'
-                      }`}>
+                        }`}>
                         {row.status}
                       </span>
                     </td>
@@ -91,11 +90,10 @@ export default function CertHistorySection({
                               alert('Berkas PDF belum diunggah. Gunakan tombol "+ Unggah / Koreksi Berkas PDF Manual".');
                             }
                           }}
-                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors ${
-                            row.fileUrl
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg inline-flex items-center gap-1 transition-colors ${row.fileUrl
                               ? 'bg-[#005ea4] hover:bg-[#004881] text-white cursor-pointer'
                               : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                          }`}
+                            }`}
                         >
                           <FileText className="w-3.5 h-3.5" />
                           <span>{row.fileUrl ? 'Liat PDF' : 'Belum Ada'}</span>
@@ -132,9 +130,8 @@ export default function CertHistorySection({
         <div className="relative pl-6 border-l-2 border-slate-200 space-y-4 font-mono-data text-xs">
           {historyList.map((row) => (
             <div key={row.id} className="relative">
-              <span className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-white ${
-                row.isCurrent ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-400'
-              }`} />
+              <span className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-white ${row.isCurrent ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-400'
+                }`} />
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                 <div className="flex justify-between font-bold text-slate-900">
                   <span>{row.periode} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â No. SK: {row.noSertifikat}</span>
@@ -142,7 +139,7 @@ export default function CertHistorySection({
                     row.isCurrent
                       ? 'text-emerald-700 bg-emerald-50 border-emerald-200 font-bold'
                       : 'text-slate-500 bg-slate-100 border-slate-200'
-                  }`}>
+                    }`}>
                     {row.status}
                   </span>
                 </div>

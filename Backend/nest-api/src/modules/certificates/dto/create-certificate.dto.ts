@@ -6,8 +6,12 @@ export class CreateCertificateDto {
   itemId: string;
 
   @IsString()
-  @IsNotEmpty()
-  jenisSertifikat: string;
+  @IsOptional()
+  jenisSertifikat?: string;
+
+  @IsString()
+  @IsOptional()
+  namaSertifikat?: string;
 
   @IsString()
   @IsOptional()
