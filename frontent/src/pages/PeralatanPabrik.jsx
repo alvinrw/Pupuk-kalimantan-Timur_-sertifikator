@@ -76,7 +76,7 @@ export default function PeralatanPabrik() {
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Kelola / Impor Dokumen</span>
-            <ChevronDown className="w-3.5 h-3.5" />
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${data.isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {data.isImportMenuOpen && (

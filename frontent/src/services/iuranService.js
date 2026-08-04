@@ -1,10 +1,11 @@
 import api, { USE_DUMMY_DATA } from './api';
+import { mockIuranData } from '../data/mockData';
 
 export const getIuranKeanggotaan = async () => {
   if (USE_DUMMY_DATA) {
     console.log('[DUMMY MODE] Fetching Iuran Keanggotaan...');
     await new Promise((resolve) => setTimeout(resolve, 300));
-    return []; // Return empty array for dummy
+    return mockIuranData || [];
   }
   const response = await api.get('/iuran-keanggotaan');
   return response.data;

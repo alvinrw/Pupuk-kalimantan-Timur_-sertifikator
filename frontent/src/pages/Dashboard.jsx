@@ -14,7 +14,8 @@ import {
   RotateCw,
   FileMinus,
   Wrench,
-  Power
+  Power,
+  Wallet
 } from 'lucide-react';
 import {
   BarChart,
@@ -29,6 +30,7 @@ import {
   Legend
 } from 'recharts';
 import { getMasterItems } from '../services/masterItemsService';
+import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';
 
 export default function Dashboard() {
   const [filterKategori, setFilterKategori] = useState('All');
@@ -159,7 +161,7 @@ export default function Dashboard() {
   const statusPieData = [
     { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
     { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
-    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
+    { name: `Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
   ];
 
@@ -404,12 +406,24 @@ export default function Dashboard() {
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                 <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
+                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hr)`} />
                 <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
+      </div>
+
+      {/* MONITORING ANGGARAN */}
+      <div className="pt-8 mt-8 border-t border-slate-200">
+        <div className="mb-6">
+          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
+            <Wallet className="w-6 h-6 text-[#005ea4]" />
+            Anggaran & Iuran
+          </h2>
+          <p className="text-sm text-slate-500 font-medium ml-8">Ringkasan serapan dan rincian iuran keanggotaan.</p>
+        </div>
+        <MonitoringAnggaran />
       </div>
 
       {/* FILTER MODAL */}

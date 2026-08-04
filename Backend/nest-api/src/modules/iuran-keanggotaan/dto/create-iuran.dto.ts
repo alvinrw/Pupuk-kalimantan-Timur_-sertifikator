@@ -31,6 +31,10 @@ export class CreateIuranDto {
 
   @IsString()
   @IsOptional()
+  statusPembayaran?: string;
+
+  @IsString()
+  @IsOptional()
   nama?: string;
 
   @IsString()

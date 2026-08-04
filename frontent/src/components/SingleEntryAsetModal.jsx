@@ -215,7 +215,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
             </div>
 
             <div>
-              <label className="font-bold text-slate-900 block mb-1">Luas (m²)</label>
+              <label className="font-bold text-slate-900 block mb-1">Luas (mÃƒâ€šÃ‚Â²)</label>
               <input
                 type="number"
                 value={formData.areaSqm}

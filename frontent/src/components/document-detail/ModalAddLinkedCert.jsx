@@ -1,5 +1,5 @@
 /**
- * ModalAddLinkedCert — Modal tambah sertifikat terhubung baru.
+ * ModalAddLinkedCert ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal tambah sertifikat terhubung baru.
  * Dipisah dari DocumentDetailPage (sebelumnya ~200 baris inline).
  */
 import React, { useState } from 'react';
@@ -148,7 +148,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                 <span>Pilih Berkas PDF</span>
               </label>
               {certData.pdfName
-                ? <span className="block text-emerald-700 font-bold text-[11px] mt-1.5">✓ Terpilih: {certData.pdfName}</span>
+                ? <span className="block text-emerald-700 font-bold text-[11px] mt-1.5">ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Terpilih: {certData.pdfName}</span>
                 : <span className="block text-slate-400 text-[10px] mt-1">Format: PDF (Opsional)</span>
               }
             </div>

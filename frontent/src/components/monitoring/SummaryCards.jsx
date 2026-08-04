@@ -2,7 +2,7 @@ import React from 'react';
 import { ShieldAlert, Clock, CheckCircle2, RotateCcw, Ban } from 'lucide-react';
 
 /**
- * SummaryCards — 5 kartu statistik di bagian atas MonitoringSertifikasi.
+ * SummaryCards ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â 5 kartu statistik di bagian atas MonitoringSertifikasi.
  * Props: countExpired, countUrgent, countValid, countInProgress, countDecommissioned,
  *        expiryTab, setExpiryTab, customUrgentDays, setCustomUrgentDays
  */

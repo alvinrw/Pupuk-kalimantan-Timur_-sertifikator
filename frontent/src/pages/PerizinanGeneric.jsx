@@ -29,9 +29,6 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
           data.setDetailModalItem(null);
           data.loadData();
         }}
-        onQuickRenew={(id) => alert(`Inisiasi Perpanjangan untuk dokumen ${id}. Menuju menu Monitoring.`)}
-        onQuickDecommission={(id) => alert(`Menandai dokumen ${id} sebagai Afkir.`)}
-        onDeleteSuccess={() => { g.setDetailModalItem(null); g.loadData(); }}
       />
     );
   }

@@ -195,37 +195,37 @@ export default function RiwayatPerpanjangan() {
 
         {/* Table View */}
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse font-sans-clean">
+          <table className="w-full text-center border-collapse font-sans-clean">
             <thead>
-              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
-                <th className="py-3 px-3 text-center font-bold whitespace-nowrap">NO.</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap text-[#005ea4]">NAMA ITEM & UNIT</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap">NO. SERTIFIKAT BARU</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap">TGL INSPEKSI</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap">TGL TERBIT SK</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap text-rose-700">TGL EXPIRATION</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap">INSTANSI / PENGUJI</th>
-                <th className="py-3 px-3 font-bold text-center whitespace-nowrap">DOKUMEN</th>
+              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none text-center align-middle">
+                <th className="py-3 px-3 text-center font-bold whitespace-nowrap align-middle">NO.</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">NAMA ITEM & UNIT</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT BARU</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL INSPEKSI</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL TERBIT SK</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-rose-700 text-center align-middle">TGL EXPIRATION</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">INSTANSI / PENGUJI</th>
+                <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">DOKUMEN</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs font-mono-data">
               {filteredData.length > 0 ? (
                 filteredData.map((log, index) => (
-                  <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3.5 px-3 text-center font-bold text-slate-500 whitespace-nowrap">
+                  <tr key={log.id} className="hover:bg-slate-50 transition-colors align-middle">
+                    <td className="py-3.5 px-3 text-center font-bold text-slate-500 whitespace-nowrap align-middle">
                       {index + 1}
                     </td>
 
                     {/* Nama Item & Unit */}
                     <td
                       onClick={() => setSelectedDetailDoc(log)}
-                      className="py-3.5 px-3 whitespace-nowrap cursor-pointer group"
+                      className="py-3.5 px-3 whitespace-nowrap cursor-pointer group text-center align-middle"
                       title="Klik untuk Lihat Detail Penuh"
                     >
                       <div className="font-bold text-slate-900 group-hover:text-[#005ea4] group-hover:underline font-sans">{log.merekItem}</div>
-                      <div className="text-[11px] text-slate-500 font-mono-data flex items-center gap-1.5 mt-0.5">
+                      <div className="text-[11px] text-slate-500 font-mono-data flex items-center justify-center gap-1.5 mt-0.5">
                         <span>{log.jenisItem}</span>
-                        <span>•</span>
+                        <span>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</span>
                         <span className="font-bold text-[#005ea4] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[10px]">
                           {log.unitPabrik}
                         </span>
@@ -233,7 +233,7 @@ export default function RiwayatPerpanjangan() {
                     </td>
 
                     {/* No. Sertifikat Baru */}
-                    <td className="py-3.5 px-3 font-bold text-slate-800 whitespace-nowrap">
+                    <td className="py-3.5 px-3 font-bold text-slate-800 whitespace-nowrap text-center align-middle">
                       {log.noSertifikatBaru}
                       <span className="block text-[10px] font-normal text-slate-400">
                         (Lama: {log.noSertifikatLama})
@@ -241,27 +241,27 @@ export default function RiwayatPerpanjangan() {
                     </td>
 
                     {/* Tanggal Inspeksi */}
-                    <td className="py-3.5 px-3 text-slate-700 whitespace-nowrap font-medium">
+                    <td className="py-3.5 px-3 text-slate-700 whitespace-nowrap font-medium text-center align-middle">
                       {log.tglInspeksi}
                     </td>
 
                     {/* Tanggal Terbit */}
-                    <td className="py-3.5 px-3 text-slate-700 whitespace-nowrap font-medium">
+                    <td className="py-3.5 px-3 text-slate-700 whitespace-nowrap font-medium text-center align-middle">
                       {log.tglTerbit}
                     </td>
 
                     {/* Tanggal Expired */}
-                    <td className="py-3.5 px-3 text-rose-700 whitespace-nowrap font-bold">
+                    <td className="py-3.5 px-3 text-rose-700 whitespace-nowrap font-bold text-center align-middle">
                       {log.tglExpiredBaru}
                     </td>
 
                     {/* Pelaksana / Penguji */}
-                    <td className="py-3.5 px-3 text-slate-800 whitespace-nowrap font-medium font-sans">
+                    <td className="py-3.5 px-3 text-slate-800 whitespace-nowrap font-medium font-sans text-center align-middle">
                       {log.pelaksana}
                     </td>
 
                     {/* Action Download / Preview */}
-                    <td className="py-3.5 px-3 text-center whitespace-nowrap">
+                    <td className="py-3.5 px-3 text-center whitespace-nowrap align-middle">
                       <button
                         onClick={() => alert(`Membuka berkas sertifikat terlampir: ${log.fileName}`)}
                         className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#005ea4] border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1.5 mx-auto cursor-pointer transition-colors"

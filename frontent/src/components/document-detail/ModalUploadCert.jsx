@@ -1,5 +1,5 @@
 /**
- * ModalUploadCert — Modal unggah / koreksi berkas PDF manual.
+ * ModalUploadCert ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal unggah / koreksi berkas PDF manual.
  * Dipisah dari DocumentDetailPage (sebelumnya ~160 baris inline).
  */
 import React, { useRef, useState } from 'react';
@@ -36,7 +36,7 @@ export default function ModalUploadCert({
               </h4>
               <p className="text-[11px] text-blue-300 font-mono-data">
                 {uploadData.target === 'current'
-                  ? 'Buat versi baru — versi lama otomatis masuk histori'
+                  ? 'Buat versi baru ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â versi lama otomatis masuk histori'
                   : 'Tambahkan riwayat berkas ke daftar histori sertifikat'}
               </p>
             </div>
@@ -50,7 +50,7 @@ export default function ModalUploadCert({
         <form onSubmit={onSubmit} className="p-6 space-y-4 text-xs font-mono-data">
           {isSingleCertScope && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs">
-              <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
+              <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Direvisi)' : 'Arsip (tambah ke histori)'}
             </div>
           )}
 
@@ -95,7 +95,7 @@ export default function ModalUploadCert({
               />
               <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
               <span className="text-xs font-bold text-[#005ea4] block">
-                {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
+                {selectedUploadFile ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Terpilih: ${selectedUploadFile.name}` : 'Klik untuk Memilih File PDF'}
               </span>
               <span className="text-[10px] text-slate-400 mt-0.5 block">Format: PDF, PNG, JPG (Opsional)</span>
             </div>

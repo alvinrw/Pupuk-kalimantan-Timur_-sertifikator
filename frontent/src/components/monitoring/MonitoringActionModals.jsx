@@ -236,14 +236,14 @@ export default function MonitoringActionModals({
                 {isOcrScanning && (
                   <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 flex items-center gap-2 text-[11px] animate-pulse">
                     <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                    <span>⚡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
+                    <span>ÃƒÂ¢Ã…Â¡Ã‚Â¡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
                   </div>
                 )}
 
                 {ocrSuccess && (
                   <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 flex items-center gap-2 text-[11px]">
                     <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>✓ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
+                    <span>ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
                   </div>
                 )}
               </div>

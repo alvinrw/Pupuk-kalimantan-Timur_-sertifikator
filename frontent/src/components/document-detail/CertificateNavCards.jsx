@@ -1,5 +1,5 @@
 /**
- * CertificateNavCards — Kartu navigasi "Sertifikat Terhubung".
+ * CertificateNavCards ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Kartu navigasi "Sertifikat Terhubung".
  * Ditampilkan ketika suatu entitas (Proyek/Aset/Produk) memiliki >1 jenis sertifikat.
  * User dapat mengklik kartu untuk berganti context sertifikat aktif.
  */

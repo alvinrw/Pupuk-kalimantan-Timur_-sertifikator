@@ -105,7 +105,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
               Perbaiki / Lengkapi Dokumen
             </h3>
             <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-              {itemCode} — <span className="font-bold text-slate-800">{itemTitle}</span>
+              {itemCode} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â <span className="font-bold text-slate-800">{itemTitle}</span>
             </p>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-200/60 transition-colors">
@@ -173,7 +173,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, item, onSuccess 
                   />
                   <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
                   <span className="text-xs font-bold text-[#005ea4] block">
-                    {selectedFile ? `✓ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
+                    {selectedFile ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
                   </span>
                   <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
                 </div>

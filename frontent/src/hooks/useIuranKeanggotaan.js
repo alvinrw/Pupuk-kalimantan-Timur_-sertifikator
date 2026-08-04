@@ -24,6 +24,8 @@ export default function useIuranKeanggotaan() {
     unitKerja: '',
     asosiasi: '',
     periode: '',
+    tanggalMulai: '',
+    tanggalSelesai: '',
     nominal: '',
     status: 'Belum Lunas',
     nama: '',
@@ -58,6 +60,8 @@ export default function useIuranKeanggotaan() {
       unitKerja: '',
       asosiasi: '',
       periode: '',
+      tanggalMulai: '',
+      tanggalSelesai: '',
       nominal: '',
       status: 'Belum Lunas',
       nama: '',
@@ -70,13 +74,26 @@ export default function useIuranKeanggotaan() {
   const handleOpenEditModal = (item) => {
     setModalMode('edit');
     setSelectedItem(item);
+    let tMulai = '';
+    let tSelesai = '';
+    if (item.periode && item.periode.includes(' s/d ')) {
+      const parts = item.periode.split(' s/d ');
+      tMulai = parts[0].substring(0, 4);
+      tSelesai = parts[1].substring(0, 4);
+    } else if (item.periode) {
+      tMulai = item.periode.substring(0, 4);
+      tSelesai = '';
+    }
+
     setFormData({
       nomer: item.nomer || '',
       kompartemen: item.kompartemen || '',
       unitKerja: item.unitKerja || '',
       asosiasi: item.asosiasi || '',
       periode: item.periode || '',
-      nominal: item.nominal || '',
+      tanggalMulai: tMulai,
+      tanggalSelesai: tSelesai,
+      nominal: item.nominal ? item.nominal.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '',
       status: item.status || 'Belum Lunas',
       nama: item.nama || '',
       npk: item.npk || '',
@@ -91,17 +108,34 @@ export default function useIuranKeanggotaan() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'nominal') {
+      const numericValue = value.replace(/\D/g, '');
+      const formattedValue = numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      setFormData(prev => ({ ...prev, [name]: formattedValue }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      let finalPeriode = formData.periode;
+      if (formData.tanggalMulai && formData.tanggalSelesai) {
+        finalPeriode = `${formData.tanggalMulai} s/d ${formData.tanggalSelesai}`;
+      } else if (formData.tanggalMulai) {
+        finalPeriode = `${formData.tanggalMulai}`;
+      }
+
       const payload = {
         ...formData,
-        nominal: formData.nominal ? parseFloat(formData.nominal) : null,
+        periode: finalPeriode,
+        nominal: formData.nominal ? parseFloat(formData.nominal.toString().replace(/\./g, '')) : null,
       };
+      
+      delete payload.tanggalMulai;
+      delete payload.tanggalSelesai;
 
       if (modalMode === 'add') {
         await createIuranKeanggotaan(payload);
@@ -144,5 +178,7 @@ export default function useIuranKeanggotaan() {
     handleInputChange,
     handleSubmit,
     handleDelete,
+    setData,
+    fetchData,
   };
 }

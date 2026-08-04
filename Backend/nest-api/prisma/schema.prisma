@@ -120,6 +120,7 @@ model IuranKeanggotaan {
   periode     String?
   nominal     Float?
   status      String?  @default("Belum Lunas")
+  statusPembayaran String? @default("Belum Lunas")
   nama        String?
   npk         String?
   keterangan  String?

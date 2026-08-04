@@ -85,10 +85,7 @@ export default function App() {
             onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
-      case 'administrasi-lainnya':
-        return (
-          <AdministrasiLainnya />
-        );
+
       case 'perizinan-proyek':
         return (
           <PerizinanGeneric
