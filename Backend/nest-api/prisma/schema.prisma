@@ -116,6 +116,43 @@ model MonitoringLog {
   @@map("monitoring_logs")
 }
 
+model NotificationSetting {
+  id            String   @id @default(uuid())
+  itemId        String?  @unique
+  certificateId String?  @unique
+  isEnabled     Boolean  @default(true)
+  triggerType   String   @default("DAYS") // "DAYS" or "DATE"
+  triggerDays   Int      @default(30)
+  triggerDate   DateTime?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relasi
+  item          MasterItem?  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  certificate   Certificate? @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+
+model ReminderNotification {
+  id            String   @id @default(uuid())
+  itemId        String?
+  certificateId String?
+  reminderType  String?  // "EXPIRED_SOON", "ALREADY_EXPIRED"
+  message       String?
+  isResolved    Boolean  @default(false)
+  
+  createdAt     DateTime @default(now())
+  resolvedAt    DateTime?
+
+  // Relasi
+  item          MasterItem?  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  certificate   Certificate? @relation(fields: [certificateId], references: [id], onDelete: Cascade)
+
+  @@map("reminder_notifications")
+}
+
 model IuranKeanggotaan {
   id          String   @id @default(uuid())
   nomer       String?

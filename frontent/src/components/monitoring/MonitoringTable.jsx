@@ -2,7 +2,7 @@ import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 
 /**
- * MonitoringTable ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Tabel utama monitoring sertifikasi.
+ * MonitoringTable — Tabel utama monitoring sertifikasi.
  */
 export default function MonitoringTable({
   filteredCertificates,
@@ -78,7 +78,7 @@ export default function MonitoringTable({
                   rowStyleClass = "bg-[#0f172a] text-slate-100 transition-colors hover:bg-slate-800";
                 } else if (isInProgress) {
                   rowStyleClass = "bg-amber-50/70 hover:bg-amber-100/70 text-slate-900 transition-colors";
-                } else if (doc.sisaHari <= 0) {
+                } else if (doc.sisaHari !== null && doc.sisaHari <= 0) {
                   rowStyleClass = "bg-rose-50/70 hover:bg-rose-100/70 text-slate-900 transition-colors";
                 }
 
@@ -119,7 +119,7 @@ export default function MonitoringTable({
                       {doc.tglExpired && doc.tglExpired !== '2030-01-01' ? doc.tglExpired : (doc.expiryDate && doc.expiryDate !== '2030-01-01' ? doc.expiryDate : '-')}
                       {doc.sisaHari !== null && doc.sisaHari !== undefined && doc.tglExpired !== '-' && (
                         <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
-                          ({isDecommissioned ? 'Afkir / Non-Aktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
+                          ({isDecommissioned ? 'Nonaktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
                         </span>
                       )}
                     </td>
@@ -133,7 +133,7 @@ export default function MonitoringTable({
                       ) : doc.sisaHari <= (parseInt(customUrgentDays) || 30) ? (
                         <span className="text-amber-600">&lt; {customUrgentDays || 30} Hari</span>
                       ) : (
-                        <span className="text-emerald-600">Valid</span>
+                        <span className="text-emerald-600">Aktif</span>
                       )}
                     </td>
                     <td className="py-3 px-3 text-center whitespace-nowrap font-mono-data align-middle">
@@ -157,7 +157,7 @@ export default function MonitoringTable({
                           onClick={() => onCancelAfkir(doc.id)}
                           className="text-xs text-slate-300 hover:text-white hover:underline font-medium cursor-pointer"
                         >
-                          Batal Afkir
+                          Batal Nonaktif
                         </button>
                       ) : (
                         <div className="inline-flex items-center gap-2">
@@ -171,7 +171,7 @@ export default function MonitoringTable({
                             onClick={() => onQuickDecommission(doc.id)}
                             className="text-xs text-slate-500 hover:text-slate-900 hover:underline font-medium cursor-pointer"
                           >
-                            Afkir
+                            Nonaktif
                           </button>
                         </div>
                       )}

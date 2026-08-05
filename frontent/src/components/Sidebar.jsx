@@ -7,6 +7,7 @@ import {
   FolderKanban,
   PackageCheck,
   Activity,
+  ClipboardList,
   History,
   HelpCircle,
   Settings,

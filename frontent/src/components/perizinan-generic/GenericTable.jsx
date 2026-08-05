@@ -150,6 +150,7 @@ export default function GenericTable({
                     </div>
                   </th>
                 )}
+                <th className="py-3.5 px-4 font-bold text-center align-middle">AKSI</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
@@ -311,6 +312,26 @@ export default function GenericTable({
                           </span>
                         </td>
                       )}
+                      
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
+                        {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
+                          <button
+                            onClick={() => setResolveTargetItem(doc)}
+                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                          >
+                            <FileWarning className="w-3.5 h-3.5" />
+                            <span>Perbaiki / Lengkapi</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
+                            className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Lihat Detail</span>
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })

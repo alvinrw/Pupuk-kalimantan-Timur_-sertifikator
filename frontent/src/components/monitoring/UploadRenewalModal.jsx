@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, UploadCloud, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle } from 'lucide-react';
+import { X, UploadCloud, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle, Crosshair } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 
 /**
  * UploadRenewalModal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal "Selesai & Upload Sertifikat Baru" untuk MonitoringSertifikasi.
@@ -21,6 +22,55 @@ export default function UploadRenewalModal({
   // Local state for temp uploading
   const [tempUrl, setTempUrl] = useState(null);
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [scanMode, setScanMode] = useState(null);
+
+  const handleOcrResult = async (fieldKey, rawText) => {
+    try {
+      const { parseDate, parseCertificateNumber } = await import('../../utils/ocrTextParser');
+      
+      if (fieldKey === 'noSertifikat') {
+        const certNo = parseCertificateNumber(rawText);
+        setNewCertNumber(certNo || rawText.replace(/\n+/g, ' ').trim());
+      } else if (fieldKey === 'terbit') {
+        const parsed = parseDate(rawText);
+        if (parsed) setIssueDate(parsed.iso);
+      } else if (fieldKey === 'expired') {
+        const parsed = parseDate(rawText);
+        if (parsed) setNewExpiryDate(parsed.iso);
+      }
+      
+      setScanMode(null);
+    } catch (err) {
+      console.error("Gagal memproses hasil OCR:", err);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isUploadingTemp || isOcrScanning) return;
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (isUploadingTemp || isOcrScanning) return;
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      // Mock event object for onFileChange
+      onFileChange({ target: { files: [file] } });
+    }
+  };
 
   // Intercept file selection to upload to temp bucket
   const onFileChange = async (e) => {
@@ -94,6 +144,10 @@ export default function UploadRenewalModal({
                   1. Upload File Sertifikat Baru (Wajib) <span className="text-rose-500">*</span>
                 </label>
                 <div
+                  onDragEnter={handleDragOver}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                   onClick={() => {
                     if (isUploadingTemp || isOcrScanning) return;
                     document.getElementById('cert-file-input-monitoring').click();
@@ -101,23 +155,29 @@ export default function UploadRenewalModal({
                   className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
                     (isUploadingTemp || isOcrScanning) 
                       ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-70' 
+                      : isDragging
+                      ? 'border-[#005ea4] bg-blue-50'
                       : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50 cursor-pointer'
                   }`}
                 >
                   <input
                     type="file"
                     id="cert-file-input-monitoring"
-                    accept=".pdf"
+                    accept=".pdf,.png,.jpg,.jpeg"
                     onChange={onFileChange}
                     className="hidden"
                     disabled={isUploadingTemp || isOcrScanning}
                   />
-                  <UploadCloud className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
-                  <div className="flex flex-col items-center">
+                  <UploadCloud className="w-6 h-6 text-[#005ea4] mx-auto mb-1 pointer-events-none" />
+                  <div className="flex flex-col items-center pointer-events-none">
                     <span className="text-xs font-bold text-[#005ea4]">
-                      {uploadedFile ? `✓ Terpilih: ${uploadedFile.name}` : 'Klik untuk Pilih File Sertifikat'}
+                      {isDragging ? 'Lepaskan file di sini...' : (uploadedFile ? `✅ Terpilih: ${uploadedFile.name}` : 'Klik atau Drag & Drop File Sertifikat')}
                     </span>
-                    <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+                    {uploadedFile ? (
+                      <span className="text-[10px] text-slate-500 mt-1">Klik atau Drag & Drop file lain untuk mengganti</span>
+                    ) : (
+                      <span className="text-[10px] text-slate-500 mt-1">Format: PDF, PNG, JPG (Maks. 10MB)</span>
+                    )}
                   </div>
                 </div>
 
@@ -138,69 +198,81 @@ export default function UploadRenewalModal({
                   </div>
                 )}
                 
-                {ocrSuccess && !isOcrScanning && (
-                  <div className="flex items-start gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 mt-2">
-                    <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                    <span>AI berhasil mengisi form! Harap verifikasi data dengan preview PDF.</span>
-                  </div>
-                )}
-
-            {isOcrScanning && (
-              <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 flex items-center gap-2 text-[11px] animate-pulse">
-                <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>⚡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
-              </div>
-            )}
-
-            {ocrSuccess && (
-              <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 flex items-center gap-2 text-[11px]">
-                <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>✓ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
-              </div>
-            )}
-            </div>
-
-            <div>
+              <div>
               <label className="font-bold text-slate-900 block mb-1">
                 2. Nomor Sertifikat Baru <span className="text-[10px] font-normal text-slate-500">(Auto-OCR / Editable)</span>
               </label>
-              <input
-                type="text"
-                value={newCertNumber}
-                onChange={(e) => setNewCertNumber(e.target.value)}
-                placeholder="Nomor SK / Sertifikat baru..."
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-bold text-slate-900 text-xs"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCertNumber}
+                  onChange={(e) => setNewCertNumber(e.target.value)}
+                  placeholder="Nomor SK / Sertifikat baru..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-bold text-slate-900 text-xs"
+                />
+                <button
+                  type="button"
+                  onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
+                  className={`p-2 rounded-lg border shrink-0 transition-all ${
+                    scanMode === 'noSertifikat' 
+                    ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                    : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                  }`}
+                  title="Drag-select No. Sertifikat"
+                >
+                  <Crosshair className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-900 block mb-1">3. Tgl Pengecekan</label>
-                  <input
-                    type="date" required
-                    value={inspectionDate}
-                    onChange={(e) => setInspectionDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                  <label className="font-bold text-slate-900 block mb-1">3. Tgl Terbit SK</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date" required
+                      value={issueDate}
+                      onChange={(e) => setIssueDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'terbit' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                      title="Drag-select Tgl Terbit"
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-900 block mb-1">4. Tgl Terbit SK</label>
-                  <input
-                    type="date" required
-                    value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                  <label className="font-bold text-slate-900 block mb-1 text-rose-700">4. Tgl Expired Baru</label>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date" required
+                      value={newExpiryDate}
+                      onChange={(e) => setNewExpiryDate(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'expired' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                      }`}
+                      title="Drag-select Tgl Expired"
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="font-bold text-slate-900 block mb-1">5. Tgl Expired Baru</label>
-                  <input
-                    type="date" required
-                    value={newExpiryDate}
-                    onChange={(e) => setNewExpiryDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
-                </div>
+              </div>
               </div>
 
               <div>
@@ -245,10 +317,11 @@ export default function UploadRenewalModal({
             </div>
             <div className="flex-1 w-full h-full pt-10">
               {tempUrl ? (
-                <iframe
-                  src={`${tempUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  className="w-full h-full border-none"
-                  title="PDF Preview"
+                <PdfCanvasOcrViewer
+                  pdfUrl={tempUrl}
+                  scanMode={scanMode}
+                  onScanComplete={handleOcrResult}
+                  onScanCancel={() => setScanMode(null)}
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center space-y-4">

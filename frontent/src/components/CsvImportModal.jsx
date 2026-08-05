@@ -203,7 +203,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Impor CSV ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â <span className="text-[#005ea4]">{currentCategoryTitle}</span>
+                Impor CSV &rarr; <span className="text-[#005ea4]">{currentCategoryTitle}</span>
               </h3>
               <p className="text-xs text-slate-500 font-mono-data">
                 Unggah berkas CSV khusus untuk modul perizinan {currentCategoryTitle}

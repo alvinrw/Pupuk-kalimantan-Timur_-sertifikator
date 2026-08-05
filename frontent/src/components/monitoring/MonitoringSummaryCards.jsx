@@ -117,7 +117,7 @@ export default function MonitoringSummaryCards({
         className={`${cardBase} ${expiryTab === 'decommissioned' ? activeRing : inactiveCard}`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Non-Aktif / Afkir</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Nonaktif</span>
           <Ban className="w-4 h-4 text-slate-400 shrink-0" />
         </div>
         <div className="flex items-end gap-1">

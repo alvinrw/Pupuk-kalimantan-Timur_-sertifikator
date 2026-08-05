@@ -2,9 +2,11 @@
  * ModalAddLinkedCert ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal tambah sertifikat terhubung baru.
  * Dipisah dari DocumentDetailPage (sebelumnya ~200 baris inline).
  */
-import React, { useState } from 'react';
-import { X, Link2, CheckSquare, Upload } from 'lucide-react';
-import { UPLOAD_ENDPOINT } from '../../config/api';
+import React, { useState, useRef, useEffect } from 'react';
+import { X, Link2, CheckSquare, Upload, CheckCircle, Loader2, AlertTriangle, FileText, ShieldAlert, Crosshair } from 'lucide-react';
+import { UPLOAD_ENDPOINT, API_BASE } from '../../config/api';
+import { scanPdfDocument } from '../../services/ocrService';
+import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 
 export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
   const [certData, setCertData] = useState({
@@ -21,8 +23,21 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
   const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [scanMode, setScanMode] = useState(null);
 
   const fileInputRef = useRef(null);
+
+  const handleOcrResult = (text) => {
+    if (!text || !scanMode) {
+      setScanMode(null);
+      return;
+    }
+    setCertData(prev => ({
+      ...prev,
+      [scanMode]: text.trim()
+    }));
+    setScanMode(null);
+  };
 
   useEffect(() => {
     if (!isOpen) {
@@ -261,57 +276,127 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                 <label className="font-bold text-slate-800 block mb-1">
                   Jenis / Nama Sertifikat <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text" required
-                  value={certData.jenisSertifikat}
-                  onChange={(e) => setCertData({ ...certData, jenisSertifikat: e.target.value })}
-                  placeholder="Contoh: PBG, SLF, HGB, Amdal"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text" required
+                    value={certData.jenisSertifikat}
+                    onChange={(e) => setCertData({ ...certData, jenisSertifikat: e.target.value })}
+                    placeholder="Contoh: PBG, SLF, HGB, Amdal"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'jenisSertifikat' ? null : 'jenisSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'jenisSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select Jenis Sertifikat"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="font-bold text-slate-800 block mb-1">
                   No. SK / Sertifikat <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text" required
-                  value={certData.noSertifikat}
-                  onChange={(e) => setCertData({ ...certData, noSertifikat: e.target.value })}
-                  placeholder="Contoh: PBG-64.74/DPMPTSP/2024"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-[#005ea4] font-bold"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text" required
+                    value={certData.noSertifikat}
+                    onChange={(e) => setCertData({ ...certData, noSertifikat: e.target.value })}
+                    placeholder="Contoh: PBG-64.74/DPMPTSP/2024"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-[#005ea4] font-bold"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'noSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select No. Sertifikat"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div>
                 <label className="font-bold text-slate-800 block mb-1">Instansi Penerbit</label>
-                <input
-                  type="text"
-                  value={certData.instansi}
-                  onChange={(e) => setCertData({ ...certData, instansi: e.target.value })}
-                  placeholder="Contoh: DPMPTSP Kota Bontang, BPN"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={certData.instansi}
+                    onChange={(e) => setCertData({ ...certData, instansi: e.target.value })}
+                    placeholder="Contoh: DPMPTSP Kota Bontang, BPN"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'instansi' ? null : 'instansi')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'instansi' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select Instansi"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">Tgl Terbit</label>
-                  <input
-                    type="date"
-                    value={certData.terbit}
-                    onChange={(e) => setCertData({ ...certData, terbit: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date"
+                      value={certData.terbit}
+                      onChange={(e) => setCertData({ ...certData, terbit: e.target.value })}
+                      className="w-full px-2 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'terbit' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                      title="Drag-select Tgl Terbit"
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="font-bold text-slate-800 block mb-1 text-rose-700">Tgl Expired</label>
-                  <input
-                    type="date"
-                    value={certData.expired}
-                    onChange={(e) => setCertData({ ...certData, expired: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                  />
+                  <div className="flex gap-1.5">
+                    <input
+                      type="date"
+                      value={certData.expired}
+                      onChange={(e) => setCertData({ ...certData, expired: e.target.value })}
+                      className="w-full px-2 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
+                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                        scanMode === 'expired' 
+                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                      }`}
+                      title="Drag-select Tgl Expired"
+                    >
+                      <Crosshair className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -358,10 +443,11 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
             </div>
             <div className="flex-1 w-full h-full pt-10">
               {sertifikatMode === 'dengan' && tempUrl ? (
-                <iframe
-                  src={`${tempUrl}#toolbar=0&navpanes=0&scrollbar=0`}
-                  className="w-full h-full border-none"
-                  title="PDF Preview"
+                <PdfCanvasOcrViewer
+                  pdfUrl={tempUrl}
+                  scanMode={scanMode}
+                  onScanComplete={handleOcrResult}
+                  onScanCancel={() => setScanMode(null)}
                 />
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 p-8 text-center space-y-4">

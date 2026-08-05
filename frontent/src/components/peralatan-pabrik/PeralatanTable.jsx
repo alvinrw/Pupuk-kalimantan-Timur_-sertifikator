@@ -115,6 +115,8 @@ export default function PeralatanTable({
                 </th>
               )}
 
+              {isVisible("hasSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">FILE PDF</th>}
+              {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">NAMA SERTIFIKAT</th>}
               {isVisible("noSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>}
               {isVisible("tanggalInspeksi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TANGGAL INSPEKSI</th>}
               {isVisible("terbit") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TERBIT</th>}
@@ -223,6 +225,11 @@ export default function PeralatanTable({
                             Ada
                           </span>
                         )}
+                      </td>
+                    )}
+                    {isVisible("namaSertifikat") && (
+                      <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
+                        {item.namaSertifikat}
                       </td>
                     )}
                     {isVisible("noSertifikat") && (

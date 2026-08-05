@@ -134,7 +134,7 @@ export default function CertHistorySection({
                 }`} />
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                 <div className="flex justify-between font-bold text-slate-900">
-                  <span>{row.periode} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â No. SK: {row.noSertifikat}</span>
+                  <span>{row.periode} — No. SK: {row.noSertifikat}</span>
                   <span className={`px-2.5 py-0.5 rounded-lg text-[10px] border ${
                     row.isCurrent
                       ? 'text-emerald-700 bg-emerald-50 border-emerald-200 font-bold'

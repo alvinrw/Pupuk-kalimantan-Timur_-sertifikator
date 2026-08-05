@@ -376,21 +376,6 @@ export function useMonitoring() {
     if (!file) return;
 
     setUploadedFile(file);
-    setIsOcrScanning(true);
-    setOcrSuccess(false);
-
-    setTimeout(() => {
-      const randomCertNum = "500.15.18.2 / " + Math.floor(2000 + Math.random() * 8000) + " / DTKT-2026";
-      const todayStr = new Date().toISOString().split('T')[0];
-      
-      setNewCertNumber(randomCertNum);
-      setInspectionDate("2026-04-10");
-      setIssueDate(todayStr);
-      setNewExpiryDate("2028-04-15");
-      
-      setIsOcrScanning(false);
-      setOcrSuccess(true);
-    }, 1200);
   };
 
   const handleConfirmUploadRenewal = async (e) => {
@@ -471,6 +456,43 @@ export function useMonitoring() {
   const countAdaSertifikat = allCertificates.filter(c => c.workflowStatus !== 'exempt' && c.workflowStatus !== 'decommissioned').length;
   const countTotal = allCertificates.length;
 
+  const handleExportCSV = (data) => {
+    const headers = ['No', 'Kategori', 'Jenis', 'Unit', 'Merek/Nama', 'No Seri', 'No Sertifikat', 'Tgl Expired', 'Sisa Hari', 'Status'];
+    const rows = data.map((doc, idx) => [
+      idx + 1,
+      doc.kategoriDokumen || doc.kategori || '-',
+      doc.jenisItem || '-',
+      doc.unitPabrik || '-',
+      doc.merekItem || doc.title || '-',
+      doc.nomorSeriTipe || '-',
+      doc.nomorSertifikat || '-',
+      doc.tglExpired !== '-' ? doc.tglExpired : '-',
+      doc.sisaHari !== null ? doc.sisaHari : '-',
+      doc.workflowStatus || '-',
+    ]);
+    const csvContent = [headers, ...rows]
+      .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `monitoring_sertifikasi_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJSON = (data) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `monitoring_sertifikasi_${new Date().toISOString().slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+
   return {
     searchTerm, setSearchTerm,
     expiryTab, setExpiryTab,
@@ -519,6 +541,8 @@ export function useMonitoring() {
     openCompleteModal,
     handleFileSelect,
     handleConfirmUploadRenewal,
+    handleExportCSV,
+    handleExportJSON,
     resetFilters,
 
     // Counts

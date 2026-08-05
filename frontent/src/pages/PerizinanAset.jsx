@@ -1,288 +1,60 @@
-import React, { useState, useMemo } from 'react';
-import { Search, FileSpreadsheet, FileArchive, History, Columns, PlusCircle, ChevronDown, Eye, FileCheck, Loader2, Building2, FileWarning, ShieldAlert, UploadCloud, X } from 'lucide-react';
+import React from 'react';
+import { Search, FileSpreadsheet, FileArchive, Columns, PlusCircle, ChevronDown, Eye, Loader2, Building2, FileWarning, ShieldAlert, X } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
 import ZipOcrModal from '../components/ZipOcrModal';
-import HistoryModal from '../components/HistoryModal';
 import SingleEntryAsetModal from '../components/SingleEntryAsetModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
+import usePerizinanAset from '../hooks/usePerizinanAset';
 
 export default function PerizinanAset({ title, subtitle }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
-  const [selectedStagingIds, setSelectedStagingIds] = useState([]);
-  const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
-  const [bulkExemptNote, setBulkExemptNote] = useState('');
-  const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
-  const [resolveTargetItem, setResolveTargetItem] = useState(null);
-  
-  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-  const [isZipModalOpen, setIsZipModalOpen] = useState(false);
-  const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
-  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
-  
-  const [detailModalItem, setDetailModalItem] = useState(null);
+  const {
+    documents,
+    setDocuments,
+    isLoading,
+    pendingCount,
+    filteredDocs,
+    expandedRows,
 
-  const [documents, setDocuments] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+    searchTerm,
+    setSearchTerm,
+    activeMainTab,
+    setActiveMainTab,
+    selectedStagingIds,
+    bulkExemptModalOpen,
+    setBulkExemptModalOpen,
+    bulkExemptNote,
+    setBulkExemptNote,
+    isSubmittingBulkExempt,
+    resolveTargetItem,
+    setResolveTargetItem,
+    isCsvModalOpen,
+    setIsCsvModalOpen,
+    isZipModalOpen,
+    setIsZipModalOpen,
+    isSingleModalOpen,
+    setIsSingleModalOpen,
+    isImportMenuOpen,
+    setIsImportMenuOpen,
+    detailModalItem,
+    setDetailModalItem,
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getMasterItems('perizinan-aset');
-      const mapped = data.map(doc => {
-        const certs = doc.certificates || [];
-        return {
-          id: doc.id,
-          MasterId: doc.id,
-          title: doc.title || "Industrial Asset",
-          merekItem: doc.title,
-          code: doc.code || '-',
-          certificateNo: doc.certificateNo || doc.code || '-',
-          unitLocation: doc.unitLocation || 'Umum',
-          location: doc.unitLocation || '-',
-          areaSqm: doc.areaSqm || "0",
-          areaHa: doc.areaHa || "0",
-          purpose: doc.title || "Industrial Asset",
-          condition: doc.status || "Baik",
-          status: doc.status || "Baik",
-          description: doc.description || "-",
-          submissionDate: doc.createdAt,
-          validityPeriod: doc.expiryDate || "-",
-          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
-          exemptionNote: doc.exemptionNote || null,
-          linkedCertificates: certs
-        };
-      });
-      setDocuments(mapped);
-    } catch (error) {
-      console.error("Failed to load PerizinanAset", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    allColumns,
+    visibleColumnKeys,
+    isColumnDropdownOpen,
+    setIsColumnDropdownOpen,
+    toggleColumn,
+    selectAllColumns,
+    isVisible,
 
-  React.useEffect(() => {
-    loadData();
-  }, []);
-
-  const pendingCount = useMemo(() => {
-    return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
-  }, [documents]);
-
-  const handleBulkExempt = async () => {
-    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
-    try {
-      setIsSubmittingBulkExempt(true);
-      for (const id of selectedStagingIds) {
-        await resolveMasterItemExemption(id, bulkExemptNote.trim());
-      }
-      setSelectedStagingIds([]);
-      setBulkExemptModalOpen(false);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      alert("Gagal melakukan bulk action.");
-    } finally {
-      setIsSubmittingBulkExempt(false);
-    }
-  };
-
-  const toggleSelectStaging = (id) => {
-    setSelectedStagingIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAllStaging = (currentRows) => {
-    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
-      setSelectedStagingIds([]);
-    } else {
-      setSelectedStagingIds(currentRows.map(r => r.parentDoc.id || r.parentDoc.MasterId));
-    }
-  };
-
-  const allColumns = [
-    { key: "title", label: "Nama Aset" },
-    { key: "namaSertifikat", label: "Nama Sertifikat" },
-    { key: "certificateNo", label: "Nomor Sertifikat" },
-    { key: "location", label: "Lokasi" },
-    { key: "areaSqm", label: "Luas (mÃƒâ€šÃ‚Â²)" },
-    { key: "areaHa", label: "Luas (Ha)" },
-    { key: "purpose", label: "Peruntukan" },
-    { key: "submissionDate", label: "Tanggal Awal Pengajuan" },
-    { key: "validityPeriod", label: "Masa Berlaku Produk" },
-    { key: "condition", label: "Kondisi" },
-    { key: "description", label: "Keterangan" },
-  ];
-
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
-
-  const toggleColumn = (key) => {
-    setVisibleColumnKeys(prev =>
-      prev.includes(key)
-        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
-        : [...prev, key]
-    );
-  };
-
-  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
-  const isVisible = (key) => visibleColumnKeys.includes(key);
-
-  const filteredDocs = documents.filter(doc => {
-    const matchesTab = activeMainTab === 'staging'
-      ? doc.documentStatus === 'PENDING_DOC'
-      : doc.documentStatus !== 'PENDING_DOC';
-
-    return matchesTab;
-  });
-
-  const expandedRows = useMemo(() => {
-    const rows = [];
-    filteredDocs.forEach((doc) => {
-      const certs = doc.linkedCertificates || [];
-      if (certs.length > 0) {
-        certs.forEach((cert, idx) => {
-          const noCert = doc.documentStatus === 'EXEMPT'
-            ? 'Tanpa Sertifikat'
-            : (cert.noSertifikat || cert.noIzin || doc.code || '-');
-
-          rows.push({
-            rowId: `${doc.id}-cert-${cert.id || idx}`,
-            parentDoc: doc,
-            cert: cert,
-            certificateNo: noCert,
-            location: doc.location || doc.unitLocation || '-',
-            areaSqm: doc.areaSqm || "0",
-            areaHa: doc.areaHa || "0",
-            purpose: cert.jenisSertifikat || doc.title || doc.purpose || "Industrial Asset",
-            submissionDate: cert.terbit || doc.createdAt,
-            validityPeriod: cert.expired || doc.expiryDate || '-',
-            condition: cert.status || doc.status || 'Baik',
-            description: cert.keterangan || cert.instansi || doc.description || '-'
-          });
-        });
-      } else {
-        const noCert = doc.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (doc.certificateNo || doc.code || '-');
-
-        rows.push({
-          rowId: `${doc.id}-primary`,
-          parentDoc: doc,
-          cert: null,
-          certificateNo: noCert,
-          location: doc.location || doc.unitLocation || '-',
-          areaSqm: doc.areaSqm || "0",
-          areaHa: doc.areaHa || "0",
-          purpose: doc.title || doc.purpose || "Industrial Asset",
-          submissionDate: doc.createdAt,
-          validityPeriod: doc.expiryDate || '-',
-          condition: doc.status || 'Baik',
-          description: doc.description || '-'
-        });
-      }
-    });
-
-    if (!searchTerm.trim()) return rows;
-
-    const s = searchTerm.toLowerCase();
-    return rows.filter(r =>
-      (r.certificateNo || '').toLowerCase().includes(s) ||
-      (r.location || '').toLowerCase().includes(s) ||
-      (r.purpose || '').toLowerCase().includes(s) ||
-      (r.parentDoc.title || '').toLowerCase().includes(s) ||
-      (r.parentDoc.code || '').toLowerCase().includes(s)
-    );
-  }, [filteredDocs, searchTerm]);
-
-  const handleCsvImported = async () => {
-    setActiveMainTab('staging');
-    await loadData();
-    setTimeout(() => {
-      loadData();
-    }, 800);
-  };
-
-  const handleZipMatched = async (extractedList) => {
-    try {
-      const successfulItems = extractedList.filter(item => item.statusLabel !== "Gagal Ekstraksi");
-      for (const item of successfulItems) {
-        await createMasterItem({
-          title: item.matchedTitle || item.pdfName,
-          code: item.matchedCode || item.nomorSeri || "-",
-          categoryKey: 'perizinan-aset',
-          unitLocation: 'Umum',
-          status: 'Aktif',
-          keterangan: `Diimpor otomatis dari ZIP (${item.pdfName})`,
-        });
-      }
-      loadData();
-      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP AI!`);
-    } catch (err) {
-      console.error(err);
-      alert("Terjadi kesalahan saat menyimpan data Batch ZIP!");
-    }
-  };
-
-  const handleSingleAdded = async (newItem) => {
-    try {
-      const createdItem = await createMasterItem({
-        title: newItem.title || newItem.dokumen || 'Unknown Item',
-        code: newItem.code || newItem.noSertifikat || '-',
-        categoryKey: 'perizinan-aset',
-        unitLocation: newItem.location || newItem.lokasi || 'Umum',
-        status: newItem.condition || newItem.status || 'Aktif',
-        keterangan: newItem.keterangan || newItem.description || '-',
-        issueDate: newItem.terbit || undefined,
-        expiryDate: newItem.expired || undefined,
-        luasM2: newItem.luasM2 || undefined,
-        luasHa: newItem.luasHa || undefined,
-        peruntukan: newItem.peruntukan || undefined,
-        documentStatus: newItem.documentStatus
-      });
-      
-      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
-
-      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
-        let fileUrl = null;
-        if (newItem.file) {
-          const formData = new FormData();
-          formData.append('file', newItem.file);
-          try {
-            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
-              method: 'POST',
-              body: formData,
-            });
-            if (uploadRes.ok) {
-              const uploadJson = await uploadRes.json();
-              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
-            }
-          } catch (uploadErr) {
-            console.error("Gagal mengunggah file:", uploadErr);
-          }
-        }
-
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.namaSertifikat || 'Sertifikat Aset',
-          namaSertifikat: newItem.namaSertifikat || undefined,
-          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
-          status: 'Aktif',
-          terbit: newItem.terbit || undefined,
-          expired: newItem.expired || undefined,
-          fileUrl: fileUrl,
-        });
-      }
-
-      setActiveMainTab('main');
-      loadData();
-    } catch (error) {
-      console.error(error);
-      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
-    }
-  };
+    loadData,
+    handleBulkExempt,
+    toggleSelectStaging,
+    toggleSelectAllStaging,
+    handleCsvImported,
+    handleZipMatched,
+    handleSingleAdded,
+  } = usePerizinanAset();
 
   if (detailModalItem) {
     return (
@@ -290,17 +62,13 @@ export default function PerizinanAset({ title, subtitle }) {
         item={detailModalItem}
         onBack={() => setDetailModalItem(null)}
         onSaveUpdate={(updatedDoc) => {
-          setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d));
-          setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+          setDocuments((prev) => prev.map((d) => (d.id === updatedDoc.id ? { ...d, ...updatedDoc } : d)));
+          setDetailModalItem((prev) => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
           loadData();
         }}
         onRefreshRequired={loadData}
-        onQuickRenew={(id) => {
-          alert(`Inisiasi Perpanjangan untuk aset ${id}.`);
-        }}
-        onQuickDecommission={(id) => {
-          alert(`Menandai aset ${id} sebagai Afkir.`);
-        }}
+        onQuickRenew={(id) => alert(`Inisiasi Perpanjangan untuk aset ${id}.`)}
+        onQuickDecommission={(id) => alert(`Menandai aset ${id} sebagai Afkir.`)}
         onDeleteSuccess={() => {
           setDetailModalItem(null);
           loadData();
@@ -335,7 +103,7 @@ export default function PerizinanAset({ title, subtitle }) {
         <div className="relative">
           <button
             onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Kelola / Impor Dokumen</span>
@@ -347,7 +115,7 @@ export default function PerizinanAset({ title, subtitle }) {
             <div className="absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean">
               <button
                 onClick={() => { setIsSingleModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800"
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
@@ -358,7 +126,7 @@ export default function PerizinanAset({ title, subtitle }) {
 
               <button
                 onClick={() => { setIsCsvModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800"
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
                 <div>
@@ -369,7 +137,7 @@ export default function PerizinanAset({ title, subtitle }) {
 
               <button
                 onClick={() => { setIsZipModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800"
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <FileArchive className="w-4 h-4 text-[#005ea4]" />
                 <div>
@@ -436,7 +204,7 @@ export default function PerizinanAset({ title, subtitle }) {
           <div className="relative">
             <button
               onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs cursor-pointer"
             >
               <Columns className="w-4 h-4 text-[#005ea4]" />
               <span>Pilih Kolom Tampil ({visibleColumnKeys.length}/{allColumns.length})</span>
@@ -449,7 +217,7 @@ export default function PerizinanAset({ title, subtitle }) {
                   <span className="font-bold text-slate-900 text-xs">Centang Kolom yang Tampil</span>
                   <button
                     onClick={selectAllColumns}
-                    className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline"
+                    className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline cursor-pointer"
                   >
                     Pilih Semua
                   </button>
@@ -516,9 +284,11 @@ export default function PerizinanAset({ title, subtitle }) {
                     />
                   </th>
                 )}
+                {isVisible("title") && <th className="py-3.5 px-4 font-bold text-center align-middle">Nama Aset</th>}
+                {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold text-center align-middle">Nama Sertifikat</th>}
                 {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold text-center align-middle">Nomer Sertifikat</th>}
                 {isVisible("location") && <th className="py-3.5 px-4 font-bold text-center align-middle">Lokasi</th>}
-                {isVisible("areaSqm") && <th className="py-3.5 px-4 font-bold text-center align-middle">Luas (mÃƒâ€šÃ‚Â²)</th>}
+                {isVisible("areaSqm") && <th className="py-3.5 px-4 font-bold text-center align-middle">Luas (m²)</th>}
                 {isVisible("areaHa") && <th className="py-3.5 px-4 font-bold text-center align-middle">Luas (Ha)</th>}
                 {isVisible("purpose") && <th className="py-3.5 px-4 font-bold text-center align-middle">Peruntukan</th>}
                 {isVisible("submissionDate") && <th className="py-3.5 px-4 font-bold text-center align-middle">Tanggal Awal Pengajuan</th>}
@@ -529,7 +299,7 @@ export default function PerizinanAset({ title, subtitle }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {expandedRows.map((row, index) => {
+              {expandedRows.map((row) => {
                 const doc = row.parentDoc;
                 return (
                   <tr key={row.rowId} className="hover:bg-slate-50/80 transition-colors font-mono-data">
@@ -549,6 +319,16 @@ export default function PerizinanAset({ title, subtitle }) {
                         className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] cursor-pointer hover:underline text-center align-middle"
                       >
                         <span>{doc.merekItem || doc.title}</span>
+                      </td>
+                    )}
+                    {isVisible("namaSertifikat") && (
+                      <td className="py-3.5 px-4 text-slate-700 text-center align-middle">
+                        {row.cert?.namaSertifikat || row.cert?.jenisSertifikat || '-'}
+                      </td>
+                    )}
+                    {isVisible("certificateNo") && (
+                      <td className="py-3.5 px-4 font-bold text-slate-900 text-center align-middle">
+                        {row.certificateNo}
                       </td>
                     )}
                     {isVisible("location") && (
@@ -667,7 +447,7 @@ export default function PerizinanAset({ title, subtitle }) {
               </h3>
               <button 
                 onClick={() => setBulkExemptModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -701,7 +481,7 @@ export default function PerizinanAset({ title, subtitle }) {
                 type="button"
                 onClick={() => setBulkExemptModalOpen(false)}
                 disabled={isSubmittingBulkExempt}
-                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
               >
                 Batal
               </button>
@@ -709,7 +489,7 @@ export default function PerizinanAset({ title, subtitle }) {
                 type="button"
                 onClick={handleBulkExempt}
                 disabled={isSubmittingBulkExempt || !bulkExemptNote.trim()}
-                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 {isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Ya, Tandai {selectedStagingIds.length} Item

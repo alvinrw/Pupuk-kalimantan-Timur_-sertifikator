@@ -11,7 +11,10 @@ import {
   FileMinus,
   Wrench,
   Power,
-  Wallet
+  Wallet,
+  FileX,
+  Ban,
+  Database
 } from 'lucide-react';
 import {
   BarChart,
@@ -111,7 +114,7 @@ export default function Dashboard() {
             const yyyy = dObj.getFullYear();
             return `${dd}/${mm}/${yyyy}`;
           }
-        } catch (_) {}
+        } catch (_) { }
         return rawDateStr;
       };
 
@@ -229,6 +232,18 @@ export default function Dashboard() {
     });
   }, [filteredItems, searchTerm, dateRangeStart, dateRangeEnd, isDateFilterActive, filterKategoriBawah]);
 
+  const chartDataSertifikatTerbit = useMemo(() => {
+    const counts = {};
+    displayedIssuedCertificates.forEach(item => {
+      const cat = item.kategori || 'Lainnya';
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    return Object.keys(counts).map(key => ({
+      name: key,
+      Jumlah: counts[key]
+    })).sort((a, b) => b.Jumlah - a.Jumlah);
+  }, [displayedIssuedCertificates]);
+
   const handleApplyDateFilter = () => {
     setIsDateFilterActive(!!(dateRangeStart || dateRangeEnd));
   };
@@ -283,6 +298,11 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const getCategoryOptions = () => {
+    const categories = Array.from(new Set(allDashboardItems.map(i => i.kategori))).filter(Boolean);
+    return ['All', ...categories.sort()];
+  };
 
   const indicators = [
     { label: 'Non-Sertifikat', value: stats.exempt, color: '#64748B' },
@@ -484,7 +504,7 @@ export default function Dashboard() {
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                 <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hr)`} />
+                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
                 <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -497,139 +517,193 @@ export default function Dashboard() {
         <div className="mb-6">
           <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
             <Wallet className="w-6 h-6 text-[#005ea4]" />
-            Anggaran & Iuran
+            Anggaran Iuran Keanggotaan
           </h2>
           <p className="text-sm text-slate-500 font-medium ml-8">Ringkasan serapan dan rincian iuran keanggotaan.</p>
         </div>
         <MonitoringAnggaran />
       </div>
 
-      {/* FILTER TOOLBAR */}
-      <div className="bg-white rounded-2xl shadow-sm w-full overflow-hidden border border-slate-200 mb-6">
-        <div className="px-6 py-4 bg-slate-800 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Dari</span>
-                  <input
-                    type="month"
-                    value={dateRangeStart}
-                    onChange={(e) => setDateRangeStart(e.target.value)}
-                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                  />
-                </div>
-                <span className="text-slate-400 text-xs mt-4">s.d.</span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Sampai</span>
-                  <input
-                    type="month"
-                    value={dateRangeEnd}
-                    onChange={(e) => setDateRangeEnd(e.target.value)}
-                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5 mt-4">
-                  <button
-                    onClick={handleApplyDateFilter}
-                    className="px-3.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-lg transition-colors font-mono-data shadow-xs"
-                  >
-                    Terapkan
-                  </button>
-                  {isDateFilterActive && (
-                    <button
-                      onClick={handleResetDateFilter}
-                      className="px-2 py-1 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1"
-                    >
-                      <X className="w-3 h-3" /> Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
+      {/* SECTION: Sertifikat Terbit — Filter + Tabel */}
+      <div className="pt-8 mt-8 border-t border-slate-200">
+        <div className="mb-4 flex flex-col xl:flex-row xl:items-end justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
+              <Database className="w-5 h-5 text-[#005ea4]" />
+              Data Sertifikat Terbit
+              <span className="ml-2 px-2.5 py-0.5 bg-blue-100 text-[#005ea4] text-xs rounded-full font-bold">
+                {displayedIssuedCertificates.length} Total
+              </span>
+            </h2>
+            <p className="text-sm text-slate-500 font-medium ml-7">Riwayat sertifikat yang telah terbit berdasarkan rentang waktu dan kategori.</p>
+          </div>
 
-            {/* Dropdown Filter Jenis khusus Tabel Terbit Bawah */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Kategori / Jenis Perizinan</span>
-                <select
-                  value={filterKategoriBawah}
-                  onChange={(e) => setFilterKategoriBawah(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
-                >
-                  <option value="All">Semua Jenis</option>
-                  {getCategoryOptions().filter(cat => cat !== 'All').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              {filterKategoriBawah !== 'All' && (
-                <button
-                  onClick={() => setFilterKategoriBawah('All')}
-                  className="mt-4 text-[11px] font-bold text-rose-600 hover:underline"
-                >
-                  Reset
-                </button>
-              )}
+          {/* Export Buttons */}
+          <div className="flex items-center gap-2 ml-7 xl:ml-0">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors shadow-xs font-mono-data"
+            >
+              Export CSV
+            </button>
+            <button
+              onClick={handleExportJSON}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-colors shadow-xs font-mono-data"
+            >
+              Export JSON
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Toolbar */}
+        <div className="bg-slate-800 rounded-xl px-5 py-3 flex flex-wrap items-end gap-4 mb-0">
+          {/* Date Range */}
+          <div className="flex items-end gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5">Dari</span>
+              <input
+                type="month"
+                value={dateRangeStart}
+                onChange={(e) => setDateRangeStart(e.target.value)}
+                className="px-2.5 py-1 text-xs border border-slate-600 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+              />
+            </div>
+            <span className="text-slate-400 text-xs mb-1.5">s.d.</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5">Sampai</span>
+              <input
+                type="month"
+                value={dateRangeEnd}
+                onChange={(e) => setDateRangeEnd(e.target.value)}
+                className="px-2.5 py-1 text-xs border border-slate-600 rounded-lg bg-slate-700 text-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+              />
+            </div>
+            <button
+              onClick={handleApplyDateFilter}
+              className="px-3.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-lg transition-colors font-mono-data shadow-xs mb-0.5"
+            >
+              Terapkan
+            </button>
+            {isDateFilterActive && (
+              <button
+                onClick={handleResetDateFilter}
+                className="px-2 py-1 text-slate-300 hover:text-white font-bold text-xs rounded-lg border border-slate-600 hover:bg-slate-700 transition-colors flex items-center gap-1 mb-0.5"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="hidden md:block w-px h-8 bg-slate-600" />
+
+          {/* Category Filter */}
+          <div className="flex items-end gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5 flex items-center gap-1">
+                <Filter className="w-3 h-3" /> Kategori / Jenis Perizinan
+              </span>
+              <select
+                value={filterKategoriBawah}
+                onChange={(e) => setFilterKategoriBawah(e.target.value)}
+                className="bg-slate-700 border border-slate-600 rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+              >
+                <option value="All">Semua Jenis</option>
+                {getCategoryOptions().filter(cat => cat !== 'All').map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            {filterKategoriBawah !== 'All' && (
+              <button
+                onClick={() => setFilterKategoriBawah('All')}
+                className="text-[11px] font-bold text-rose-400 hover:text-rose-300 mb-1"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Grafik Sertifikat Terbit */}
+      {chartDataSertifikatTerbit.length > 0 && (
+        <div className="mb-6 bg-white border border-slate-200 rounded-xl p-5 shadow-2xs">
+          <h3 className="text-sm font-bold text-slate-800 mb-4 font-mono-data">Grafik Distribusi Kategori Sertifikat Terbit</h3>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartDataSertifikatTerbit} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: '#f1f5f9' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  labelStyle={{ fontWeight: 'bold', color: '#0f172a', marginBottom: '4px' }}
+                />
+                <Bar dataKey="Jumlah" fill="#005ea4" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {/* Tabel Data */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
-                <th className="py-3 px-4 text-center font-bold">NO.</th>
-                <th className="py-3 px-4 font-bold text-[#005ea4]">KATEGORI DOKUMEN</th>
-                <th className="py-3 px-4 font-bold">JENIS PERIZINAN / ALAT</th>
-                <th className="py-3 px-4 font-bold">MEREK / NAMA ITEM</th>
-                <th className="py-3 px-4 font-bold">NOMOR SERI / TAG</th>
-                <th className="py-3 px-4 font-bold">NO. SERTIFIKAT</th>
-                <th className="py-3 px-4 font-bold">TANGGAL TERBIT</th>
-                <th className="py-3 px-4 font-bold">TANGGAL EXPIRATION</th>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
+              <th className="py-3 px-4 text-center font-bold">NO.</th>
+              <th className="py-3 px-4 font-bold text-[#005ea4]">KATEGORI DOKUMEN</th>
+              <th className="py-3 px-4 font-bold">JENIS PERIZINAN / ALAT</th>
+              <th className="py-3 px-4 font-bold">MEREK / NAMA ITEM</th>
+              <th className="py-3 px-4 font-bold">NOMOR SERI / TAG</th>
+              <th className="py-3 px-4 font-bold">NO. SERTIFIKAT</th>
+              <th className="py-3 px-4 font-bold">TANGGAL TERBIT</th>
+              <th className="py-3 px-4 font-bold">TANGGAL EXPIRATION</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-200 text-xs">
+            {displayedIssuedCertificates.length > 0 ? (
+              displayedIssuedCertificates.map((item, index) => {
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-4 text-center font-mono-data font-bold text-slate-500">
+                      {index + 1}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-[#005ea4]">
+                      {item.kategori}
+                    </td>
+                    <td className="py-3 px-4 font-medium text-slate-800">
+                      {item.jenis}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-slate-900">
+                      {item.merekItem}
+                    </td>
+                    <td className="py-3 px-4 font-mono-data text-slate-600">
+                      {item.nomorSeriTipe}
+                    </td>
+                    <td className="py-3 px-4 font-mono-data text-slate-800">
+                      {item.nomorSertifikat}
+                    </td>
+                    <td className="py-3 px-4 font-mono-data font-bold text-slate-700">
+                      {item.tglTerbit !== '-' ? item.tglTerbit : '-'}
+                    </td>
+                    <td className="py-3 px-4 font-mono-data font-bold text-slate-900">
+                      {item.tglExpired !== '-' ? item.tglExpired : '-'}
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} className="py-10 text-center text-slate-500 font-mono-data">
+                  Tidak ada sertifikat yang terbit pada kriteria/rentang ini.
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 text-xs">
-              {displayedIssuedCertificates.length > 0 ? (
-                displayedIssuedCertificates.map((item, index) => {
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-4 text-center font-mono-data font-bold text-slate-500">
-                        {index + 1}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-[#005ea4]">
-                        {item.kategori}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-slate-800">
-                        {item.jenis}
-                      </td>
-                      <td className="py-3 px-4 font-bold text-slate-900">
-                        {item.merekItem}
-                      </td>
-                      <td className="py-3 px-4 font-mono-data text-slate-600">
-                        {item.nomorSeriTipe}
-                      </td>
-                      <td className="py-3 px-4 font-mono-data text-slate-800">
-                        {item.nomorSertifikat}
-                      </td>
-                      <td className="py-3 px-4 font-mono-data font-bold text-slate-700">
-                        {item.tglTerbit !== '-' ? item.tglTerbit : '-'}
-                      </td>
-                      <td className="py-3 px-4 font-mono-data font-bold text-slate-900">
-                        {item.tglExpired !== '-' ? item.tglExpired : '-'}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center text-slate-500 font-mono-data">
-                    Tidak ada sertifikat yang terbit pada kriteria/rentang ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            )}
+          </tbody>
+        </table>
       </div>
+    </div>
   );
 }

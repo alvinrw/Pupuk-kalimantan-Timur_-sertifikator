@@ -105,3 +105,32 @@ src/
 - Sesuai instruksi, **TIDAK ADA PUSH KE GITHUB** pada sesi Sprint 3 ini.
 - Build Frontend (`vite build`) & Backend (`nest build`) berjalan 100% lancar tanpa error/warning pemutus.
 - Seluruh fungsi bisnis, form input, dan pratinjau PDF layar ganda dipastikan berjalan normal tanpa merusak fitur eksisting.
+
+---
+
+## ✅ Detail Refactoring Sprint 4 (5 Agustus 2026)
+
+> **Fokus**: Membersihkan _spaghetti code_ pada modul Monitoring Sertifikasi + pembaruan terminologi UI.
+
+### Perubahan File
+
+| File / Komponen | Baris Awal | Baris Akhir | Deskripsi |
+|---|---|---|---|
+| `MonitoringSertifikasi.jsx` | 477 | ~230 | Hapus tabel inline duplikat, pakai `<MonitoringTable />`, hapus logika export duplikat |
+| `MonitoringActionModals.jsx` | 237 | ~200 | Hapus dead code drag-drop, bersihkan import tak terpakai |
+| `MonitoringTable.jsx` | 195 | 195 | Update teks UI: "Afkir"→"Nonaktif", "Valid"→"Aktif", fix null check sisaHari |
+| `MonitoringSummaryCards.jsx` | 147 | 147 | Update label kartu "Non-Aktif / Afkir" → "Nonaktif" |
+| `useMonitoring.js` | 513 | ~552 | Tambah `handleExportCSV` & `handleExportJSON`, expose di return object |
+
+### Masalah yang Diperbaiki
+
+1. **Tabel duplikat dihapus**: `MonitoringTable.jsx` sudah ada sejak Sprint 2 tapi tidak pernah dipakai — halaman utama memakai copy-paste inline 130 baris. Sekarang halaman hanya render `<MonitoringTable />`.
+2. **Dead code dibersihkan**: `MonitoringActionModals.jsx` punya drag-drop state (`isDragging`, `handleDragOver`, dll.) yang tidak digunakan karena upload sudah ada di `UploadRenewalModal`.
+3. **Logika export dipindah ke hook**: `handleExportCSV` & `handleExportJSON` yang sebelumnya di halaman utama kini ada di `useMonitoring.js` dan diterima melalui satu objek `m`.
+4. **Terminologi UI diperbarui**:
+   - "Afkir" → **"Nonaktif"** (semua label, tombol, teks modal)
+   - "Valid" → **"Aktif"** (kolom Status Perizinan di tabel)
+   - "Batal Afkir" → **"Batal Nonaktif"**
+   - Nilai API yang dikirim ke Backend (`status: 'Afkir'`) **tidak diubah** agar tidak merusak Backend.
+5. **Bug null safety**: Fix `doc.sisaHari <= 0` tanpa null check yang menyebabkan baris exempt/decommissioned ikut berwarna merah.
+

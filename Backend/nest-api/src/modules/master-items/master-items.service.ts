@@ -285,15 +285,23 @@ export class MasterItemsService implements OnModuleInit {
       };
 
       if (activeCerts.length > 0) {
-        for (const cert of activeCerts) {
-          evaluateTarget(
-            cert.expired,
-            cert.notificationSetting,
-            cert.namaSertifikat || cert.jenisSertifikat || '-',
-            cert.noSertifikat || '-',
-            cert.id
-          );
-        }
+        const primaryCert = activeCerts.slice().sort((a, b) => {
+          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+          if (dA !== dB) return dB - dA;
+          const hasPdfA = !!a.fileUrl;
+          const hasPdfB = !!b.fileUrl;
+          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        })[0];
+
+        evaluateTarget(
+          primaryCert.expired,
+          primaryCert.notificationSetting,
+          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || '-',
+          primaryCert.noSertifikat || '-',
+          primaryCert.id
+        );
       } else {
         evaluateTarget(
           item.expiryDate,
@@ -407,15 +415,23 @@ export class MasterItemsService implements OnModuleInit {
       };
 
       if (activeCerts.length > 0) {
-        for (const cert of activeCerts) {
-          await evaluateAndSave(
-            cert.expired,
-            cert.notificationSetting,
-            cert.namaSertifikat || cert.jenisSertifikat || '-',
-            cert.noSertifikat || '-',
-            cert.id
-          );
-        }
+        const primaryCert = activeCerts.slice().sort((a, b) => {
+          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+          if (dA !== dB) return dB - dA;
+          const hasPdfA = !!a.fileUrl;
+          const hasPdfB = !!b.fileUrl;
+          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        })[0];
+
+        await evaluateAndSave(
+          primaryCert.expired,
+          primaryCert.notificationSetting,
+          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || '-',
+          primaryCert.noSertifikat || '-',
+          primaryCert.id
+        );
       } else {
         await evaluateAndSave(
           item.expiryDate,

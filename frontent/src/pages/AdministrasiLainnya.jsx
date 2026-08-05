@@ -1,369 +1,95 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 import {
   Search,
   FileSpreadsheet,
-  FileArchive,
-  History,
   Columns,
   PlusCircle,
   ChevronDown,
   Trash2,
   FileCheck,
   AlertTriangle,
-  RefreshCw,
   X,
   Check,
   Building2,
   FileWarning,
   ShieldAlert,
-  UploadCloud,
-  Eye,
   Loader2
 } from 'lucide-react';
 import CsvImportModal from '../components/CsvImportModal';
-import HistoryModal from '../components/HistoryModal';
 import SingleEntryCiptaanModal from '../components/SingleEntryCiptaanModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
-import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem, deleteMasterItem } from '../services/masterItemsService';
+import useAdministrasiLainnya from '../hooks/useAdministrasiLainnya';
 
 export default function AdministrasiLainnya() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
-  const [selectedStagingIds, setSelectedStagingIds] = useState([]);
-  const [bulkExemptModalOpen, setBulkExemptModalOpen] = useState(false);
-  const [bulkExemptNote, setBulkExemptNote] = useState('');
-  const [isSubmittingBulkExempt, setIsSubmittingBulkExempt] = useState(false);
-  const [resolveTargetItem, setResolveTargetItem] = useState(null);
-  
-  // Header Dropdown Filter States
-  const [filterJenis, setFilterJenis] = useState('All');
-  const [filterMasa, setFilterMasa] = useState('All');
-  const [filterHasSertifikat, setFilterHasSertifikat] = useState('All'); // 'All' | 'ada' | 'tidak'
+  const {
+    ciptaanList,
+    isLoading,
+    filteredData,
+    pendingCount,
+    uniqueJenis,
+    uniqueMasa,
+    filteredTargetList,
 
-  // Modals & Popovers
-  const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
-  const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
-  const [historyTargetItem, setHistoryTargetItem] = useState(null);
-  const [detailModalItem, setDetailModalItem] = useState(null);
+    activeMainTab,
+    setActiveMainTab,
+    searchTerm,
+    setSearchTerm,
+    filterJenis,
+    setFilterJenis,
+    filterMasa,
+    setFilterMasa,
+    filterHasSertifikat,
+    setFilterHasSertifikat,
 
-  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
-  const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
-  
-  // Active Row Action Dropdown state
-  const [openActionRowId, setOpenActionRowId] = useState(null);
+    isColumnDropdownOpen,
+    setIsColumnDropdownOpen,
+    isImportMenuOpen,
+    setIsImportMenuOpen,
 
-  // Row Delete Confirmation Modal state
-  const [rowConfirmModalOpen, setRowConfirmModalOpen] = useState(false);
-  const [pendingDeleteRowId, setPendingDeleteRowId] = useState(null);
+    isCsvModalOpen,
+    setIsCsvModalOpen,
+    isSingleModalOpen,
+    setIsSingleModalOpen,
+    resolveTargetItem,
+    setResolveTargetItem,
+    detailModalItem,
+    setDetailModalItem,
 
-  // Ganti Target Sertifikat Modal State
-  const [reassignCertRowItem, setReassignCertRowItem] = useState(null);
-  const [searchTargetItemTerm, setSearchTargetItemTerm] = useState('');
-  const [selectedNewTargetItem, setSelectedNewTargetItem] = useState(null);
+    rowConfirmModalOpen,
+    setRowConfirmModalOpen,
+    requestDeleteRow,
+    confirmDeleteRow,
 
-  // Columns Configuration
-  const allColumns = [
-    { key: "no", label: "No." },
-    { key: "judulCiptaan", label: "Judul Ciptaan" },
-    { key: "jenisCiptaan", label: "Jenis Ciptaan" },
-    { key: "hasSertifikat", label: "Ada Sertifikat" },
-    { key: "tanggalCiptaan", label: "Tanggal Ciptaan" },
-    { key: "masaBerlaku", label: "Masa Berlaku" },
-    { key: "kapanBerakhir", label: "Kapan Berakhir" }
-  ];
+    selectedStagingIds,
+    bulkExemptModalOpen,
+    setBulkExemptModalOpen,
+    bulkExemptNote,
+    setBulkExemptNote,
+    isSubmittingBulkExempt,
+    toggleSelectStaging,
+    toggleSelectAllStaging,
+    handleBulkExempt,
 
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
+    reassignCertRowItem,
+    setReassignCertRowItem,
+    searchTargetItemTerm,
+    setSearchTargetItemTerm,
+    selectedNewTargetItem,
+    setSelectedNewTargetItem,
+    confirmReassignTargetRow,
 
-  const toggleColumn = (key) => {
-    setVisibleColumnKeys(prev =>
-      prev.includes(key)
-        ? prev.length > 1 ? prev.filter(k => k !== key) : prev
-        : [...prev, key]
-    );
-  };
+    allColumns,
+    visibleColumnKeys,
+    selectAllColumns,
+    toggleColumn,
+    isVisible,
 
-  const selectAllColumns = () => setVisibleColumnKeys(allColumns.map(c => c.key));
-  const isVisible = (key) => visibleColumnKeys.includes(key);
-
-  // Helper to determine status color styling for table rows (HITAM = Afkir, MERAH = Expired, KUNING = Perpanjangan)
-  const getRowStatusStyle = (item) => {
-    const statusStr = (item.status || '').toLowerCase();
-    
-    if (statusStr === 'afkir' || statusStr === 'decommissioned') {
-      return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
-    }
-    if (statusStr === 'expired') {
-      return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
-    }
-    if (statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses') {
-      return 'bg-amber-50/90 text-amber-950 hover:bg-amber-100 border-b border-amber-200';
-    }
-    return 'hover:bg-slate-50 border-b border-slate-200 text-slate-800';
-  };
-
-  // Connected Master Data Ciptaan
-  const [ciptaanList, setCiptaanList] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getMasterItems('administrasi-lainnya');
-      const mapped = data.map((item, idx) => {
-        const certs = item.certificates || [];
-        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
-
-        let primaryCert = null;
-        if (activeCerts.length > 0) {
-          primaryCert = activeCerts.slice().sort((a, b) => {
-            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            return dB - dA;
-          })[0];
-        } else if (certs.length > 0) {
-          primaryCert = certs[0];
-        }
-
-        const noCert = item.documentStatus === 'EXEMPT'
-          ? 'Tanpa Sertifikat'
-          : (primaryCert?.noSertifikat || primaryCert?.noIzin || item.certificateNo || item.code || '-');
-
-        const expiryVal = primaryCert?.expired || item.expiryDate || '-';
-        const issueVal = primaryCert?.terbit || item.issueDate || item.createdAt;
-
-        return {
-          id: item.id,
-          MasterId: item.id,
-          no: idx + 1,
-          judulCiptaan: item.title || "Administrasi Lainnya",
-          jenisCiptaan: item.categoryKey || "Administrasi",
-          tanggalCiptaan: issueVal,
-          masaBerlaku: item.areaSqm || "Selamanya",
-          kapanBerakhir: expiryVal,
-          noSertifikat: noCert,
-          documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
-          exemptionNote: item.exemptionNote || null,
-          hasCertificatePdf: !!primaryCert?.fileUrl,
-          fileUrl: primaryCert?.fileUrl || null,
-          status: item.status || "Aktif",
-          merekItem: item.title,
-          notificationSetting: item.notificationSetting || null,
-          reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true,
-          jenisPeralatan: item.categoryKey,
-          linkedCertificates: certs
-        };
-      });
-      setCiptaanList(mapped);
-    } catch (error) {
-      console.error("Failed to load AdministrasiLainnya", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  React.useEffect(() => {
-    loadData();
-  }, []);
-
-  const pendingCount = useMemo(() => {
-    return ciptaanList.filter(item => item.documentStatus === 'PENDING_DOC').length;
-  }, [ciptaanList]);
-
-  const handleBulkExempt = async () => {
-    if (selectedStagingIds.length === 0 || !bulkExemptNote.trim()) return;
-    try {
-      setIsSubmittingBulkExempt(true);
-      for (const id of selectedStagingIds) {
-        await resolveMasterItemExemption(id, bulkExemptNote.trim());
-      }
-      setSelectedStagingIds([]);
-      setBulkExemptModalOpen(false);
-      await loadData();
-    } catch (err) {
-      console.error(err);
-      alert("Gagal melakukan bulk action.");
-    } finally {
-      setIsSubmittingBulkExempt(false);
-    }
-  };
-
-  const toggleSelectStaging = (id) => {
-    setSelectedStagingIds(prev =>
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
-  };
-
-  const toggleSelectAllStaging = (currentRows) => {
-    if (selectedStagingIds.length === currentRows.length && currentRows.length > 0) {
-      setSelectedStagingIds([]);
-    } else {
-      setSelectedStagingIds(currentRows.map(r => r.id || r.MasterId));
-    }
-  };
-
-  // Unique options for dropdown filters
-  const uniqueJenis = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.jenisCiptaan || i.jenisItem).filter(Boolean))], [ciptaanList]);
-  const uniqueMasa = useMemo(() => ['All', ...new Set(ciptaanList.map(i => i.masaBerlaku).filter(Boolean))], [ciptaanList]);
-
-  // Process Search & Category Filtering
-  const filteredData = useMemo(() => {
-    return ciptaanList.filter((item) => {
-      const matchesTab = activeMainTab === 'staging'
-        ? item.documentStatus === 'PENDING_DOC'
-        : item.documentStatus !== 'PENDING_DOC';
-
-      const judul = item.judulCiptaan || item.merekItem || '';
-      const jenis = item.jenisCiptaan || item.jenisItem || '';
-
-      const searchLower = searchTerm.toLowerCase();
-      const matchesSearch =
-        judul.toLowerCase().includes(searchLower) ||
-        jenis.toLowerCase().includes(searchLower);
-
-      const matchesJenis = filterJenis === 'All' || jenis === filterJenis;
-      const matchesMasa = filterMasa === 'All' || (item.masaBerlaku || '') === filterMasa;
-      const matchesHasSertifikat = filterHasSertifikat === 'All'
-        ? true
-        : filterHasSertifikat === 'ada'
-        ? item.documentStatus !== 'EXEMPT'
-        : item.documentStatus === 'EXEMPT';
-
-      return matchesTab && matchesSearch && matchesJenis && matchesMasa && matchesHasSertifikat;
-    });
-  }, [ciptaanList, searchTerm, filterJenis, filterMasa, filterHasSertifikat, activeMainTab]);
-
-  // Handlers
-  const handleCsvImported = async () => {
-    setActiveMainTab('staging');
-    await loadData();
-    setTimeout(() => {
-      loadData();
-    }, 800);
-  };
-
-  const handleSingleAdded = async (newItem) => {
-    try {
-      const createdItem = await createMasterItem({
-        title: newItem.judulCiptaan || 'Unknown Item',
-        code: newItem.noSertifikat || '-',
-        categoryKey: 'administrasi-lainnya',
-        unitLocation: 'Umum',
-        status: 'Aktif',
-        keterangan: 'Data Manual Input',
-        issueDate: newItem.tanggalCiptaan || undefined,
-        expiryDate: newItem.expiryDate || undefined,
-        documentStatus: newItem.documentStatus
-      });
-      
-      const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
-
-      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
-        let fileUrl = null;
-        if (newItem.file) {
-          const formData = new FormData();
-          formData.append('file', newItem.file);
-          try {
-            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
-              method: 'POST',
-              body: formData,
-            });
-            if (uploadRes.ok) {
-              const uploadJson = await uploadRes.json();
-              fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || uploadJson?.data?.path || null;
-            }
-          } catch (uploadErr) {
-            console.error("Gagal mengunggah file:", uploadErr);
-          }
-        }
-
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.jenisCiptaan || 'Sertifikat Pencatatan',
-          namaSertifikat: newItem.namaSertifikat || undefined,
-          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
-          status: 'Aktif',
-          terbit: newItem.tanggalCiptaan || undefined,
-          expired: newItem.expiryDate || undefined,
-          fileUrl: fileUrl,
-        });
-      }
-
-      setIsSingleModalOpen(false);
-      loadData();
-    } catch (error) {
-      console.error(error);
-      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
-    }
-  };
-
-  const handleZipMatched = () => {
-    alert("Berhasil menghubungkan file PDF ZIP ke baris tabel!");
-  };
-
-  // Row Delete Confirmation Trigger
-  const requestDeleteRow = (rowId) => {
-    setPendingDeleteRowId(rowId);
-    setRowConfirmModalOpen(true);
-    setOpenActionRowId(null);
-  };
-
-  const confirmDeleteRow = async () => {
-    if (!pendingDeleteRowId) return;
-    try {
-      await deleteMasterItem(pendingDeleteRowId);
-      setCiptaanList(prev => prev.filter(item => item.id !== pendingDeleteRowId));
-      alert("Baris berhasil dihapus dari database.");
-    } catch (error) {
-      console.error(error);
-      alert("Gagal menghapus baris dari database.");
-    } finally {
-      setRowConfirmModalOpen(false);
-      setPendingDeleteRowId(null);
-    }
-  };
-
-  // Ganti Target Sertifikat Handler
-  const openReassignTargetModal = (item) => {
-    setReassignCertRowItem(item);
-    setSelectedNewTargetItem(ciptaanList.find(e => e.id !== item.id) || ciptaanList[0]);
-    setSearchTargetItemTerm('');
-    setOpenActionRowId(null);
-  };
-
-  const confirmReassignTargetRow = () => {
-    if (!reassignCertRowItem || !selectedNewTargetItem) return;
-
-    setCiptaanList(prev =>
-      prev.map(eq => {
-        if (eq.id === selectedNewTargetItem.id) {
-          return {
-            ...eq,
-            noSertifikat: reassignCertRowItem.noSertifikat,
-            hasCertificatePdf: true
-          };
-        }
-        if (eq.id === reassignCertRowItem.id) {
-          return {
-            ...eq,
-            noSertifikat: "-",
-            hasCertificatePdf: false
-          };
-        }
-        return eq;
-      })
-    );
-
-    alert(`Sertifikat ${reassignCertRowItem.noSertifikat} berhasil dipindahkan ke ${selectedNewTargetItem.judulCiptaan}!`);
-    setReassignCertRowItem(null);
-    loadData();
-  };
-
-  const filteredTargetList = ciptaanList.filter(eq =>
-    eq.id !== reassignCertRowItem?.id &&
-    (eq.judulCiptaan.toLowerCase().includes(searchTargetItemTerm.toLowerCase()) ||
-     eq.jenisCiptaan.toLowerCase().includes(searchTargetItemTerm.toLowerCase()))
-  );
+    loadData,
+    handleCsvImported,
+    handleSingleAdded,
+    getRowStatusStyle
+  } = useAdministrasiLainnya();
 
   if (detailModalItem) {
     return (
@@ -371,16 +97,9 @@ export default function AdministrasiLainnya() {
         item={detailModalItem}
         hideLinkedCertificates={true}
         onBack={() => setDetailModalItem(null)}
-        onSaveUpdate={(updatedItem) => {
-          setCiptaanList(prev => prev.map(i => i.id === updatedItem.id ? { ...i, ...updatedItem, judulCiptaan: updatedItem.merekItem || i.judulCiptaan } : i));
-          loadData();
-        }}
-        onQuickRenew={(id) => {
-          alert(`Inisiasi Perpanjangan untuk ciptaan ${id}. Menuju menu Monitoring.`);
-        }}
-        onQuickDecommission={(id) => {
-          alert(`Menandai ciptaan ${id} sebagai Afkir.`);
-        }}
+        onSaveUpdate={() => loadData()}
+        onQuickRenew={(id) => alert(`Inisiasi Perpanjangan untuk ciptaan ${id}. Menuju menu Monitoring.`)}
+        onQuickDecommission={(id) => alert(`Menandai ciptaan ${id} sebagai Afkir.`)}
         onDeleteSuccess={() => {
           setDetailModalItem(null);
           loadData();
@@ -416,7 +135,7 @@ export default function AdministrasiLainnya() {
         <div className="relative">
           <button
             onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
             <span>+ Kelola / Impor Dokumen</span>
@@ -428,7 +147,7 @@ export default function AdministrasiLainnya() {
             <div className="absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean">
               <button
                 onClick={() => { setIsSingleModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800"
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
@@ -439,7 +158,7 @@ export default function AdministrasiLainnya() {
 
               <button
                 onClick={() => { setIsCsvModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800"
+                className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
                 <div>
@@ -485,7 +204,7 @@ export default function AdministrasiLainnya() {
       </div>
 
       {/* Search, Reset Filters, & Column Selector */}
-      <div className="bg-white p-4 rounded-lg border border-[#e2e8fo] shadow-2xs flex flex-wrap items-center justify-between gap-3 relative">
+      <div className="bg-white p-4 rounded-lg border border-[#e2e8f0] shadow-2xs flex flex-wrap items-center justify-between gap-3 relative">
         <div className="relative flex-1 min-w-[280px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[#707783]" />
           <input
@@ -493,7 +212,7 @@ export default function AdministrasiLainnya() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Cari Judul Ciptaan, Jenis Ciptaan..."
-            className="w-full pl-9 pr-4 py-2 text-xs bg-[#f8fafc] border border-[#e2e8fo] rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
+            className="w-full pl-9 pr-4 py-2 text-xs bg-[#f8fafc] border border-[#e2e8f0] rounded-md focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
           />
         </div>
 
@@ -502,10 +221,10 @@ export default function AdministrasiLainnya() {
             {filteredData.length} data ditemukan
           </div>
 
-          {(filterJenis !== 'All' || filterMasa !== 'All') && (
+          {(filterJenis !== 'All' || filterMasa !== 'All' || filterHasSertifikat !== 'All') && (
             <button
-              onClick={() => { setFilterJenis('All'); setFilterMasa('All'); }}
-              className="text-xs font-bold text-rose-700 hover:underline px-2.5 py-1 bg-rose-50 rounded border border-rose-200"
+              onClick={() => { setFilterJenis('All'); setFilterMasa('All'); setFilterHasSertifikat('All'); }}
+              className="text-xs font-bold text-rose-700 hover:underline px-2.5 py-1 bg-rose-50 rounded border border-rose-200 cursor-pointer"
             >
               Reset Filter Header
             </button>
@@ -515,7 +234,7 @@ export default function AdministrasiLainnya() {
           <div className="relative">
             <button
               onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs cursor-pointer"
             >
               <Columns className="w-4 h-4 text-[#005ea4]" />
               <span>Pilih Kolom Tampil ({visibleColumnKeys.length}/{allColumns.length})</span>
@@ -528,7 +247,7 @@ export default function AdministrasiLainnya() {
                   <span className="font-bold text-slate-900 text-xs">Centang Kolom yang Tampil</span>
                   <button
                     onClick={selectAllColumns}
-                    className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline"
+                    className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline cursor-pointer"
                   >
                     Pilih Semua
                   </button>
@@ -579,7 +298,7 @@ export default function AdministrasiLainnya() {
         </div>
       )}
 
-      {/* Table with Custom 6 Columns & Header Filters */}
+      {/* Table with Custom Columns & Header Filters */}
       <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
         <div className="overflow-x-auto">
           <table className="w-full text-center border-collapse">
@@ -617,8 +336,6 @@ export default function AdministrasiLainnya() {
                   </th>
                 )}
 
-                {isVisible("tanggalCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TANGGAL CIPTAAN</th>}
-
                 {/* SERTIFIKAT FILTER */}
                 {isVisible("hasSertifikat") && (
                   <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60">
@@ -636,6 +353,8 @@ export default function AdministrasiLainnya() {
                     </div>
                   </th>
                 )}
+
+                {isVisible("tanggalCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TANGGAL CIPTAAN</th>}
 
                 {/* MASA BERLAKU FILTER */}
                 {isVisible("masaBerlaku") && (
@@ -720,36 +439,36 @@ export default function AdministrasiLainnya() {
                           )}
                         </td>
                       )}
-                    {isVisible("tanggalCiptaan") && (
-                      <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap text-center align-middle">
-                        {item.tanggalCiptaan}
+                      {isVisible("tanggalCiptaan") && (
+                        <td className="py-3.5 px-4 font-mono-data text-slate-700 whitespace-nowrap text-center align-middle">
+                          {item.tanggalCiptaan}
+                        </td>
+                      )}
+                      {isVisible("masaBerlaku") && (
+                        <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap text-center align-middle">
+                          {item.masaBerlaku}
+                        </td>
+                      )}
+                      {isVisible("kapanBerakhir") && (
+                        <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap text-center align-middle">
+                          {item.kapanBerakhir}
+                        </td>
+                      )}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            requestDeleteRow(item.id || item.MasterId);
+                          }}
+                          className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer"
+                          title="Hapus Data"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
-                    )}
-                    {isVisible("masaBerlaku") && (
-                      <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap text-center align-middle">
-                        {item.masaBerlaku}
-                      </td>
-                    )}
-                    {isVisible("kapanBerakhir") && (
-                      <td className="py-3.5 px-4 font-mono-data font-bold text-rose-700 whitespace-nowrap text-center align-middle">
-                        {item.kapanBerakhir}
-                      </td>
-                    )}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          requestDeleteRow(item.id || item.MasterId);
-                        }}
-                        className="p-1.5 text-rose-600 hover:bg-rose-100 rounded-lg transition-colors"
-                        title="Hapus Data"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 1)} className="py-8 text-center text-[#64748B] font-mono-data">
@@ -771,7 +490,7 @@ export default function AdministrasiLainnya() {
                 <h4 className="font-bold text-sm">Ganti / Pindahkan Target Sertifikat</h4>
                 <p className="text-[11px] text-blue-300 font-mono-data">Sertifikat: {reassignCertRowItem.noSertifikat} ({reassignCertRowItem.judulCiptaan})</p>
               </div>
-              <button onClick={() => setReassignCertRowItem(null)} className="text-slate-400 hover:text-white">
+              <button onClick={() => setReassignCertRowItem(null)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -828,14 +547,14 @@ export default function AdministrasiLainnya() {
               <button
                 type="button"
                 onClick={() => setReassignCertRowItem(null)}
-                className="px-3.5 py-1.5 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300"
+                className="px-3.5 py-1.5 bg-slate-200 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-300 cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="button"
                 onClick={confirmReassignTargetRow}
-                className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs"
+                className="px-4 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs cursor-pointer"
               >
                 Pindahkan Sertifikat ke Item Ini
               </button>
@@ -860,14 +579,14 @@ export default function AdministrasiLainnya() {
                 <button
                   type="button"
                   onClick={() => setRowConfirmModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs"
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="button"
                   onClick={confirmDeleteRow}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs"
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs shadow-xs cursor-pointer"
                 >
                   Ya, Hapus Baris Data
                 </button>
@@ -911,7 +630,7 @@ export default function AdministrasiLainnya() {
               </h3>
               <button 
                 onClick={() => setBulkExemptModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200"
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -945,7 +664,7 @@ export default function AdministrasiLainnya() {
                 type="button"
                 onClick={() => setBulkExemptModalOpen(false)}
                 disabled={isSubmittingBulkExempt}
-                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50"
+                className="px-4 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 disabled:opacity-50 cursor-pointer"
               >
                 Batal
               </button>
@@ -953,7 +672,7 @@ export default function AdministrasiLainnya() {
                 type="button"
                 onClick={handleBulkExempt}
                 disabled={isSubmittingBulkExempt || !bulkExemptNote.trim()}
-                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs"
+                className="px-4 py-2 text-xs font-bold text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-1.5 shadow-xs cursor-pointer"
               >
                 {isSubmittingBulkExempt && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Ya, Tandai {selectedStagingIds.length} Item

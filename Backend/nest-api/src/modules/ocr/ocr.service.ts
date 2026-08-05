@@ -2,8 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
-// eslint-disable-next-line @typescript-[#005ea4]/no-var-requires
-const pdfParse = require('pdf-parse');
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pdfParseLib = require('pdf-parse');
+const pdfParse = pdfParseLib.default || pdfParseLib;
 
 export interface OcrScanResult {
   noSertifikat?: string;
