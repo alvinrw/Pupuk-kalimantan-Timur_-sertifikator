@@ -223,7 +223,43 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
 
       let masterCertList = detail.certificates || [];
 
-      const allMappedLinkedCerts = masterCertList.map((c, index) => ({
+      // Group certificates into chains. Every 'Aktif' certificate is a distinct chain.
+      // History items (non-aktif) are grouped under the matching 'Aktif' certificate by jenisSertifikat.
+      const chains = [];
+      masterCertList.forEach(c => {
+        const isActive = c.status?.toLowerCase() === 'aktif' || c.status?.toLowerCase() === 'active';
+        if (isActive) {
+          chains.push({ head: c, history: [] });
+        }
+      });
+
+      masterCertList.forEach(c => {
+        const isActive = c.status?.toLowerCase() === 'aktif' || c.status?.toLowerCase() === 'active';
+        if (!isActive) {
+          const jenis = c.jenisSertifikat || 'Sertifikat Terhubung';
+          const matchingChain = chains.find(ch => (ch.head.jenisSertifikat || 'Sertifikat Terhubung') === jenis);
+          if (matchingChain) {
+            matchingChain.history.push(c);
+          } else {
+            const existingExpiredChain = chains.find(ch => (ch.head.jenisSertifikat || 'Sertifikat Terhubung') === jenis);
+            if (existingExpiredChain) {
+              const existingDate = new Date(existingExpiredChain.head.terbit || '1970-01-01');
+              const newDate = new Date(c.terbit || '1970-01-01');
+              if (newDate > existingDate) {
+                existingExpiredChain.history.push(existingExpiredChain.head);
+                existingExpiredChain.head = c;
+              } else {
+                existingExpiredChain.history.push(c);
+              }
+            } else {
+              chains.push({ head: c, history: [] });
+            }
+          }
+        }
+      });
+      const uniqueLinkedCerts = chains.map(ch => ch.head);
+
+      const allMappedLinkedCerts = uniqueLinkedCerts.map((c, index) => ({
         id: c.id,
         periode: c.terbit && c.expired ? `${c.terbit.substring(0, 4)} – ${c.expired.substring(0, 4)}` : 'Periode SK',
         noSertifikat: c.noSertifikat || '-',

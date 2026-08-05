@@ -274,7 +274,41 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       const assetCategory = doc.jenisPeralatan || doc.categoryKey || categoryName || 'Perizinan Aset';
 
       if (certs.length > 0) {
-        certs.forEach((cert, idx) => {
+        const chains = [];
+        certs.forEach(c => {
+          const isActive = c.status?.toLowerCase() === 'aktif' || c.status?.toLowerCase() === 'active';
+          if (isActive) {
+            chains.push({ head: c, history: [] });
+          }
+        });
+
+        certs.forEach(c => {
+          const isActive = c.status?.toLowerCase() === 'aktif' || c.status?.toLowerCase() === 'active';
+          if (!isActive) {
+            const jenis = c.jenisSertifikat || 'Sertifikat Terhubung';
+            const matchingChain = chains.find(ch => (ch.head.jenisSertifikat || 'Sertifikat Terhubung') === jenis);
+            if (matchingChain) {
+              matchingChain.history.push(c);
+            } else {
+              const existingExpiredChain = chains.find(ch => (ch.head.jenisSertifikat || 'Sertifikat Terhubung') === jenis);
+              if (existingExpiredChain) {
+                const existingDate = new Date(existingExpiredChain.head.terbit || '1970-01-01');
+                const newDate = new Date(c.terbit || '1970-01-01');
+                if (newDate > existingDate) {
+                  existingExpiredChain.history.push(existingExpiredChain.head);
+                  existingExpiredChain.head = c;
+                } else {
+                  existingExpiredChain.history.push(c);
+                }
+              } else {
+                chains.push({ head: c, history: [] });
+              }
+            }
+          }
+        });
+        const uniqueCerts = chains.map(ch => ch.head);
+
+        uniqueCerts.forEach((cert, idx) => {
           const noCert = cert.noSertifikat || cert.noIzin || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
 
           rows.push({
