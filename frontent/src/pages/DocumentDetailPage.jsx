@@ -1,10 +1,10 @@
 /**
- * DocumentDetailPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Orchestrator utama halaman detail dokumen/sertifikat.
+ * DocumentDetailPage  -  Orchestrator utama halaman detail dokumen/sertifikat.
  *
  * Semua state & business logic ada di: hooks/useDocumentDetail.js
  * Semua sub-komponen UI ada di: components/document-detail/
  *
- * Refactored dari 2183 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ~400 baris.
+ * Refactored dari 2183 → ~400 baris.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -143,8 +143,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {isActionMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+          <div className={`absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col transition-all duration-200 origin-top-right ${isActionMenuOpen ? 'scale-100 opacity-100 visible pointer-events-auto translate-y-0' : 'scale-95 opacity-0 invisible pointer-events-none -translate-y-2'}`}>
               {!isEditing ? (
                 <button
                   onClick={() => { setIsEditing(true); setIsActionMenuOpen(false); }}
@@ -239,7 +238,6 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                 <span>Hapus Data Ini</span>
               </button>
             </div>
-          )}
         </div>
       </div>
 
@@ -270,7 +268,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           <form onSubmit={handleSave} className="space-y-6">
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2">
               <Edit3 className="w-5 h-5 text-amber-700 shrink-0" />
-              <span>Mode Edit Data {isHaki ? 'Hak Cipta (HAKI)' : isEquipment ? 'Peralatan Pabrik' : 'Dokumen Perizinan'} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Perbarui informasi di bawah ini:</span>
+              <span>Mode Edit Data {isHaki ? 'Hak Cipta (HAKI)' : isEquipment ? 'Peralatan Pabrik' : 'Dokumen Perizinan'}  -  Perbarui informasi di bawah ini:</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">

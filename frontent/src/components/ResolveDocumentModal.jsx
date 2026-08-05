@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
+import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair, FileWarning } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE } from '../config/api';
 import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting } from '../services/masterItemsService';
@@ -245,7 +245,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               Perbaiki / Lengkapi Dokumen
             </h3>
             <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-              {itemCode} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â <span className="font-bold text-slate-800">{itemTitle}</span>
+              {item?.code || '-'} — <span className="font-bold text-slate-800">{item?.title || '-'}</span>
             </p>
           </div>
         </div>
@@ -335,46 +335,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             </div>
 
-          {/* Form Opsi A: Unggah PDF Sertifikat */}
-          {option === 'upload' && (
-            <form onSubmit={handleUploadSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Opsional)</label>
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (e.dataTransfer.files[0]) setSelectedFile(e.dataTransfer.files[0]);
-                  }}
-                  className="border-2 border-dashed border-slate-300 hover:border-[#005ea4] rounded-xl p-4 text-center cursor-pointer transition-colors bg-slate-50 hover:bg-blue-50/50"
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
-                    className="hidden"
-                  />
-                  <Upload className="w-6 h-6 mx-auto text-[#005ea4] mb-1" />
-                  <span className="text-xs font-bold text-[#005ea4] block">
-                    {selectedFile ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ File Terpilih: ${selectedFile.name}` : 'Pilih File PDF atau Gambar'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">Maksimal 10MB</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Expired</span>
-                  <span className="font-bold text-rose-700">{formData.expired || '-'}</span>
-                </div>
-                {formData.instansi && (
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block text-[10px] uppercase">Instansi Penerbit</span>
-                    <span className="font-bold text-slate-800">{formData.instansi}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
+
             <div className="space-y-3">
 
               <div>
@@ -490,7 +451,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
 

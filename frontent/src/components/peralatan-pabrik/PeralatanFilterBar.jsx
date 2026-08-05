@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Columns } from 'lucide-react';
+import { Search, Columns, ChevronDown } from 'lucide-react';
 
 export default function PeralatanFilterBar({
   searchTerm,
@@ -49,11 +49,11 @@ export default function PeralatanFilterBar({
           >
             <Columns className="w-4 h-4 text-[#005ea4]" />
             <span>Pilih Kolom Tampil ({visibleColumnKeys.length}/{allColumns.length})</span>
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isColumnDropdownOpen ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Dropdown Popover */}
-          {isColumnDropdownOpen && (
-            <div className="absolute right-0 top-10 z-40 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 space-y-2 text-xs font-sans-clean">
+          <div className={`absolute right-0 top-10 z-40 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 space-y-2 text-xs font-sans-clean transition-all duration-200 origin-top-right ${isColumnDropdownOpen ? 'scale-100 opacity-100 visible pointer-events-auto translate-y-0' : 'scale-95 opacity-0 invisible pointer-events-none -translate-y-2'}`}>
               <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                 <span className="font-bold text-slate-900 text-xs">Centang Kolom yang Tampil</span>
                 <button
@@ -77,8 +77,7 @@ export default function PeralatanFilterBar({
                 ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
       </div>
     </div>
   );

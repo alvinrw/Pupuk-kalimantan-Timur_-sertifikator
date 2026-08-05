@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Filter, Loader2, Search } from 'lucide-react';
+import { Activity, Filter, Loader2, Search, RotateCcw, Calendar, X } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
 import { useMonitoring } from '../hooks/useMonitoring';
 import MonitoringSummaryCards from '../components/monitoring/MonitoringSummaryCards';

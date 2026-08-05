@@ -120,8 +120,8 @@ export function usePeralatanPabrik() {
           id: item.id,
           MasterId: item.id,
           categoryKey: item.categoryKey,
-          jenisPeralatan: item.title || 'Unknown',
-          merekItem: item.code || '-',
+          jenisPeralatan: meta.jenisPeralatan || meta.kategori || item.code || 'Unknown',
+          merekItem: item.title || '-',
           tipe: meta.tipe || '-',
           nomorSeri: meta.nomorSeri || '-',
           lokasi: item.unitLocation || 'Umum',
@@ -343,8 +343,8 @@ export function usePeralatanPabrik() {
       }
 
       const createdItem = await createMasterItem({
-        title: newItem.jenisPeralatan || 'Unknown Item',
-        code: newItem.merekItem || '-',
+        title: newItem.merekItem || 'Unknown Item',
+        code: newItem.jenisPeralatan || '-',
         categoryKey: 'peralatan-pabrik',
         unitLocation: locationStr,
         status: newItem.status || 'Aktif',

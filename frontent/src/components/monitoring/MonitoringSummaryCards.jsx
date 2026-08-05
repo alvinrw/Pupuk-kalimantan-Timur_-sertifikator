@@ -89,8 +89,8 @@ export default function MonitoringSummaryCards({
         className={`${cardBase} ${expiryTab === 'urgent' ? activeRing : inactiveCard}`}
       >
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1 text-slate-500">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Urgent ≤</span>
+          <div className="flex items-center gap-1 text-slate-500 whitespace-nowrap">
+            <span className="text-[10px] font-bold uppercase tracking-wider shrink-0">Urgent ≤</span>
             <input
               type="number"
               value={customUrgentDays}
@@ -99,9 +99,9 @@ export default function MonitoringSummaryCards({
                 setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1));
               }}
               onClick={(e) => e.stopPropagation()}
-              className="w-12 px-1.5 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
+              className="w-10 px-1 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white shrink-0"
             />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Hr</span>
+            <span className="text-[10px] font-bold uppercase tracking-wider shrink-0">Hr</span>
           </div>
           <Clock className="w-4 h-4 text-slate-400 shrink-0" />
         </div>

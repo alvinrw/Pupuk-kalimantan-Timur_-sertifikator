@@ -11,7 +11,10 @@ import {
   FileMinus,
   Wrench,
   Power,
-  Wallet
+  Wallet,
+  Ban,
+  Database,
+  FileX
 } from 'lucide-react';
 import {
   BarChart,
@@ -143,6 +146,8 @@ export default function Dashboard() {
     return flattened;
   }, [rawItems]);
 
+  const getCategoryOptions = () => ['All', ...new Set(allDashboardItems.map(item => item.kategori))];
+
   const filteredItems = useMemo(() => {
     return allDashboardItems.filter(item => {
       const matchKategori = filterKategori === 'All' || item.kategori === filterKategori;
@@ -171,9 +176,9 @@ export default function Dashboard() {
   const statusPieData = [
     { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
     { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
-    { name: `Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
+    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
-  ], [stats]);
+  ];
 
   // Data Bar Chart (pemetaan per kategori)
   const categoryBarData = useMemo(() => {
@@ -336,16 +341,16 @@ export default function Dashboard() {
         {/* Card 1: Urgent */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
-            <div className="flex items-center gap-1 text-slate-500">
+            <div className="flex items-center gap-1 text-slate-500 whitespace-nowrap">
               <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span className="font-mono-data text-[10px] font-bold uppercase">Urgent ≤</span>
+              <span className="font-mono-data text-[10px] font-bold uppercase shrink-0">Urgent ≤</span>
               <input
                 type="number"
                 value={customUrgentDays}
                 onChange={(e) => setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-12 px-1.5 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
+                className="w-10 px-1 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white shrink-0"
               />
-              <span className="font-mono-data text-[10px] font-bold uppercase">Hr</span>
+              <span className="font-mono-data text-[10px] font-bold uppercase shrink-0">Hr</span>
             </div>
             <div className="flex items-end gap-1">
               <span className="text-3xl font-extrabold text-slate-800">{stats.urgent}</span>
@@ -484,7 +489,7 @@ export default function Dashboard() {
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                 <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (ÃƒÂ¢Ã¢â‚¬Â°Ã‚Â¤ ${stats.threshold} Hr)`} />
+                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
                 <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -504,80 +509,76 @@ export default function Dashboard() {
         <MonitoringAnggaran />
       </div>
 
-      {/* FILTER MODAL */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4 font-sans-clean animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            {/* Modal Header */}
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Dari</span>
-                  <input
-                    type="month"
-                    value={dateRangeStart}
-                    onChange={(e) => setDateRangeStart(e.target.value)}
-                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                  />
-                </div>
-                <span className="text-slate-400 text-xs mt-4">s.d.</span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Sampai</span>
-                  <input
-                    type="month"
-                    value={dateRangeEnd}
-                    onChange={(e) => setDateRangeEnd(e.target.value)}
-                    className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5 mt-4">
-                  <button
-                    onClick={handleApplyDateFilter}
-                    className="px-3.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-lg transition-colors font-mono-data shadow-xs"
-                  >
-                    Terapkan
-                  </button>
-                  {isDateFilterActive && (
-                    <button
-                      onClick={handleResetDateFilter}
-                      className="px-2 py-1 text-slate-600 hover:text-slate-900 font-bold text-xs rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors flex items-center gap-1"
-                    >
-                      <X className="w-3 h-3" /> Clear
-                    </button>
-                  )}
-                </div>
-              </div>
+      {/* TABEL CONTROLS (Inline Filters) */}
+      <div className="bg-white rounded-2xl shadow-xs border border-slate-200 mb-4 overflow-hidden">
+        <div className="px-6 py-4 bg-slate-900 text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5">Dari</span>
+              <input
+                type="month"
+                value={dateRangeStart}
+                onChange={(e) => setDateRangeStart(e.target.value)}
+                className="px-2.5 py-1 text-xs border border-slate-700 rounded-lg bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+              />
             </div>
-
-            {/* Dropdown Filter Jenis khusus Tabel Terbit Bawah */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
-              <div className="flex flex-col">
-                <span className="text-[10px] text-slate-500 font-mono-data font-bold mb-0.5">Kategori / Jenis Perizinan</span>
-                <select
-                  value={filterKategoriBawah}
-                  onChange={(e) => setFilterKategoriBawah(e.target.value)}
-                  className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
-                >
-                  <option value="All">Semua Jenis</option>
-                  {getCategoryOptions().filter(cat => cat !== 'All').map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              {filterKategoriBawah !== 'All' && (
+            <span className="text-slate-400 text-xs mt-4">s.d.</span>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5">Sampai</span>
+              <input
+                type="month"
+                value={dateRangeEnd}
+                onChange={(e) => setDateRangeEnd(e.target.value)}
+                className="px-2.5 py-1 text-xs border border-slate-700 rounded-lg bg-slate-800 text-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 mt-4">
+              <button
+                onClick={handleApplyDateFilter}
+                className="px-3.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold text-xs rounded-lg transition-colors font-mono-data shadow-xs"
+              >
+                Terapkan
+              </button>
+              {isDateFilterActive && (
                 <button
-                  onClick={() => setFilterKategoriBawah('All')}
-                  className="mt-4 text-[11px] font-bold text-rose-600 hover:underline"
+                  onClick={handleResetDateFilter}
+                  className="px-2 py-1 text-slate-300 hover:text-white font-bold text-xs rounded-lg border border-slate-600 hover:bg-slate-700 transition-colors flex items-center gap-1"
                 >
-                  Reset
+                  <X className="w-3 h-3" /> Clear
                 </button>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Tabel Data */}
+          {/* Dropdown Filter Jenis khusus Tabel Terbit Bawah */}
+          <div className="flex items-center gap-2">
+            <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5">Kategori / Jenis Perizinan</span>
+              <select
+                value={filterKategoriBawah}
+                onChange={(e) => setFilterKategoriBawah(e.target.value)}
+                className="bg-slate-800 text-white border border-slate-700 rounded-lg px-2.5 py-1 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
+              >
+                <option value="All">Semua Jenis</option>
+                {getCategoryOptions().filter(cat => cat !== 'All').map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+            {filterKategoriBawah !== 'All' && (
+              <button
+                onClick={() => setFilterKategoriBawah('All')}
+                className="mt-4 text-[11px] font-bold text-rose-400 hover:underline"
+              >
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Tabel Data */}
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -635,6 +636,5 @@ export default function Dashboard() {
           </table>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }

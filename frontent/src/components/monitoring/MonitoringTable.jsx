@@ -2,7 +2,7 @@ import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
 
 /**
- * MonitoringTable ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Tabel utama monitoring sertifikasi.
+ * MonitoringTable  -  Tabel utama monitoring sertifikasi.
  */
 export default function MonitoringTable({
   filteredCertificates,

@@ -75,8 +75,8 @@ export default function PeralatanPabrik() {
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${data.isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {data.isImportMenuOpen && (
-            <div className="absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean">
+          {/* Unified Popover Menu */}
+          <div className={`absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean transition-all duration-200 origin-top-right ${data.isImportMenuOpen ? 'scale-100 opacity-100 visible pointer-events-auto translate-y-0' : 'scale-95 opacity-0 invisible pointer-events-none -translate-y-2'}`}>
               <button
                 onClick={() => { data.setIsSingleModalOpen(true); data.setIsImportMenuOpen(false); }}
                 className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
@@ -100,7 +100,6 @@ export default function PeralatanPabrik() {
                 </div>
               </button>
             </div>
-          )}
         </div>
       </div>
 

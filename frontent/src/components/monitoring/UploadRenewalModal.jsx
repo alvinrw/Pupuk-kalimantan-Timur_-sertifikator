@@ -3,7 +3,7 @@ import { X, UploadCloud, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle
 import { API_BASE } from '../../config/api';
 
 /**
- * UploadRenewalModal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal "Selesai & Upload Sertifikat Baru" untuk MonitoringSertifikasi.
+ * UploadRenewalModal  -  Modal "Selesai & Upload Sertifikat Baru" untuk MonitoringSertifikasi.
  */
 export default function UploadRenewalModal({
   activeModalItem, onClose,
@@ -144,18 +144,21 @@ export default function UploadRenewalModal({
                     <span>AI berhasil mengisi form! Harap verifikasi data dengan preview PDF.</span>
                   </div>
                 )}
+              </div>
 
             {isOcrScanning && (
               <div className="mt-2.5 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 flex items-center gap-2 text-[11px] animate-pulse">
                 <Loader2 className="w-4 h-4 text-amber-600 animate-spin" />
-                <span>ÃƒÂ¢Ã…Â¡Ã‚Â¡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
+                <span>⚡ <b>AI OCR Engine:</b> Mengekstrak data nomor, tanggal pengecekan, & expired dari dokumen...</span>
               </div>
+            )}
 
             {ocrSuccess && (
               <div className="mt-2.5 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 flex items-center gap-2 text-[11px]">
                 <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
+                <span>✓ <b>OCR Berhasil:</b> Data di bawah telah otomatis terisi dari hasil pemindaian sertifikat! (Dapat Anda edit manual).</span>
               </div>
+            )}
 
               <div className="grid grid-cols-3 gap-3">
                 <div>

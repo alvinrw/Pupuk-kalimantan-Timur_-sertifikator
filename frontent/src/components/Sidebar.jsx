@@ -12,7 +12,8 @@ import {
   Settings,
   Users,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ClipboardList
 } from 'lucide-react';
 
 export default function Sidebar({ activeTab, setActiveTab }) {

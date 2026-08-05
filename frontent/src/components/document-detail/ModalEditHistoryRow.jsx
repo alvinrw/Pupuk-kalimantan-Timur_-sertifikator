@@ -1,5 +1,5 @@
 /**
- * ModalEditHistoryRow ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal edit baris sertifikat histori.
+ * ModalEditHistoryRow  -  Modal edit baris sertifikat histori.
  * Dipisah dari DocumentDetailPage.
  */
 import React from 'react';
@@ -78,8 +78,8 @@ export default function ModalEditHistoryRow({
               />
               <span className="text-xs font-bold text-[#005ea4] block">
                 {selectedHistoryFile
-                  ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ File Baru: ${selectedHistoryFile.name}`
-                  : (editingHistoryRow.fileUrl ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Ada Berkas PDF (Klik untuk ganti)' : 'Klik untuk Unggah PDF')}
+                  ? `✓ File Baru: ${selectedHistoryFile.name}`
+                  : (editingHistoryRow.fileUrl ? '✓ Ada Berkas PDF (Klik untuk ganti)' : 'Klik untuk Unggah PDF')}
               </span>
             </div>
           </div>

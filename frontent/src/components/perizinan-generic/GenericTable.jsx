@@ -201,7 +201,7 @@ export default function GenericTable({
                           className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans text-center align-middle ${
                             isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
                           }`}
-                          title={`Klik untuk Lihat Detail ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ${namaItemLabel}`}
+                          title={`Klik untuk Lihat Detail  -  ${namaItemLabel}`}
                         >
                           <div className="flex items-center justify-center gap-2">
                             <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.hasPdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />

@@ -1,0 +1,14 @@
+{
+  "parserOptions": {
+    "ecmaVersion": 2020,
+    "sourceType": "module",
+    "ecmaFeatures": { "jsx": true }
+  },
+  "env": { "browser": true, "es6": true, "node": true },
+  "plugins": ["react"],
+  "globals": { "React": "readonly" },
+  "rules": {
+    "no-undef": "error",
+    "react/jsx-no-undef": "error"
+  }
+}

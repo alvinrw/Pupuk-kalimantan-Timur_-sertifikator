@@ -398,7 +398,7 @@ export default function ZipOcrModal({ isOpen, onClose, onMatchSuccess }) {
                   <div>
                     <span className="font-bold text-slate-900 font-mono-data block">{item.fileName}</span>
                     <span className="text-[11px] text-slate-600 font-mono-data">
-                      {item.uploadDate} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Total {item.totalPdfs} PDF (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                      {item.uploadDate}  -  Total {item.totalPdfs} PDF (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
                     </span>
                   </div>
                   <button

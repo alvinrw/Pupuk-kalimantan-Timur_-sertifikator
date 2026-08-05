@@ -11,6 +11,7 @@ import PerizinanAset from './pages/PerizinanAset';
 import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
 import InformasiLainnya from './pages/InformasiLainnya';
 import IuranKeanggotaan from './pages/IuranKeanggotaan';
+import TugasTerdekat from './pages/TugasTerdekat';
 
 import {
   mockStats,
@@ -110,6 +111,8 @@ export default function App() {
         return <InformasiLainnya />;
       case 'iuran-keanggotaan':
         return <IuranKeanggotaan />;
+      case 'tugas-terdekat':
+        return <TugasTerdekat />;
       default:
         return (
           <Dashboard
