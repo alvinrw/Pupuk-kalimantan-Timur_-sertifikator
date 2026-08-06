@@ -12,7 +12,7 @@ import {
 } from '../services/masterItemsService';
 
 const CATEGORY_KEY = 'administrasi-lainnya';
-const UPLOAD_URL = 'http://localhost:3000/api/v1/document-history/upload';
+const UPLOAD_URL = `${import.meta.env.VITE_API_BASE_URL}/document-history/upload`;
 
 /**
  * Memetakan satu item dari API ke format yang digunakan UI tabel ciptaan.

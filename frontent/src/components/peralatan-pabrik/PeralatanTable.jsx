@@ -1,5 +1,6 @@
 import React from 'react';
-import { FileWarning, ShieldAlert, FileCheck, Eye, Check, CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, FileCheck, FileWarning, HelpCircle, ShieldAlert, XCircle, Search, Eye, Wrench, Check } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function PeralatanTable({
   activeMainTab,
@@ -19,6 +20,9 @@ export default function PeralatanTable({
   setResolveTargetItem,
   getRowStatusStyle
 }) {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
+  
   return (
     <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
       <div className="overflow-x-auto">
@@ -276,7 +280,7 @@ export default function PeralatanTable({
                     </td>
                   )}
                   <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
-                    {row.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
+                    {(!isViewer && (row.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging')) ? (
                       <button
                         onClick={() => setResolveTargetItem(item)}
                         className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"

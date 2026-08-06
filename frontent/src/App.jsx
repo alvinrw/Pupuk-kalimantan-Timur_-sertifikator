@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import Login from './pages/Login';
+import { useAuth } from './contexts/AuthContext';
 
 import Dashboard from './pages/Dashboard';
 import PeralatanPabrik from './pages/PeralatanPabrik';
@@ -12,6 +14,8 @@ import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
 import InformasiLainnya from './pages/InformasiLainnya';
 import IuranKeanggotaan from './pages/IuranKeanggotaan';
 import TugasTerdekat from './pages/TugasTerdekat';
+import HistoriPencatatan from './pages/HistoriPencatatan';
+import ManajemenPengguna from './pages/ManajemenPengguna';
 
 import {
   mockStats,
@@ -20,7 +24,13 @@ import {
   mockActivityLogs
 } from './data/mockData';
 
+import useHeartbeat from './hooks/useHeartbeat';
+
 export default function App() {
+  const { user } = useAuth();
+  
+  // Call heartbeat hook to keep online status active
+  useHeartbeat(60000); // 1 minute interval
   const [activeTab, setActiveTab] = useState('dashboard');
 
   const [equipmentList] = useState(mockEquipmentList);
@@ -113,6 +123,10 @@ export default function App() {
         return <IuranKeanggotaan />;
       case 'tugas-terdekat':
         return <TugasTerdekat setActiveTab={setActiveTab} />;
+      case 'histori-pencatatan':
+        return <HistoriPencatatan />;
+      case 'manajemen-pengguna':
+        return <ManajemenPengguna />;
       default:
         return (
           <Dashboard
@@ -124,6 +138,10 @@ export default function App() {
         );
     }
   };
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="flex h-screen bg-[#f7f9fb] font-sans-clean overflow-hidden">

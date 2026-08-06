@@ -7,6 +7,7 @@ import {
   History, UploadCloud, FileText, Edit3, Trash2, Calendar
 } from 'lucide-react';
 import { getFullFileUrl } from '../../config/api';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function CertHistorySection({
   historyList,
@@ -15,6 +16,9 @@ export default function CertHistorySection({
   setEditingHistoryRow,
   setSelectedHistoryToDelete,
 }) {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-6">
       {/* Header */}
@@ -28,6 +32,7 @@ export default function CertHistorySection({
             Daftar seluruh berkas SK, hasil inspeksi, dan koreksi upload manual
           </p>
         </div>
+        {!isViewer && (
         <button
           onClick={() => openUploadModal('current')}
           className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data shrink-0"
@@ -35,6 +40,7 @@ export default function CertHistorySection({
           <UploadCloud className="w-4 h-4" />
           <span>+ Unggah / Koreksi Berkas PDF Manual</span>
         </button>
+        )}
       </div>
 
       {/* History Table */}
@@ -98,20 +104,24 @@ export default function CertHistorySection({
                           <FileText className="w-3.5 h-3.5" />
                           <span>{row.fileUrl ? 'Liat PDF' : 'Belum Ada'}</span>
                         </button>
-                        <button
-                          onClick={() => setEditingHistoryRow({ ...row })}
-                          className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer"
-                          title="Edit Baris Sertifikat"
-                        >
-                          <Edit3 className="w-3.5 h-3.5 text-amber-700" />
-                        </button>
-                        <button
-                          onClick={() => setSelectedHistoryToDelete({ ...row })}
-                          className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
-                          title="Hapus Sertifikat"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {!isViewer && (
+                          <>
+                            <button
+                              onClick={() => setEditingHistoryRow({ ...row })}
+                              className="p-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg transition-colors cursor-pointer"
+                              title="Edit Baris Sertifikat"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-amber-700" />
+                            </button>
+                            <button
+                              onClick={() => setSelectedHistoryToDelete({ ...row })}
+                              className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-300 rounded-lg transition-colors cursor-pointer"
+                              title="Hapus Sertifikat"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

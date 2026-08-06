@@ -1,4 +1,6 @@
 import { Module } from '@nestjs/common';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { ActivityInterceptor } from './common/interceptors/activity.interceptor';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -14,6 +16,9 @@ import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { DocumentHistoryModule } from './modules/document-history/document-history.module';
 import { CsvImportModule } from './modules/csv-import/csv-import.module';
 import { IuranKeanggotaanModule } from './modules/iuran-keanggotaan/iuran-keanggotaan.module';
+import { UsersModule } from './modules/users/users.module';
+import { ActivityLogsModule } from './modules/activity-logs/activity-logs.module';
+import { WebsocketsModule } from './modules/websockets/websockets.module';
 
 @Module({
   imports: [
@@ -34,8 +39,16 @@ import { IuranKeanggotaanModule } from './modules/iuran-keanggotaan/iuran-keangg
     DocumentHistoryModule,
     CsvImportModule,
     IuranKeanggotaanModule,
+    UsersModule,
+    ActivityLogsModule,
+    WebsocketsModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: ActivityInterceptor,
+    }
+  ],
 })
 export class AppModule {}

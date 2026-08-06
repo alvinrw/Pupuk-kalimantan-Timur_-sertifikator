@@ -19,6 +19,7 @@ import { updateNotificationSetting } from '../services/masterItemsService';
 // Hook & Config
 import { useDocumentDetail } from '../hooks/useDocumentDetail';
 import { getFullFileUrl } from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 
 // Section Components
 import ErrorBoundary from '../components/ErrorBoundary';
@@ -35,6 +36,8 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
   if (!item) return null;
 
   const hook = useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired, initialCertId });
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
   const {
     parentDoc, effectiveCategoryKey, targetCert, isSingleCertScope,
     isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
@@ -135,6 +138,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
           </div>
 
           {/* Action Buttons Dropdown */}
+          {!isViewer && (
           <div className="relative font-mono-data" ref={actionMenuRef}>
             <button
               onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
@@ -243,6 +247,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
               </div>
             )}
           </div>
+          )}
         </div>
 
         {/* STATUS BAR */}
@@ -630,12 +635,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                     </p>
                   )}
                 </div>
+                {!isViewer && (
                 <button
                   onClick={() => setIsEditing(true)}
                   className="px-4 py-2 text-xs font-bold text-[#005ea4] hover:bg-blue-50 border border-slate-200 rounded-xl transition-colors cursor-pointer"
                 >
                   Ubah Pengaturan
                 </button>
+                )}
               </div>
             </div>
 
@@ -650,18 +657,22 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   Alasan: {item.exemptionNote || 'Tidak ada catatan khusus'}
                 </p>
                 <div className="pt-4 mt-2 border-t border-indigo-200/60 flex items-center justify-center gap-3">
-                  <button
-                    onClick={() => { setRenewExemptDate(formData.berakhir && formData.berakhir !== '-' ? formData.berakhir : ''); setIsRenewExemptModalOpen(true); }}
-                    className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
-                  >
-                    <RefreshCw className="w-4 h-4" /><span>Ajukan Perpanjangan</span>
-                  </button>
-                  <button
-                    onClick={() => openUploadModal('archive')}
-                    className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
-                  >
-                    <UploadCloud className="w-4 h-4" /><span>Upload Sertifikat Sekarang</span>
-                  </button>
+                  {!isViewer && (
+                    <>
+                      <button
+                        onClick={() => { setRenewExemptDate(formData.berakhir && formData.berakhir !== '-' ? formData.berakhir : ''); setIsRenewExemptModalOpen(true); }}
+                        className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                      >
+                        <RefreshCw className="w-4 h-4" /><span>Ajukan Perpanjangan</span>
+                      </button>
+                      <button
+                        onClick={() => openUploadModal('archive')}
+                        className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
+                      >
+                        <UploadCloud className="w-4 h-4" /><span>Upload Sertifikat Sekarang</span>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
@@ -707,12 +718,14 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                       <ExternalLink className="w-3.5 h-3.5 text-white" />
                     </button>
                   ) : (
+                    !isViewer && (
                     <button
                       onClick={() => openUploadModal('current')}
                       className="px-4 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                     >
                       <UploadCloud className="w-3.5 h-3.5 text-amber-600" /><span>+ Unggah File PDF</span>
                     </button>
+                    )
                   )}
                 </div>
               </div>

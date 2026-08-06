@@ -172,3 +172,50 @@ model IuranKeanggotaan {
 
   @@map("iuran_keanggotaan")
 }
+
+// ---------------------------------------------------------
+// RBAC & Authentication Schema (Tahap 2)
+// ---------------------------------------------------------
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique // "Admin 1", "Admin 2", "Admin 3", "User", "Viewer"
+  description String?
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  nama      String
+  npk       String   @unique
+  username  String   @unique
+  password  String   // Disimpan dalam bentuk Hash (Bcrypt)
+
+  roleId    Int      @map("role_id")
+  role      Role     @relation(fields: [roleId], references: [id])
+
+  activityLogs ActivityLog[]
+
+  lastActive DateTime? @map("last_active")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  action      String   // "INSERT", "UPDATE", "DELETE", "LOGIN"
+  targetTable String   @map("target_table") 
+  targetId    String?  @map("target_id")    
+  details     String?  
+  timestamp   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}

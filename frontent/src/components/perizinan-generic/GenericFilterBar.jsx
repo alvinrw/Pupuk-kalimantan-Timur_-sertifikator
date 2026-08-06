@@ -1,5 +1,6 @@
 import React from 'react';
 import { PlusCircle, ChevronDown, FileSpreadsheet, Building2, FileWarning, Search, RotateCcw, Columns } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function GenericFilterBar({
   title,
@@ -26,6 +27,9 @@ export default function GenericFilterBar({
   isVisible,
   toggleColumn
 }) {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
+
   return (
     <div className="space-y-6">
       {/* Header & Workflow Dropdown */}
@@ -40,6 +44,7 @@ export default function GenericFilterBar({
         </div>
 
         {/* Dropdown Menu "+ Kelola / Impor Dokumen" */}
+        {!isViewer && (
         <div className="relative font-mono-data">
           <button
             onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
@@ -76,6 +81,7 @@ export default function GenericFilterBar({
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* TAB SWITCHER: DATA UTAMA VS STAGING */}
@@ -92,6 +98,7 @@ export default function GenericFilterBar({
           <span>Data Utama</span>
         </button>
 
+        {!isViewer && (
         <button
           onClick={() => setActiveMainTab('staging')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
@@ -108,6 +115,7 @@ export default function GenericFilterBar({
             </span>
           )}
         </button>
+        )}
       </div>
 
       {/* Search, Reset Filters, & Column Selector */}

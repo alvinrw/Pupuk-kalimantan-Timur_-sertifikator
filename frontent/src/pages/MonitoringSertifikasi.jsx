@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Activity, Filter, Loader2, Search, RotateCcw, Calendar, X } from 'lucide-react';
 import DocumentDetailPage from './DocumentDetailPage';
+import { useAuth } from '../contexts/AuthContext';
 import { useMonitoring } from '../hooks/useMonitoring';
 import MonitoringSummaryCards from '../components/monitoring/MonitoringSummaryCards';
 import MonitoringActionModals from '../components/monitoring/MonitoringActionModals';
@@ -8,6 +9,8 @@ import MonitoringHistorySidebar from '../components/monitoring/MonitoringHistory
 import MonitoringTable from '../components/monitoring/MonitoringTable';
 
 export default function MonitoringSertifikasi() {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
   const m = useMonitoring();
 
   // Custom Date Range state (UI-only, applied on top of hook filters)
@@ -182,18 +185,22 @@ export default function MonitoringSertifikasi() {
                 />
               </div>
               {/* Export */}
-              <button
-                onClick={() => m.handleExportCSV(displayedCertificates)}
-                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition-colors font-mono-data"
-              >
-                Export CSV
-              </button>
-              <button
-                onClick={() => m.handleExportJSON(displayedCertificates)}
-                className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition-colors font-mono-data"
-              >
-                Export JSON
-              </button>
+              {!isViewer && (
+                <>
+                  <button
+                    onClick={() => m.handleExportCSV(displayedCertificates)}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition-colors font-mono-data"
+                  >
+                    Export CSV
+                  </button>
+                  <button
+                    onClick={() => m.handleExportJSON(displayedCertificates)}
+                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition-colors font-mono-data"
+                  >
+                    Export JSON
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
