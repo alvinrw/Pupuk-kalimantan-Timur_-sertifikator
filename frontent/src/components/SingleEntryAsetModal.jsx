@@ -108,7 +108,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
       user: 'Departemen Aset & Umum',
       status: formData.status,
       namaSertifikat: formData.namaSertifikat,
-      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `HGB-BPN-${Math.floor(100 + Math.random() * 900)}` : "BELUM_ADA_SERTIFIKAT")),
+      noSertifikat: formData.noSertifikat || (sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (selectedFile ? `HGB-BPN-${Math.floor(100 + Math.random() * 900)}` : "BELUM_ADA_SERTIFIKAT")),
       terbit: formData.terbit || new Date().toISOString().split('T')[0],
       expired: formData.expired || '',
       hasCertificatePdf: sertifikatMode === 'dengan' && (!!selectedFile || !!finalUrl),
@@ -145,7 +145,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
       headerIcon={Building2}
       formId="singleEntryAsetForm"
       onSubmit={handleSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile)}
+      submitDisabled={isUploadingTemp}
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={tempUrl}
@@ -269,14 +269,10 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
           Bagian 2: {sertifikatMode === 'dengan' ? 'Data Berkas Sertifikat' : 'Pengecualian Sertifikat'}
         </h4>
         
-        {sertifikatMode === 'tanpa' ? (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-800 font-medium">Aset ini dicatat tanpa dokumen sertifikat terlampir.</p>
-          </div>
-        ) : (
+        {sertifikatMode === 'dengan' && (
           <>
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat <span className="text-rose-500">*</span></label>
+            <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat HGB/Legalitas (Opsional)</label>
               <div
                 onClick={() => {
                   if (isUploadingTemp || isScanningOcr) return;
@@ -317,7 +313,6 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                         } finally {
                           setIsUploadingTemp(false);
                         }
-                        // Fitur auto-scan keseluruhan dimatikan agar instan
                       }
                     }
                   }}
@@ -364,9 +359,8 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                 </div>
               )}
             </div>
-
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
+              <label className="text-xs font-bold text-slate-700 block mb-1">Lokasi / Area</label>
               <input
                 type="text"
                 value={formData.location}

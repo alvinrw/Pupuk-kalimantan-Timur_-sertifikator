@@ -6,9 +6,12 @@ import {
   Loader2,
   History,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import { uploadCsv, getCsvHistory, deleteCsvHistory } from '../services/csvService';
+import { bulkCreateMastersWithCertificates } from '../services/masterItemsService';
+import * as xlsx from 'xlsx';
 
 export default function CsvImportModal({ isOpen, onClose, onImportSuccess, importType = 'master_items', categoryKey = '', moduleName = '' }) {
   const fileInputRef = useRef(null);
@@ -131,14 +134,77 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       
       for (const f of files) {
         try {
-          const res = await uploadCsv(f, importType, categoryKey);
+          const isExcel = f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls');
+          
+          let parsedRows = [];
+          if (isExcel) {
+            const arrayBuffer = await f.arrayBuffer();
+            const workbook = xlsx.read(arrayBuffer, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const jsonArray = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+            parsedRows = jsonArray.filter(row => row.length > 0);
+          } else {
+            const text = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.onerror = () => reject(new Error("Gagal membaca file"));
+              reader.readAsText(f);
+            });
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) throw new Error("File kosong atau tidak valid");
+            const firstLine = lines[0];
+            const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+            parsedRows = lines.map(line => line.split(delimiter).map(c => c.trim().replace(/^"|"$/g, '')));
+          }
+
+          if (parsedRows.length < 2) throw new Error("File kosong atau tidak valid");
+          
+          const grouped = {};
+          // i=1 to skip header
+          for (let i = 1; i < parsedRows.length; i++) {
+            const cols = parsedRows[i];
+            if (!cols || cols.length < 2) continue; // Relaxed check
+            
+            const title = String(cols[0] || '').trim();
+            const tipe = String(cols[1] || '').trim();
+            const code = String(cols[2] || '').trim();
+            const unitLocation = String(cols[3] || '').trim();
+            const penanggungJawab = String(cols[4] || '').trim();
+            const status = String(cols[5] || 'Aktif').trim();
+            
+            const namaSertifikat = String(cols[6] || '').trim();
+            const noSertifikat = String(cols[7] || '').trim();
+            const terbit = String(cols[8] || '').trim();
+            const expired = String(cols[9] || '').trim();
+            
+            const key = code || title;
+            if (!key) continue;
+            
+            if (!grouped[key]) {
+              grouped[key] = {
+                master: { title, tipe, code, unitLocation, penanggungJawab, status },
+                certificates: []
+              };
+            }
+            
+            if (namaSertifikat) {
+              grouped[key].certificates.push({ namaSertifikat, noSertifikat, terbit, expired });
+            }
+          }
+          
+          const groupedData = Object.values(grouped);
+          if (groupedData.length === 0) throw new Error("Tidak ada data master yang valid");
+          
+          const res = await bulkCreateMastersWithCertificates(groupedData, categoryKey);
+          
           newHistories.push({
             id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             fileName: f.name,
             targetCategory: currentCategoryTitle,
             uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            totalRows: res.totalRows ?? res.importedCount ?? 1,
-            successCount: res.successCount ?? res.importedCount ?? 1,
+            totalRows: res.importedCount ?? 1,
+            successCount: res.successCount ?? 1,
             duplicateCount: res.duplicateCount ?? 0,
             failCount: res.failCount ?? 0,
             failedRows: res.failedRows || [],
@@ -147,6 +213,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           anySuccess = true;
         } catch (err) {
           console.error(`Gagal upload ${f.name}`, err);
+          alert(`Gagal upload ${f.name}: ${err.message}`);
           newHistories.push({
             id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             fileName: f.name,
@@ -164,7 +231,14 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       
       await new Promise(r => setTimeout(r, 800));
 
-      setUploadHistory(prev => [...newHistories.reverse(), ...prev]);
+      const updatedHistory = [...newHistories.reverse(), ...uploadHistory];
+      setUploadHistory(updatedHistory);
+      try {
+        localStorage.setItem(`csv_upload_history_${categoryKey}`, JSON.stringify(updatedHistory));
+      } catch (e) {
+        console.error("Failed to sync save history", e);
+      }
+      
       setStep('upload');
       setFiles([]);
       if (anySuccess && onImportSuccess) {
@@ -210,9 +284,35 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {categoryKey !== 'administrasi-lainnya' && (
+              <button
+                onClick={() => {
+                  const csvContent = 
+                    "Nama Aset / Master (Wajib),Jenis Kategori,Kode / No Seri,Lokasi Unit,Penanggung Jawab,Status Aset,Nama Sertifikat (Child),No Sertifikat Active,Tgl Terbit,Tgl Expired\n" +
+                    "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Layak Operasi,SLO-12345,2026-01-01,2027-01-01\n" +
+                    "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Inspeksi K3,K3-9998,2026-02-15,2027-02-15\n" +
+                    "Area Lahan Pabrik NPK,Tanah / Lahan,LHN-005,Bontang,Dept Aset,Aktif,,,,\n";
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", url);
+                  link.setAttribute("download", `Template_Impor_${categoryKey || 'master'}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#005ea4] rounded-lg border border-blue-200 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
+                title="Unduh Template CSV"
+              >
+                <Download className="w-4 h-4" />
+                <span>Unduh Template</span>
+              </button>
+            )}
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Sub-Tabs */}
@@ -339,7 +439,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                         )}
                       </div>
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
-                        {item.uploadDate} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                        {item.uploadDate} - Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
                         <button 

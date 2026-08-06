@@ -238,12 +238,19 @@ export default function PeralatanTable({
                     )}
                     {isVisible("noSertifikat") && (
                       <td className="py-3.5 px-4 font-mono-data font-bold text-[#005ea4] whitespace-nowrap flex items-center justify-center gap-1.5 align-middle">
-                        {row.documentStatus === 'PENDING_DOC' ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                            <FileWarning className="w-3 h-3 text-amber-500" />
-                            Belum Upload PDF
-                          </span>
-                        ) : row.documentStatus === 'EXEMPT' ? (
+                        {item.documentStatus === 'PENDING_DOC' || (!row.hasPdf && item.documentStatus !== 'EXEMPT') ? (
+                          row.noSertifikat && row.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' ? (
+                            <>
+                              <FileWarning className="w-3.5 h-3.5 text-amber-500" />
+                              <span>{row.noSertifikat}</span>
+                            </>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <FileWarning className="w-3 h-3 text-amber-500" />
+                              Belum Upload PDF
+                            </span>
+                          )
+                        ) : item.documentStatus === 'EXEMPT' ? (
                           <span
                             title={`Catatan Alasan: ${row.exemptionNote || 'Tanpa Sertifikat'}`}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-100/80 text-indigo-800 border border-indigo-300 shadow-2xs cursor-help"

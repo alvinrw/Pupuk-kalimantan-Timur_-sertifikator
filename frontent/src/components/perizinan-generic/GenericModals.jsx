@@ -3,6 +3,8 @@ import { ShieldAlert, X, Loader2 } from 'lucide-react';
 import SingleEntryGenericModal from '../SingleEntryGenericModal';
 import CsvImportModal from '../CsvImportModal';
 import ResolveDocumentModal from '../ResolveDocumentModal';
+import CertDetailModal from './CertDetailModal';
+import ModalAddLinkedCert from '../document-detail/ModalAddLinkedCert';
 
 export default function GenericModals({
   categoryName,
@@ -22,7 +24,14 @@ export default function GenericModals({
   bulkExemptNote,
   setBulkExemptNote,
   isSubmittingBulkExempt,
-  handleBulkExempt
+  handleBulkExempt,
+  viewingCert,
+  setViewingCert,
+  addCertTargetMaster,
+  setAddCertTargetMaster,
+  handleSaveCertEdit,
+  handleDeleteCert,
+  handleAddCertSuccess
 }) {
   return (
     <>
@@ -45,6 +54,21 @@ export default function GenericModals({
         onClose={() => setResolveTargetItem(null)}
         item={resolveTargetItem}
         onSuccess={loadData}
+      />
+
+      <CertDetailModal
+        isOpen={!!viewingCert}
+        onClose={() => setViewingCert(null)}
+        cert={viewingCert?.cert}
+        masterItem={viewingCert?.masterItem}
+        onSaveCert={handleSaveCertEdit}
+        onDeleteCert={handleDeleteCert}
+      />
+
+      <ModalAddLinkedCert
+        isOpen={!!addCertTargetMaster}
+        onClose={() => setAddCertTargetMaster(null)}
+        onSave={handleAddCertSuccess}
       />
 
       {/* BULK EXEMPT MODAL */}

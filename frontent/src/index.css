@@ -40,3 +40,26 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+ /* Tampilkan Ikon Kalender pada Input Date */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: block !important;
+  opacity: 0.6;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Memastikan kalender bisa diklik di seluruh area input (Opsional, sangat bagus untuk UX) */
+input[type="date"] {
+  position: relative;
+}
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}

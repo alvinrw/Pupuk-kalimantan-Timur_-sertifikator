@@ -154,7 +154,9 @@ export class MasterItemsService implements OnModuleInit {
 
     const items = await this.prisma.masterItem.findMany({
       where: {
-        documentStatus: 'COMPLETED',
+        documentStatus: {
+          in: ['COMPLETED', 'EXEMPT']
+        }
       },
       include: {
         notificationSetting: true,

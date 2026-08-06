@@ -1,5 +1,5 @@
 /**
- * ModalAddLinkedCert ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal tambah sertifikat terhubung baru.
+ * ModalAddLinkedCert - Modal tambah sertifikat terhubung baru.
  * Dipisah dari DocumentDetailPage (sebelumnya ~200 baris inline).
  */
 import React, { useState, useRef, useEffect } from 'react';
@@ -78,7 +78,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
       await onSave({
         certPayload: {
           jenisSertifikat: certData.jenisSertifikat,
-          noSertifikat: sertifikatMode === 'tanpa' ? 'Tanpa Sertifikat' : (certData.noSertifikat || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`),
+          noSertifikat: certData.noSertifikat || (sertifikatMode === 'tanpa' ? 'Tanpa Sertifikat' : `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`),
           instansi: certData.instansi || null,
           terbit: certData.terbit || undefined,
           expired: certData.expired || undefined,
@@ -149,11 +149,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
             </div>
 
             <form id="addLinkedCertForm" onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 space-y-4 text-xs font-mono-data">
-              {sertifikatMode === 'tanpa' ? (
-                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-xs text-amber-800 font-medium">Anda akan menambahkan riwayat perizinan ini ke dalam sistem tanpa dokumen sertifikat terlampir.</p>
-                 </div>
-              ) : (
+              {sertifikatMode === 'dengan' && (
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat <span className="text-rose-500">*</span></label>
                   <div
@@ -301,11 +297,11 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
 
               <div>
                 <label className="font-bold text-slate-800 block mb-1">
-                  No. SK / Sertifikat <span className="text-rose-500">*</span>
+                  No. SK / Sertifikat (Opsional)
                 </label>
                 <div className="flex gap-2">
                   <input
-                    type="text" required
+                    type="text"
                     value={certData.noSertifikat}
                     onChange={(e) => setCertData({ ...certData, noSertifikat: e.target.value })}
                     placeholder="Contoh: PBG-64.74/DPMPTSP/2024"

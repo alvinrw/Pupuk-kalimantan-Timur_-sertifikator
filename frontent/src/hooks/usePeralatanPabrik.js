@@ -390,7 +390,7 @@ export function usePeralatanPabrik() {
 
       const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
 
-      if ((newItem.documentStatus === 'COMPLETED' || !newItem.documentStatus) && targetItemId) {
+      if (targetItemId) {
         let fileUrl = null;
         if (newItem.file) {
           const formData = new FormData();
@@ -419,6 +419,10 @@ export function usePeralatanPabrik() {
           expired: newItem.berakhir || undefined,
           fileUrl: fileUrl,
         });
+
+        if (newItem.documentStatus === 'EXEMPT') {
+          await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');
+        }
       }
 
       if (targetItemId) {

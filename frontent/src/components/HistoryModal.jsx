@@ -84,7 +84,7 @@ export default function HistoryModal({ isOpen, onClose, documentItem, onUpdateCe
                 Riwayat & Kelola Sertifikat
               </h3>
               <p className="text-xs text-slate-600 font-mono-data">
-                {documentItem.code || documentItem.tipe} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â {documentItem.title || documentItem.merekItem}
+                {documentItem.code || documentItem.tipe} - {documentItem.title || documentItem.merekItem}
               </p>
             </div>
           </div>

@@ -117,8 +117,16 @@ export default function App() {
         );
       case 'riwayat-perpanjangan':
         return <RiwayatPerpanjangan />;
-      case 'informasi-lainnya':
-        return <InformasiLainnya />;
+      case 'informasi-modul':
+        return <InformasiLainnya activeSection="overview" />;
+      case 'informasi-status':
+        return <InformasiLainnya activeSection="status" />;
+      case 'informasi-alur-kerja':
+        return <InformasiLainnya activeSection="workflow" />;
+      case 'informasi-panduan':
+        return <InformasiLainnya activeSection="multicert" />;
+      case 'informasi-kolom-csv':
+        return <InformasiLainnya activeSection="columns" />;
       case 'iuran-keanggotaan':
         return <IuranKeanggotaan />;
       case 'tugas-terdekat':

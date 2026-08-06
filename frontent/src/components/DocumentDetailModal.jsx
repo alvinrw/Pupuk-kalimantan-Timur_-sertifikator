@@ -68,7 +68,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </span>
               </div>
               <p className="text-xs text-slate-300 font-mono-data truncate max-w-md">
-                {formData.merekItem} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â ({formData.lokasi})
+                {formData.merekItem} - ({formData.lokasi})
               </p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
             <form onSubmit={handleSave} className="space-y-4 font-mono-data">
               <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2">
                 <Edit3 className="w-4 h-4 text-amber-700 shrink-0" />
-                <span>Mode Edit Data Dokumen ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Perbarui informasi spesifikasi dan perizinan di bawah ini:</span>
+                <span>Mode Edit Data Dokumen - Perbarui informasi spesifikasi dan perizinan di bawah ini:</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

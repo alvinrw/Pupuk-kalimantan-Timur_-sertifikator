@@ -290,7 +290,7 @@ export default function usePerizinanAset() {
 
       const targetItemId = createdItem?.id || createdItem?.MasterId;
 
-      if (newItem.documentStatus === 'COMPLETED' && targetItemId) {
+      if (targetItemId) {
         let fileUrl = null;
         if (newItem.file) {
           const formData = new FormData();
@@ -317,6 +317,10 @@ export default function usePerizinanAset() {
           expired: newItem.expired || undefined,
           fileUrl,
         });
+
+        if (newItem.documentStatus === 'EXEMPT') {
+          await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');
+        }
       }
 
       setActiveMainTab('main');

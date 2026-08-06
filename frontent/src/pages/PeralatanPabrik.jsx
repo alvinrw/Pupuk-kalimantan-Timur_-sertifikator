@@ -30,6 +30,7 @@ export default function PeralatanPabrik() {
           // Refresh langsung dari server untuk memastikan data terupdate 100%
           data.loadData();
         }}
+        onRefreshRequired={data.loadData}
         onQuickRenew={(id) => {
           alert(`Inisiasi Perpanjangan Sertifikat untuk item ${id}. Menuju menu Monitoring.`);
         }}
@@ -38,9 +39,6 @@ export default function PeralatanPabrik() {
         }}
         onDeleteSuccess={() => {
           data.setDetailModalItem(null);
-          data.loadData();
-        }}
-        onRefreshRequired={() => {
           data.loadData();
         }}
       />

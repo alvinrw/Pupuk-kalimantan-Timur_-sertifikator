@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE } from '../config/api';
-import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting } from '../services/masterItemsService';
+import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting, updateCertificate } from '../services/masterItemsService';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
 
@@ -131,14 +131,20 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
 
     const targetId = activeDoc.MasterId || activeDoc.id;
 
-    if (sertifikatMode === 'tanpa') {
-      try {
-        await resolveMasterItemExemption(targetId, formData.keterangan || "Tidak Perlu Sertifikat");
-      } catch (err) {
-        console.error("Exemption resolve error:", err);
-      }
-    } else {
-      try {
+    try {
+      if (activeDoc.isChild || activeDoc.certId || activeDoc.masterItemId) {
+        // Update existing child certificate
+        await updateCertificate(activeDoc.id || activeDoc.certId, {
+          namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat,
+          noSertifikat: formData.noSertifikat,
+          instansi: formData.instansi,
+          terbit: formData.terbit,
+          expired: formData.expired,
+          fileUrl: finalUrl,
+          status: 'Aktif'
+        });
+      } else {
+        // Create new certificate for master item
         await createCertificateForMasterItem({
           itemId: targetId,
           jenisSertifikat: activeDoc.jenisSertifikat || activeDoc.jenisPeralatan || activeDoc.jenisCiptaan || activeDoc.categoryKey || activeDoc.title || "Sertifikat",
@@ -150,9 +156,17 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
           fileUrl: finalUrl,
           status: 'Aktif'
         });
-      } catch (err) {
-        console.error("Certificate resolve error:", err);
+
+        if (sertifikatMode === 'tanpa') {
+          try {
+            await resolveMasterItemExemption(targetId, formData.keterangan || 'Tanpa Sertifikat (Input Manual)');
+          } catch (err) {
+            console.error("Exemption resolve error:", err);
+          }
+        }
       }
+    } catch (err) {
+      console.error("Certificate resolve error:", err);
     }
 
     try {
@@ -173,7 +187,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       fileUrl: finalUrl,
       documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
       hasCertificatePdf: sertifikatMode === 'dengan' && (!!selectedFile || !!finalUrl),
-      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || "BELUM_ADA_SERTIFIKAT"),
+      noSertifikat: formData.noSertifikat || (sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : "BELUM_ADA_SERTIFIKAT"),
       notificationSetting: {
         isEnabled: formData.reminderEnabled,
         triggerType: formData.reminderType,
@@ -197,7 +211,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       headerIcon={CheckCircle2}
       formId="resolveDocumentForm"
       onSubmit={handleSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile && !activeDoc.fileUrl)}
+      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile && !tempUrl && !activeDoc.fileUrl)}
       submitText="Simpan & Selesaikan"
       submitIcon={Save}
       tempUrl={tempUrl || activeDoc.fileUrl}
@@ -236,25 +250,10 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
         </button>
       </div>
 
-      {sertifikatMode === 'tanpa' ? (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
-          <p className="text-xs text-amber-800 font-medium">Dokumen ini ditandai pengecualian (tidak membutuhkan lampiran berkas fisik PDF).</p>
-          <div>
-            <label className="text-xs font-bold text-amber-900 block mb-1">Catatan Pengecualian / Alasan <span className="text-rose-500">*</span></label>
-            <textarea
-              rows={2}
-              required
-              value={formData.keterangan}
-              onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-              placeholder="Contoh: Tidak membutuhkan izin sesuai peraturan..."
-              className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-xs"
-            />
-          </div>
-        </div>
-      ) : (
+      {sertifikatMode === 'dengan' && (
         <div className="space-y-4">
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat Baru <span className="text-rose-500">*</span></label>
+            <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat Baru (Wajib)</label>
             <div
               onClick={() => {
                 if (isUploadingTemp || isScanningOcr) return;
@@ -363,8 +362,11 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             )}
           </div>
+        </div>
+      )}
 
-          {hasExistingCertDetails ? (
+      {/* Form Data */}
+      {hasExistingCertDetails ? (
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Detail Sertifikat Terdaftar</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
@@ -509,8 +511,6 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             </div>
           )}
-        </div>
-      )}
 
       {/* SECTION NOTIFIKASI & DEADLINE */}
       <div className="space-y-4 pt-4 border-t border-slate-200">

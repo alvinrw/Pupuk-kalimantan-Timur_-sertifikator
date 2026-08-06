@@ -1,5 +1,13 @@
 import { useState, useMemo, useEffect } from 'react';
-import { getMasterItems, resolveMasterItemExemption, createMasterItem, createCertificateForMasterItem } from '../services/masterItemsService';
+import {
+  getMasterItems,
+  resolveMasterItemExemption,
+  createMasterItem,
+  createCertificateForMasterItem,
+  updateCertificate,
+  deleteCertificate,
+  updateMasterItem
+} from '../services/masterItemsService';
 
 export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [searchTerm, setSearchTerm] = useState('');
@@ -19,9 +27,13 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [isSingleModalOpen, setIsSingleModalOpen] = useState(false);
   const [historyTargetItem, setHistoryTargetItem] = useState(null);
   const [detailModalItem, setDetailModalItem] = useState(null);
+  const [activeCertId, setActiveCertId] = useState(null);
+  const [viewingCert, setViewingCert] = useState(null);
+  const [addCertTargetMaster, setAddCertTargetMaster] = useState(null);
 
   const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState(false);
+  const [expandedMasterIds, setExpandedMasterIds] = useState([]);
 
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -153,13 +165,11 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const defaultColumns = [
     { key: "no", label: "NO." },
     { key: "namaItem", label: isProyek ? "NAMA PROYEK" : isProduk ? "NAMA PRODUK" : "NAMA ITEM" },
-    { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
     { key: "code", label: isProyek ? "KODE PROYEK" : isProduk ? "KODE PRODUK" : "KODE REGISTRASI" },
-    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
-    { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
-    { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
+    { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
     { key: "unit", label: isProyek ? "LOKASI PROYEK" : isProduk ? "UNIT PENGELOLA" : "LOKASI" },
     { key: "user", label: "PENANGGUNG JAWAB" },
+    { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
     { key: "status", label: "STATUS" }
   ];
 
@@ -168,15 +178,17 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "namaItem", label: "NAMA ASET" },
     { key: "code", label: "NOMOR SERI ASSET" },
     { key: "jenisItem", label: "JENIS ASET" },
-    { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
-    { key: "certificateNo", label: "NOMOR SERTIFIKAT" },
-    { key: "hasSertifikat", label: "ADA SERTIFIKAT" },
     { key: "unit", label: "LOKASI" },
     { key: "user", label: "PENANGGUNG JAWAB" },
+    { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
     { key: "status", label: "STATUS" }
   ];
 
-  const allColumns = isAsetCategory ? asetColumns : defaultColumns;
+  const baseColumns = isAsetCategory ? asetColumns : defaultColumns;
+
+  const allColumns = useMemo(() => {
+    return baseColumns;
+  }, [baseColumns]);
 
   const pendingCount = useMemo(() => {
     return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
@@ -200,6 +212,28 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     }
   };
 
+  const handleMoveToUtama = async (masterId) => {
+    try {
+      setIsLoading(true);
+      await updateMasterItem(masterId, { documentStatus: 'COMPLETED' });
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal memindahkan data ke Utama.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    window.handleMoveToUtama = handleMoveToUtama;
+    return () => {
+      if (window.handleMoveToUtama === handleMoveToUtama) {
+        delete window.handleMoveToUtama;
+      }
+    };
+  }, [documents]);
+
   const toggleSelectStaging = (id) => {
     setSelectedStagingIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
@@ -210,7 +244,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
   useEffect(() => {
     setVisibleColumnKeys(allColumns.map(c => c.key));
-  }, [isAsetCategory, categoryName, title]);
+  }, [allColumns]);
 
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>
@@ -239,9 +273,9 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
       const titleStr = doc.title || doc.merekItem || doc.judulCiptaan || doc.namaItem || '';
       const codeStr = doc.code || doc.id || doc.noSertifikat || '';
-      const unitStr = doc.unit || doc.unitPabrik || doc.lokasi || '';
+      const unitStr = doc.unitPabrik || doc.unit || doc.lokasi || 'Kantor Pusat';
       const certStr = doc.certificateNo || doc.noSertifikat || '';
-      const jenisStr = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '';
+      const jenisStr = doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || 'General';
       const statusStr = doc.status || 'Aktif';
 
       const searchLower = searchTerm.toLowerCase();
@@ -267,12 +301,18 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     });
   }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, filterHasSertifikat, activeMainTab]);
 
-  const expandedRows = useMemo(() => {
-    const rows = [];
-    filteredDocs.forEach((doc) => {
+  const toggleExpandMaster = (id) => {
+    setExpandedMasterIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const masterRows = useMemo(() => {
+    return filteredDocs.map((doc, index) => {
       const certs = doc.linkedCertificates || [];
       const assetCategory = doc.jenisPeralatan || doc.categoryKey || categoryName || 'Perizinan Aset';
-
+      
+      const processedCerts = [];
       if (certs.length > 0) {
         const chains = [];
         certs.forEach(c => {
@@ -306,47 +346,49 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             }
           }
         });
-        const uniqueCerts = chains.map(ch => ch.head);
 
-        uniqueCerts.forEach((cert, idx) => {
-          const noCert = cert.noSertifikat || cert.noIzin || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
-
-          rows.push({
-            rowId: `${doc.id}-cert-${cert.id || idx}`,
-            parentDoc: doc,
-            cert: cert,
-            certNo: noCert,
-            jenisCert: assetCategory,
-            issuer: cert.instansi || cert.keterangan || doc.user || 'Umum',
-            issueDate: cert.terbit || doc.createdAt || '-',
-            expiryDate: cert.expired || doc.expiryDate || '-',
-            status: formatStatus(cert.status || doc.status || 'Aktif'),
+        chains.forEach((ch, idx) => {
+          const cert = ch.head;
+          processedCerts.push({
+            id: cert.id || `${doc.id}-cert-${idx}`,
+            namaSertifikat: cert.namaSertifikat || cert.jenisSertifikat || 'Sertifikat Terhubung',
+            noSertifikat: cert.noSertifikat || cert.noIzin || '-',
+            terbit: cert.terbit || '-',
+            expired: cert.expired || '-',
+            status: formatStatus(cert.status || 'Aktif'),
             hasPdf: !!cert.fileUrl,
             fileUrl: cert.fileUrl || null,
-            namaSertifikat: cert.namaSertifikat || cert.jenisSertifikat || '-'
+            history: ch.history,
+            certObj: cert
           });
         });
-      } else {
-        const noCert = doc.certificateNo || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-');
-
-        rows.push({
-          rowId: `${doc.id}-primary`,
-          parentDoc: doc,
-          cert: null,
-          certNo: noCert,
-          jenisCert: assetCategory,
-          issuer: doc.user || doc.description || 'Umum',
-          issueDate: doc.createdAt || '-',
-          expiryDate: doc.expiryDate || '-',
-          status: formatStatus(doc.status || 'Aktif'),
-          hasPdf: !!doc.fileUrl,
-          fileUrl: doc.fileUrl || null,
-          namaSertifikat: '-'
-        });
       }
+
+      return {
+        id: doc.id || doc.MasterId || `doc-${index}`,
+        rowId: doc.id || doc.MasterId || `doc-${index}`,
+        parentDoc: doc,
+        docCode: doc.code || doc.id || '-',
+        docNamaItem: doc.merekItem || doc.title || doc.judulCiptaan || doc.namaItem || '-',
+        docJenis: doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '-',
+        docUnit: doc.unit || doc.unitPabrik || doc.lokasi || '-',
+        docUser: doc.user || doc.description || 'Umum',
+        documentStatus: doc.documentStatus || 'COMPLETED',
+        status: formatStatus(doc.status || 'Aktif'),
+        exemptionNote: doc.exemptionNote || null,
+        certs: processedCerts
+      };
     });
-    return rows;
   }, [filteredDocs, categoryName]);
+
+  const toggleSelectAllStaging = (rows) => {
+    const targetRows = rows || masterRows;
+    if (selectedStagingIds.length === targetRows.length) {
+      setSelectedStagingIds([]);
+    } else {
+      setSelectedStagingIds(targetRows.map(r => r.id || r.parentDoc?.id));
+    }
+  };
 
   const resetFilters = () => {
     setSearchTerm('');
@@ -392,7 +434,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
       const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
 
-      if ((newItem.documentStatus === 'COMPLETED' || !newItem.documentStatus) && targetItemId) {
+      if (targetItemId) {
         await createCertificateForMasterItem({
           itemId: targetItemId,
           jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
@@ -403,6 +445,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           expired: newItem.expired || undefined,
           fileUrl: newItem.fileUrl || null,
         });
+
+        if (newItem.documentStatus === 'EXEMPT') {
+          await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');
+        }
       }
 
       setIsSingleModalOpen(false);
@@ -411,6 +457,55 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     } catch (error) {
       console.error("Gagal menambahkan data:", error);
       alert("Gagal menyimpan data ke database!");
+    }
+  };
+
+  const handleSaveCertEdit = async (certId, updatedData) => {
+    try {
+      await updateCertificate(certId, updatedData);
+      setViewingCert(null);
+      await loadData();
+    } catch (err) {
+      console.error("Gagal update sertifikat:", err);
+      throw err;
+    }
+  };
+
+  const handleDeleteCert = async (certId) => {
+    try {
+      await deleteCertificate(certId);
+      setViewingCert(null);
+      await loadData();
+    } catch (err) {
+      console.error("Gagal hapus sertifikat:", err);
+      throw err;
+    }
+  };
+
+  const handleAddCertSuccess = async ({ certPayload, pdfFile }) => {
+    try {
+      if (!addCertTargetMaster) return;
+      const targetItemId = addCertTargetMaster.id || addCertTargetMaster.MasterId || addCertTargetMaster.parentDoc?.id;
+      
+      let finalFileUrl = certPayload.fileUrl || null;
+
+      await createCertificateForMasterItem({
+        itemId: targetItemId,
+        jenisSertifikat: certPayload.jenisSertifikat || 'Sertifikat Terhubung',
+        namaSertifikat: certPayload.namaSertifikat || certPayload.jenisSertifikat || 'Sertifikat Terhubung',
+        noSertifikat: certPayload.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+        instansi: certPayload.instansi || undefined,
+        terbit: certPayload.terbit || undefined,
+        expired: certPayload.expired || undefined,
+        status: certPayload.status || 'Aktif',
+        fileUrl: finalFileUrl
+      });
+
+      setAddCertTargetMaster(null);
+      await loadData();
+    } catch (err) {
+      console.error("Gagal menambah sertifikat:", err);
+      alert("Gagal menambahkan sertifikat baru.");
     }
   };
 
@@ -444,6 +539,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     isSingleModalOpen, setIsSingleModalOpen,
     historyTargetItem, setHistoryTargetItem,
     detailModalItem, setDetailModalItem,
+    activeCertId, setActiveCertId,
+    viewingCert, setViewingCert,
+    addCertTargetMaster, setAddCertTargetMaster,
+    handleSaveCertEdit, handleDeleteCert, handleAddCertSuccess,
     isColumnDropdownOpen, setIsColumnDropdownOpen,
     isImportMenuOpen, setIsImportMenuOpen,
     documents, setDocuments,
@@ -452,7 +551,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     loadData, allColumns, pendingCount,
     handleBulkExempt, toggleSelectStaging,
     visibleColumnKeys, toggleColumn, selectAllColumns, isVisible,
-    uniqueJenis, uniqueLokasi, uniqueStatus, expandedRows,
+    uniqueJenis, uniqueLokasi, uniqueStatus,
+    masterRows, expandedRows: masterRows,
+    expandedMasterIds, setExpandedMasterIds, toggleExpandMaster,
+    toggleSelectAllStaging,
     resetFilters, handleCsvImported, handleSingleAdded,
     getRowStatusStyle
   };

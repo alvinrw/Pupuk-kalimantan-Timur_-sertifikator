@@ -21,7 +21,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
   const { user, logout } = useAuth();
-  const [openDropdowns, setOpenDropdowns] = useState({ 'admin-dropdown': false });
+  const [openDropdowns, setOpenDropdowns] = useState({ 'admin-dropdown': false, 'informasi-dropdown': false });
 
   const toggleDropdown = (dropdownId) => {
     setOpenDropdowns(prev => ({
@@ -60,7 +60,19 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
         { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList, roleGuard: ['Admin 1', 'Admin 2', 'Admin 3', 'User'] },
-        { id: "informasi-lainnya", label: "Informasi Lainnya", icon: HelpCircle },
+        {
+          id: "informasi-dropdown",
+          label: "Informasi Lainnya",
+          icon: HelpCircle,
+          isDropdown: true,
+          subItems: [
+            { id: "informasi-modul", label: "Modul Aplikasi" },
+            { id: "informasi-status", label: "Warna Status Dokumen" },
+            { id: "informasi-alur-kerja", label: "Alur Kerja" },
+            { id: "informasi-panduan", label: "Panduan Tambah Item" },
+            { id: "informasi-kolom-csv", label: "Struktur Kolom & CSV" },
+          ]
+        },
         { id: "histori-pencatatan", label: "Histori Pencatatan", icon: History, roleGuard: ['Admin 1', 'Admin 2', 'Admin 3'] },
         { id: "manajemen-pengguna", label: "Manajemen Pengguna", icon: Users, roleGuard: ['Admin 1', 'Admin 2', 'Admin 3'] },
       ]
@@ -94,15 +106,21 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                   return (
                     <div key={item.id} className="space-y-1">
                       <button
-                        onClick={() => toggleDropdown(item.id)}
+                        onClick={() => {
+                          toggleDropdown(item.id);
+                          // If dropdown is currently closed and user clicks, navigate to first sub-item
+                          if (!isOpen) {
+                            setActiveTab(item.subItems[0].id);
+                          }
+                        }}
                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors duration-150 ${
-                          hasActiveChild && !isOpen
+                          hasActiveChild
                             ? "bg-[#005ea4]/10 text-[#005ea4]"
                             : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <Icon className={`w-4 h-4 ${hasActiveChild && !isOpen ? "text-[#005ea4]" : "text-slate-500"}`} />
+                          <Icon className={`w-4 h-4 ${hasActiveChild ? "text-[#005ea4]" : "text-slate-500"}`} />
                           <span>{item.label}</span>
                         </div>
                         <ChevronDown className={`w-4 h-4 text-slate-400 transform transition-transform duration-200 ${isOpen ? '' : '-rotate-90'}`} />

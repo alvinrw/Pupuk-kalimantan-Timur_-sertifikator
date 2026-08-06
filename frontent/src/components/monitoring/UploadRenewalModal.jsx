@@ -4,7 +4,7 @@ import { API_BASE } from '../../config/api';
 import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 
 /**
- * UploadRenewalModal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal "Selesai & Upload Sertifikat Baru" untuk MonitoringSertifikasi.
+ * UploadRenewalModal - Modal "Selesai & Upload Sertifikat Baru" untuk MonitoringSertifikasi.
  */
 export default function UploadRenewalModal({
   activeModalItem, onClose,
