@@ -1,0 +1,61 @@
+Nama Aset / Master (Wajib);Jenis Kategori;Kode / No Seri;Lokasi Unit;Penanggung Jawab;Status Aset;Nama Sertifikat (Child);No Sertifikat Active;Tgl Terbit;Tgl Expired
+Overhead Crane 1 Ton;Aset Peralatan;CR-001;Bay 1;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR001;01/01/2025;01/01/2026
+Overhead Crane 1 Ton;Aset Peralatan;CR-001;Bay 1;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR001;01/06/2025;01/06/2026
+Overhead Crane 2 Ton;Aset Peralatan;CR-002;Bay 2;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR002;01/01/2025;01/01/2026
+Overhead Crane 2 Ton;Aset Peralatan;CR-002;Bay 2;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR002;01/06/2025;01/06/2026
+Overhead Crane 3 Ton;Aset Peralatan;CR-003;Bay 3;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR003;01/01/2025;01/01/2026
+Overhead Crane 3 Ton;Aset Peralatan;CR-003;Bay 3;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR003;01/06/2025;01/06/2026
+Overhead Crane 4 Ton;Aset Peralatan;CR-004;Bay 4;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR004;01/01/2025;01/01/2026
+Overhead Crane 4 Ton;Aset Peralatan;CR-004;Bay 4;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR004;01/06/2025;01/06/2026
+Overhead Crane 5 Ton;Aset Peralatan;CR-005;Bay 5;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR005;01/01/2025;01/01/2026
+Overhead Crane 5 Ton;Aset Peralatan;CR-005;Bay 5;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR005;01/06/2025;01/06/2026
+Overhead Crane 6 Ton;Aset Peralatan;CR-006;Bay 6;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR006;01/01/2025;01/01/2026
+Overhead Crane 6 Ton;Aset Peralatan;CR-006;Bay 6;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR006;01/06/2025;01/06/2026
+Overhead Crane 7 Ton;Aset Peralatan;CR-007;Bay 7;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR007;01/01/2025;01/01/2026
+Overhead Crane 7 Ton;Aset Peralatan;CR-007;Bay 7;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR007;01/06/2025;01/06/2026
+Overhead Crane 8 Ton;Aset Peralatan;CR-008;Bay 8;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR008;01/01/2025;01/01/2026
+Overhead Crane 8 Ton;Aset Peralatan;CR-008;Bay 8;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR008;01/06/2025;01/06/2026
+Overhead Crane 9 Ton;Aset Peralatan;CR-009;Bay 9;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR009;01/01/2025;01/01/2026
+Overhead Crane 9 Ton;Aset Peralatan;CR-009;Bay 9;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR009;01/06/2025;01/06/2026
+Overhead Crane 10 Ton;Aset Peralatan;CR-010;Bay 10;Dept Pemeliharaan;Aktif;Sertifikat Layak Operasi;SLO-CR010;01/01/2025;01/01/2026
+Overhead Crane 10 Ton;Aset Peralatan;CR-010;Bay 10;Dept Pemeliharaan;Aktif;Sertifikat K3;K3-CR010;01/06/2025;01/06/2026
+Forklift 1 Ton;Aset Kendaraan;FL-001;Gudang 1;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL001;01/02/2025;01/02/2026
+Forklift 1 Ton;Aset Kendaraan;FL-001;Gudang 1;Dept Logistik;Aktif;Sertifikat K3;K3-FL001;01/07/2025;01/07/2026
+Forklift 2 Ton;Aset Kendaraan;FL-002;Gudang 2;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL002;01/02/2025;01/02/2026
+Forklift 2 Ton;Aset Kendaraan;FL-002;Gudang 2;Dept Logistik;Aktif;Sertifikat K3;K3-FL002;01/07/2025;01/07/2026
+Forklift 3 Ton;Aset Kendaraan;FL-003;Gudang 3;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL003;01/02/2025;01/02/2026
+Forklift 3 Ton;Aset Kendaraan;FL-003;Gudang 3;Dept Logistik;Aktif;Sertifikat K3;K3-FL003;01/07/2025;01/07/2026
+Forklift 4 Ton;Aset Kendaraan;FL-004;Gudang 4;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL004;01/02/2025;01/02/2026
+Forklift 4 Ton;Aset Kendaraan;FL-004;Gudang 4;Dept Logistik;Aktif;Sertifikat K3;K3-FL004;01/07/2025;01/07/2026
+Forklift 5 Ton;Aset Kendaraan;FL-005;Gudang 5;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL005;01/02/2025;01/02/2026
+Forklift 5 Ton;Aset Kendaraan;FL-005;Gudang 5;Dept Logistik;Aktif;Sertifikat K3;K3-FL005;01/07/2025;01/07/2026
+Forklift 6 Ton;Aset Kendaraan;FL-006;Gudang 6;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL006;01/02/2025;01/02/2026
+Forklift 6 Ton;Aset Kendaraan;FL-006;Gudang 6;Dept Logistik;Aktif;Sertifikat K3;K3-FL006;01/07/2025;01/07/2026
+Forklift 7 Ton;Aset Kendaraan;FL-007;Gudang 7;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL007;01/02/2025;01/02/2026
+Forklift 7 Ton;Aset Kendaraan;FL-007;Gudang 7;Dept Logistik;Aktif;Sertifikat K3;K3-FL007;01/07/2025;01/07/2026
+Forklift 8 Ton;Aset Kendaraan;FL-008;Gudang 8;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL008;01/02/2025;01/02/2026
+Forklift 8 Ton;Aset Kendaraan;FL-008;Gudang 8;Dept Logistik;Aktif;Sertifikat K3;K3-FL008;01/07/2025;01/07/2026
+Forklift 9 Ton;Aset Kendaraan;FL-009;Gudang 9;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL009;01/02/2025;01/02/2026
+Forklift 9 Ton;Aset Kendaraan;FL-009;Gudang 9;Dept Logistik;Aktif;Sertifikat K3;K3-FL009;01/07/2025;01/07/2026
+Forklift 10 Ton;Aset Kendaraan;FL-010;Gudang 10;Dept Logistik;Aktif;Sertifikat Layak Operasi;SLO-FL010;01/02/2025;01/02/2026
+Forklift 10 Ton;Aset Kendaraan;FL-010;Gudang 10;Dept Logistik;Aktif;Sertifikat K3;K3-FL010;01/07/2025;01/07/2026
+Kompresor Nitrogen 1;Mesin Produksi;KP-001;Pabrik 1;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP001;01/03/2025;01/03/2026
+Kompresor Nitrogen 1;Mesin Produksi;KP-001;Pabrik 1;Dept Produksi;Aktif;Sertifikat K3;K3-KP001;01/08/2025;01/08/2026
+Kompresor Nitrogen 1;Mesin Produksi;KP-002;Pabrik 2;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP002;01/03/2025;01/03/2026
+Kompresor Nitrogen 1;Mesin Produksi;KP-002;Pabrik 2;Dept Produksi;Aktif;Sertifikat K3;K3-KP002;01/08/2025;01/08/2026
+Kompresor Nitrogen 1;Mesin Produksi;KP-003;Pabrik 3;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP003;01/03/2025;01/03/2026
+Kompresor Nitrogen 3;Mesin Produksi;KP-003;Pabrik 3;Dept Produksi;Aktif;Sertifikat K3;K3-KP003;01/08/2025;01/08/2026
+Kompresor Nitrogen 4;Mesin Produksi;KP-004;Pabrik 4;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP004;01/03/2025;01/03/2026
+Kompresor Nitrogen 4;Mesin Produksi;KP-004;Pabrik 4;Dept Produksi;Aktif;Sertifikat K3;K3-KP004;01/08/2025;01/08/2026
+Kompresor Nitrogen 5;Mesin Produksi;KP-005;Pabrik 5;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP005;01/03/2025;01/03/2026
+Kompresor Nitrogen 5;Mesin Produksi;KP-005;Pabrik 5;Dept Produksi;Aktif;Sertifikat K3;K3-KP005;01/08/2025;01/08/2026
+Kompresor Nitrogen 6;Mesin Produksi;KP-006;Pabrik 6;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP006;01/03/2025;01/03/2026
+Kompresor Nitrogen 6;Mesin Produksi;KP-006;Pabrik 6;Dept Produksi;Aktif;Sertifikat K3;K3-KP006;01/08/2025;01/08/2026
+Kompresor Nitrogen 7;Mesin Produksi;KP-007;Pabrik 7;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP007;01/03/2025;01/03/2026
+Kompresor Nitrogen 7;Mesin Produksi;KP-007;Pabrik 7;Dept Produksi;Aktif;Sertifikat K3;K3-KP007;01/08/2025;01/08/2026
+Kompresor Nitrogen 8;Mesin Produksi;KP-008;Pabrik 8;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP008;01/03/2025;01/03/2026
+Kompresor Nitrogen 8;Mesin Produksi;KP-008;Pabrik 8;Dept Produksi;Aktif;Sertifikat K3;K3-KP008;01/08/2025;01/08/2026
+Kompresor Nitrogen 9;Mesin Produksi;KP-009;Pabrik 9;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP009;01/03/2025;01/03/2026
+Kompresor Nitrogen 9;Mesin Produksi;KP-009;Pabrik 9;Dept Produksi;Aktif;Sertifikat K3;K3-KP009;01/08/2025;01/08/2026
+Kompresor Nitrogen 10;Mesin Produksi;KP-010;Pabrik 10;Dept Produksi;Aktif;Sertifikat Tekanan Tinggi;STT-KP010;01/03/2025;01/03/2026
+Kompresor Nitrogen 10;Mesin Produksi;KP-010;Pabrik 10;Dept Produksi;Aktif;Sertifikat K3;K3-KP010;01/08/2025;01/08/2026

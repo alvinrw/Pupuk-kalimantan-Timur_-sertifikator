@@ -394,6 +394,56 @@ export class CsvImportService {
     });
   }
 
+  async processBulkNested(groupedData: any[], categoryKey: string) {
+    let successCount = 0;
+    const createdMasters = [];
+
+    for (const group of groupedData) {
+      const masterData = {
+        title: group.master.title || '',
+        code: group.master.code || `CSV-${randomUUID().substring(0, 8)}`,
+        unitLocation: group.master.unitLocation || '',
+        status: group.master.status || 'Aktif',
+        keterangan: JSON.stringify({
+          tipe: group.master.tipe,
+          penanggungJawab: group.master.penanggungJawab,
+        }),
+        categoryKey: categoryKey || '',
+        documentStatus: 'PENDING_DOC',
+      };
+
+      const createdMaster = await this.prisma.masterItem.create({
+        data: masterData,
+      });
+
+      for (const cert of group.certificates) {
+        await this.prisma.certificate.create({
+          data: {
+            itemId: createdMaster.id,
+            jenisSertifikat: cert.namaSertifikat || 'Umum',
+            namaSertifikat: cert.namaSertifikat,
+            noSertifikat: cert.noSertifikat,
+            terbit: cert.terbit,
+            expired: cert.expired,
+            status: 'Aktif',
+          },
+        });
+        successCount++;
+      }
+      
+      if (group.certificates.length === 0) successCount++;
+      createdMasters.push(createdMaster);
+    }
+
+    return {
+      success: true,
+      importedCount: createdMasters.length,
+      successCount: successCount,
+      failedRows: [],
+      masters: createdMasters,
+    };
+  }
+
   async deleteImportHistory(id: string) {
     try {
       const log = await this.prisma.monitoringLog.findUnique({

@@ -23,6 +23,17 @@ export class CsvImportController {
     return this.csvImportService.processCsv(file, type, categoryKey);
   }
 
+  @Post('bulk-nested')
+  async bulkNested(
+    @Body('data') data: any[],
+    @Body('categoryKey') categoryKey: string
+  ) {
+    if (!data || !Array.isArray(data)) {
+      throw new HttpException('Data array is required', HttpStatus.BAD_REQUEST);
+    }
+    return this.csvImportService.processBulkNested(data, categoryKey);
+  }
+
   @Get('history')
   async getHistory(@Query('categoryKey') categoryKey?: string) {
     return this.csvImportService.getImportHistory(categoryKey);

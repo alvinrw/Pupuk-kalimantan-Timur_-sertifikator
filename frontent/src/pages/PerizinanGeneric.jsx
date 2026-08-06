@@ -14,7 +14,11 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
     return (
       <DocumentDetailPage
         item={data.detailModalItem}
-        onBack={() => data.setDetailModalItem(null)}
+        initialCertId={data.activeCertId}
+        onBack={() => {
+          data.setDetailModalItem(null);
+          data.setActiveCertId(null);
+        }}
         onSaveUpdate={(updatedDoc) => {
           data.setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? { ...d, ...updatedDoc, title: updatedDoc.merekItem || d.title } : d));
           data.setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
@@ -22,6 +26,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         }}
         onDeleteSuccess={() => {
           data.setDetailModalItem(null);
+          data.setActiveCertId(null);
           data.loadData();
         }}
         onRefreshRequired={data.loadData}
@@ -72,6 +77,9 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         setBulkExemptModalOpen={data.setBulkExemptModalOpen}
         isSubmittingBulkExempt={data.isSubmittingBulkExempt}
         toggleSelectAllStaging={data.toggleSelectAllStaging}
+        masterRows={data.masterRows}
+        expandedMasterIds={data.expandedMasterIds}
+        toggleExpandMaster={data.toggleExpandMaster}
         expandedRows={data.expandedRows}
         isVisible={data.isVisible}
         isAsetCategory={data.isAsetCategory}
@@ -90,8 +98,11 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         getRowStatusStyle={data.getRowStatusStyle}
         toggleSelectStaging={data.toggleSelectStaging}
         setDetailModalItem={data.setDetailModalItem}
+        setActiveCertId={data.setActiveCertId}
         setResolveTargetItem={data.setResolveTargetItem}
         visibleColumnKeys={data.visibleColumnKeys}
+        setViewingCert={data.setViewingCert}
+        setAddCertTargetMaster={data.setAddCertTargetMaster}
       />
 
       <GenericModals
@@ -113,6 +124,13 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         setBulkExemptNote={data.setBulkExemptNote}
         isSubmittingBulkExempt={data.isSubmittingBulkExempt}
         handleBulkExempt={data.handleBulkExempt}
+        viewingCert={data.viewingCert}
+        setViewingCert={data.setViewingCert}
+        addCertTargetMaster={data.addCertTargetMaster}
+        setAddCertTargetMaster={data.setAddCertTargetMaster}
+        handleSaveCertEdit={data.handleSaveCertEdit}
+        handleDeleteCert={data.handleDeleteCert}
+        handleAddCertSuccess={data.handleAddCertSuccess}
       />
     </div>
   );

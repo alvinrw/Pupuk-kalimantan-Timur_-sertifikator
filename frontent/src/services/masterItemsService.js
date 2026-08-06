@@ -15,7 +15,11 @@ export const getMasterItems = async (categoryKey = '', search = '') => {
     // Simple filter simulation for dummy data
     let result = [...masterDataset];
     if (categoryKey) {
-      result = result.filter(item => item.KategoriId === categoryKey || item.KategoriNama?.toLowerCase().includes(categoryKey.toLowerCase()));
+      result = result.filter(item => 
+        item.KategoriId === categoryKey || 
+        item.categoryKey === categoryKey ||
+        item.KategoriNama?.toLowerCase().includes(categoryKey.toLowerCase())
+      );
     }
     if (search) {
       result = result.filter(item => item.Nama.toLowerCase().includes(search.toLowerCase()));
@@ -117,9 +121,6 @@ export const resolveMasterItemExemption = async (id, note) => {
   return response.data;
 };
 
-/**
- * Create a new master item
- */
 export const createMasterItem = async (data) => {
   if (USE_DUMMY_DATA) {
     console.log('[DUMMY MODE] Creating Master Item...', data);
@@ -128,6 +129,62 @@ export const createMasterItem = async (data) => {
   }
   console.log('[REAL API] Creating Master Item...');
   const response = await api.post('/master-items', data);
+  return response.data;
+};
+
+/**
+ * Bulk create masters and certificates from parsed CSV grouping
+ */
+export const bulkCreateMastersWithCertificates = async (groupedData, categoryKey) => {
+  if (USE_DUMMY_DATA) {
+    console.log('[DUMMY MODE] Bulk creating...', groupedData);
+    await new Promise(res => setTimeout(res, 800));
+    const createdMasters = [];
+    let successCount = 0;
+    
+    for (const group of groupedData) {
+      const masterData = {
+        id: `DUMMY-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+        title: group.master.title,
+        merekItem: group.master.title,
+        jenisPeralatan: group.master.tipe,
+        code: group.master.code,
+        unitLocation: group.master.unitLocation,
+        user: group.master.penanggungJawab,
+        status: group.master.status,
+        categoryKey,
+        documentStatus: 'PENDING_DOC', // Always goes to staging
+        certificates: []
+      };
+
+      for (const cert of group.certificates) {
+        masterData.certificates.push({
+          id: `CERT-${Date.now()}-${Math.floor(Math.random()*1000)}`,
+          namaSertifikat: cert.namaSertifikat,
+          noSertifikat: cert.noSertifikat,
+          terbit: cert.terbit,
+          expired: cert.expired,
+          status: 'Aktif',
+          fileUrl: null // Wait for user to upload PDF
+        });
+      }
+      createdMasters.push(masterData);
+      masterDataset.unshift(masterData); // Add to the front of the dummy dataset
+      successCount += group.certificates.length > 0 ? group.certificates.length : 1;
+    }
+    
+    return { 
+      success: true, 
+      importedCount: createdMasters.length, 
+      successCount: successCount, 
+      failedRows: [], 
+      masters: createdMasters 
+    };
+  }
+
+  // REAL API logic
+  console.log('[REAL API] Bulk creating...');
+  const response = await api.post('/csv-import/bulk-nested', { data: groupedData, categoryKey });
   return response.data;
 };
 

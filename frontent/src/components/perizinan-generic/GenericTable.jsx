@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
+import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronRight, FileText, Plus } from 'lucide-react';
 
 export default function GenericTable({
   activeMainTab,
@@ -7,7 +7,10 @@ export default function GenericTable({
   setBulkExemptModalOpen,
   isSubmittingBulkExempt,
   toggleSelectAllStaging,
+  masterRows,
   expandedRows,
+  expandedMasterIds = [],
+  toggleExpandMaster,
   isVisible,
   isAsetCategory,
   categoryName,
@@ -26,8 +29,13 @@ export default function GenericTable({
   toggleSelectStaging,
   setDetailModalItem,
   setResolveTargetItem,
-  visibleColumnKeys
+  visibleColumnKeys,
+  setViewingCert,
+  setAddCertTargetMaster,
+  setActiveCertId
 }) {
+  const rowsToRender = masterRows || expandedRows || [];
+
   return (
     <>
       {/* BULK ACTION BAR */}
@@ -57,12 +65,14 @@ export default function GenericTable({
                   <th className="py-3.5 px-3 w-10 text-center align-middle">
                     <input
                       type="checkbox"
-                      checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
-                      onChange={() => toggleSelectAllStaging(expandedRows)}
+                      checked={rowsToRender.length > 0 && selectedStagingIds.length === rowsToRender.length}
+                      onChange={() => toggleSelectAllStaging(rowsToRender)}
                       className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
                     />
                   </th>
                 )}
+                <th className="py-3.5 px-2 w-10 text-center align-middle"></th>
+
                 {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>}
 
                 {isVisible("namaItem") && (
@@ -75,11 +85,15 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {!isAsetCategory && isVisible("code") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">KODE PERIZINAN</th>}
+                {isVisible("code") && (
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">
+                    {isAsetCategory ? "NOMOR SERI ASSET" : categoryName?.toLowerCase().includes('proyek') ? "KODE PROYEK" : "KODE PERIZINAN"}
+                  </th>
+                )}
 
-                {!isAsetCategory && isVisible("jenisItem") && (
+                {isVisible("jenisItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 justify-center">
                       <span>
                         {isAsetCategory
                           ? "JENIS ASET"
@@ -101,8 +115,6 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {isVisible("certificateNo") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">NOMOR SERTIFIKAT</th>}
-
                 {isVisible("unit") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
                     <div className="flex items-center justify-center gap-1.5">
@@ -121,17 +133,11 @@ export default function GenericTable({
                   </th>
                 )}
 
-                {isAsetCategory && isVisible("luasM2") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">LUAS (MÃƒâ€šÃ‚Â²)</th>}
-                {isAsetCategory && isVisible("luasHa") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">LUAS (HA)</th>}
-                {isAsetCategory && isVisible("peruntukan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">PERUNTUKAN</th>}
-
-                {!isAsetCategory && isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">INSTANSI / USER</th>}
+                {isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">PENANGGUNG JAWAB</th>}
                 
-                {isVisible("issueDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">{isAsetCategory ? "TANGGAL AWAL PENGAJUAN" : "TERBIT"}</th>}
-                {isVisible("expiryDate") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">{isAsetCategory ? "MASA BERLAKU PRODUK" : "EXPIRED"}</th>}
-
-                {isAsetCategory && isVisible("kondisi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KONDISI</th>}
-                {isAsetCategory && isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KETERANGAN</th>}
+                {isVisible("certCount") && (
+                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">SERTIFIKAT TERHUBUNG</th>
+                )}
 
                 {isVisible("status") && (
                   <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
@@ -154,8 +160,8 @@ export default function GenericTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 text-xs">
-              {expandedRows.length > 0 ? (
-                expandedRows.map((row, index) => {
+              {rowsToRender.length > 0 ? (
+                rowsToRender.map((row, index) => {
                   const doc = row.parentDoc;
                   const rowClass = getRowStatusStyle({ status: row.status });
                   const statusStr = (row.status || '').toLowerCase();
@@ -163,14 +169,8 @@ export default function GenericTable({
                   const isExpired = statusStr === 'expired';
                   const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
 
-                  const docCode = doc.code || doc.id || '-';
-                  const docUnit = doc.unit || doc.unitPabrik || doc.lokasi || '-';
-                  const docCert = row.certNo;
-                  const docExpiry = row.expiryDate;
-                  const docJenis = row.jenisCert;
-                  const docUser = row.issuer;
-                  const docIssue = row.issueDate;
-                  const docNamaItem = doc.merekItem || doc.title || doc.judulCiptaan || '-';
+                  const isExpanded = expandedMasterIds.includes(row.id);
+                  const hasCertsOrExempt = row.certs.length > 0 || row.documentStatus === 'EXEMPT';
 
                   const namaItemLabel = categoryName?.toLowerCase().includes('aset')
                     ? 'Nama Aset'
@@ -179,165 +179,368 @@ export default function GenericTable({
                     : 'Nama Produk';
 
                   return (
-                    <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
-                      {activeMainTab === 'staging' && (
-                        <td className="py-3.5 px-3 text-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
-                            onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
-                            className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
-                          />
-                        </td>
-                      )}
-                      {isVisible("no") && (
-                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
-                          {index + 1}
-                        </td>
-                      )}
+                    <React.Fragment key={row.id || index}>
+                      {/* Master Row */}
+                      <tr className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                        {activeMainTab === 'staging' && (
+                          <td className="py-3.5 px-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
+                              onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
+                              className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                            />
+                          </td>
+                        )}
 
-                      {isVisible("namaItem") && (
-                        <td
-                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans text-center align-middle ${
-                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
-                          }`}
-                          title={`Klik untuk Lihat Detail - ${namaItemLabel}`}
-                        >
-                          <div className="flex items-center justify-center gap-2">
-                            <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.hasPdf ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
-                            <span className="max-w-[220px] truncate block">{docNamaItem}</span>
-                          </div>
-                        </td>
-                      )}
-
-                      {!isAsetCategory && isVisible("code") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {docCode}
-                        </td>
-                      )}
-
-                      {!isAsetCategory && isVisible("jenisItem") && (
-                        <td className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                          {docJenis}
-                        </td>
-                      )}
-
-                      {isVisible("certificateNo") && (
-                        <td
-                          onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                          className={`py-3.5 px-4 font-bold whitespace-nowrap cursor-pointer hover:underline text-center align-middle ${
-                            isAfkir ? 'text-slate-200' : 'text-[#005ea4]'
-                          }`}
-                        >
-                          <div className="flex items-start justify-center gap-1.5">
-                            <FileCheck className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${row.hasPdf ? 'text-emerald-600' : 'text-slate-400'}`} />
-                            <div>
-                              <span className="block">{docCert}</span>
-                            </div>
-                          </div>
-                        </td>
-                      )}
-
-                      {isVisible("unit") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-center align-middle">
-                          {docUnit}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("luasM2") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800 text-center align-middle">
-                          {doc.luasM2 || doc.kapasitas || '12.000 mÃƒâ€šÃ‚Â²'}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("luasHa") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-bold text-slate-800 text-center align-middle">
-                          {doc.luasHa || '1,2 Ha'}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("peruntukan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
-                          {doc.peruntukan || doc.title || doc.merekItem || 'Fasilitas Industrial'}
-                        </td>
-                      )}
-
-                      {!isAsetCategory && isVisible("user") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
-                          {docUser}
-                        </td>
-                      )}
-
-                      {isVisible("issueDate") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
-                          {docIssue}
-                        </td>
-                      )}
-
-                      {isVisible("expiryDate") && (
-                        <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-300' : 'text-rose-700'}`}>
-                          {docExpiry}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("kondisi") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700 text-center align-middle">
-                          {doc.kondisi || (isAfkir ? 'Afkir / Non-Aktif' : isExpired ? 'Perlu Re-sertifikasi' : 'Baik & Layak')}
-                        </td>
-                      )}
-
-                      {isAsetCategory && isVisible("keterangan") && (
-                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-600 font-mono-data text-[11px] max-w-[300px] truncate text-center align-middle" title={doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? doc.exemptionNote : ''}>
-                          {doc.documentStatus === 'EXEMPT' && doc.exemptionNote ? (
-                            <span className="text-amber-700 font-semibold italic">{doc.exemptionNote}</span>
+                        <td className="py-3.5 px-2 text-center align-middle">
+                          {hasCertsOrExempt ? (
+                            <button
+                              onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                isExpanded
+                                  ? 'bg-blue-100 text-[#005ea4] border-blue-300 shadow-2xs'
+                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
+                              }`}
+                              title={isExpanded ? 'Sembunyikan Sertifikat' : 'Lihat Sertifikat Terhubung'}
+                            >
+                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                            </button>
                           ) : (
-                            doc.keterangan || doc.user || 'DPMPTSP / BPN Kota Bontang'
+                            <span className="text-slate-300 font-bold text-xs">-</span>
                           )}
                         </td>
-                      )}
 
-                      {isVisible("status") && (
-                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                          <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
-                            isAfkir
-                              ? 'bg-slate-800 text-white border-slate-600'
-                              : isExpired
-                              ? 'bg-rose-100 text-rose-900 border-rose-300'
-                              : isPerpanjang
-                              ? 'bg-amber-100 text-amber-900 border-amber-300'
-                              : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                          }`}>
-                            {row.status}
-                          </span>
-                        </td>
-                      )}
-                      
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
-                        {doc.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging' ? (
-                          <button
-                            onClick={() => setResolveTargetItem(doc)}
-                            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <FileWarning className="w-3.5 h-3.5" />
-                            <span>Perbaiki / Lengkapi</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setDetailModalItem({ ...doc, currentCert: row.cert })}
-                            className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Lihat Detail</span>
-                          </button>
+                        {isVisible("no") && (
+                          <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
+                            {index + 1}
+                          </td>
                         )}
-                      </td>
-                    </tr>
+
+                        {isVisible("namaItem") && (
+                          <td
+                            onClick={() => setDetailModalItem(doc)}
+                            className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans text-center align-middle ${
+                              isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                            }`}
+                            title={`Klik untuk Lihat Detail - ${namaItemLabel}`}
+                          >
+                            <div className="flex items-center justify-center gap-2">
+                              <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
+                              <span className="max-w-[240px] truncate block">{row.docNamaItem}</span>
+                            </div>
+                          </td>
+                        )}
+
+                        {isVisible("code") && (
+                          <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                            {row.docCode}
+                          </td>
+                        )}
+
+                        {isVisible("jenisItem") && (
+                          <td className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-slate-800'}`}>
+                            {row.docJenis}
+                          </td>
+                        )}
+
+                        {isVisible("unit") && (
+                          <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-center align-middle">
+                            {row.docUnit}
+                          </td>
+                        )}
+
+                        {isVisible("user") && (
+                          <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
+                            {row.docUser}
+                          </td>
+                        )}
+
+                        {isVisible("certCount") && (
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+                            {row.documentStatus === 'PENDING_DOC' ? (
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                <FileWarning className="w-3.5 h-3.5" />
+                                Menunggu Dokumen
+                              </span>
+                            ) : row.documentStatus === 'EXEMPT' ? (
+                              <button
+                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                Tanpa Sertifikat (Pengecualian)
+                              </button>
+                            ) : row.certs.length > 0 ? (
+                              <button
+                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 shadow-2xs cursor-pointer transition-colors"
+                              >
+                                <FileCheck className="w-3.5 h-3.5" />
+                                <span>{row.certs.length} Sertifikat</span>
+                                {isExpanded ? <ChevronDown className="w-3 h-3 ml-0.5" /> : <ChevronRight className="w-3 h-3 ml-0.5" />}
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                Belum Ada
+                              </span>
+                            )}
+                          </td>
+                        )}
+
+                        {isVisible("status") && (
+                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                            <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
+                              isAfkir
+                                ? 'bg-slate-800 text-white border-slate-600'
+                                : isExpired
+                                ? 'bg-rose-100 text-rose-900 border-rose-300'
+                                : isPerpanjang
+                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                            }`}>
+                              {row.status}
+                            </span>
+                          </td>
+                        )}
+                        
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
+                          {activeMainTab === 'staging' ? (
+                            row.certs.length > 0 && row.certs.every(c => c.hasPdf) ? (
+                              <button
+                                onClick={() => window.handleMoveToUtama && window.handleMoveToUtama(doc.id || doc.MasterId)}
+                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                              >
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                                <span>Pindah ke Utama</span>
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setResolveTargetItem(doc)}
+                                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                              >
+                                <FileWarning className="w-3.5 h-3.5" />
+                                <span>Perbaiki / Lengkapi</span>
+                              </button>
+                            )
+                          ) : doc.documentStatus === 'PENDING_DOC' ? (
+                            <button
+                              onClick={() => setResolveTargetItem(doc)}
+                              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <FileWarning className="w-3.5 h-3.5" />
+                              <span>Perbaiki / Lengkapi</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                if (setActiveCertId) setActiveCertId(null);
+                                setDetailModalItem(doc.parentDoc || doc);
+                              }}
+                              className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Lihat Detail</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+
+                      {/* Expanded Sub-table Row */}
+                      {isExpanded && (
+                        <tr className="bg-slate-50/90 border-b-2 border-slate-300 shadow-inner">
+                          <td colSpan={100} className="p-4 text-left font-sans">
+                            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                              {/* Sub-table Header */}
+                              <div className="bg-slate-100/90 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-[#005ea4]" />
+                                  <span className="font-bold text-xs text-slate-800 font-mono-data uppercase tracking-wide">
+                                    Daftar Sertifikat / Izin Terhubung ({row.certs.length})
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[11px] text-slate-500 font-mono-data">
+                                    Master: <strong className="text-slate-800">{row.docNamaItem}</strong> ({row.docCode})
+                                  </span>
+                                  {setAddCertTargetMaster && (
+                                    <button
+                                      onClick={() => setAddCertTargetMaster(row.parentDoc || row)}
+                                      className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>+ Tambah Sertifikat</span>
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+
+                              {row.documentStatus === 'EXEMPT' && row.certs.length === 0 ? (
+                                <div className="p-4 bg-slate-50 text-slate-700 text-xs flex items-center gap-2">
+                                  <XCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                                  <span>Item ini ditandai <strong>Pengecualian (Tidak Memerlukan Sertifikat)</strong>. Catatan: <em className="text-amber-700 font-semibold">{row.exemptionNote || 'Tidak ada catatan'}</em></span>
+                                </div>
+                              ) : row.certs.length > 0 ? (
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-center border-collapse font-mono-data text-xs">
+                                    <thead>
+                                      <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
+                                        <th className="py-2.5 px-3 w-10 text-center">NO</th>
+                                        <th className="py-2.5 px-4 text-left">NAMA SERTIFIKAT</th>
+                                        <th className="py-2.5 px-4 text-center">NOMOR SERTIFIKAT</th>
+                                        <th className="py-2.5 px-4 text-center">TANGGAL TERBIT</th>
+                                        <th className="py-2.5 px-4 text-center">MASA BERLAKU (EXPIRED)</th>
+                                        <th className="py-2.5 px-4 text-center">STATUS</th>
+                                        <th className="py-2.5 px-4 text-center">DOKUMEN PDF</th>
+                                        <th className="py-2.5 px-4 text-center">AKSI</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {row.certs.map((cert, certIdx) => {
+                                        const certStatusLower = (cert.status || '').toLowerCase();
+                                        const isCertExpired = certStatusLower === 'expired';
+                                        const isCertPerpanjang = certStatusLower === 'perpanjang' || certStatusLower === 'perpanjangan' || certStatusLower === 'in progress';
+
+                                        return (
+                                          <tr key={cert.id || certIdx} className="hover:bg-blue-50/40 transition-colors">
+                                            <td className="py-2.5 px-3 font-bold text-slate-500 text-center">{certIdx + 1}</td>
+                                            <td 
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                const raw = cert.certObj || cert || {};
+                                                const targetId = raw.id || cert.id;
+                                                if (setActiveCertId) setActiveCertId(targetId);
+                                                setDetailModalItem(row.parentDoc || row);
+                                              }}
+                                              className="py-2.5 px-4 text-left font-bold text-slate-900 cursor-pointer hover:text-[#005ea4] hover:underline"
+                                              title="Klik untuk Lihat Detail Halaman Penuh Sertifikat"
+                                            >
+                                              {cert.namaSertifikat}
+                                            </td>
+                                            <td className="py-2.5 px-4 text-center font-bold text-[#005ea4]">{cert.noSertifikat}</td>
+                                            <td className="py-2.5 px-4 text-center text-slate-600">{cert.terbit}</td>
+                                            <td className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : 'text-slate-800'}`}>
+                                              {cert.expired}
+                                            </td>
+                                            <td className="py-2.5 px-4 text-center">
+                                              <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                                isCertExpired 
+                                                  ? 'bg-rose-50 text-rose-700 border-rose-200' 
+                                                  : isCertPerpanjang 
+                                                  ? 'bg-amber-50 text-amber-700 border-amber-200' 
+                                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                              }`}>
+                                                {cert.status}
+                                              </span>
+                                            </td>
+                                            <td className="py-2.5 px-4 text-center">
+                                              {cert.hasPdf && cert.fileUrl ? (
+                                                <a
+                                                  href={cert.fileUrl}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                  onClick={(e) => e.stopPropagation()}
+                                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#005ea4] text-[11px] font-bold rounded-md border border-blue-200 transition-colors"
+                                                >
+                                                  <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                                  <span>Lihat PDF</span>
+                                                </a>
+                                              ) : (
+                                                <span className="text-slate-400 text-[11px] italic">Tidak Ada File</span>
+                                              )}
+                                            </td>
+                                            <td className="py-2.5 px-4 text-center whitespace-nowrap font-mono-data">
+                                              <div className="flex items-center justify-center gap-1.5">
+                                                {activeMainTab === 'staging' ? (
+                                                  cert.hasPdf ? (
+                                                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md border border-emerald-300 inline-flex items-center gap-1">
+                                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                                      <span>Sudah</span>
+                                                    </span>
+                                                  ) : (
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        const raw = cert.certObj || cert || {};
+                                                        const targetId = raw.id || cert.id;
+                                                        if (setActiveCertId) setActiveCertId(targetId);
+                                                        setDetailModalItem(row.parentDoc || row);
+                                                      }}
+                                                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-md border border-amber-600 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                                      title="Upload dokumen PDF"
+                                                    >
+                                                      <FileWarning className="w-3.5 h-3.5" />
+                                                      <span>Lengkapi</span>
+                                                    </button>
+                                                  )
+                                                ) : (
+                                                  <>
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        const raw = cert.certObj || cert || {};
+                                                        const targetId = raw.id || cert.id;
+                                                        if (setActiveCertId) setActiveCertId(targetId);
+                                                        setDetailModalItem(row.parentDoc || row);
+                                                      }}
+                                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-md border border-slate-300 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                                      title="Lihat Detail Halaman Penuh Sertifikat"
+                                                    >
+                                                      <Eye className="w-3.5 h-3.5 text-[#005ea4]" />
+                                                      <span>Lihat Detail</span>
+                                                    </button>
+                                                    {cert.hasPdf && cert.fileUrl && (
+                                                      <a
+                                                        href={cert.fileUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[11px] font-bold rounded-md border border-emerald-200 inline-flex items-center gap-1 transition-colors"
+                                                        title="Buka Dokumen PDF"
+                                                      >
+                                                        <FileCheck className="w-3.5 h-3.5" />
+                                                        <span>PDF</span>
+                                                      </a>
+                                                    )}
+                                                  </>
+                                                )}
+                                              </div>
+                                            </td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div className="p-6 text-center text-slate-400 italic text-xs flex flex-col items-center justify-center gap-2">
+                                  <span>Belum ada sertifikat terhubung ke Master ini.</span>
+                                  {setAddCertTargetMaster && (
+                                    <button
+                                      onClick={() => setAddCertTargetMaster(row.parentDoc || row)}
+                                      className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors not-italic"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                      <span>+ Tambah Sertifikat Sekarang</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })
               ) : (
                 <tr>
-                  <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 1)} className="py-8 text-center text-slate-400 font-mono-data">
+                  <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 2)} className="py-8 text-center text-slate-400 font-mono-data">
                     Data perizinan tidak ditemukan.
                   </td>
                 </tr>
