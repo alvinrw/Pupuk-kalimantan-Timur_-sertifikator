@@ -306,23 +306,32 @@ export default function GenericTable({
                         
                         <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
                           {activeMainTab === 'staging' ? (
-                            row.certs.length > 0 && row.certs.every(c => c.hasPdf) ? (
-                              <button
-                                onClick={() => window.handleMoveToUtama && window.handleMoveToUtama(doc.id || doc.MasterId)}
-                                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                                <span>Pindah ke Utama</span>
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => setResolveTargetItem(doc)}
-                                className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-                              >
-                                <FileWarning className="w-3.5 h-3.5" />
-                                <span>Perbaiki / Lengkapi</span>
-                              </button>
-                            )
+                            (() => {
+                              const isReadyToMove = row.documentStatus === 'EXEMPT' || (row.certs.length > 0 && row.certs.every(c => c.hasPdf));
+                              
+                              if (isReadyToMove) {
+                                return (
+                                  <button
+                                    onClick={() => window.handleMoveToUtama && window.handleMoveToUtama(doc.id || doc.MasterId)}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Pindah ke Utama</span>
+                                  </button>
+                                );
+                              } else {
+                                return (
+                                  <button
+                                    disabled
+                                    title="Lengkapi semua sertifikat (child) terlebih dahulu"
+                                    className="px-3 py-1.5 bg-slate-200 text-slate-500 text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-not-allowed"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>Pindah ke Utama</span>
+                                  </button>
+                                );
+                              }
+                            })()
                           ) : doc.documentStatus === 'PENDING_DOC' ? (
                             <button
                               onClick={() => setResolveTargetItem(doc)}
@@ -465,9 +474,7 @@ export default function GenericTable({
                                                         e.stopPropagation();
                                                         e.preventDefault();
                                                         const raw = cert.certObj || cert || {};
-                                                        const targetId = raw.id || cert.id;
-                                                        if (setActiveCertId) setActiveCertId(targetId);
-                                                        setDetailModalItem(row.parentDoc || row);
+                                                        setResolveTargetItem({ ...raw, isChild: true });
                                                       }}
                                                       className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-md border border-amber-600 inline-flex items-center gap-1 cursor-pointer transition-colors"
                                                       title="Upload dokumen PDF"

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { uploadCsv, getCsvHistory, deleteCsvHistory } from '../services/csvService';
 import { bulkCreateMastersWithCertificates } from '../services/masterItemsService';
+import * as xlsx from 'xlsx';
 
 export default function CsvImportModal({ isOpen, onClose, onImportSuccess, importType = 'master_items', categoryKey = '', moduleName = '' }) {
   const fileInputRef = useRef(null);
@@ -133,35 +134,49 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       
       for (const f of files) {
         try {
-          const text = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error("Gagal membaca file"));
-            reader.readAsText(f);
-          });
+          const isExcel = f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls');
           
-          const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-          if (lines.length < 2) throw new Error("File kosong atau tidak valid");
-          
-          const firstLine = lines[0];
-          const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+          let parsedRows = [];
+          if (isExcel) {
+            const arrayBuffer = await f.arrayBuffer();
+            const workbook = xlsx.read(arrayBuffer, { type: 'array' });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const jsonArray = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+            parsedRows = jsonArray.filter(row => row.length > 0);
+          } else {
+            const text = await new Promise((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = (e) => resolve(e.target.result);
+              reader.onerror = () => reject(new Error("Gagal membaca file"));
+              reader.readAsText(f);
+            });
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) throw new Error("File kosong atau tidak valid");
+            const firstLine = lines[0];
+            const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+            parsedRows = lines.map(line => line.split(delimiter).map(c => c.trim().replace(/^"|"$/g, '')));
+          }
+
+          if (parsedRows.length < 2) throw new Error("File kosong atau tidak valid");
           
           const grouped = {};
-          for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^"|"$/g, ''));
-            if (cols.length < 2) continue; // Relaxed check
+          // i=1 to skip header
+          for (let i = 1; i < parsedRows.length; i++) {
+            const cols = parsedRows[i];
+            if (!cols || cols.length < 2) continue; // Relaxed check
             
-            const title = cols[0];
-            const tipe = cols[1] || '';
-            const code = cols[2] || '';
-            const unitLocation = cols[3] || '';
-            const penanggungJawab = cols[4] || '';
-            const status = cols[5] || 'Aktif';
+            const title = String(cols[0] || '').trim();
+            const tipe = String(cols[1] || '').trim();
+            const code = String(cols[2] || '').trim();
+            const unitLocation = String(cols[3] || '').trim();
+            const penanggungJawab = String(cols[4] || '').trim();
+            const status = String(cols[5] || 'Aktif').trim();
             
-            const namaSertifikat = cols[6] || '';
-            const noSertifikat = cols[7] || '';
-            const terbit = cols[8] || '';
-            const expired = cols[9] || '';
+            const namaSertifikat = String(cols[6] || '').trim();
+            const noSertifikat = String(cols[7] || '').trim();
+            const terbit = String(cols[8] || '').trim();
+            const expired = String(cols[9] || '').trim();
             
             const key = code || title;
             if (!key) continue;

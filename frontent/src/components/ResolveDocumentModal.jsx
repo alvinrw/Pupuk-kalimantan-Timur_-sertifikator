@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE } from '../config/api';
-import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting } from '../services/masterItemsService';
+import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting, updateCertificate } from '../services/masterItemsService';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
 
@@ -131,9 +131,20 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
 
     const targetId = activeDoc.MasterId || activeDoc.id;
 
-    // We always create the certificate with or without the PDF file.
-    // If sertifikatMode === 'tanpa', we just don't have a fileUrl.
     try {
+      if (activeDoc.isChild || activeDoc.certId || activeDoc.masterItemId) {
+        // Update existing child certificate
+        await updateCertificate(activeDoc.id || activeDoc.certId, {
+          namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat,
+          noSertifikat: formData.noSertifikat,
+          instansi: formData.instansi,
+          terbit: formData.terbit,
+          expired: formData.expired,
+          fileUrl: finalUrl,
+          status: 'Aktif'
+        });
+      } else {
+        // Create new certificate for master item
         await createCertificateForMasterItem({
           itemId: targetId,
           jenisSertifikat: activeDoc.jenisSertifikat || activeDoc.jenisPeralatan || activeDoc.jenisCiptaan || activeDoc.categoryKey || activeDoc.title || "Sertifikat",
@@ -153,9 +164,10 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
             console.error("Exemption resolve error:", err);
           }
         }
-      } catch (err) {
-        console.error("Certificate resolve error:", err);
       }
+    } catch (err) {
+      console.error("Certificate resolve error:", err);
+    }
 
     try {
       await updateNotificationSetting(targetId, {
