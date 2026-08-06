@@ -1,8 +1,8 @@
-﻿import React from 'react';
+import React from 'react';
 import { Filter, X, RotateCcw, Check } from 'lucide-react';
 
 /**
- * FilterModal ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Pop-up filter modal untuk MonitoringSertifikasi.
+ * FilterModal - Pop-up filter modal untuk MonitoringSertifikasi.
  */
 export default function FilterModal({
   isOpen, onClose, onReset,

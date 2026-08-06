@@ -66,6 +66,22 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
   // ──────────────────────────────────────────────────────────────────
   // EDITING & LOCAL STATE
   // ──────────────────────────────────────────────────────────────────
+  const parseKeterangan = (ket) => {
+    try {
+      if (ket && typeof ket === 'string' && ket.trim().startsWith('{')) {
+        const parsed = JSON.parse(ket);
+        return {
+          text: parsed.keteranganAsli !== undefined ? parsed.keteranganAsli : ket,
+          additionalEntities: Array.isArray(parsed.additionalEntities) ? parsed.additionalEntities : []
+        };
+      }
+    } catch (e) {}
+    return { text: ket || '', additionalEntities: [] };
+  };
+
+  const initialKetRaw = targetCert?.keterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo');
+  const parsedKet = parseKeterangan(initialKetRaw);
+
   const [localDocumentStatus, setLocalDocumentStatus] = useState(item.documentStatus || 'PENDING_DOC');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -86,7 +102,8 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
     masaBerlaku: item.masaBerlaku || '5 Tahun',
     terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
     berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
-    keterangan: targetCert?.keterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'),
+    keterangan: parsedKet.text,
+    additionalEntities: parsedKet.additionalEntities,
     fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
     namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || ''
   });
@@ -514,7 +531,8 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
             penanggungJawab: formData.user || '',
             noSertifikat: formData.noSertifikat || '',
             namaSertifikat: formData.namaSertifikat || '',
-            keteranganAsli: formData.keterangan || ''
+            keteranganAsli: formData.keterangan || '',
+            additionalEntities: formData.additionalEntities || []
           })
         };
       } else {
@@ -529,7 +547,8 @@ export function useDocumentDetail({ item, onBack, onSaveUpdate, onDeleteSuccess,
           expiryDate: formData.berakhir || formData.expiryDate || null,
           keterangan: JSON.stringify({
             namaSertifikat: formData.namaSertifikat || '',
-            keteranganAsli: formData.keterangan || ''
+            keteranganAsli: formData.keterangan || '',
+            additionalEntities: formData.additionalEntities || []
           })
         };
       }

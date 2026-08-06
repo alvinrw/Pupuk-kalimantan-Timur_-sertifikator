@@ -392,7 +392,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
       const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
 
-      if ((newItem.documentStatus === 'COMPLETED' || !newItem.documentStatus) && targetItemId) {
+      if (targetItemId) {
         await createCertificateForMasterItem({
           itemId: targetItemId,
           jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
@@ -403,6 +403,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           expired: newItem.expired || undefined,
           fileUrl: newItem.fileUrl || null,
         });
+
+        if (newItem.documentStatus === 'EXEMPT') {
+          await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');
+        }
       }
 
       setIsSingleModalOpen(false);

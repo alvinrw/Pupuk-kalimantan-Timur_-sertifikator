@@ -68,7 +68,7 @@ export default function ModalUploadCert({
       headerIcon={UploadCloud}
       formId="uploadCertForm"
       onSubmit={onSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr || !selectedUploadFile}
+      submitDisabled={isUploadingTemp || isScanningOcr}
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={uploadData.tempUrl}
@@ -179,12 +179,11 @@ export default function ModalUploadCert({
 
               <div>
                 <label className="font-bold text-slate-800 block mb-1">
-                  No. Sertifikat / SK Baru <span className="text-rose-500">*</span>
+                  No. Sertifikat / SK Baru (Opsional)
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    required
                     value={uploadData.noSertifikat}
                     onChange={(e) => setUploadData({ ...uploadData, noSertifikat: e.target.value })}
                     placeholder="Contoh: SKP-2024/DISNAKER/1234"

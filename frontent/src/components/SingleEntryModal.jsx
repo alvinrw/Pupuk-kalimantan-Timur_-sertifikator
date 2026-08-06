@@ -189,7 +189,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       file: sertifikatMode === 'dengan' ? selectedFile : null,
       fileUrl: finalUrl,
       id: `EQ-MANUAL-${Date.now()}`,
-      noSertifikat: sertifikatMode === 'tanpa' ? 'Tanpa Sertifikat' : (formData.noSertifikat || (selectedFile ? `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}` : 'BELUM_ADA_SERTIFIKAT')),
+      noSertifikat: formData.noSertifikat || (sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (selectedFile ? `SN-${Math.floor(10000 + Math.random() * 90000)}` : "BELUM_ADA_SERTIFIKAT")),
       tanggalInspeksi: terbitIso || new Date().toISOString().split('T')[0],
       berakhir: expiredIso || '',
       hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
@@ -240,7 +240,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       headerIcon={PlusCircle}
       formId="singleEntryForm"
       onSubmit={handleSubmit}
-      submitDisabled={isUploadingTemp || (sertifikatMode === 'dengan' && !selectedFile)}
+      submitDisabled={isUploadingTemp || (sertifikatMode === 'dengan' && !selectedFile && !tempUrl)}
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={tempUrl}
@@ -353,15 +353,9 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
           Bagian 2: {sertifikatMode === 'dengan' ? 'Data Dokumen Sertifikat' : 'Pengecualian Sertifikat'}
         </h4>
 
-        {sertifikatMode === 'tanpa' ? (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-800 font-medium">Aset ini dicatat tanpa dokumen sertifikat terlampir.</p>
-          </div>
-        ) : (
-          <>
-            {/* File Upload Area */}
-            <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat <span className="text-rose-500">*</span></label>
+        {sertifikatMode === 'dengan' && (
+          <div className="space-y-1">
+            <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Wajib)</label>
               <div
                 onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
@@ -399,9 +393,11 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                 </div>
               )}
             </div>
+        )}
 
-            {/* Nama Sertifikat */}
-            <div>
+        {/* Data Section */}
+      <div className="space-y-4">
+        <div>
               <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
               <input type="text" value={formData.namaSertifikat}
                 onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
@@ -504,8 +500,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                 )}
               </div>
             </div>
-          </>
-        )}
+      </div>
       </div>
 
       {/* SECTION 3: NOTIFIKASI & DEADLINE */}

@@ -1,5 +1,5 @@
 /**
- * ModalEditHistoryRow ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Modal edit baris sertifikat histori.
+ * ModalEditHistoryRow - Modal edit baris sertifikat histori.
  * Dipisah dari DocumentDetailPage.
  */
 import React from 'react';

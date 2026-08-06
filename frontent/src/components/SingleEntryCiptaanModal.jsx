@@ -80,7 +80,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
       user: formData.penanggungJawab,
       status: formData.status,
       namaSertifikat: formData.namaSertifikat,
-      noSertifikat: sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (formData.noSertifikat || (selectedFile ? `EC-${Math.floor(100000 + Math.random() * 900000)}` : "BELUM_ADA_SERTIFIKAT")),
+      noSertifikat: formData.noSertifikat || (sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (selectedFile ? `EC-${Math.floor(100000 + Math.random() * 900000)}` : "BELUM_ADA_SERTIFIKAT")),
       terbit: formData.terbit || new Date().toISOString().split('T')[0],
       expired: formData.expired || 'Seumur Hidup + 70 Tahun',
       hasCertificatePdf: sertifikatMode === 'dengan' && (!!selectedFile || !!finalUrl),
@@ -115,7 +115,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
       headerIcon={Sparkles}
       formId="singleEntryCiptaanForm"
       onSubmit={handleSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile)}
+      submitDisabled={isUploadingTemp || isScanningOcr}
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={tempUrl}
@@ -217,14 +217,10 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
       {/* SECTION 2: DATA SERTIFIKAT */}
       <div className="space-y-4">
         <h4 className="font-bold text-slate-900 text-sm border-b border-slate-200 pb-2 mt-6">
-          Bagian 2: {sertifikatMode === 'dengan' ? 'Data Berkas Sertifikat HAKI' : 'Pengecualian Sertifikat'}
+          Bagian 2: Data Berkas Sertifikat
         </h4>
         
-        {sertifikatMode === 'tanpa' ? (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-            <p className="text-xs text-amber-800 font-medium">Produk/Ciptaan ini dicatat tanpa dokumen sertifikat terlampir.</p>
-          </div>
-        ) : (
+        {sertifikatMode === 'dengan' && (
           <>
             <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat HAKI <span className="text-rose-500">*</span></label>

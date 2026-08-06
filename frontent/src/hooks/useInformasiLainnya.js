@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
-  Ban, ShieldAlert, Clock, CheckCircle2,
-  Database, Activity, RotateCcw, Sparkles, History,
-  Factory, Building2, FolderKanban, PackageCheck, FileSpreadsheet
+  Ban, ShieldAlert, Clock, CheckCircle2, Shield,
+  FileWarning, Database, Activity, RotateCcw, Sparkles, History,
+  Factory, Building2, FolderKanban, PackageCheck, FileSpreadsheet,
+  ClipboardCheck, Upload
 } from 'lucide-react';
 
 export function useInformasiLainnya() {
-  const [activeGuideTab, setActiveGuideTab] = useState('overview'); // 'overview' | 'status' | 'workflow' | 'columns' | 'multicert'
   const [selectedDocDetail, setSelectedDocDetail] = useState(null);
   const [selectedJenisTutorial, setSelectedJenisTutorial] = useState('jenis1'); // 'jenis1' | 'jenis2'
   const [activeCategoryTab, setActiveCategoryTab] = useState('peralatan');
@@ -28,7 +28,7 @@ export function useInformasiLainnya() {
       bgCard: "bg-rose-50 border-rose-200 text-rose-950",
       icon: ShieldAlert,
       iconColor: "text-rose-600",
-      description: "Masa berlaku sertifikat perizinan telah melewati tanggal kadaluarsa (sisa hari ≤ 0). Berisiko hukum & keselamatan K3. Harus segera dilakukan resertifikasi ulang atau tera ulang."
+      description: "Masa berlaku sertifikat perizinan telah melewati tanggal kadaluarsa (sisa hari ≤ 0). Berisiko hukum & keselamatan K3. Harus segera dilakukan resertifikasi ulang melalui tombol 'Perbaiki & Lengkapi'."
     },
     {
       title: "Perpanjangan / Urgent / Process",
@@ -47,39 +47,69 @@ export function useInformasiLainnya() {
       icon: CheckCircle2,
       iconColor: "text-emerald-600",
       description: "Dokumen sertifikat perizinan masih berlaku sah secara hukum dengan sisa masa berlaku aman di atas 30 hari."
+    },
+    {
+      title: "Pending Dokumen (Staging)",
+      badge: "Belum Upload",
+      code: "bg-slate-100 text-slate-700 border-slate-300",
+      bgCard: "bg-white border-slate-200 text-slate-800",
+      icon: FileWarning,
+      iconColor: "text-slate-500",
+      description: "Item sudah terdaftar di sistem (via CSV Import atau Input Single) namun file PDF sertifikat belum diunggah. Item tampil di tab 'Staging' dan memiliki ikon peringatan kuning di kolom No. Sertifikat. Harus diselesaikan via tombol 'Perbaiki & Lengkapi'."
+    },
+    {
+      title: "Tanpa Sertifikat (EXEMPT)",
+      badge: "Dikecualikan",
+      code: "bg-violet-100 text-violet-800 border-violet-300",
+      bgCard: "bg-violet-50/70 border-violet-200 text-violet-950",
+      icon: Shield,
+      iconColor: "text-violet-600",
+      description: "Item secara resmi dikecualikan dari kewajiban sertifikat (tidak memerlukan dokumen perizinan). Status ini diset melalui opsi 'Tanpa Sertifikat (Exempt)' di modal Perbaiki & Lengkapi, atau via fitur Tandai Massal. Ditampilkan dengan ikon tameng ungu (🛡️) di kolom No. Sertifikat."
     }
   ];
 
   const workflowSteps = [
     {
       step: 1,
-      title: "Input & Impor Data Perizinan Massal",
+      title: "Import CSV Massal atau Input Single Perizinan Baru",
       icon: Database,
-      desc: "Pengguna menginput data perizinan melalui form '+ Tambah Single Perizinan Baru' atau mengunggah file CSV Master gabungan multi-unit."
+      desc: "Pengguna memasukkan data perizinan melalui dua jalur: (A) Impor file CSV master multi-unit sekaligus via tombol 'Import CSV', atau (B) Input satu per satu via form 'Input Single Perizinan Baru'. Data yang baru masuk akan otomatis masuk ke tab Staging."
     },
     {
       step: 2,
-      title: "Pemantauan Tenggat Otomatis H-30",
-      icon: Activity,
-      desc: "Sistem SERTIFIKATOR menghitung sisa hari secara real-time dan mengelompokkan dokumen ke dalam 5 Summary Cards di menu Monitoring & Evaluasi."
+      title: "Tab Staging — Antrian Item yang Belum Lengkap",
+      icon: ClipboardCheck,
+      desc: "Tab Staging menampilkan semua item yang datanya sudah tercatat namun belum memiliki file PDF sertifikat. Di sini admin dapat memilih satu item untuk dilengkapi, atau memilih banyak item sekaligus untuk Tandai Massal sebagai Tanpa Sertifikat (EXEMPT)."
     },
     {
       step: 3,
-      title: "Penandaan Fase Status 'Proses Sertifikasi'",
-      icon: RotateCcw,
-      desc: "Penandaan status dokumen (Warna Kuning / Perpanjang) sebagai indikator bahwa sertifikat sedang dalam fase proses perpanjangan atau pembaruan SK."
+      title: "Perbaiki & Lengkapi — Upload PDF atau Tandai Exempt",
+      icon: Upload,
+      desc: "Klik tombol 'Perbaiki & Lengkapi' pada baris item di Staging. Di modal ini, pilih salah satu: (A) 'Dengan Sertifikat' → wajib upload file PDF terlebih dahulu sebelum bisa menyimpan, atau (B) 'Tanpa Sertifikat (Exempt)' → item dikecualikan dan langsung diselesaikan tanpa perlu PDF."
     },
     {
       step: 4,
-      title: "Upload Sertifikat Baru + AI OCR Scanning",
+      title: "AI OCR Otomatis Ekstrak Data dari PDF",
       icon: Sparkles,
-      desc: "Setelah sertifikat penerbitan baru terbit, unggah PDF ke sistem. AI OCR Engine otomatis mengekstrak Nomor SK, Tanggal Terbit, dan Expired Baru tanpa ketik manual."
+      desc: "Setelah file PDF diunggah, AI OCR Engine otomatis memindai dan mengekstrak Nomor Sertifikat, Tanggal Terbit, dan Tanggal Expired dari dokumen tanpa input manual. Hasil scan ditampilkan langsung di form untuk dikonfirmasi oleh admin."
     },
     {
       step: 5,
-      title: "Pencatatan Audit Log & Histori Otomatis",
+      title: "Simpan & Selesaikan — Item Pindah ke Data Utama",
+      icon: RotateCcw,
+      desc: "Setelah admin menekan 'Simpan & Selesaikan', item dihapus dari tab Staging dan muncul di tab Data Utama dengan status yang sesuai (Aktif, Expired, dsb.). Sertifikat baru dan audit log perubahan tersimpan secara otomatis."
+    },
+    {
+      step: 6,
+      title: "Pemantauan Otomatis & Notifikasi H-30",
+      icon: Activity,
+      desc: "Sistem SERTIFIKATOR menghitung sisa hari secara real-time dan mengelompokkan dokumen ke dalam 5 Summary Cards di menu Monitoring & Evaluasi. Notifikasi reminder otomatis dikirim pada H-30 sebelum tanggal expired, sesuai pengaturan di setiap item."
+    },
+    {
+      step: 7,
+      title: "Audit Log & Riwayat Perpanjangan",
       icon: History,
-      desc: "Hasil perpanjangan terekam secara otomatis ke dalam rekam jejak timeline 'Riwayat Perpanjangan' sebagai arsip kepatuhan audit perusahaan."
+      desc: "Setiap perubahan data, upload dokumen, dan perpanjangan sertifikat terekam secara otomatis ke dalam rekam jejak timeline 'Riwayat Perpanjangan' sebagai arsip kepatuhan audit perusahaan yang dapat diakses kapan saja."
     }
   ];
 
@@ -87,32 +117,32 @@ export function useInformasiLainnya() {
     {
       title: "Perizinan Peralatan Pabrik",
       icon: Factory,
-      items: "Bejana Tekan / Boiler, Pesawat Angkat (Crane), Tangki Timbun B3, Mesin Tenaga, Instalasi Listrik & Petir, Timbangan Metrologi, Fire Alarm System."
+      items: "Bejana Tekan / Boiler, Pesawat Angkat (Crane), Tangki Timbun B3, Mesin Tenaga, Instalasi Listrik & Petir, Timbangan Metrologi, Fire Alarm System. Dilengkapi fitur Staging, Perbaiki & Lengkapi, dan OCR otomatis."
     },
     {
       title: "Perizinan Aset & Bangunan",
       icon: Building2,
-      items: "Persetujuan Bangunan Gedung (PBG), Hak Guna Bangunan (HGB), Izin Tersus Pelabuhan Dermaga, Akreditasi Lab QC B3, Izin Lingkungan WWTP."
+      items: "Persetujuan Bangunan Gedung (PBG), Hak Guna Bangunan (HGB), Izin Tersus Pelabuhan Dermaga, Akreditasi Lab QC B3, Izin Lingkungan WWTP. Filter berdasarkan lokasi, luas area, dan peruntukan."
     },
     {
       title: "Perizinan Proyek & Konstruksi",
       icon: FolderKanban,
-      items: "Sertifikat Laik Fungsi (SLF), PBG Proyek Ekspansi Kilang, Izin K3 Heavy Lifting Crane Proyek, PBG Gudang Bagging Plant, Piping Pipe-Rack."
+      items: "Sertifikat Laik Fungsi (SLF), PBG Proyek Ekspansi Kilang, Izin K3 Heavy Lifting Crane Proyek, PBG Gudang Bagging Plant, Piping Pipe-Rack. Input & monitoring per batch proyek."
     },
     {
       title: "Perizinan & Sertifikasi Produk",
       icon: PackageCheck,
-      items: "Sertifikat SNI Urea & NPK Pelangi, Sertifikat Halal BPJPH Kemenag, Sertifikat Industri Hijau Level 5, Standard Mutu Ekspor."
+      items: "Sertifikat SNI Urea & NPK Pelangi, Sertifikat Halal BPJPH Kemenag, Sertifikat Industri Hijau Level 5, Standard Mutu Ekspor. Monitoring masa berlaku per produk fertilizer."
     },
     {
       title: "Administrasi Lainnya / HAKI",
       icon: FileSpreadsheet,
-      items: "Hak Cipta Program Komputer (Software), Buku Panduan K3 Operasi Kilang, Desain Layout Control Room, Modul SOP Operasional."
+      items: "Data Keanggotaan Asosiasi & Iuran Tahunan, Hak Cipta Program Komputer (Software), Buku Panduan K3 Operasi Kilang, Desain Layout Control Room, Modul SOP Operasional."
     },
     {
       title: "Monitoring & Evaluasi",
       icon: Activity,
-      items: "Rekapitulasi 5 Summary Cards, Filter Multi-Parameter, Slide-over Riwayat Audit Log, dan Modal Resertifikasi + Pemindaian AI OCR PDF."
+      items: "Rekapitulasi 5 Summary Cards (Aktif, Perpanjang, Expired, Staging, Exempt), Filter Multi-Parameter, Tugas Terdekat, Slide-over Riwayat Audit Log, dan Modal Resertifikasi + Pemindaian AI OCR PDF."
     }
   ];
 
@@ -263,7 +293,6 @@ export function useInformasiLainnya() {
   };
 
   return {
-    activeGuideTab, setActiveGuideTab,
     selectedDocDetail, setSelectedDocDetail,
     selectedJenisTutorial, setSelectedJenisTutorial,
     activeCategoryTab, setActiveCategoryTab,

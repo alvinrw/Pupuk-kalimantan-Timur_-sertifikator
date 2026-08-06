@@ -6,7 +6,8 @@ import {
   Loader2,
   History,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import { uploadCsv, getCsvHistory, deleteCsvHistory } from '../services/csvService';
 
@@ -210,9 +211,22 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {categoryKey !== 'administrasi-lainnya' && (
+              <a
+                href={`/templates/template_${categoryKey || 'master'}.csv`}
+                download
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#005ea4] rounded-lg border border-blue-200 hover:bg-blue-100 text-xs font-bold transition-colors"
+                title="Unduh Template CSV"
+              >
+                <Download className="w-4 h-4" />
+                <span>Unduh Template</span>
+              </a>
+            )}
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Sub-Tabs */}
@@ -339,7 +353,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                         )}
                       </div>
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
-                        {item.uploadDate} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                        {item.uploadDate} - Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
                         <button 

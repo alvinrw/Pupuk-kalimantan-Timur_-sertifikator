@@ -1,10 +1,10 @@
 /**
- * DocumentDetailPage ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Orchestrator utama halaman detail dokumen/sertifikat.
+ * DocumentDetailPage - Orchestrator utama halaman detail dokumen/sertifikat.
  *
  * Semua state & business logic ada di: hooks/useDocumentDetail.js
  * Semua sub-komponen UI ada di: components/document-detail/
  *
- * Refactored dari 2183 ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ ~400 baris.
+ * Refactored dari 2183 -> ~400 baris.
  */
 import React, { useState, useRef, useEffect } from 'react';
 import {
@@ -12,7 +12,7 @@ import {
   FileText, CheckCircle2, ShieldAlert, Building2,
   ShieldCheck, FileCheck, ExternalLink, Sparkles,
   UploadCloud, Trash2, RefreshCw, AlertTriangle, Loader2,
-  ChevronDown, Settings
+  ChevronDown, Settings, Plus
 } from 'lucide-react';
 import { updateNotificationSetting } from '../services/masterItemsService';
 
@@ -272,7 +272,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
             <form onSubmit={handleSave} className="space-y-6">
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2">
                 <Edit3 className="w-5 h-5 text-amber-700 shrink-0" />
-                <span>Mode Edit Data {isHaki ? 'Hak Cipta (HAKI)' : isEquipment ? 'Peralatan Pabrik' : 'Dokumen Perizinan'} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â  Perbarui informasi di bawah ini:</span>
+                <span>Mode Edit Data {isHaki ? 'Hak Cipta (HAKI)' : isEquipment ? 'Peralatan Pabrik' : 'Dokumen Perizinan'} - Perbarui informasi di bawah ini:</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
@@ -384,6 +384,52 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                   <textarea value={formData.keterangan} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} rows={3}
                     className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
                   />
+                </div>
+              </div>
+
+              {/* Seksi Entitas Tambahan (Custom Fields) */}
+              <div className="mt-4 pt-4 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider font-mono-data flex items-center gap-1.5">
+                    <Plus className="w-4 h-4 text-[#005ea4]" /> Entitas Spesifikasi Tambahan
+                  </label>
+                  <button type="button" onClick={() => setFormData({ ...formData, additionalEntities: [...(formData.additionalEntities || []), { key: '', value: '' }] })}
+                    className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded-lg border border-slate-300 flex items-center gap-1 font-bold transition-colors">
+                    <Plus className="w-3 h-3" /> Tambah Field
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {(formData.additionalEntities || []).map((ent, idx) => (
+                    <div key={idx} className="flex gap-2 items-center">
+                      <input type="text" placeholder="Nama Field (cth: Kapasitas Angkat)" value={ent.key}
+                        onChange={(e) => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].key = e.target.value;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold"
+                      />
+                      <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
+                        onChange={(e) => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = e.target.value;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                      />
+                      <button type="button" onClick={() => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts.splice(idx, 1);
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  {(!formData.additionalEntities || formData.additionalEntities.length === 0) && (
+                    <p className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada field spesifikasi tambahan. Klik "Tambah Field" untuk memasukkan data custom.</p>
+                  )}
                 </div>
               </div>
 
@@ -503,6 +549,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                     { label: 'Masa Berlaku', val: formData.masaBerlaku, cls: 'font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block' },
                     { label: 'Kapan Berakhir', val: formData.berakhir, cls: 'font-bold text-rose-700' },
                     { label: 'Instansi Penerbit HAKI', val: formData.keterangan || 'Dirjen KI Kemenkumham', cls: 'font-bold text-slate-800 font-sans' },
+                    ...(formData.additionalEntities || []).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' }))
                   ].map(({ label, val, cls }) => (
                     <div key={label}>
                       <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
@@ -530,6 +577,7 @@ export default function DocumentDetailPage({ item, onBack, onSaveUpdate, onQuick
                     { label: 'No. Sertifikat Active', val: displayNoSert, cls: 'font-bold text-[#005ea4]' },
                     { label: 'Tanggal Terbit', val: formData.terbit || '-', cls: 'font-bold text-slate-800' },
                     { label: 'Tanggal Expired', val: displayExpired, cls: 'font-bold text-rose-700' },
+                    ...(formData.additionalEntities || []).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' }))
                   ].map(({ label, val, cls }) => (
                     <div key={label}>
                       <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>

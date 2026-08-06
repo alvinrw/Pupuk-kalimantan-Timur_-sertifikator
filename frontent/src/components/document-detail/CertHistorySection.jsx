@@ -1,5 +1,5 @@
 /**
- * CertHistorySection ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â Tabel riwayat sertifikat + Garis Waktu Audit.
+ * CertHistorySection - Tabel riwayat sertifikat + Garis Waktu Audit.
  * Dipisah dari DocumentDetailPage agar lebih mudah dikelola dan ditest.
  */
 import React from 'react';
