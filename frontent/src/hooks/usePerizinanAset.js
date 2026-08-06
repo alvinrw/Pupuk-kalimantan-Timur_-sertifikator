@@ -11,7 +11,7 @@ import {
 } from '../services/masterItemsService';
 
 const CATEGORY_KEY = 'perizinan-aset';
-const UPLOAD_URL = 'http://localhost:3000/api/v1/document-history/upload';
+const UPLOAD_URL = `${import.meta.env.VITE_API_BASE_URL}/document-history/upload`;
 
 export default function usePerizinanAset() {
   // ─── Search & Tab State ──────────────────────────────────────

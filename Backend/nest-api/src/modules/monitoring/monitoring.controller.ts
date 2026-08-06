@@ -1,4 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Controller, Get, Query , UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { MonitoringService } from './monitoring.service';
 import {
@@ -8,6 +11,8 @@ import {
 
 @ApiTags('Monitoring & Expiry Engine')
 @Controller('monitoring')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}
 

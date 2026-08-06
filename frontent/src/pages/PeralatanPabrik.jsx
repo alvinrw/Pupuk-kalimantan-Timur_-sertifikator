@@ -6,6 +6,7 @@ import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
 import ResolveDocumentModal from '../components/ResolveDocumentModal';
 import DocumentDetailPage from './DocumentDetailPage';
+import { useAuth } from '../contexts/AuthContext';
 
 import { usePeralatanPabrik } from '../hooks/usePeralatanPabrik';
 import PeralatanFilterBar from '../components/peralatan-pabrik/PeralatanFilterBar';
@@ -13,6 +14,8 @@ import PeralatanTable from '../components/peralatan-pabrik/PeralatanTable';
 import PeralatanModals from '../components/peralatan-pabrik/PeralatanModals';
 
 export default function PeralatanPabrik() {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
   const data = usePeralatanPabrik();
 
   if (data.detailModalItem) {
@@ -63,6 +66,7 @@ export default function PeralatanPabrik() {
         </div>
 
         {/* UNIFIED SINGLE ACTION DROPDOWN BUTTON */}
+        {!isViewer && (
         <div className="relative">
           <button
             onClick={() => data.setIsImportMenuOpen(!data.isImportMenuOpen)}
@@ -100,6 +104,7 @@ export default function PeralatanPabrik() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* TAB SWITCHER */}
@@ -115,6 +120,7 @@ export default function PeralatanPabrik() {
           <Building2 className="w-4 h-4" />
           <span>Data Utama</span>
         </button>
+        {!isViewer && (
         <button
           onClick={() => data.setActiveMainTab('staging')}
           className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
@@ -131,6 +137,7 @@ export default function PeralatanPabrik() {
             </span>
           )}
         </button>
+        )}
       </div>
 
       <PeralatanFilterBar

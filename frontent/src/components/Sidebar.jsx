@@ -13,10 +13,14 @@ import {
   Settings,
   Users,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from 'lucide-react';
+import RoleGuard from './RoleGuard';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab }) {
+  const { user, logout } = useAuth();
   const [openDropdowns, setOpenDropdowns] = useState({ 'admin-dropdown': false, 'informasi-dropdown': false });
 
   const toggleDropdown = (dropdownId) => {
@@ -55,7 +59,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
-        { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList },
+        { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList, roleGuard: ['Admin 1', 'Admin 2', 'Admin 3', 'User'] },
         {
           id: "informasi-dropdown",
           label: "Informasi Lainnya",
@@ -69,6 +73,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             { id: "informasi-kolom-csv", label: "Struktur Kolom & CSV" },
           ]
         },
+        { id: "histori-pencatatan", label: "Histori Pencatatan", icon: History, roleGuard: ['Admin 1', 'Admin 2', 'Admin 3'] },
+        { id: "manajemen-pengguna", label: "Manajemen Pengguna", icon: Users, roleGuard: ['Admin 1', 'Admin 2', 'Admin 3'] },
       ]
     }
   ];
@@ -152,7 +158,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 }
 
                 const isActive = activeTab === item.id;
-                return (
+                const buttonElement = (
                   <button
                     key={item.id}
                     onClick={() => setActiveTab(item.id)}
@@ -166,6 +172,15 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                     <span>{item.label}</span>
                   </button>
                 );
+
+                if (item.roleGuard) {
+                  return (
+                    <RoleGuard key={item.id} allowedRoles={item.roleGuard}>
+                      {buttonElement}
+                    </RoleGuard>
+                  );
+                }
+                return buttonElement;
               })}
             </nav>
           </div>
@@ -176,14 +191,34 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       <div className="p-4 border-t border-slate-200 bg-slate-50/50">
         <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white shadow-xs">
           <img 
-            src="https://ui-avatars.com/api/?name=Rihmid+Pribidi&background=eff6ff&color=005ea4" 
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nama || 'User')}&background=eff6ff&color=005ea4`} 
             alt="User Avatar" 
             className="w-10 h-10 rounded-full ring-2 ring-slate-100 object-cover shrink-0" 
           />
-          <div className="flex flex-col overflow-hidden">
-            <span className="text-sm font-bold text-slate-900 truncate tracking-tight">Rihmid Pribidi</span>
-            <span className="text-[11px] font-medium text-slate-500 truncate mt-0.5">Admin</span>
+          <div className="flex flex-col overflow-hidden flex-1">
+            <span 
+              className="text-sm font-bold text-slate-900 truncate tracking-tight"
+              title={user?.nama || 'Pengguna'}
+            >
+              {(() => {
+                const fullName = user?.nama;
+                if (!fullName) return 'Pengguna';
+                const parts = fullName.trim().split(/\s+/);
+                if (parts.length <= 2) return fullName;
+                const firstTwo = parts.slice(0, 2).join(' ');
+                const abbreviated = parts.slice(2).map(p => p[0].toUpperCase() + '.').join(' ');
+                return `${firstTwo} ${abbreviated}`;
+              })()}
+            </span>
+            <span className="text-[11px] font-medium text-slate-500 truncate mt-0.5">{user?.role || 'Sistem RBAC'}</span>
           </div>
+          <button 
+            onClick={logout}
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Keluar"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
       </div>
     </aside>

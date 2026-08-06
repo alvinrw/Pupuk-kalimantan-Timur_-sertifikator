@@ -16,6 +16,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
 
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
   // Drag-to-OCR scan mode state
@@ -49,6 +50,10 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       });
       setSelectedFile(null);
       setTempUrl(null);
+      setLocalPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
       setSertifikatMode('dengan');
       setIsUploadingTemp(false);
       setScanMode(null);
@@ -68,6 +73,10 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
   const processFile = useCallback(async (file) => {
     if (!file) return;
     setSelectedFile(file);
+    setLocalPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
     setTempUrl(null);
     setScanMode(null);
 
@@ -213,10 +222,10 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     return (
       <button
         type="button"
-        title={!tempUrl ? 'Upload PDF dulu' : (isActive ? 'Klik untuk batal scan' : `Scan area PDF untuk ${label}`)}
-        onClick={() => { if (tempUrl) setScanMode(isActive ? null : fieldKey); }}
-        disabled={!tempUrl}
-        className={`${baseClass} ${!tempUrl ? disabledClass : isActive ? colorMap[fieldKey].active : colorMap[fieldKey].idle} cursor-pointer`}
+        title={!(localPreviewUrl || tempUrl) ? 'Upload PDF dulu' : (isActive ? 'Klik untuk batal scan' : `Scan area PDF untuk ${label}`)}
+        onClick={() => { if (localPreviewUrl || tempUrl) setScanMode(isActive ? null : fieldKey); }}
+        disabled={!(localPreviewUrl || tempUrl)}
+        className={`${baseClass} ${!(localPreviewUrl || tempUrl) ? disabledClass : isActive ? colorMap[fieldKey].active : colorMap[fieldKey].idle} cursor-pointer`}
       >
         {isActive ? (
           <X className="w-3.5 h-3.5" />
@@ -247,7 +256,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       rightPanelContent={
         PdfCanvasOcrViewer ? (
           <PdfCanvasOcrViewer
-            pdfUrl={tempUrl}
+            pdfUrl={localPreviewUrl || tempUrl}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}

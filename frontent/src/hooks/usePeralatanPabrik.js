@@ -396,7 +396,7 @@ export function usePeralatanPabrik() {
           const formData = new FormData();
           formData.append('file', newItem.file);
           try {
-            const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+            const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/document-history/upload`, {
               method: 'POST',
               body: formData,
             });
@@ -426,7 +426,7 @@ export function usePeralatanPabrik() {
       }
 
       if (targetItemId) {
-        await fetch(`http://localhost:3000/api/v1/master-items/${targetItemId}/notification-setting`, {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL}/master-items/${targetItemId}/notification-setting`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

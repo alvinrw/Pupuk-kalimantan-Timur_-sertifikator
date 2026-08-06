@@ -166,7 +166,7 @@ export function useMonitoring() {
       });
       setAllCertificates(flattened);
       try {
-        const reminderRes = await fetch('http://localhost:3000/api/v1/master-items/reminders/active');
+        const reminderRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/master-items/reminders/active`);
         if (reminderRes.ok) {
           const reminderJson = await reminderRes.json();
           setActiveReminders(reminderJson);
@@ -392,7 +392,7 @@ export function useMonitoring() {
       if (uploadedFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
-        const uploadRes = await fetch('http://localhost:3000/api/v1/document-history/upload', {
+        const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/document-history/upload`, {
           method: 'POST',
           body: formDataUpload
         });

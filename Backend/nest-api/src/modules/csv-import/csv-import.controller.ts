@@ -1,11 +1,17 @@
-import { Controller, Post, Get, Delete, Param, Query, UseInterceptors, UploadedFile, HttpException, HttpStatus, Body } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { Controller, Post, Get, Delete, Param, Query, UseInterceptors, UploadedFile, HttpException, HttpStatus, Body , UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CsvImportService } from './csv-import.service';
 
 @Controller('csv-import')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
 export class CsvImportController {
   constructor(private readonly csvImportService: CsvImportService) {}
 
+  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadCsv(
@@ -39,6 +45,7 @@ export class CsvImportController {
     return this.csvImportService.getImportHistory(categoryKey);
   }
 
+  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
   @Delete('history/:id')
   async deleteHistory(@Param('id') id: string) {
     return this.csvImportService.deleteImportHistory(id);

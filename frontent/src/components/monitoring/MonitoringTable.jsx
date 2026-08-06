@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, RotateCcw } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * MonitoringTable — Tabel utama monitoring sertifikasi.
@@ -18,6 +19,9 @@ export default function MonitoringTable({
   onQuickRenew,
   onQuickDecommission,
 }) {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
+  
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
       {/* Table Top Controls & Search Bar */}
@@ -63,7 +67,9 @@ export default function MonitoringTable({
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL EXPIRATION</th>
               <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">STATUS PERIZINAN</th>
+              {!isViewer && (
               <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">AKSI WORKFLOW</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs">
@@ -136,6 +142,7 @@ export default function MonitoringTable({
                         <span className="text-emerald-600">Aktif</span>
                       )}
                     </td>
+                    {!isViewer && (
                     <td className="py-3 px-3 text-center whitespace-nowrap font-mono-data align-middle">
                       {isInProgress ? (
                         <div className="inline-flex items-center gap-2">
@@ -176,6 +183,7 @@ export default function MonitoringTable({
                         </div>
                       )}
                     </td>
+                    )}
                   </tr>
                 );
               })
