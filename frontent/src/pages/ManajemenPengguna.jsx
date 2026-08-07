@@ -12,7 +12,7 @@ export default function ManajemenPengguna() {
   const [modalData, setModalData] = useState({ type: '', title: '', user: null });
   const [deleteConfirmData, setDeleteConfirmData] = useState({ isOpen: false, user: null });
   const [isLoading, setIsLoading] = useState(true);
-  const [formData, setFormData] = useState({ nama: '', npk: '', username: '', password: '', roleName: 'Admin 2' });
+  const [formData, setFormData] = useState({ nama: '', npk: '', username: '', password: '', roleName: 'Admin' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
@@ -50,7 +50,7 @@ export default function ManajemenPengguna() {
   const openModal = (type, title, user = null) => {
     setModalData({ type, title, user });
     if (type === 'add') {
-      setFormData({ nama: '', npk: '', username: '', password: '', roleName: 'Admin 2' });
+      setFormData({ nama: '', npk: '', username: '', password: '', roleName: 'Admin' });
     } else if (type === 'edit') {
       setFormData({ 
         nama: user.nama, 
@@ -141,9 +141,9 @@ export default function ManajemenPengguna() {
 
   const getRoleBadge = (role) => {
     switch (role) {
-      case 'Admin 1': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Admin 2':
-      case 'Admin 3': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Super Admin': return 'bg-purple-100 text-purple-700 border-purple-200';
+      case 'Admin':
+      case 'Admin': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'User': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'Viewer': return 'bg-slate-100 text-slate-700 border-slate-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -221,8 +221,8 @@ export default function ManajemenPengguna() {
                   </td>
                 </tr>
               ) : users.map((u) => {
-                const isAdmin1 = u.role === 'Admin 1';
-                const isActionDisabled = isAdmin1 && currentUser.role !== 'Admin 1';
+                const isAdmin1 = u.role === 'Super Admin';
+                const isActionDisabled = isAdmin1 && currentUser.role !== 'Super Admin';
 
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
@@ -254,7 +254,7 @@ export default function ManajemenPengguna() {
                           onClick={() => openModal('edit', `Edit Data: ${u.nama}`, u)}
                           className={`p-1.5 rounded-lg transition-colors ${isActionDisabled ? 'text-slate-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'}`}
                           disabled={isActionDisabled}
-                          title={isActionDisabled ? "Tidak bisa mengubah Admin 1" : "Edit Akun"}
+                          title={isActionDisabled ? "Tidak bisa mengubah Super Admin" : "Edit Akun"}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -262,7 +262,7 @@ export default function ManajemenPengguna() {
                           onClick={() => handleDelete(u)}
                           className={`p-1.5 rounded-lg transition-colors ${isAdmin1 ? 'text-slate-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
                           disabled={isAdmin1}
-                          title={isAdmin1 ? "Admin 1 Permanen (Tidak bisa dihapus)" : "Hapus Akun"}
+                          title={isAdmin1 ? "Super Admin Permanen (Tidak bisa dihapus)" : "Hapus Akun"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -308,9 +308,9 @@ export default function ManajemenPengguna() {
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700">Pilih Role</label>
                 <select name="roleName" value={formData.roleName} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none">
-                  <option value="Admin 1" disabled={currentUser.role !== 'Admin 1'}>Admin 1</option>
-                  <option value="Admin 2">Admin 2</option>
-                  <option value="Admin 3">Admin 3</option>
+                  <option value="Super Admin" disabled={currentUser.role !== 'Super Admin'}>Super Admin</option>
+                  <option value="Admin">Admin</option>
+                  <option value="Admin">Admin</option>
                   <option value="User">User</option>
                   <option value="Viewer">Viewer</option>
                 </select>

@@ -10,11 +10,11 @@ import { DocumentHistoryService } from './document-history.service';
 @ApiTags('Document History')
 @Controller('document-history')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class DocumentHistoryController {
   constructor(private readonly documentHistoryService: DocumentHistoryService) {}
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('upload')
   @ApiOperation({ summary: 'Unggah file (PDF/Image) ke MinIO Storage' })
   @ApiConsumes('multipart/form-data')
@@ -54,7 +54,7 @@ export class DocumentHistoryController {
     };
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('upload-temp')
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -75,7 +75,7 @@ export class DocumentHistoryController {
     };
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('move-temp')
   async moveTemp(@Body() body: { tempUrl: string }) {
     if (!body || !body.tempUrl) {

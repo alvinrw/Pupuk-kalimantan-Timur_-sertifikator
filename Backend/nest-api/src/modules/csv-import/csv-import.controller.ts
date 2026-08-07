@@ -7,11 +7,11 @@ import { CsvImportService } from './csv-import.service';
 
 @Controller('csv-import')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class CsvImportController {
   constructor(private readonly csvImportService: CsvImportService) {}
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))
   async uploadCsv(
@@ -45,7 +45,7 @@ export class CsvImportController {
     return this.csvImportService.getImportHistory(categoryKey);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Delete('history/:id')
   async deleteHistory(@Param('id') id: string) {
     return this.csvImportService.deleteImportHistory(id);

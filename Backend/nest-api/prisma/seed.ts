@@ -7,7 +7,7 @@ async function main() {
   console.log('Seeding data awal untuk Role dan User...');
 
   // 1. Buat Roles
-  const roles = ['Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer'];
+  const roles = ['Super Admin', 'Admin', 'User', 'Viewer'];
   for (const roleName of roles) {
     await prisma.role.upsert({
       where: { name: roleName },
@@ -17,13 +17,13 @@ async function main() {
   }
   console.log('✅ Roles berhasil dibuat/diperbarui.');
 
-  // 2. Ambil Role "Admin 1"
+  // 2. Ambil Role "Super Admin"
   const admin1Role = await prisma.role.findUnique({
-    where: { name: 'Admin 1' },
+    where: { name: 'Super Admin' },
   });
 
   if (!admin1Role) {
-    throw new Error('Gagal menemukan Role Admin 1');
+    throw new Error('Gagal menemukan Role Super Admin');
   }
 
   // 3. Buat Akun Super Admin

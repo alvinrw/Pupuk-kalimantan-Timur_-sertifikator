@@ -4,7 +4,7 @@ import { socket } from '../services/socket';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  // Ubah null menjadi { nama: "Muhfi", role: "Admin 1" } jika ingin bypass login saat dev
+  // Ubah null menjadi { nama: "Muhfi", role: "Super Admin" } jika ingin bypass login saat dev
   const [user, setUser] = useState(() => {
     const savedUser = sessionStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
@@ -43,10 +43,7 @@ export function AuthProvider({ children }) {
       sessionStorage.setItem('token', data.access_token);
       sessionStorage.setItem('user', JSON.stringify(data.user));
 
-      // Koneksi socket
-      socket.auth = { token: data.access_token };
-      socket.connect();
-
+      // Koneksi socket (dihapus karena sudah ditangani oleh useEffect di atas saat state token berubah)
       console.log("Login sukses dari backend!", data.user);
     } catch (error) {
       console.error("Error during login", error);

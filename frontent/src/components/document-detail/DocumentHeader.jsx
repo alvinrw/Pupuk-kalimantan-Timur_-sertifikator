@@ -3,6 +3,7 @@ import {
   ArrowLeft, Edit3, RotateCcw, Ban,
   UploadCloud, Trash2, Settings, ChevronDown
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function DocumentHeader({ hook, item, onBack }) {
   const {
@@ -16,6 +17,9 @@ export default function DocumentHeader({ hook, item, onBack }) {
     setSelectedHistoryToDelete,
     historyList,
   } = hook;
+
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const actionMenuRef = useRef(null);
@@ -72,6 +76,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
       </div>
 
       {/* Right: Aksi Dropdown */}
+      {!isViewer && (
       <div className="relative font-mono-data" ref={actionMenuRef}>
         <button
           onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
@@ -185,6 +190,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

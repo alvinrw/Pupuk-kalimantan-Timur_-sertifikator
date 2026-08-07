@@ -8,11 +8,11 @@ import { UpdateCertificateDto } from './dto/update-certificate.dto';
 
 @Controller('certificates')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class CertificatesController {
   constructor(private readonly certificatesService: CertificatesService) {}
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post()
   create(@Body() createCertificateDto: CreateCertificateDto) {
     return this.certificatesService.create(createCertificateDto);
@@ -28,13 +28,13 @@ export class CertificatesController {
     return this.certificatesService.findOne(id);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Put(':id')
   update(@Param('id') id: string, @Body() updateCertificateDto: UpdateCertificateDto) {
     return this.certificatesService.update(id, updateCertificateDto);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.certificatesService.remove(id);
