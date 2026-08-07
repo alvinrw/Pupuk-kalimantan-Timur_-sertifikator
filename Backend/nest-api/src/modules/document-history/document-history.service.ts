@@ -195,4 +195,16 @@ export class DocumentHistoryService implements OnModuleInit {
     });
   }
 
+  async getFileBuffer(objectName: string): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      this.minioClient.getObject(this.bucketName, objectName, (err, dataStream) => {
+        if (err) return reject(err);
+        dataStream.on('data', chunk => chunks.push(Buffer.from(chunk)));
+        dataStream.on('end', () => resolve(Buffer.concat(chunks)));
+        dataStream.on('error', e => reject(e));
+      });
+    });
+  }
+
 }

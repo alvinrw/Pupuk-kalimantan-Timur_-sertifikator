@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle, Crosshair } from 'lucide-react';
-import { API_BASE } from '../../config/api';
+import { API_BASE, getFullFileUrl } from '../../config/api';
 import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 
 /**
@@ -85,9 +85,11 @@ export default function UploadRenewalModal({
           setIsUploadingTemp(true);
           const fd = new FormData();
           fd.append('file', file);
+          const token = sessionStorage.getItem('token');
           const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
             method: 'POST',
-            body: fd
+            body: fd,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
           });
           if (uploadRes.ok) {
             const json = await uploadRes.json();
@@ -106,9 +108,13 @@ export default function UploadRenewalModal({
     e.preventDefault();
     if (tempUrl) {
       try {
+        const token = sessionStorage.getItem('token');
         await fetch(`${API_BASE}/document-history/move-temp`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({ tempUrl })
         });
       } catch (err) {
@@ -318,7 +324,7 @@ export default function UploadRenewalModal({
             <div className="flex-1 w-full h-full pt-10">
               {tempUrl ? (
                 <PdfCanvasOcrViewer
-                  pdfUrl={tempUrl}
+                  pdfUrl={tempUrl ? getFullFileUrl(tempUrl) : null}
                   scanMode={scanMode}
                   onScanComplete={handleOcrResult}
                   onScanCancel={() => setScanMode(null)}

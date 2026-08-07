@@ -120,9 +120,11 @@ export default function ModalUploadCert({
                             setIsUploadingTemp(true);
                             const fdTemp = new FormData();
                             fdTemp.append('file', file);
+                            const token = sessionStorage.getItem('token');
                             const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
                               method: 'POST',
-                              body: fdTemp
+                              body: fdTemp,
+                              headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                             });
                             if (uploadRes.ok) {
                               const json = await uploadRes.json();

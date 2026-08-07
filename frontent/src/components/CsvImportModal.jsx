@@ -161,22 +161,31 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           if (parsedRows.length < 2) throw new Error("File kosong atau tidak valid");
           
           const grouped = {};
-          // i=1 to skip header
+          const headers = Array.from(parsedRows[0] || []).map(h => (h || '').toString().toLowerCase().replace(/[^a-z0-9]/g, ''));
+          
+          const getVal = (cols, possibleNames) => {
+            for (const name of possibleNames) {
+              const idx = headers.findIndex(h => h && h.includes(name));
+              if (idx !== -1 && cols[idx]) return String(cols[idx]).trim();
+            }
+            return '';
+          };
+
           for (let i = 1; i < parsedRows.length; i++) {
             const cols = parsedRows[i];
-            if (!cols || cols.length < 2) continue; // Relaxed check
+            if (!cols || cols.length < 2) continue;
             
-            const title = String(cols[0] || '').trim();
-            const tipe = String(cols[1] || '').trim();
-            const code = String(cols[2] || '').trim();
-            const unitLocation = String(cols[3] || '').trim();
-            const penanggungJawab = String(cols[4] || '').trim();
-            const status = String(cols[5] || 'Aktif').trim();
+            const title = getVal(cols, ['title', 'merekitem', 'merek', 'namaperalatan', 'namaproduk', 'judul', 'nama']);
+            const tipe = getVal(cols, ['jenis', 'tipe', 'peruntukan']);
+            const code = getVal(cols, ['code', 'registrasi', 'noslf', 'certificateno', 'nomorseri']);
+            const unitLocation = getVal(cols, ['unit', 'lokasi']);
+            const penanggungJawab = getVal(cols, ['user', 'kontraktor', 'pencipta', 'penanggungjawab']);
+            const status = getVal(cols, ['status', 'kondisi']);
             
-            const namaSertifikat = String(cols[6] || '').trim();
-            const noSertifikat = String(cols[7] || '').trim();
-            const terbit = String(cols[8] || '').trim();
-            const expired = String(cols[9] || '').trim();
+            const namaSertifikat = getVal(cols, ['namasertifikat', 'jenissertifikat']) || tipe || 'Sertifikat Utama';
+            const noSertifikat = getVal(cols, ['nosertifikat', 'certificateno', 'noslf', 'nosurat']);
+            const terbit = getVal(cols, ['terbit', 'issuedate', 'tanggalawal', 'tanggalinspeksi']);
+            const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim']);
             
             const key = code || title;
             if (!key) continue;
@@ -188,7 +197,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               };
             }
             
-            if (namaSertifikat) {
+            if (noSertifikat && noSertifikat !== '-' && noSertifikat.toLowerCase() !== 'tanpa sertifikat') {
               grouped[key].certificates.push({ namaSertifikat, noSertifikat, terbit, expired });
             }
           }
@@ -196,7 +205,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           const groupedData = Object.values(grouped);
           if (groupedData.length === 0) throw new Error("Tidak ada data master yang valid");
           
-          const res = await bulkCreateMastersWithCertificates(groupedData, categoryKey);
+          const res = await bulkCreateMastersWithCertificates(groupedData, categoryKey, f.name);
           
           newHistories.push({
             id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,

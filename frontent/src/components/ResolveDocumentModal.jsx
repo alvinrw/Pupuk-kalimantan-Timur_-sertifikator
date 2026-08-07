@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
-import { API_BASE } from '../config/api';
+import { API_BASE, getFullFileUrl } from '../config/api';
 import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting, updateCertificate } from '../services/masterItemsService';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
@@ -101,9 +101,13 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
     if (sertifikatMode === 'dengan') {
       if (tempUrl) {
         try {
+          const token = sessionStorage.getItem('token');
           const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
             body: JSON.stringify({ tempUrl })
           });
           if (moveRes.ok) {
@@ -117,9 +121,11 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
         try {
           const fd = new FormData();
           fd.append('file', selectedFile);
+          const token = sessionStorage.getItem('token');
           const uploadRes = await fetch(`${API_BASE}/document-history/upload`, {
             method: 'POST',
-            body: fd
+            body: fd,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
           });
           if (uploadRes.ok) {
             const json = await uploadRes.json();
@@ -218,7 +224,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       rightPanelContent={
         (tempUrl || activeDoc.fileUrl) ? (
           <PdfCanvasOcrViewer
-            pdfUrl={tempUrl || activeDoc.fileUrl}
+            pdfUrl={(tempUrl || activeDoc.fileUrl) ? getFullFileUrl(tempUrl || activeDoc.fileUrl) : null}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}
@@ -281,9 +287,11 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                         setIsUploadingTemp(true);
                         const fdTemp = new FormData();
                         fdTemp.append('file', file);
+                        const token = sessionStorage.getItem('token');
                         const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
                           method: 'POST',
-                          body: fdTemp
+                          body: fdTemp,
+                          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                         });
                         if (uploadRes.ok) {
                           const json = await uploadRes.json();

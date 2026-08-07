@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { updateCertificate, deleteCertificate } from '../../services/masterItemsService';
+import { UPLOAD_ENDPOINT } from '../../config/api';
 
 export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const [historyList, setHistoryList] = useState([]);
@@ -7,6 +8,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
   const [editingHistoryRow, setEditingHistoryRow] = useState(null);
   const [selectedHistoryFile, setSelectedHistoryFile] = useState(null);
+  const editHistoryFileInputRef = useRef(null);
 
   const fetchHistory = useCallback(async () => {
     if (!item) return;
@@ -76,7 +78,37 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
 
   const handleSaveHistoryRowEdit = async (updatedRow) => {
     try {
-      await updateCertificate(updatedRow.id, updatedRow);
+      let finalRow = { ...updatedRow };
+      if (selectedHistoryFile) {
+        const fd = new FormData();
+        fd.append('file', selectedHistoryFile);
+        const token = sessionStorage.getItem('token');
+        const res = await fetch(UPLOAD_ENDPOINT, { 
+          method: 'POST', 
+          body: fd,
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        if (!res.ok) throw new Error('Gagal upload file ke server');
+        const json = await res.json();
+        const newFileUrl = json?.data?.url || json?.data?.fileUrl;
+        if (newFileUrl) {
+          finalRow.fileUrl = newFileUrl;
+        }
+      }
+      
+      const payload = {
+        itemId: finalRow.itemId,
+        jenisSertifikat: finalRow.jenisSertifikat,
+        namaSertifikat: finalRow.namaSertifikat,
+        noSertifikat: finalRow.noSertifikat,
+        instansi: finalRow.instansi,
+        terbit: finalRow.terbit,
+        expired: finalRow.expired,
+        status: finalRow.status,
+        fileUrl: finalRow.fileUrl
+      };
+      
+      await updateCertificate(finalRow.id, payload);
       await fetchHistory();
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
@@ -94,6 +126,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
     selectedHistoryToDelete, setSelectedHistoryToDelete,
     editingHistoryRow, setEditingHistoryRow,
     selectedHistoryFile, setSelectedHistoryFile,
+    editHistoryFileInputRef,
     handleDeleteHistoryRow, handleSaveHistoryRowEdit
   };
 }

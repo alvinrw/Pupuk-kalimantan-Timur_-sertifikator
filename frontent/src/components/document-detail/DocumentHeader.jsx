@@ -3,8 +3,12 @@ import {
   ArrowLeft, Edit3, RotateCcw, Ban,
   UploadCloud, Trash2, Settings, ChevronDown
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function DocumentHeader({ hook, item, onBack }) {
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
+
   const {
     formData, targetCert, parentDoc, isSingleCertScope,
     isEditing, setIsEditing,
@@ -72,6 +76,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
       </div>
 
       {/* Right: Aksi Dropdown */}
+      {!isViewer && (
       <div className="relative font-mono-data" ref={actionMenuRef}>
         <button
           onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
@@ -180,11 +185,12 @@ export default function DocumentHeader({ hook, item, onBack }) {
               className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
             >
               <Trash2 className="w-4 h-4 text-slate-400" />
-              <span>Hapus Data Ini</span>
+              <span>Hapus Item / Dokumen</span>
             </button>
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
