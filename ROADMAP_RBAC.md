@@ -19,10 +19,10 @@ import { createContext, useState, useContext } from 'react';
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  // Ganti role ini manual saat coding: "Admin 1", "Admin 2", "User", "Viewer"
+  // Ganti role ini manual saat coding: "Super Admin", "Admin", "User", "Viewer"
   const [user, setUser] = useState({
     nama: "Muhfi",
-    role: "Admin 1" 
+    role: "Super Admin" 
   });
 
   const login = (username, password) => {
@@ -53,7 +53,7 @@ export const RoleGuard = ({ allowedRoles, children }) => {
   return children;
 };
 ```
-*Gunakan `<RoleGuard allowedRoles={['Admin 1', 'User']}> <button>Unggah</button> </RoleGuard>` di halaman Anda.*
+*Gunakan `<RoleGuard allowedRoles={['Super Admin', 'User']}> <button>Unggah</button> </RoleGuard>` di halaman Anda.*
 
 ### 1.3 UI Halaman Login & "Histori Pencatatan"
 - **Login:** Desain halaman login statis.
@@ -71,7 +71,7 @@ Buka file `Backend/nest-api/prisma/schema.prisma` dan tambahkan model berikut:
 // Definisi Role Akses
 model Role {
   id          Int      @id @default(autoincrement())
-  name        String   @unique // "Admin 1", "Admin 2", "Admin 3", "User", "Viewer"
+  name        String   @unique // "Super Admin", "Admin", "User", "Viewer"
   description String?
   users       User[]
 
@@ -191,10 +191,10 @@ export class RolesGuard implements CanActivate {
 }
 ```
 
-### 3.2 Hierarki dan Proteksi Role (Admin 1, 2, 3, User, Viewer)
-- **Admin 1 (Super Admin Mutlak):** Di dalam fungsi `deleteUser()` atau `updateUser()`, tambahkan logika *hardcode* agar user dengan Role "Admin 1" tidak bisa dihapus atau di-edit oleh siapapun.
-- **Admin 2 & 3:** Bisa mengakses manajemen user, tetapi diblokir (Forbidden) jika mencoba mengedit Admin 1.
-- **User (Standard):** Mendapat akses `@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')` di endpoint Upload/Edit, tapi otomatis ditolak di endpoint `/users` (Manajemen Akun).
+### 3.2 Hierarki dan Proteksi Role (Super Admin, 2, 3, User, Viewer)
+- **Super Admin (Super Admin Mutlak):** Di dalam fungsi `deleteUser()` atau `updateUser()`, tambahkan logika *hardcode* agar user dengan Role "Super Admin" tidak bisa dihapus atau di-edit oleh siapapun.
+- **Admin & 3:** Bisa mengakses manajemen user, tetapi diblokir (Forbidden) jika mencoba mengedit Super Admin.
+- **User (Standard):** Mendapat akses `@Roles('Super Admin', 'Admin', 'User')` di endpoint Upload/Edit, tapi otomatis ditolak di endpoint `/users` (Manajemen Akun).
 - **Viewer (Read-Only):** Dilarang di semua operasi `POST/PUT/DELETE` dan endpoint file/staging (tidak akan lolos `RolesGuard`).
 
 ### 3.3 Menyatukan Keduanya (Integrasi)

@@ -12,7 +12,7 @@ import {
 @ApiTags('Monitoring & Expiry Engine')
 @Controller('monitoring')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class MonitoringController {
   constructor(private readonly monitoringService: MonitoringService) {}
 

@@ -8,11 +8,11 @@ import { UpdateIuranDto } from './dto/update-iuran.dto';
 
 @Controller('iuran-keanggotaan')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class IuranKeanggotaanController {
   constructor(private readonly iuranService: IuranKeanggotaanService) {}
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post()
   create(@Body() createIuranDto: CreateIuranDto) {
     return this.iuranService.create(createIuranDto);
@@ -28,13 +28,13 @@ export class IuranKeanggotaanController {
     return this.iuranService.findOne(id);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateIuranDto: UpdateIuranDto) {
     return this.iuranService.update(id, updateIuranDto);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.iuranService.remove(id);

@@ -6,7 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 
 @Controller('activity-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3')
+@Roles('Super Admin', 'Admin')
 export class ActivityLogsController {
   constructor(private readonly activityLogsService: ActivityLogsService) {}
 

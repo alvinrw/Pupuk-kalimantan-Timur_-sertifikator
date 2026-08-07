@@ -21,6 +21,9 @@ export default function DocumentHeader({ hook, item, onBack }) {
     historyList,
   } = hook;
 
+  const { user } = useAuth();
+  const isViewer = user?.role === 'Viewer';
+
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const actionMenuRef = useRef(null);
 

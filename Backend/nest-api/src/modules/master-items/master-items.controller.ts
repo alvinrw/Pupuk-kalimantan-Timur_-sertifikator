@@ -8,17 +8,17 @@ import { UpdateMasterItemDto } from './dto/update-master-item.dto';
 
 @Controller('master-items')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class MasterItemsController {
   constructor(private readonly masterItemsService: MasterItemsService) {}
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('reminders/trigger')
   triggerDeadlineCheck() {
     return this.masterItemsService.runDeadlineCheck();
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post()
   create(@Body() createMasterItemDto: CreateMasterItemDto) {
     return this.masterItemsService.create(createMasterItemDto);
@@ -32,7 +32,7 @@ export class MasterItemsController {
     return this.masterItemsService.findAll(categoryKey, search);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Get('reminders/tasks')
   getTaskCenterData() {
     return this.masterItemsService.getTaskCenterData();
@@ -48,19 +48,19 @@ export class MasterItemsController {
     return this.masterItemsService.findOne(id);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Put(':id')
   update(@Param('id') id: string, @Body() updateMasterItemDto: UpdateMasterItemDto) {
     return this.masterItemsService.update(id, updateMasterItemDto);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.masterItemsService.remove(id);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Patch(':id/resolve-exemption')
   resolveExemption(
     @Param('id') id: string,
@@ -69,7 +69,7 @@ export class MasterItemsController {
     return this.masterItemsService.resolveExemption(id, note);
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Put(':id/notification-setting')
   updateNotificationSetting(
     @Param('id') itemId: string,

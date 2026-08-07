@@ -268,7 +268,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       rightPanelContent={
         PdfCanvasOcrViewer ? (
           <PdfCanvasOcrViewer
-            pdfUrl={tempUrl ? getFullFileUrl(tempUrl) : localPreviewUrl}
+            pdfUrl={localPreviewUrl || tempUrl}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}

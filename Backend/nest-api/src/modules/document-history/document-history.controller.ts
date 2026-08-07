@@ -2,7 +2,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import 'multer';
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, Body, UseGuards, Get, Query, Req, Res } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, Body , UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { DocumentHistoryService } from './document-history.service';
@@ -12,14 +12,14 @@ import { Response } from 'express';
 @ApiTags('Document History')
 @Controller('document-history')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Admin 1', 'Admin 2', 'Admin 3', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class DocumentHistoryController {
   constructor(
     private readonly documentHistoryService: DocumentHistoryService,
     private readonly pdfWatermarkService: PdfWatermarkService,
   ) {}
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('upload')
   @ApiOperation({ summary: 'Unggah file (PDF/Image) ke MinIO Storage' })
   @ApiConsumes('multipart/form-data')
@@ -59,7 +59,7 @@ export class DocumentHistoryController {
     };
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('upload-temp')
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -80,7 +80,7 @@ export class DocumentHistoryController {
     };
   }
 
-  @Roles('Admin 1', 'Admin 2', 'Admin 3', 'User')
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('move-temp')
   async moveTemp(@Body() body: { tempUrl: string }) {
     if (!body || !body.tempUrl) {

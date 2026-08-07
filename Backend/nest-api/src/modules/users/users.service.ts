@@ -63,10 +63,10 @@ export class UsersService {
     
     if (!userToUpdate) throw new NotFoundException('User tidak ditemukan');
     
-    if (userToUpdate.role.name === 'Admin 1') {
-      // Jika yang di-edit adalah Admin 1, pastikan yang mengedit adalah dirinya sendiri
+    if (userToUpdate.role.name === 'Super Admin') {
+      // Jika yang di-edit adalah Super Admin, pastikan yang mengedit adalah dirinya sendiri
       if (!currentUser || currentUser.id !== userToUpdate.id) {
-        throw new ForbiddenException('Super Admin (Admin 1) hanya dapat diedit oleh dirinya sendiri.');
+        throw new ForbiddenException('Super Admin (Super Admin) hanya dapat diedit oleh dirinya sendiri.');
       }
     }
 
@@ -97,8 +97,8 @@ export class UsersService {
 
     if (!userToDelete) throw new NotFoundException('User tidak ditemukan');
 
-    if (userToDelete.role.name === 'Admin 1') {
-      throw new ForbiddenException('Super Admin (Admin 1) tidak dapat dihapus oleh siapapun.');
+    if (userToDelete.role.name === 'Super Admin') {
+      throw new ForbiddenException('Super Admin (Super Admin) tidak dapat dihapus oleh siapapun.');
     }
 
     return this.prisma.user.delete({
