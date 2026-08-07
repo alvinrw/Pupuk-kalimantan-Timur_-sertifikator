@@ -28,7 +28,7 @@ export default function ModalEditHistoryRow({
           </button>
         </div>
 
-        <form onSubmit={onSubmit} className="p-5 space-y-3.5 text-xs font-mono-data">
+        <form onSubmit={(e) => { e.preventDefault(); onSubmit(editingHistoryRow); }} className="p-5 space-y-3.5 text-xs font-mono-data">
           <div>
             <label className="font-bold text-slate-800 block mb-1">No. Sertifikat / SK</label>
             <input

@@ -13,6 +13,15 @@ export const UPLOAD_ENDPOINT = `${BASE_URL}/api/v1/document-history/upload`;
  */
 export function getFullFileUrl(path) {
   if (!path) return null;
+  
+  const token = sessionStorage.getItem('token') || '';
+  // Check if it's a PDF file
+  const isPdf = path.toLowerCase().endsWith('.pdf') || path.includes('.pdf?');
+  
+  if (isPdf) {
+    return `${API_BASE}/document-history/view-watermarked?token=${encodeURIComponent(token)}&filePath=${encodeURIComponent(path)}`;
+  }
+  
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
   return `${BASE_URL}${path}`;
 }

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlusCircle, Save, Upload, FileCheck, Loader2, X } from 'lucide-react';
-import { API_BASE } from '../config/api';
+import { API_BASE, getFullFileUrl } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 
 export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
@@ -87,8 +87,11 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
         const fdTemp = new FormData();
         fdTemp.append('file', file);
         
+        const token = sessionStorage.getItem('token');
         const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
-          method: 'POST', body: fdTemp
+          method: 'POST', 
+          body: fdTemp,
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         
         if (uploadRes.ok) {
@@ -165,9 +168,13 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     if (sertifikatMode === 'dengan') {
       if (tempUrl) {
         try {
+          const token = sessionStorage.getItem('token');
           const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
             body: JSON.stringify({ tempUrl })
           });
           if (moveRes.ok) {
@@ -179,7 +186,12 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
         try {
           const fd = new FormData();
           fd.append('file', selectedFile);
-          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, { method: 'POST', body: fd });
+          const token = sessionStorage.getItem('token');
+          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, { 
+            method: 'POST', 
+            body: fd,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          });
           if (uploadRes.ok) {
             const json = await uploadRes.json();
             finalUrl = json.data?.url || null;

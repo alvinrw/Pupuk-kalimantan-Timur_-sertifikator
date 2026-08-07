@@ -32,12 +32,13 @@ export class CsvImportController {
   @Post('bulk-nested')
   async bulkNested(
     @Body('data') data: any[],
-    @Body('categoryKey') categoryKey: string
+    @Body('categoryKey') categoryKey: string,
+    @Body('fileName') fileName?: string
   ) {
     if (!data || !Array.isArray(data)) {
       throw new HttpException('Data array is required', HttpStatus.BAD_REQUEST);
     }
-    return this.csvImportService.processBulkNested(data, categoryKey);
+    return this.csvImportService.processBulkNested(data, categoryKey, fileName);
   }
 
   @Get('history')

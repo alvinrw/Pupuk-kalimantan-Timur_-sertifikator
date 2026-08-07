@@ -64,9 +64,13 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
     try {
       let finalUrl = null;
       if (sertifikatMode === 'dengan' && tempUrl) {
+        const token = sessionStorage.getItem('token');
         const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
           body: JSON.stringify({ tempUrl })
         });
         if (moveRes.ok) {
@@ -180,9 +184,11 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                               setIsUploadingTemp(true);
                               const fdTemp = new FormData();
                               fdTemp.append('file', file);
+                              const token = sessionStorage.getItem('token');
                               const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
                                 method: 'POST',
-                                body: fdTemp
+                                body: fdTemp,
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                               });
                               if (uploadRes.ok) {
                                 const json = await uploadRes.json();

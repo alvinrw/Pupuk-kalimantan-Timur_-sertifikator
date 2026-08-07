@@ -6,13 +6,18 @@ import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, B
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { DocumentHistoryService } from './document-history.service';
+import { PdfWatermarkService } from './pdf-watermark.service';
+import { Response } from 'express';
 
 @ApiTags('Document History')
 @Controller('document-history')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('Super Admin', 'Admin', 'User', 'Viewer')
 export class DocumentHistoryController {
-  constructor(private readonly documentHistoryService: DocumentHistoryService) {}
+  constructor(
+    private readonly documentHistoryService: DocumentHistoryService,
+    private readonly pdfWatermarkService: PdfWatermarkService,
+  ) {}
 
   @Roles('Super Admin', 'Admin', 'User')
   @Post('upload')
@@ -87,6 +92,57 @@ export class DocumentHistoryController {
       message: 'File berhasil dipindahkan ke final storage',
       data: { url: finalUrl }
     };
+  }
+
+  @Get('view-watermarked')
+  @ApiOperation({ summary: 'Melihat file PDF/Gambar dengan watermark dinamis' })
+  async viewWatermarked(
+    @Query('filePath') filePath: string,
+    @Req() req: any,
+    @Res() res: Response
+  ) {
+    if (!filePath) {
+      throw new BadRequestException('filePath wajib diberikan');
+    }
+
+    try {
+      const bucketName = this.documentHistoryService['bucketName'] || 'sertifikator-docs';
+      let objectKey = '';
+      
+      if (filePath.includes(`/${bucketName}/`)) {
+        objectKey = filePath.split(`/${bucketName}/`)[1];
+      } else {
+        objectKey = filePath;
+      }
+
+      const buffer = await this.documentHistoryService.getFileBuffer(objectKey);
+      
+      let contentType = 'application/octet-stream';
+      if (objectKey.toLowerCase().endsWith('.pdf')) {
+        contentType = 'application/pdf';
+      } else if (objectKey.toLowerCase().endsWith('.png')) {
+        contentType = 'image/png';
+      } else if (objectKey.toLowerCase().endsWith('.jpg') || objectKey.toLowerCase().endsWith('.jpeg')) {
+        contentType = 'image/jpeg';
+      }
+
+      res.setHeader('Content-Type', contentType);
+
+      if (contentType === 'application/pdf') {
+        const userDesc = `${req.user.username.toUpperCase()} (${req.user.npk || '-'})`;
+        const dateStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' }); // WITA (Bontang time)
+        const watermarkText = `DIKUNJUNGI OLEH ${userDesc} PADA ${dateStr} WITA`;
+        
+        const watermarkedBuffer = await this.pdfWatermarkService.addWatermark(buffer, watermarkText);
+        res.setHeader('Content-Length', watermarkedBuffer.length);
+        res.send(watermarkedBuffer);
+      } else {
+        res.setHeader('Content-Length', buffer.length);
+        res.send(buffer);
+      }
+    } catch (error) {
+      throw new BadRequestException(`Gagal memuat dokumen: ${error.message}`);
+    }
   }
 
 }

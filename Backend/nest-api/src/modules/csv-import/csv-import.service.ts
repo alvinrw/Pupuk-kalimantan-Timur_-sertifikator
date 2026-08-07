@@ -394,7 +394,7 @@ export class CsvImportService {
     });
   }
 
-  async processBulkNested(groupedData: any[], categoryKey: string) {
+  async processBulkNested(groupedData: any[], categoryKey: string, fileName?: string) {
     let successCount = 0;
     const createdMasters = [];
 
@@ -434,6 +434,22 @@ export class CsvImportService {
       if (group.certificates.length === 0) successCount++;
       createdMasters.push(createdMaster);
     }
+
+    await this.prisma.monitoringLog.create({
+      data: {
+        action: 'CSV_IMPORT',
+        status: 'SUCCESS',
+        detail: JSON.stringify({
+          fileName: fileName || `impor_${categoryKey}.csv`,
+          importedCount: createdMasters.length,
+          successCount: successCount,
+          categoryKey: categoryKey,
+          importedIds: createdMasters.map((m: any) => m.id),
+          importedCodes: createdMasters.map((m: any) => m.code).filter(Boolean),
+          type: 'master_items'
+        })
+      }
+    });
 
     return {
       success: true,

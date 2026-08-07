@@ -58,7 +58,11 @@ export class CertificatesService {
 
       await this.prisma.masterItem.update({
         where: { id: createCertificateDto.itemId },
-        data: { documentStatus: 'COMPLETED' },
+        data: { 
+          documentStatus: 'COMPLETED',
+          issueDate: createCertificateDto.terbit || null,
+          expiryDate: createCertificateDto.expired || null,
+        },
       }).catch(() => {});
     }
 
@@ -93,6 +97,15 @@ export class CertificatesService {
       await this.prisma.reminderNotification.updateMany({
         where: { itemId: cert.itemId, isResolved: false },
         data: { isResolved: true, resolvedAt: new Date() },
+      }).catch(() => {});
+
+      await this.prisma.masterItem.update({
+        where: { id: cert.itemId },
+        data: {
+          documentStatus: 'COMPLETED',
+          issueDate: updateCertificateDto.terbit !== undefined ? updateCertificateDto.terbit : undefined,
+          expiryDate: updateCertificateDto.expired !== undefined ? updateCertificateDto.expired : undefined,
+        }
       }).catch(() => {});
     }
 

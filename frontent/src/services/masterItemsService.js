@@ -135,7 +135,7 @@ export const createMasterItem = async (data) => {
 /**
  * Bulk create masters and certificates from parsed CSV grouping
  */
-export const bulkCreateMastersWithCertificates = async (groupedData, categoryKey) => {
+export const bulkCreateMastersWithCertificates = async (groupedData, categoryKey, fileName) => {
   if (USE_DUMMY_DATA) {
     console.log('[DUMMY MODE] Bulk creating...', groupedData);
     await new Promise(res => setTimeout(res, 800));
@@ -184,7 +184,7 @@ export const bulkCreateMastersWithCertificates = async (groupedData, categoryKey
 
   // REAL API logic
   console.log('[REAL API] Bulk creating...');
-  const response = await api.post('/csv-import/bulk-nested', { data: groupedData, categoryKey });
+  const response = await api.post('/csv-import/bulk-nested', { data: groupedData, categoryKey, fileName });
   return response.data;
 };
 

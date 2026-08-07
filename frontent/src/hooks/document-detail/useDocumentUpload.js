@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { updateCertificate, updateMasterItem } from '../../services/masterItemsService';
+import { updateCertificate, updateMasterItem, createCertificate } from '../../services/masterItemsService';
 import { UPLOAD_ENDPOINT } from '../../config/api';
 
 export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshRequired }) {
@@ -9,7 +9,7 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
   const manualFileInputRef = useRef(null);
 
   const openUploadModal = (type) => {
-    setUploadData({ type });
+    setUploadData({ type, noSertifikat: '', instansi: '', terbit: '', expired: '' });
     setSelectedUploadFile(null);
     setIsUploadModalOpen(true);
   };
@@ -25,7 +25,12 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
       const fd = new FormData();
       fd.append('file', selectedUploadFile);
 
-      const res = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd });
+      const token = sessionStorage.getItem('token');
+      const res = await fetch(UPLOAD_ENDPOINT, { 
+        method: 'POST', 
+        body: fd,
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (!res.ok) throw new Error('Gagal upload file ke server');
 
       const json = await res.json();
@@ -35,17 +40,40 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
 
       const masterItemId = item?.MasterId || item?.id;
 
+      const certPayload = {
+        itemId: masterItemId,
+        noSertifikat: uploadData.noSertifikat || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`,
+        instansi: uploadData.instansi || null,
+        terbit: uploadData.terbit || undefined,
+        expired: uploadData.expired || undefined,
+        status: 'Aktif',
+        fileUrl: newFileUrl,
+        jenisSertifikat: 'Sertifikat Utama'
+      };
+
       if (uploadData.type === 'current') {
         if (item.currentCert && item.currentCert.id) {
-          await updateCertificate(item.currentCert.id, { fileUrl: newFileUrl });
+          await updateCertificate(item.currentCert.id, { 
+            noSertifikat: uploadData.noSertifikat || undefined,
+            instansi: uploadData.instansi || undefined,
+            terbit: uploadData.terbit || undefined,
+            expired: uploadData.expired || undefined,
+            fileUrl: newFileUrl 
+          });
         } else {
-          await updateMasterItem(masterItemId, { fileUrl: newFileUrl });
+          await createCertificate(certPayload);
         }
       } else if (uploadData.type === 'archive') {
         if (uploadData.rowId) {
-          await updateCertificate(uploadData.rowId, { fileUrl: newFileUrl });
+          await updateCertificate(uploadData.rowId, { 
+            noSertifikat: uploadData.noSertifikat || undefined,
+            instansi: uploadData.instansi || undefined,
+            terbit: uploadData.terbit || undefined,
+            expired: uploadData.expired || undefined,
+            fileUrl: newFileUrl 
+          });
         } else {
-          await updateMasterItem(masterItemId, { fileUrl: newFileUrl, status: 'Aktif' });
+          await createCertificate(certPayload);
         }
       }
 

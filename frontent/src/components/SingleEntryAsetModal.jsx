@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Building2, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../services/ocrService';
-import { API_BASE } from '../config/api';
+import { API_BASE, getFullFileUrl } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
 
@@ -66,9 +66,13 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
     if (sertifikatMode === 'dengan') {
       if (tempUrl) {
         try {
+          const token = sessionStorage.getItem('token');
           const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+            },
             body: JSON.stringify({ tempUrl })
           });
           if (moveRes.ok) {
@@ -82,9 +86,11 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
         try {
           const fd = new FormData();
           fd.append('file', selectedFile);
+          const token = sessionStorage.getItem('token');
           const uploadRes = await fetch(`${API_BASE}/document-history/upload`, {
             method: 'POST',
-            body: fd
+            body: fd,
+            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
           });
           if (uploadRes.ok) {
             const json = await uploadRes.json();
@@ -152,7 +158,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
       rightPanelContent={
         tempUrl ? (
           <PdfCanvasOcrViewer
-            pdfUrl={tempUrl}
+            pdfUrl={tempUrl ? getFullFileUrl(tempUrl) : null}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}
@@ -300,9 +306,11 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                           setIsUploadingTemp(true);
                           const fdTemp = new FormData();
                           fdTemp.append('file', file);
+                          const token = sessionStorage.getItem('token');
                           const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
                             method: 'POST',
-                            body: fdTemp
+                            body: fdTemp,
+                            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
                           });
                           if (uploadRes.ok) {
                             const json = await uploadRes.json();
