@@ -59,7 +59,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
-        { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
+        { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'Admin 1', 'Admin 2', 'Admin 3', 'User'] },
         {
           id: "informasi-dropdown",
           label: "Informasi Lainnya",
@@ -73,8 +73,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             { id: "informasi-kolom-csv", label: "Struktur Kolom & CSV" },
           ]
         },
-        { id: "histori-pencatatan", label: "Histori Pencatatan", icon: History, roleGuard: ['Super Admin', 'Admin'] },
-        { id: "manajemen-pengguna", label: "Manajemen Pengguna", icon: Users, roleGuard: ['Super Admin', 'Admin'] },
+        { id: "histori-pencatatan", label: "Histori Pencatatan", icon: History, roleGuard: ['Super Admin', 'Admin', 'Admin 1', 'Admin 2', 'Admin 3'] },
+        { id: "manajemen-pengguna", label: "Manajemen Pengguna", icon: Users, roleGuard: ['Super Admin', 'Admin', 'Admin 1', 'Admin 2', 'Admin 3'] },
       ]
     }
   ];
