@@ -102,9 +102,9 @@ export default function DocumentModals({ hook, item }) {
         onClose={() => setIsAfkirModalOpen(false)}
         onConfirm={confirmAfkir}
         isLoading={isAfkiring}
-        title="Tandai Sebagai Afkir?"
-        description={<>Apakah Anda yakin ingin menandai <br /><strong className="text-slate-800">{formData.merekItem || item?.title}</strong> sebagai Afkir/Non-Aktif?</>}
-        confirmLabel={isAfkiring ? 'Memproses...' : 'Ya, Afkirkan'}
+        title="Tandai Sebagai Non Aktif?"
+        description={<>Apakah Anda yakin ingin menandai <br /><strong className="text-slate-800">{formData.merekItem || item?.title}</strong> sebagai Non-Aktif?</>}
+        confirmLabel={isAfkiring ? 'Memproses...' : 'Ya, Non-Aktifkan'}
         icon={<Ban className="w-6 h-6" />}
         iconBgClassName="bg-slate-100 text-slate-600 border border-slate-200"
         confirmClassName="bg-slate-800 hover:bg-slate-900 text-white"

@@ -19,6 +19,12 @@ export class MasterItemsController {
   }
 
   @Roles('Super Admin', 'Admin', 'User')
+  @Post('check-duplicate')
+  checkDuplicate(@Body() body: { title: string, code: string, unitLocation: string, nomorSeri: string, excludeId?: string }) {
+    return this.masterItemsService.checkDuplicate(body);
+  }
+
+  @Roles('Super Admin', 'Admin', 'User')
   @Post()
   create(@Body() createMasterItemDto: CreateMasterItemDto) {
     return this.masterItemsService.create(createMasterItemDto);

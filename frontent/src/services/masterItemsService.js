@@ -80,17 +80,29 @@ export const updateMasterItem = async (id, data) => {
   }
   console.log(`[REAL API] Updating Master Item ${id}...`);
 
+  const validCategories = [
+    'peralatan-pabrik', 'perizinan-aset', 'administrasi-lainnya',
+    'bangunan-generic', 'lingkungan-generic', 'kesehatan-generic',
+    'proteksi-kebakaran', 'pesawat-angkat-angkut', 'pesawat-tenaga-produksi',
+    'instalasi-penyalur-petir', 'esdm-generic', 'komunikasi-generic',
+    'disnaker-generic', 'haki-generic'
+  ];
+  
+  const mappedCategoryKey = validCategories.includes(data.categoryKey)
+    ? data.categoryKey
+    : (validCategories.includes(data.jenisPeralatan) ? data.jenisPeralatan : undefined);
+
   const payload = {
-    title: data.title,
-    code: data.code,
-    categoryKey: data.categoryKey,
-    unitLocation: data.unitLocation,
+    title: data.title || data.merekItem,
+    code: data.code || data.tipe || data.noSertifikat,
+    categoryKey: mappedCategoryKey,
+    unitLocation: data.unitLocation || data.lokasi,
     status: data.status,
     luasM2: data.luasM2,
     luasHa: data.luasHa,
     peruntukan: data.peruntukan,
-    issueDate: data.issueDate,
-    expiryDate: data.expiryDate,
+    issueDate: data.issueDate || data.terbit || data.tanggalInspeksi || data.tanggalCiptaan,
+    expiryDate: data.expiryDate || data.berakhir,
     keterangan: data.keterangan,
     documentStatus: data.documentStatus
   };

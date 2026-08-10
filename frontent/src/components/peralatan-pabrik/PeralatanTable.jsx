@@ -216,7 +216,7 @@ export default function PeralatanTable({
                         {item.documentStatus === 'PENDING_DOC' || (!row.hasPdf && item.documentStatus !== 'EXEMPT') ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                             <FileWarning className="w-3 h-3" />
-                            Belum Upload PDF
+                            Tidak Ada Sertifikat
                           </span>
                         ) : item.documentStatus === 'EXEMPT' ? (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
@@ -247,7 +247,7 @@ export default function PeralatanTable({
                           ) : (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
                               <FileWarning className="w-3 h-3 text-amber-500" />
-                              Belum Upload PDF
+                              Tidak Ada Sertifikat
                             </span>
                           )
                         ) : item.documentStatus === 'EXEMPT' ? (

@@ -1,7 +1,7 @@
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Controller, Get, Post, Body, Param, Delete, Put , UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Delete, Put, UseGuards, Req } from '@nestjs/common';
 import { CertificatesService } from './certificates.service';
 import { CreateCertificateDto } from './dto/create-certificate.dto';
 import { UpdateCertificateDto } from './dto/update-certificate.dto';
@@ -14,7 +14,11 @@ export class CertificatesController {
 
   @Roles('Super Admin', 'Admin', 'User')
   @Post()
-  create(@Body() createCertificateDto: CreateCertificateDto) {
+  create(@Body() createCertificateDto: CreateCertificateDto, @Req() req: any) {
+    // Otomatis isi uploadedBy dari JWT user yang sedang login
+    const nama = req.user?.nama || req.user?.username || 'Sistem';
+    const npk = req.user?.npk || '-';
+    createCertificateDto.uploadedBy = `${nama} (${npk})`;
     return this.certificatesService.create(createCertificateDto);
   }
 
@@ -30,7 +34,13 @@ export class CertificatesController {
 
   @Roles('Super Admin', 'Admin', 'User')
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateCertificateDto: UpdateCertificateDto) {
+  update(@Param('id') id: string, @Body() updateCertificateDto: UpdateCertificateDto, @Req() req: any) {
+    // Jika ada update fileUrl baru (upload ulang), catat juga siapa yang mengupdate
+    if (updateCertificateDto.fileUrl && !updateCertificateDto.uploadedBy) {
+      const nama = req.user?.nama || req.user?.username || 'Sistem';
+      const npk = req.user?.npk || '-';
+      updateCertificateDto.uploadedBy = `${nama} (${npk})`;
+    }
     return this.certificatesService.update(id, updateCertificateDto);
   }
 
@@ -40,4 +50,3 @@ export class CertificatesController {
     return this.certificatesService.remove(id);
   }
 }
-

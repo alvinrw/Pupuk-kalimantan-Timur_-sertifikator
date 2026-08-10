@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { X, UploadCloud, Save, Upload, Loader2, AlertTriangle, FileText, CheckCircle, Crosshair } from 'lucide-react';
 import { scanPdfDocument } from '../../services/ocrService';
-import { API_BASE } from '../../config/api';
+import { API_BASE, getFullFileUrl } from '../../config/api';
 import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 import BaseSplitScreenUploadModal from '../common/BaseSplitScreenUploadModal';
 export default function ModalUploadCert({
@@ -29,6 +29,8 @@ export default function ModalUploadCert({
       if (fieldKey === 'noSertifikat') {
         const certNo = parseCertificateNumber(rawText);
         setUploadData(prev => ({ ...prev, noSertifikat: certNo || rawText.replace(/\n+/g, ' ').trim() }));
+      } else if (fieldKey === 'namaSertifikat') {
+        setUploadData(prev => ({ ...prev, namaSertifikat: rawText.replace(/\n+/g, ' ').trim() }));
       } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
         const parsed = parseDate(rawText);
         if (parsed) {
@@ -75,7 +77,7 @@ export default function ModalUploadCert({
       rightPanelContent={
         uploadData.tempUrl ? (
           <PdfCanvasOcrViewer
-            pdfUrl={uploadData.tempUrl}
+            pdfUrl={getFullFileUrl(uploadData.tempUrl)}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}
@@ -177,6 +179,33 @@ export default function ModalUploadCert({
                     <span>{ocrErrorMsg}</span>
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">
+                  Nama Sertifikat
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={uploadData.namaSertifikat || ''}
+                    onChange={(e) => setUploadData({ ...uploadData, namaSertifikat: e.target.value })}
+                    placeholder="Contoh: SLO Crane, Sertifikat K3"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'namaSertifikat' ? null : 'namaSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'namaSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select Nama Sertifikat"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div>

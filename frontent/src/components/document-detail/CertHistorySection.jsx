@@ -4,7 +4,7 @@
  */
 import React from 'react';
 import {
-  History, UploadCloud, FileText, Edit3, Trash2, Calendar
+  History, UploadCloud, FileText, Edit3, Trash2, Calendar, UserCheck
 } from 'lucide-react';
 import { getFullFileUrl } from '../../config/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -58,6 +58,7 @@ export default function CertHistorySection({
                 <th className="py-2.5 px-3 font-bold">NO. SERTIFIKAT / SK</th>
                 <th className="py-2.5 px-3 font-bold">TGL TERBIT</th>
                 <th className="py-2.5 px-3 font-bold">TGL EXPIRED</th>
+                <th className="py-2.5 px-3 font-bold">DIINPUT OLEH</th>
                 <th className="py-2.5 px-3 font-bold text-center">STATUS SERTIFIKAT</th>
                 <th className="py-2.5 px-3 font-bold text-right">AKSI </th>
               </tr>
@@ -80,6 +81,16 @@ export default function CertHistorySection({
                     <td className="py-3 px-3 font-bold text-[#005ea4]">{row.noSertifikat}</td>
                     <td className="py-3 px-3 text-slate-700">{row.terbit}</td>
                     <td className="py-3 px-3 font-bold text-rose-700">{row.expired}</td>
+                    <td className="py-3 px-3">
+                      {row.uploadedBy ? (
+                        <div className="flex items-center gap-1.5">
+                          <UserCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                          <span className="font-bold text-slate-700 text-[11px]">{row.uploadedBy}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 italic text-[11px]">Tidak Tercatat</span>
+                      )}
+                    </td>
                     <td className="py-3 px-3 text-center">
                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${row.isCurrent
                           ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
@@ -156,8 +167,20 @@ export default function CertHistorySection({
                   </span>
                 </div>
                 <div className="text-[11px] text-slate-600 space-y-0.5">
-                  <div>Penerbit / Penguji: <span className="font-bold text-slate-800">{row.instansi}</span></div>
+                  <div>Penerbit / Penguji: <span className="font-bold text-slate-800">{row.instansi || '-'}</span></div>
                   <div>Masa Berlaku: {row.terbit} s.d <span className="font-bold text-rose-700">{row.expired}</span></div>
+                  <div className="flex items-center gap-1 pt-0.5">
+                    <UserCheck className="w-3 h-3 text-emerald-600 shrink-0" />
+                    <span>Diinput oleh: </span>
+                    <span className="font-bold text-slate-800">
+                      {row.uploadedBy || 'Sistem / Tidak Tercatat'}
+                    </span>
+                    {row.createdAt && (
+                      <span className="text-slate-400 ml-1">
+                        — {new Date(row.createdAt).toLocaleDateString('id-ID', { day:'2-digit', month:'short', year:'numeric' })}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

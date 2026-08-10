@@ -193,6 +193,7 @@ export default function GenericTable({
                           </td>
                         )}
 
+
                         <td className="py-3.5 px-2 text-center align-middle">
                           {hasCertsOrExempt ? (
                             <button

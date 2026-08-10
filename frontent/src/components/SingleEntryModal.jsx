@@ -25,9 +25,9 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
   // Date validation errors
   const [dateErrors, setDateErrors] = useState({ terbit: false, expired: false });
 
-  // Lazy-loaded PdfCanvasOcrViewer
   const [PdfCanvasOcrViewer, setPdfCanvasOcrViewer] = useState(null);
 
+  const [duplicateWarning, setDuplicateWarning] = useState(null);
   const fileInputRef = useRef(null);
 
   // ─── Load PdfCanvasOcrViewer saat modal dibuka ─────────────────────────────
@@ -164,6 +164,33 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       return;
     }
 
+    try {
+      const checkRes = await fetch(`${API_BASE}/master-items/check-duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(sessionStorage.getItem('token') ? { 'Authorization': `Bearer ${sessionStorage.getItem('token')}` } : {}) },
+        body: JSON.stringify({
+          title: formData.jenisPeralatan,
+          code: formData.merekItem,
+          unitLocation: formData.unitPabrik && formData.lokasiDetail ? `${formData.unitPabrik} - ${formData.lokasiDetail}` : (formData.lokasiDetail || formData.unitPabrik || 'Umum'),
+          nomorSeri: formData.nomorSeri
+        })
+      });
+
+      if (checkRes.ok) {
+        const checkData = await checkRes.json();
+        if (checkData.isDuplicate) {
+          setDuplicateWarning(checkData);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Error checking duplicate:', err);
+    }
+
+    await proceedSubmit(false);
+  };
+
+  const proceedSubmit = async (forceUpdate, existingId = null) => {
     let finalUrl = null;
     if (sertifikatMode === 'dengan') {
       if (tempUrl) {
@@ -209,14 +236,17 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       expired: expiredIso,
       file: sertifikatMode === 'dengan' ? selectedFile : null,
       fileUrl: finalUrl,
-      id: `EQ-MANUAL-${Date.now()}`,
+      id: existingId || `EQ-MANUAL-${Date.now()}`,
+      forceUpdate,
+      existingId,
       noSertifikat: formData.noSertifikat || (sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : (selectedFile ? `SN-${Math.floor(10000 + Math.random() * 90000)}` : "BELUM_ADA_SERTIFIKAT")),
       tanggalInspeksi: terbitIso || new Date().toISOString().split('T')[0],
       berakhir: expiredIso || '',
       hasCertificatePdf: sertifikatMode === 'dengan' && !!selectedFile,
-      documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
-      keterangan: sertifikatMode === 'tanpa' ? 'Tidak Perlu Sertifikat' : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : 'Data Manual Input')
+      documentStatus: (sertifikatMode === 'tanpa' && (!formData.noSertifikat || !terbitIso || !expiredIso)) ? 'EXEMPT' : 'COMPLETED',
+      keterangan: (sertifikatMode === 'tanpa' && (!formData.noSertifikat || !terbitIso || !expiredIso)) ? 'Tidak Perlu Sertifikat / Data Tidak Lengkap' : (selectedFile ? `Sertifikat Attached (${selectedFile.name})` : 'Data Tersedia (File Fisik Belum Diunggah)')
     });
+    setDuplicateWarning(null);
     onClose();
   };
 
@@ -276,6 +306,56 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
         ) : null
       }
     >
+      {duplicateWarning && (
+        <div className="absolute inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-5 border-b border-slate-200 bg-amber-50 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <FileCheck className="w-5 h-5 text-amber-700" />
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-900 text-[15px]">Data Serupa Ditemukan</h3>
+                <p className="text-amber-700 text-[11px] leading-snug mt-0.5">
+                  Item dengan identitas ini sudah ada di {duplicateWarning.isInStaging ? 'Staging' : 'Database'}.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-5">
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs font-mono-data mb-5">
+                <div className="text-slate-500 mb-1">Item yang ditemukan:</div>
+                <div className="font-bold text-slate-800">{duplicateWarning.matchedItem.title}</div>
+                <div className="text-slate-600 mt-1">{duplicateWarning.matchedItem.code} • {duplicateWarning.matchedItem.unitLocation}</div>
+              </div>
+              
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => proceedSubmit(true, duplicateWarning.matchedItem.id)}
+                  className="w-full py-2.5 bg-[#005ea4] hover:bg-[#004e8a] text-white font-bold rounded-lg text-sm transition-colors"
+                >
+                  Timpa / Perbarui Data Lama
+                </button>
+                <button
+                  type="button"
+                  onClick={() => proceedSubmit(false)}
+                  className="w-full py-2.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold rounded-lg text-sm transition-colors"
+                >
+                  Tetap Simpan sebagai Data Baru
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDuplicateWarning(null)}
+                  className="w-full py-2.5 text-slate-500 hover:text-slate-700 font-bold rounded-lg text-sm transition-colors"
+                >
+                  Batal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mode Toggle */}
       <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
         <button

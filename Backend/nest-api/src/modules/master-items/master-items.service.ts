@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { CreateMasterItemDto } from './dto/create-master-item.dto';
 import { UpdateMasterItemDto } from './dto/update-master-item.dto';
 import { PrismaService } from '../../database/prisma.service';
+import { recalculateStagingStatuses } from '../csv-import/staging-validation.helper';
 
 @Injectable()
 export class MasterItemsService implements OnModuleInit {
@@ -18,6 +19,43 @@ export class MasterItemsService implements OnModuleInit {
     return this.prisma.masterItem.create({
       data: createMasterItemDto,
     });
+  }
+
+  async checkDuplicate(data: { title: string, code: string, unitLocation: string, nomorSeri: string, excludeId?: string }) {
+    const { title, code, unitLocation, nomorSeri, excludeId } = data;
+    
+    const items = await this.prisma.masterItem.findMany({
+      where: {
+        title: { equals: title, mode: 'insensitive' },
+        code: { equals: code, mode: 'insensitive' },
+        unitLocation: { equals: unitLocation, mode: 'insensitive' },
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      }
+    });
+
+    for (const item of items) {
+      let dbNomorSeri = '';
+      try {
+        if (item.keterangan && item.keterangan.startsWith('{')) {
+          const meta = JSON.parse(item.keterangan);
+          dbNomorSeri = meta.nomorSeri || '';
+        }
+      } catch (e) {}
+
+      if ((dbNomorSeri || '').trim().toLowerCase() === (nomorSeri || '').trim().toLowerCase()) {
+        return {
+          isDuplicate: true,
+          isInStaging: item.documentStatus === 'PENDING_DOC',
+          matchedItem: item
+        };
+      }
+    }
+
+    return {
+      isDuplicate: false,
+      isInStaging: false,
+      matchedItem: null
+    };
   }
 
   async findAll(categoryKey?: string, search?: string) {
@@ -73,7 +111,7 @@ export class MasterItemsService implements OnModuleInit {
   }
 
   async update(id: string, updateMasterItemDto: UpdateMasterItemDto) {
-    await this.findOne(id); // Check if exists
+    const item = await this.findOne(id); // Check if exists
 
     // Resolve any active notifications on manual update/renewal
     await this.prisma.reminderNotification.updateMany({
@@ -81,21 +119,30 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    return this.prisma.masterItem.update({
+    const updated = await this.prisma.masterItem.update({
       where: { id },
-      data: updateMasterItemDto,
+      data: {
+        ...updateMasterItemDto,
+        isManuallyEdited: true,
+        lastEditSource: 'MANUAL',
+      },
     });
+
+    await recalculateStagingStatuses(this.prisma, updated.categoryKey);
+    return updated;
   }
 
   async remove(id: string) {
-    await this.findOne(id); // Check if exists
-    return this.prisma.masterItem.delete({
+    const item = await this.findOne(id); // Check if exists
+    const deleted = await this.prisma.masterItem.delete({
       where: { id },
     });
+    await recalculateStagingStatuses(this.prisma, item.categoryKey);
+    return deleted;
   }
 
   async resolveExemption(id: string, note: string) {
-    await this.findOne(id);
+    const item = await this.findOne(id);
 
     // Resolve active reminders
     await this.prisma.reminderNotification.updateMany({
@@ -103,13 +150,32 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    return this.prisma.masterItem.update({
+    // Periksa apakah item ini sudah memiliki data lengkap di primaryCert atau permit
+    let hasCertData = false;
+    if (item.certificates && item.certificates.length > 0) {
+      const c = item.certificates[0];
+      if (c.noSertifikat && c.terbit && c.expired) hasCertData = true;
+    } else if (item.permits && item.permits.length > 0) {
+      const p = item.permits[0];
+      if (p.noIzin && p.terbit && p.expired) hasCertData = true;
+    } else {
+      if (item.issueDate && item.expiryDate) hasCertData = true;
+    }
+
+    // Jika datanya lengkap (diunggah dari Staging/CSV), maka 'Tanpa Sertifikat' berarti hanya Bypass Upload PDF
+    const newStatus = hasCertData ? 'COMPLETED' : 'EXEMPT';
+    const newNote = hasCertData ? 'Sertifikat Aktif (Bypass Upload PDF)' : (note || 'Tidak memerlukan sertifikat');
+
+    const updated = await this.prisma.masterItem.update({
       where: { id },
       data: {
-        documentStatus: 'EXEMPT',
-        exemptionNote: note || 'Tidak memerlukan sertifikat',
+        documentStatus: newStatus,
+        exemptionNote: newNote,
       },
     });
+
+    await recalculateStagingStatuses(this.prisma, item.categoryKey);
+    return updated;
   }
 
   // === NOTIFICATION SETTINGS & REMINDERS ===
@@ -201,7 +267,11 @@ export class MasterItemsService implements OnModuleInit {
       const evaluateTarget = (expiryStr: string | null, targetSetting: any, displayName: string, displayNo: string, certId?: string) => {
         if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') return;
 
-        const expiry = new Date(expiryStr);
+        let expiry = new Date(expiryStr);
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(expiryStr)) {
+          const parts = expiryStr.split('/');
+          expiry = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        }
         if (isNaN(expiry.getTime())) return;
         expiry.setHours(0, 0, 0, 0);
 
@@ -298,10 +368,10 @@ export class MasterItemsService implements OnModuleInit {
         })[0];
 
         evaluateTarget(
-          primaryCert.expired,
+          primaryCert.expired && primaryCert.expired !== '-' ? primaryCert.expired : item.expiryDate,
           primaryCert.notificationSetting,
-          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || '-',
-          primaryCert.noSertifikat || '-',
+          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || item.title || '-',
+          primaryCert.noSertifikat || item.code || '-',
           primaryCert.id
         );
       } else {

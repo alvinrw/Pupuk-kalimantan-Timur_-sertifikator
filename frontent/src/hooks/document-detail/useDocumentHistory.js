@@ -28,6 +28,36 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         }
       }
 
+      const formatToDDMMYYYY = (rawDateStr) => {
+        if (!rawDateStr || rawDateStr === '-') return '-';
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+        try {
+          const dObj = new Date(rawDateStr);
+          if (!isNaN(dObj.getTime())) {
+            const dd = String(dObj.getDate()).padStart(2, '0');
+            const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+            const yyyy = dObj.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+          }
+        } catch (_) {}
+        return rawDateStr;
+      };
+
+      const getYearFromStr = (dateStr) => {
+        if (!dateStr || dateStr === '-') return '2024';
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+          return dateStr.split('/')[2];
+        }
+        try {
+          const dObj = new Date(dateStr);
+          if (!isNaN(dObj.getTime())) {
+            return String(dObj.getFullYear());
+          }
+        } catch (_) {}
+        const match = dateStr.match(/\b\d{4}\b/);
+        return match ? match[0] : '2024';
+      };
+
       const parentList = listToProcess.map(m => {
         let isCurrent = false;
         if (targetCert && targetCert.id === m.id) {
@@ -39,10 +69,10 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         }
         return {
           ...m,
-          periode: m.periode || `${new Date(m.terbit || m.issueDate || '2024').getFullYear()} - ${new Date(m.expired || m.expiryDate || '2024').getFullYear()}`,
+          periode: m.periode || `${getYearFromStr(m.terbit || m.issueDate)} - ${getYearFromStr(m.expired || m.expiryDate)}`,
           noSertifikat: m.noSertifikat || m.certNo || m.certificateNo || '-',
-          terbit: m.terbit || m.issueDate || '-',
-          expired: m.expired || m.expiryDate || '-',
+          terbit: formatToDDMMYYYY(m.terbit || m.issueDate || '-'),
+          expired: formatToDDMMYYYY(m.expired || m.expiryDate || '-'),
           status: m.status || 'Aktif',
           instansi: m.instansi || m.issuer || '-',
           fileUrl: m.fileUrl || m.pdfUrl || null,

@@ -4,6 +4,7 @@ import * as csv from 'csv-parser';
 import { Readable } from 'stream';
 import { randomUUID, createHash } from 'crypto';
 import * as xlsx from 'xlsx';
+import { validateItem, recalculateStagingStatuses } from './staging-validation.helper';
 
 @Injectable()
 export class CsvImportService {
@@ -37,19 +38,6 @@ export class CsvImportService {
 
     try {
       if (type === 'master_items') {
-        const existingItems = await this.prisma.masterItem.findMany({
-          where: targetCategoryKey ? { categoryKey: targetCategoryKey } : undefined,
-          select: {
-            id: true,
-            code: true,
-            title: true,
-            unitLocation: true,
-            categoryKey: true,
-            keterangan: true,
-            updatedAt: true
-          }
-        });
-
         // Helper untuk lookup case-insensitive
         const getVal = (r: any, keys: string[]) => {
           const k = Object.keys(r).find(key => {
@@ -59,65 +47,22 @@ export class CsvImportService {
           return k ? String(r[k]).trim() : '';
         };
 
-        // Helper untuk generate MD5 hash dari 6 kolom utama
-        const generateRowHash = (
-          code: string,
-          title: string,
-          namaSertifikat: string,
-          tipe: string,
-          nomorSeri: string,
-          unitLocation: string,
-        ): string => {
-          const clean = (val: string) => (val || '').trim().toLowerCase();
-          const combined = [
-            clean(code),
-            clean(title),
-            clean(namaSertifikat),
-            clean(tipe),
-            clean(nomorSeri),
-            clean(unitLocation)
-          ].join('|');
-
-          return createHash('md5').update(combined).digest('hex');
+        // Normalize helper: trim + lowercase + '-' → ''
+        const norm = (val: string) => {
+          const v = (val || '').trim().toLowerCase();
+          return v === '-' ? '' : v;
         };
-
-        // Bangun hash map dari data yang sudah ada di sistem
-        const hashMap = new Map<string, any>();
-        for (const item of existingItems) {
-          let tipe = '';
-          let nomorSeri = '';
-          let namaSertifikat = '';
-          try {
-            if (item.keterangan && item.keterangan.startsWith('{')) {
-              const meta = JSON.parse(item.keterangan);
-              tipe = meta.tipe || '';
-              nomorSeri = meta.nomorSeri || '';
-              namaSertifikat = meta.namaSertifikat || '';
-            }
-          } catch (e) {}
-
-          const hash = generateRowHash(
-            item.code || '',
-            item.title || '',
-            namaSertifikat,
-            tipe,
-            nomorSeri,
-            item.unitLocation || ''
-          );
-
-          // Jika ada beberapa data duplikat di DB, simpan yang paling baru (updatedAt paling akhir)
-          const existingInMap = hashMap.get(hash);
-          if (!existingInMap || new Date(item.updatedAt) > new Date(existingInMap.updatedAt)) {
-            hashMap.set(hash, item);
-          }
-        }
 
         let successCount = 0;
         let failCount = 0;
         let duplicateCount = 0;
+        let protectedCount = 0;
         const failedRows = [];
         const importedIds = [];
         const importedCodes = [];
+        
+        // Track normalized keys processed in this batch to detect intra-file duplicates
+        const processedKeys = new Set<string>();
 
         for (let i = 0; i < results.length; i++) {
           const row = results[i];
@@ -175,23 +120,40 @@ export class CsvImportService {
             };
             const jsonKeterangan = JSON.stringify(extraData);
 
-            // Hitung hash baris baru
-            const newRowHash = generateRowHash(
-              rawCode,
-              rawTitle,
-              cleanNamaSertifikat,
-              cleanTipe,
-              cleanNoSeri,
-              rawLocation
-            );
+            // === DUPLIKAT DETECTION: Direct DB lookup (lebih reliable dari hash) ===
+            // Key untuk intra-file duplicate check
+            const rowKey = `${norm(rawCode)}|${norm(rawTitle)}|${norm(rawLocation)}`;
+            if (processedKeys.has(rowKey)) {
+              duplicateCount++;
+              continue; // duplikat dalam 1 file CSV
+            }
+            processedKeys.add(rowKey);
 
-            // Bandingkan dengan DB hash map
-            const existing = hashMap.get(newRowHash);
+            // Cari di DB berdasarkan title + code + categoryKey (case-insensitive)
+            const existingInDb = await this.prisma.masterItem.findFirst({
+              where: {
+                categoryKey: rawCategory,
+                title: { equals: rawTitle, mode: 'insensitive' },
+                code: { equals: rawCode, mode: 'insensitive' },
+              },
+              select: { id: true, documentStatus: true, isManuallyEdited: true }
+            });
+            
+            if (i < 2) {
+              console.log(`[SEARCH DEBUG] category=${rawCategory} | title=${rawTitle} | code=${rawCode}`);
+              console.log(`[SEARCH RESULT]`, existingInDb);
+            }
 
-            const isDuplicate = !!existing;
-            if (isDuplicate) duplicateCount++;
+            const isDuplicate = !!existingInDb;
+            if (isDuplicate) {
+              if (existingInDb.isManuallyEdited) {
+                protectedCount++;
+                continue; // lindungi data yang sudah diedit manual
+              }
+              duplicateCount++;
+            }
 
-            const idToUse = existing ? existing.id : (row.id || randomUUID());
+            const idToUse = existingInDb ? existingInDb.id : (row.id || randomUUID());
 
             const luasM2Val = getVal(row, ['luas (m²)', 'luas m2', 'luasm2', 'luas_m2']) || (row.luasM2 != null ? String(row.luasM2) : null);
             const luasHaVal = getVal(row, ['luas (ha)', 'luas ha', 'luasha', 'luas_ha']) || (row.luasHa != null ? String(row.luasHa) : null);
@@ -223,14 +185,16 @@ export class CsvImportService {
               issueDate: issueDateVal,
               expiryDate: expiryDateVal,
               keterangan: jsonKeterangan,
-              documentStatus: existing ? existing.documentStatus : 'PENDING_DOC',
+              documentStatus: existingInDb ? existingInDb.documentStatus : 'PENDING_DOC',
+              isManuallyEdited: false,
+              lastEditSource: 'CSV',
               updatedAt: new Date()
             };
 
-            if (existing) {
+            if (existingInDb) {
               await this.prisma.masterItem.update({
-                where: { id: existing.id },
-                data: dataToSave
+                where: { id: existingInDb.id },
+                data: dataToSave,
               });
             } else {
               await this.prisma.masterItem.create({
@@ -243,18 +207,24 @@ export class CsvImportService {
 
             if (cleanNoSertifikat && cleanNoSertifikat !== '-' && cleanNoSertifikat !== 'Tanpa Sertifikat') {
               try {
-                await this.prisma.certificate.create({
-                  data: {
-                    itemId: idToUse,
-                    jenisSertifikat: cleanTipe || 'Sertifikat Utama',
-                    namaSertifikat: cleanNamaSertifikat || 'Sertifikat Master',
-                    noSertifikat: cleanNoSertifikat,
-                    instansi: cleanPenanggungJawab || 'Instansi Penerbit',
-                    terbit: issueDateVal || '',
-                    expired: expiryDateVal || '',
-                    status: 'Aktif'
-                  }
+                const existingCert = await this.prisma.certificate.findFirst({
+                  where: { itemId: idToUse, noSertifikat: cleanNoSertifikat }
                 });
+                
+                if (!existingCert) {
+                  await this.prisma.certificate.create({
+                    data: {
+                      itemId: idToUse,
+                      jenisSertifikat: cleanTipe || 'Sertifikat Utama',
+                      namaSertifikat: cleanNamaSertifikat || 'Sertifikat Master',
+                      noSertifikat: cleanNoSertifikat,
+                      instansi: cleanPenanggungJawab || 'Instansi Penerbit',
+                      terbit: issueDateVal || '',
+                      expired: expiryDateVal || '',
+                      status: 'Aktif'
+                    }
+                  });
+                }
               } catch(e) {}
             }
             
@@ -287,6 +257,7 @@ export class CsvImportService {
               totalRows,
               successCount,
               duplicateCount,
+              protectedCount,
               failCount,
               failedRows,
               importedIds,
@@ -298,10 +269,11 @@ export class CsvImportService {
         });
 
         return {
-          message: `Impor CSV selesai: ${successCount} Berhasil, ${duplicateCount} Duplikat (Diperbarui), ${failCount} Gagal.`,
+          message: `Impor CSV selesai: ${successCount} Berhasil, ${duplicateCount + protectedCount} Duplikat (Diperbarui), ${failCount} Gagal.`,
           totalRows,
           successCount,
           duplicateCount,
+          protectedCount,
           failCount
         };
 
@@ -381,59 +353,281 @@ export class CsvImportService {
       orderBy: { createdAt: 'desc' }
     });
 
-    if (!categoryKey) return logs;
+    const filtered = categoryKey 
+      ? logs.filter(log => {
+          if (!log.detail) return true;
+          try {
+            const detailObj = JSON.parse(log.detail);
+            return !detailObj.categoryKey || detailObj.categoryKey === categoryKey;
+          } catch {
+            return true;
+          }
+        })
+      : logs;
 
-    return logs.filter(log => {
-      if (!log.detail) return true;
+    // Urutkan dari terlama ke terbaru untuk melacak timeline "claim" item ID
+    const sortedLogs = [...filtered].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const claimedByOlderLogs = new Set<string>();
+
+    const updatedLogs = [];
+    for (const log of sortedLogs) {
+      if (!log.detail) {
+        updatedLogs.push(log);
+        continue;
+      }
+
       try {
         const detailObj = JSON.parse(log.detail);
-        return !detailObj.categoryKey || detailObj.categoryKey === categoryKey;
-      } catch {
-        return true;
+        const importedIds: string[] = detailObj.importedIds || [];
+        const originalFailCount = detailObj.failCount || 0;
+        const originalProtectedCount = detailObj.protectedCount || 0;
+
+        if (importedIds.length > 0) {
+          // Ambil status item di database saat ini
+          const items = await this.prisma.masterItem.findMany({
+            where: { id: { in: importedIds } },
+            select: { id: true, documentStatus: true, validationStatus: true }
+          });
+
+          // Peta pencarian cepat berdasarkan ID
+          const itemMap = new Map<string, any>();
+          for (const item of items) {
+            itemMap.set(item.id, item);
+          }
+
+          let successCount = 0;
+          let duplicateCount = 0;
+          let failCount = originalFailCount;
+
+          const seenInThisLog = new Set<string>();
+
+          for (const id of importedIds) {
+            const item = itemMap.get(id);
+            if (!item) continue; // Data sudah dihapus dari DB
+
+            const isAlreadyClaimed = claimedByOlderLogs.has(id);
+            const isIntraFileDuplicate = seenInThisLog.has(id);
+
+            if (isAlreadyClaimed || isIntraFileDuplicate) {
+              // Jika sudah diklaim oleh upload sebelumnya ATAU sudah pernah muncul di baris awal file yang sama (intra-file duplicate)
+              duplicateCount++;
+            } else {
+              if (item.documentStatus !== 'PENDING_DOC' || item.validationStatus === 'NEW') {
+                successCount++;
+              } else if (item.validationStatus === 'DUPLICATE') {
+                duplicateCount++;
+              } else if (item.validationStatus === 'FAILED') {
+                failCount++;
+              }
+            }
+            seenInThisLog.add(id);
+          }
+
+          // Tandai semua ID aktif di log ini sebagai ter-klaim agar riwayat upload yang lebih baru mendeteksinya sebagai duplikat
+          items.forEach(item => claimedByOlderLogs.add(item.id));
+
+          detailObj.successCount = successCount;
+          detailObj.duplicateCount = duplicateCount;
+          detailObj.failCount = failCount;
+          detailObj.totalRows = successCount + duplicateCount + originalProtectedCount + failCount;
+        }
+
+        updatedLogs.push({
+          ...log,
+          detail: JSON.stringify(detailObj)
+        });
+      } catch (e) {
+        updatedLogs.push(log);
       }
-    });
+    }
+
+    // Kembalikan ke urutan terbaru dulu (descending) sebelum dikembalikan ke client
+    return updatedLogs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async processBulkNested(groupedData: any[], categoryKey: string, fileName?: string) {
     let successCount = 0;
+    let duplicateCount = 0;
+    let protectedCount = 0;
+    let failCount = 0;
+    const failedRows = [];
     const createdMasters = [];
+    const processedIds: string[] = [];
+    const processedCodes: string[] = [];
 
-    for (const group of groupedData) {
-      const masterData = {
-        title: group.master.title || '',
-        code: group.master.code || `CSV-${randomUUID().substring(0, 8)}`,
-        unitLocation: group.master.unitLocation || '',
-        status: group.master.status || 'Aktif',
-        keterangan: JSON.stringify({
-          tipe: group.master.tipe,
-          penanggungJawab: group.master.penanggungJawab,
-        }),
+    const norm = (val: string) => {
+      return (val || '').trim().toLowerCase().replace(/^-$/, '');
+    };
+
+    const getCompareKey = (title: string, code: string) => {
+      return `${norm(code)}|${norm(title)}`;
+    };
+
+    // Track compareKeys processed in this upload session (to detect intra-file duplicates and record their row number)
+    const fileProcessedKeys = new Map<string, number>();
+
+    for (let i = 0; i < groupedData.length; i++) {
+      const group = groupedData[i];
+      const rawTitle = group.master.title || '';
+      const rawCode = group.master.code || '';
+      const rawLocation = group.master.unitLocation || '';
+
+      if (!rawTitle && !rawCode) {
+        continue;
+      }
+
+      // 1. Validasi kolom wajib (Mandatory Fields)
+      const itemToValidate = {
+        title: rawTitle,
+        code: rawCode,
+        unitLocation: rawLocation,
         categoryKey: categoryKey || '',
-        documentStatus: 'PENDING_DOC',
+        keterangan: JSON.stringify({
+          tipe: group.master.tipe || '',
+          penanggungJawab: group.master.penanggungJawab || '',
+        }),
+        issueDate: group.certificates[0]?.terbit || '',
+        expiryDate: group.certificates[0]?.expired || '',
       };
 
-      const createdMaster = await this.prisma.masterItem.create({
-        data: masterData,
+      const errors = validateItem(itemToValidate);
+      let isFailed = errors.length > 0;
+
+      let finalValidationStatus = 'NEW';
+      let finalValidationErrorsJson: string | null = null;
+
+      if (isFailed) {
+        finalValidationStatus = 'FAILED';
+        finalValidationErrorsJson = JSON.stringify(errors);
+        failCount++;
+        failedRows.push({
+          rowNumber: i + 1,
+          title: rawTitle || `Baris ${i + 1}`,
+          reason: errors.join(', ')
+        });
+        continue; // Jangan masukkan ke staging jika gagal
+      }
+
+      // 2. Cek Duplikat Internal (dalam File)
+      const compareKey = getCompareKey(rawTitle, rawCode);
+      const firstSeenRow = fileProcessedKeys.get(compareKey);
+
+      if (firstSeenRow !== undefined) {
+        // Baris ini adalah duplikat dari baris sebelumnya di file yang sama
+        finalValidationStatus = 'FAILED';
+        finalValidationErrorsJson = JSON.stringify([`Duplikat dengan baris ${firstSeenRow}`]);
+        failCount++;
+        failedRows.push({
+          rowNumber: i + 1,
+          title: rawTitle || `Baris ${i + 1}`,
+          reason: `Duplikat dengan baris ${firstSeenRow}`
+        });
+        continue; // Jangan masukkan ke staging jika duplikat internal file
+      }
+
+      // Catat baris awal kemunculan data unik ini
+      fileProcessedKeys.set(compareKey, i + 1);
+
+      // Cari di DB (case-insensitive) untuk duplicate check
+      const existingInDb = await this.prisma.masterItem.findFirst({
+        where: {
+          categoryKey: categoryKey || '',
+          title: { equals: rawTitle, mode: 'insensitive' },
+          code: { equals: rawCode, mode: 'insensitive' },
+        },
+        select: { id: true, documentStatus: true, isManuallyEdited: true }
       });
 
-      for (const cert of group.certificates) {
-        await this.prisma.certificate.create({
-          data: {
-            itemId: createdMaster.id,
-            jenisSertifikat: cert.namaSertifikat || 'Umum',
-            namaSertifikat: cert.namaSertifikat,
-            noSertifikat: cert.noSertifikat,
-            terbit: cert.terbit,
-            expired: cert.expired,
-            status: 'Aktif',
-          },
-        });
-        successCount++;
+      if (existingInDb && existingInDb.isManuallyEdited) {
+        // Lindungi data yang sudah diedit manual
+        protectedCount++;
+        continue;
       }
-      
-      if (group.certificates.length === 0) successCount++;
-      createdMasters.push(createdMaster);
+
+      // Tentukan status validasi jika tidak FAILED
+      if (!isFailed) {
+        if (existingInDb) {
+          finalValidationStatus = 'DUPLICATE';
+          duplicateCount++;
+        } else {
+          finalValidationStatus = 'NEW';
+          successCount++;
+        }
+      }
+
+      const masterData = {
+        title: rawTitle,
+        code: rawCode || `CSV-${randomUUID().substring(0, 8)}`,
+        unitLocation: rawLocation,
+        status: group.master.status || 'Aktif',
+        keterangan: JSON.stringify({
+          tipe: group.master.tipe || '',
+          nomorSeri: rawCode || '',
+          penanggungJawab: group.master.penanggungJawab || '',
+          noSertifikat: group.certificates[0]?.noSertifikat || '',
+          namaSertifikat: group.certificates[0]?.namaSertifikat || '',
+          keteranganAsli: group.certificates[0]?.keterangan || ''
+        }),
+        categoryKey: categoryKey || '',
+        documentStatus: existingInDb ? existingInDb.documentStatus : 'PENDING_DOC',
+        isManuallyEdited: false,
+        lastEditSource: 'CSV',
+        validationStatus: finalValidationStatus,
+        validationErrors: finalValidationErrorsJson,
+        updatedAt: new Date()
+      };
+
+      let currentMasterId: string;
+      if (existingInDb) {
+        await this.prisma.masterItem.update({
+          where: { id: existingInDb.id },
+          data: masterData,
+        });
+        currentMasterId = existingInDb.id;
+      } else {
+        const createdMaster = await this.prisma.masterItem.create({
+          data: masterData,
+        });
+        currentMasterId = createdMaster.id;
+        createdMasters.push(createdMaster);
+      }
+      processedIds.push(currentMasterId);
+      if (masterData.code) {
+        processedCodes.push(masterData.code);
+      }
+
+      for (const cert of group.certificates) {
+        const cleanNoCert = cert.noSertifikat ? String(cert.noSertifikat).trim() : '';
+        if (cleanNoCert && cleanNoCert !== '-' && cleanNoCert.toLowerCase() !== 'tanpa sertifikat') {
+          // Cari jika sertifikat sudah ada
+          const existingCert = await this.prisma.certificate.findFirst({
+            where: {
+              itemId: currentMasterId,
+              noSertifikat: { equals: cleanNoCert, mode: 'insensitive' }
+            }
+          });
+
+          if (!existingCert) {
+            await this.prisma.certificate.create({
+              data: {
+                itemId: currentMasterId,
+                jenisSertifikat: cert.namaSertifikat || 'Umum',
+                namaSertifikat: cert.namaSertifikat,
+                noSertifikat: cleanNoCert,
+                terbit: cert.terbit,
+                expired: cert.expired,
+                status: 'Aktif',
+              },
+            });
+          }
+        }
+      }
     }
+
+    // Jalankan recalculation dinamis setelah semua data disimpan ke Staging
+    await recalculateStagingStatuses(this.prisma, categoryKey);
+
+    const totalRows = successCount + duplicateCount + protectedCount + failCount;
 
     await this.prisma.monitoringLog.create({
       data: {
@@ -441,11 +635,15 @@ export class CsvImportService {
         status: 'SUCCESS',
         detail: JSON.stringify({
           fileName: fileName || `impor_${categoryKey}.csv`,
-          importedCount: createdMasters.length,
+          importedCount: totalRows,
           successCount: successCount,
+          duplicateCount: duplicateCount,
+          protectedCount: protectedCount,
+          failCount: failCount,
+          failedRows: failedRows,
           categoryKey: categoryKey,
-          importedIds: createdMasters.map((m: any) => m.id),
-          importedCodes: createdMasters.map((m: any) => m.code).filter(Boolean),
+          importedIds: processedIds,
+          importedCodes: processedCodes,
           type: 'master_items'
         })
       }
@@ -453,9 +651,12 @@ export class CsvImportService {
 
     return {
       success: true,
-      importedCount: createdMasters.length,
+      importedCount: totalRows,
       successCount: successCount,
-      failedRows: [],
+      duplicateCount: duplicateCount,
+      protectedCount: protectedCount,
+      failCount: failCount,
+      failedRows: failedRows,
       masters: createdMasters,
     };
   }
@@ -466,19 +667,51 @@ export class CsvImportService {
         where: { id }
       });
 
+      let categoryKeyToRecalculate = '';
+
       if (log && log.detail) {
         let detailObj: any = {};
         try { detailObj = JSON.parse(log.detail); } catch {}
+        categoryKeyToRecalculate = detailObj.categoryKey || '';
 
-        const idsToDelete = detailObj.importedIds || [];
-        const codesToDelete = detailObj.importedCodes || [];
+        const idsToDelete: string[] = detailObj.importedIds || [];
+        const codesToDelete: string[] = detailObj.importedCodes || [];
 
-        if (idsToDelete.length > 0 || codesToDelete.length > 0) {
+        // Cari semua log impor LAINNYA yang masih aktif
+        const otherLogs = await this.prisma.monitoringLog.findMany({
+          where: {
+            action: 'CSV_IMPORT',
+            id: { not: id }
+          }
+        });
+
+        const activeIds = new Set<string>();
+        const activeCodes = new Set<string>();
+
+        for (const ol of otherLogs) {
+          if (ol.detail) {
+            try {
+              const od = JSON.parse(ol.detail);
+              if (od.importedIds && Array.isArray(od.importedIds)) {
+                od.importedIds.forEach((iId: string) => activeIds.add(iId));
+              }
+              if (od.importedCodes && Array.isArray(od.importedCodes)) {
+                od.importedCodes.forEach((iCode: string) => activeCodes.add(iCode));
+              }
+            } catch {}
+          }
+        }
+
+        // Hanya hapus item yang TIDAK direferensikan oleh log impor aktif lainnya
+        const safeIdsToDelete = idsToDelete.filter(iId => !activeIds.has(iId));
+        const safeCodesToDelete = codesToDelete.filter(iCode => !activeCodes.has(iCode));
+
+        if (safeIdsToDelete.length > 0 || safeCodesToDelete.length > 0) {
           await this.prisma.masterItem.deleteMany({
             where: {
               OR: [
-                ...(idsToDelete.length ? [{ id: { in: idsToDelete } }] : []),
-                ...(codesToDelete.length ? [{ code: { in: codesToDelete } }] : [])
+                ...(safeIdsToDelete.length ? [{ id: { in: safeIdsToDelete } }] : []),
+                ...(safeCodesToDelete.length ? [{ code: { in: safeCodesToDelete } }] : [])
               ]
             }
           });
@@ -488,6 +721,11 @@ export class CsvImportService {
       await this.prisma.monitoringLog.delete({
         where: { id }
       });
+
+      if (categoryKeyToRecalculate) {
+        await recalculateStagingStatuses(this.prisma, categoryKeyToRecalculate);
+      }
+
       return { message: 'History record and imported data deleted successfully' };
     } catch (e) {
       return { message: 'Record removed' };

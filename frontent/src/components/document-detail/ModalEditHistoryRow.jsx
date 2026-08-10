@@ -29,36 +29,61 @@ export default function ModalEditHistoryRow({
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); onSubmit(editingHistoryRow); }} className="p-5 space-y-3.5 text-xs font-mono-data">
-          <div>
-            <label className="font-bold text-slate-800 block mb-1">No. Sertifikat / SK</label>
-            <input
-              type="text" required
-              value={editingHistoryRow.noSertifikat}
-              onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, noSertifikat: e.target.value })}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-            />
-          </div>
+          {(() => {
+            const formatDateForInput = (dateStr) => {
+              if (!dateStr) return '';
+              if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+                const parts = dateStr.split('/');
+                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+              }
+              return dateStr;
+            };
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="font-bold text-slate-800 block mb-1">Tgl Terbit</label>
-              <input
-                type="date"
-                value={editingHistoryRow.terbit}
-                onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, terbit: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-              />
-            </div>
-            <div>
-              <label className="font-bold text-slate-800 block mb-1 text-rose-700">Tgl Expired</label>
-              <input
-                type="date"
-                value={editingHistoryRow.expired}
-                onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, expired: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-              />
-            </div>
-          </div>
+            return (
+              <>
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1">Nama Sertifikat</label>
+                  <input
+                    type="text" required
+                    value={editingHistoryRow.namaSertifikat || editingHistoryRow.jenisSertifikat || ''}
+                    onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, namaSertifikat: e.target.value, jenisSertifikat: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1">No. Sertifikat / SK</label>
+                  <input
+                    type="text" required
+                    value={editingHistoryRow.noSertifikat}
+                    onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, noSertifikat: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1">Tgl Terbit</label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(editingHistoryRow.terbit)}
+                      onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, terbit: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1 text-rose-700">Tgl Expired</label>
+                    <input
+                      type="date"
+                      value={formatDateForInput(editingHistoryRow.expired)}
+                      onChange={(e) => setEditingHistoryRow({ ...editingHistoryRow, expired: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                    />
+                  </div>
+                </div>
+              </>
+            );
+          })()}
 
           <div>
             <label className="font-bold text-slate-800 block mb-1">Upload / Ganti File PDF Sertifikat</label>
@@ -78,8 +103,8 @@ export default function ModalEditHistoryRow({
               />
               <span className="text-xs font-bold text-[#005ea4] block">
                 {selectedHistoryFile
-                  ? `ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ File Baru: ${selectedHistoryFile.name}`
-                  : (editingHistoryRow.fileUrl ? 'ÃƒÂ¢Ã…â€œÃ¢â‚¬Å“ Ada Berkas PDF (Klik untuk ganti)' : 'Klik untuk Unggah PDF')}
+                  ? `✓ File Baru: ${selectedHistoryFile.name}`
+                  : (editingHistoryRow.fileUrl ? '✓ Ada Berkas PDF (Klik untuk ganti)' : 'Klik untuk Unggah PDF')}
               </span>
             </div>
           </div>

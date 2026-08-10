@@ -36,7 +36,11 @@ export class CertificatesService {
 
         await this.prisma.masterItem.update({
           where: { id: createCertificateDto.itemId },
-          data: { documentStatus: 'COMPLETED' },
+          data: { 
+            documentStatus: 'COMPLETED',
+            isManuallyEdited: true,
+            lastEditSource: 'MANUAL'
+          },
         }).catch(() => {});
 
         return cert;
@@ -62,6 +66,8 @@ export class CertificatesService {
           documentStatus: 'COMPLETED',
           issueDate: createCertificateDto.terbit || null,
           expiryDate: createCertificateDto.expired || null,
+          isManuallyEdited: true,
+          lastEditSource: 'MANUAL'
         },
       }).catch(() => {});
     }
@@ -103,6 +109,8 @@ export class CertificatesService {
         where: { id: cert.itemId },
         data: {
           documentStatus: 'COMPLETED',
+          isManuallyEdited: true,
+          lastEditSource: 'MANUAL',
           issueDate: updateCertificateDto.terbit !== undefined ? updateCertificateDto.terbit : undefined,
           expiryDate: updateCertificateDto.expired !== undefined ? updateCertificateDto.expired : undefined,
         }

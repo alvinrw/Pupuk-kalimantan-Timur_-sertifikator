@@ -37,41 +37,26 @@ export class OcrService {
 
   async scanPdf(fileBuffer: Buffer): Promise<OcrScanResult> {
     try {
-      // 1. Coba panggil Python RapidOCR Extractor terlebih dahulu (General Extractor 4 Field)
-      let projectRoot = path.resolve(process.cwd(), '..');
-      let pythonScriptPath = path.join(projectRoot, 'Testing_ocr', 'test_cert_page_only.py');
+      // 1. Panggil FastAPI OCR Microservice (General Extractor)
+      try {
+        const formData = new FormData();
+        formData.append('file', new Blob([fileBuffer as any]), 'document.pdf');
+        
+        this.logger.log(`Mengirim PDF ke FastAPI OCR Engine...`);
+        const response = await fetch('http://127.0.0.1:8000/api/v1/ocr/process-pdf', {
+          method: 'POST',
+          body: formData as any,
+        });
 
-      if (!fs.existsSync(pythonScriptPath)) {
-        pythonScriptPath = `C:\\Users\\alvin\\Documents\\Coolyeah\\PKT\\Inventor\\Testing_ocr\\test_cert_page_only.py`;
-        projectRoot = `C:\\Users\\alvin\\Documents\\Coolyeah\\PKT\\Inventor`;
-      }
+        if (response.ok) {
+          const jsonResponse = await response.json();
+          if (jsonResponse.data) {
+            const pyRes = jsonResponse.data;
+            this.logger.log(`FastAPI OCR Extracted: ${JSON.stringify(pyRes)}`);
 
-      const tempPdfPath = path.join(projectRoot, `temp_scan_${Date.now()}.pdf`);
-      fs.writeFileSync(tempPdfPath, fileBuffer);
-
-      if (fs.existsSync(pythonScriptPath)) {
-        try {
-          const pyBin = fs.existsSync(`C:\\Users\\alvin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe`)
-            ? `"C:\\Users\\alvin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe"`
-            : `python`;
-
-          this.logger.log(`Executing Python RapidOCR Engine (${pyBin}) on: ${tempPdfPath}`);
-          const pyOutput = execSync(`${pyBin} "${pythonScriptPath}" "${tempPdfPath}"`, {
-            cwd: projectRoot,
-            encoding: 'utf-8',
-            timeout: 25000,
-          });
-
-          if (fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath);
-
-          const matchJson = pyOutput.match(/JSON_START\s*([\s\S]*?)\s*JSON_END/);
-          if (matchJson && matchJson[1]) {
-            const pyRes = JSON.parse(matchJson[1]);
-            this.logger.log(`Python RapidOCR Extracted: ${JSON.stringify(pyRes)}`);
-
-            const noCert = pyRes.nomor_sertifikat && pyRes.nomor_sertifikat !== 'UNKNOWN' ? pyRes.nomor_sertifikat : null;
-            const terbitDate = pyRes.tanggal_terbit || pyRes.tanggal_inspeksi || null;
-            const expiryDate = pyRes.tanggal_berakhir || (terbitDate ? this.addOneYear(terbitDate) : null);
+            const noCert = pyRes.nomor_surat && pyRes.nomor_surat !== 'UNKNOWN' ? pyRes.nomor_surat : null;
+            const terbitDate = pyRes.tanggal_terbit || null;
+            const expiryDate = pyRes.tanggal_expired || (terbitDate ? this.addOneYear(terbitDate) : null);
 
             if (noCert || terbitDate || expiryDate) {
               return {
@@ -79,14 +64,15 @@ export class OcrService {
                 terbit: terbitDate || undefined,
                 expired: expiryDate || undefined,
                 instansi: 'Disnaker Kalimantan Timur',
-                confidence: 95,
+                confidence: pyRes.confidence_score || 95,
               };
             }
           }
-        } catch (pyErr) {
-          this.logger.warn(`Python RapidOCR execution failed, falling back to pdf-parse: ${pyErr.message}`);
-          if (fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath);
+        } else {
+          this.logger.warn(`FastAPI OCR mengembalikan status: ${response.status}`);
         }
+      } catch (pyErr) {
+        this.logger.warn(`FastAPI OCR connection failed, falling back to pdf-parse: ${pyErr.message}`);
       }
 
       // 2. Fallback ke pdf-parse jika Python tidak tersedia / gagal

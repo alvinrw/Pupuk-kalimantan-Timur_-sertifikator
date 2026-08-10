@@ -24,6 +24,12 @@ model MasterItem {
   // Status kelengkapan dokumen (PENDING_DOC, COMPLETED, EXEMPT)
   documentStatus String   @default("PENDING_DOC")
   exemptionNote  String?  // Catatan alasan jika tidak ada sertifikat
+  isManuallyEdited  Boolean  @default(false)
+  lastEditSource    String?  // "CSV" | "MANUAL" | "STAGING_RESOLVE"
+  
+  // Status Validasi Staging (NEW, DUPLICATE, FAILED)
+  validationStatus String   @default("NEW")
+  validationErrors String?  // Menyimpan detail error dalam format JSON string array (e.g. '["Lokasi wajib diisi"]')
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -49,6 +55,7 @@ model Certificate {
   expired         String?
   status          String   @default("Aktif")
   fileUrl         String?  // URL/Path file PDF di MinIO Storage
+  uploadedBy      String?  // Format: "NAMA LENGKAP (NPK)" — siapa yang upload/input sertifikat ini
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

@@ -58,6 +58,16 @@ export function usePeralatanPabrik() {
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -70,8 +80,8 @@ export function usePeralatanPabrik() {
         let primaryCert = null;
         if (activeCerts.length > 0) {
           primaryCert = activeCerts.slice().sort((a, b) => {
-            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            const dA = getTimestamp(a.expired);
+            const dB = getTimestamp(b.expired);
             if (dA !== dB) return dB - dA;
             const hasPdfA = !!a.fileUrl;
             const hasPdfB = !!b.fileUrl;
@@ -129,7 +139,7 @@ export function usePeralatanPabrik() {
           status: item.status || 'Aktif',
           documentStatus: item.documentStatus || item.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: item.exemptionNote || null,
-          namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
+          namaSertifikat: primaryCert?.namaSertifikat || primaryCert?.jenisSertifikat || meta.namaSertifikat || '-',
           noSertifikat: noCert,
           terbit: terbitVal,
           berakhir: expiredVal,
@@ -139,10 +149,20 @@ export function usePeralatanPabrik() {
           fileUrl: primaryCert?.fileUrl || null,
           hasPdf: !!primaryCert?.fileUrl,
           certificates: certs,
+          validationStatus: item.validationStatus || 'NEW',
+          validationErrors: item.validationErrors || null,
         };
       });
 
       setEquipmentList(mapped);
+
+      // Auto-update detailModalItem using functional updater to avoid stale closure
+      // (Hanya update jika masih ada item terbuka, tidak akan membatalkan back)
+      setDetailModalItem(prev => {
+        if (!prev) return null; // Jika sudah di-null-kan oleh tombol back, jangan kembalikan
+        const updated = mapped.find(x => x.id === prev.id);
+        return updated || prev;
+      });
     } catch (err) {
       console.error("Failed to fetch PeralatanPabrik:", err);
     } finally {
@@ -217,7 +237,15 @@ export function usePeralatanPabrik() {
     if (item.berakhir && item.berakhir !== '-') {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const expDate = new Date(item.berakhir);
+      
+      let expDate;
+      // Handle DD/MM/YYYY format (format Indonesia yang dipakai di sistem ini)
+      if (/^\d{2}\/\d{2}\/\d{4}$/.test(item.berakhir)) {
+        const parts = item.berakhir.split('/');
+        expDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+      } else {
+        expDate = new Date(item.berakhir);
+      }
       expDate.setHours(0, 0, 0, 0);
 
       if (!isNaN(expDate.getTime())) {
@@ -376,7 +404,7 @@ export function usePeralatanPabrik() {
         locationStr = newItem.lokasiDetail;
       }
 
-      const createdItem = await createMasterItem({
+      const itemPayload = {
         title: newItem.jenisPeralatan || 'Unknown Item',
         code: newItem.merekItem || '-',
         categoryKey: 'peralatan-pabrik',
@@ -386,7 +414,14 @@ export function usePeralatanPabrik() {
         issueDate: newItem.terbit || undefined,
         expiryDate: newItem.berakhir || undefined,
         documentStatus: newItem.documentStatus || 'COMPLETED',
-      });
+      };
+
+      let createdItem;
+      if (newItem.forceUpdate && newItem.existingId) {
+        createdItem = await updateMasterItem(newItem.existingId, itemPayload);
+      } else {
+        createdItem = await createMasterItem(itemPayload);
+      }
 
       const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
 

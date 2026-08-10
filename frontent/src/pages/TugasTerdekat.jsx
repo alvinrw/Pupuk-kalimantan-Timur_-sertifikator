@@ -12,7 +12,7 @@ import {
   Bell,
   ArrowUpDown
 } from 'lucide-react';
-import { API_BASE } from '../config/api';
+import api from '../services/api';
 import DocumentDetailPage from './DocumentDetailPage';
 
 export default function TugasTerdekat() {
@@ -47,11 +47,10 @@ export default function TugasTerdekat() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_BASE}/master-items/reminders/tasks`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
+      console.log("Fetching tasks from backend...");
+      const res = await api.get('/master-items/reminders/tasks');
+      console.log("Successfully fetched tasks:", res.data);
+      setData(res.data);
     } catch (err) {
       console.error("Gagal mengambil data Tugas Terdekat", err);
     } finally {

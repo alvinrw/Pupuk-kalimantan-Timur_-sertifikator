@@ -16,14 +16,34 @@ export default function DocumentReadView({ hook, item }) {
     handleToggleReminder,
   } = hook;
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   const activeCerts = historyList.filter(c => (c.status || '').toLowerCase() === 'aktif' || (c.status || '').toLowerCase() === 'active');
   const primaryCert = activeCerts.length > 0
-    ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
+    ? activeCerts.slice().sort((a, b) => getTimestamp(b.expired) - getTimestamp(a.expired))[0]
     : (historyList.length > 0 ? historyList[0] : null);
 
   const displayNoSert = primaryCert?.noSertifikat || formData.noSertifikat || 'Belum Ada Sertifikat Active';
   const displayExpired = primaryCert?.expired || formData.berakhir || 'Belum Ada Data';
   const displayFileUrl = primaryCert?.fileUrl || formData.fileUrl || null;
+
+  // Jika statusnya EXEMPT tapi ternyata dia punya No Sertifikat yang valid (bukan 'Tanpa Sertifikat' atau 'Belum Ada...'),
+  // maka paksa tampilannya menjadi ACTIVE (COMPLETED).
+  let effectiveDocumentStatus = localDocumentStatus;
+  if (localDocumentStatus === 'EXEMPT') {
+    const isNoSertValid = displayNoSert && displayNoSert !== 'Belum Ada Sertifikat Active' && displayNoSert.toLowerCase() !== 'tanpa sertifikat' && displayNoSert !== '-';
+    if (isNoSertValid) {
+      effectiveDocumentStatus = 'COMPLETED';
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -103,8 +123,8 @@ export default function DocumentReadView({ hook, item }) {
         )}
       </div>
 
-      {/* SECTION 1.5: NOTIFICATION SETTINGS (Read-only) - ONLY FOR SINGLE CERT SCOPE */}
-      {isSingleCertScope && (
+      {/* SECTION 1.5: NOTIFICATION SETTINGS (Read-only) */}
+      {true && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-4">
           <h4 className="font-bold text-sm text-slate-900 border-b border-slate-200 pb-3 flex items-center gap-2">
             <Settings className="w-5 h-5 text-[#005ea4]" />
@@ -152,7 +172,7 @@ export default function DocumentReadView({ hook, item }) {
 
 
       {/* SECTION 2: CERT LEGAL STATUS */}
-      {localDocumentStatus === 'EXEMPT' ? (
+      {effectiveDocumentStatus === 'EXEMPT' ? (
         <div className="bg-indigo-50/60 border border-indigo-200 rounded-2xl p-6 space-y-4 font-mono-data text-center">
           <h4 className="font-bold text-sm text-indigo-900 flex items-center justify-center gap-2 mb-2">
             <ShieldAlert className="w-6 h-6 text-indigo-600" />
@@ -187,7 +207,7 @@ export default function DocumentReadView({ hook, item }) {
           </h4>
 
           <div className="space-y-4">
-            {(activeCerts.length > 0 ? activeCerts : [primaryCert || formData]).map((cert, index) => {
+            {[primaryCert || formData].map((cert, index) => {
               const currentNoSert = cert?.noSertifikat || cert?.certNo || formData.noSertifikat || '-';
               const currentExpired = cert?.expired || formData.berakhir || '-';
               const currentTerbit = cert?.terbit || formData.terbit || '-';

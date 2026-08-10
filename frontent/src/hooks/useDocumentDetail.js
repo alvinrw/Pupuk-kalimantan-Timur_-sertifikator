@@ -19,8 +19,18 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     setActiveCertId(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
   }, [item, initialCertId]);
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   const allItemCerts = item?.certificates || [];
-  const activeItemCert = allItemCerts.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status).sort((a,b) => new Date(b.expired || 0) - new Date(a.expired || 0))[0];
+  const activeItemCert = allItemCerts.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status).sort((a,b) => getTimestamp(b.expired) - getTimestamp(a.expired))[0];
 
   const rawTargetCert = item?.currentCert || item?.cert || activeItemCert || null;
   const targetCert = activeCertId && item.linkedCertificates

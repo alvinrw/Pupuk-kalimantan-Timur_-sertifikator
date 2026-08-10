@@ -75,6 +75,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               totalRows: detail.totalRows ?? detail.importedCount ?? 1,
               successCount: detail.successCount ?? detail.importedCount ?? 1,
               duplicateCount: detail.duplicateCount ?? 0,
+              protectedCount: detail.protectedCount ?? 0,
               failCount: detail.failCount ?? 0,
               failedRows: detail.failedRows || [],
               status: log.status === 'SUCCESS' ? 'Selesai' : 'Gagal'
@@ -142,7 +143,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             const workbook = xlsx.read(arrayBuffer, { type: 'array' });
             const sheetName = workbook.SheetNames[0];
             const sheet = workbook.Sheets[sheetName];
-            const jsonArray = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+            const jsonArray = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: false });
             parsedRows = jsonArray.filter(row => row.length > 0);
           } else {
             const text = await new Promise((resolve, reject) => {
@@ -160,7 +161,6 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
           if (parsedRows.length < 2) throw new Error("File kosong atau tidak valid");
           
-          const grouped = {};
           const headers = Array.from(parsedRows[0] || []).map(h => (h || '').toString().toLowerCase().replace(/[^a-z0-9]/g, ''));
           
           const getVal = (cols, possibleNames) => {
@@ -170,6 +170,8 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             }
             return '';
           };
+
+          const groupedData = [];
 
           for (let i = 1; i < parsedRows.length; i++) {
             const cols = parsedRows[i];
@@ -187,22 +189,19 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             const terbit = getVal(cols, ['terbit', 'issuedate', 'tanggalawal', 'tanggalinspeksi']);
             const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim']);
             
-            const key = code || title;
-            if (!key) continue;
-            
-            if (!grouped[key]) {
-              grouped[key] = {
-                master: { title, tipe, code, unitLocation, penanggungJawab, status },
-                certificates: []
-              };
+            // Skip completely empty noise rows
+            if (!title && !tipe && !code && !unitLocation && !penanggungJawab && !noSertifikat) {
+              continue;
             }
-            
-            if (noSertifikat && noSertifikat !== '-' && noSertifikat.toLowerCase() !== 'tanpa sertifikat') {
-              grouped[key].certificates.push({ namaSertifikat, noSertifikat, terbit, expired });
-            }
+
+            groupedData.push({
+              master: { title, tipe, code, unitLocation, penanggungJawab, status },
+              certificates: (noSertifikat && noSertifikat !== '-' && noSertifikat.toLowerCase() !== 'tanpa sertifikat')
+                ? [{ namaSertifikat, noSertifikat, terbit, expired }]
+                : []
+            });
           }
           
-          const groupedData = Object.values(grouped);
           if (groupedData.length === 0) throw new Error("Tidak ada data master yang valid");
           
           const res = await bulkCreateMastersWithCertificates(groupedData, categoryKey, f.name);
@@ -297,22 +296,31 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             {categoryKey !== 'administrasi-lainnya' && (
               <button
                 onClick={() => {
-                  const csvContent = 
-                    "Nama Aset / Master (Wajib),Jenis Kategori,Kode / No Seri,Lokasi Unit,Penanggung Jawab,Status Aset,Nama Sertifikat (Child),No Sertifikat Active,Tgl Terbit,Tgl Expired\n" +
-                    "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Layak Operasi,SLO-12345,2026-01-01,2027-01-01\n" +
-                    "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Inspeksi K3,K3-9998,2026-02-15,2027-02-15\n" +
-                    "Area Lahan Pabrik NPK,Tanah / Lahan,LHN-005,Bontang,Dept Aset,Aktif,,,,\n";
-                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", url);
-                  link.setAttribute("download", `Template_Impor_${categoryKey || 'master'}.csv`);
-                  document.body.appendChild(link);
-                  link.click();
-                  document.body.removeChild(link);
+                  if (categoryKey === 'peralatan-pabrik') {
+                    const link = document.createElement("a");
+                    link.setAttribute("href", "/Template_perizinan Alat pabrik.xlsx");
+                    link.setAttribute("download", "Template_perizinan Alat pabrik.xlsx");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  } else {
+                    const csvContent = 
+                      "Nama Aset / Master (Wajib),Jenis Kategori,Kode / No Seri,Lokasi Unit,Penanggung Jawab,Status Aset,Nama Sertifikat (Child),No Sertifikat Active,Tgl Terbit,Tgl Expired\n" +
+                      "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Layak Operasi,SLO-12345,2026-01-01,2027-01-01\n" +
+                      "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Inspeksi K3,K3-9998,2026-02-15,2027-02-15\n" +
+                      "Area Lahan Pabrik NPK,Tanah / Lahan,LHN-005,Bontang,Dept Aset,Aktif,,,,\n";
+                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", `Template_Impor_${categoryKey || 'master'}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }
                 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#005ea4] rounded-lg border border-blue-200 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
-                title="Unduh Template CSV"
+                title="Unduh Template Impor"
               >
                 <Download className="w-4 h-4" />
                 <span>Unduh Template</span>
@@ -448,7 +456,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                         )}
                       </div>
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
-                        {item.uploadDate} - Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                        {item.uploadDate} - Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount + (item.protectedCount || 0)} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
                         <button 

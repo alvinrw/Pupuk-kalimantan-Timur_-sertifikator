@@ -23,11 +23,21 @@ function mapItemToRow(item, idx) {
     (c) => c.status === 'Aktif' || c.status === 'Active' || !c.status
   );
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   let primaryCert = null;
   if (activeCerts.length > 0) {
     primaryCert = activeCerts.slice().sort((a, b) => {
-      const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-      const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+      const dA = getTimestamp(a.expired);
+      const dB = getTimestamp(b.expired);
       return dB - dA;
     })[0];
   } else if (certs.length > 0) {

@@ -10,7 +10,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
   const isViewer = user?.role === 'Viewer';
 
   const {
-    formData, targetCert, parentDoc, isSingleCertScope,
+    formData, targetCert, parentDoc, isSingleCertScope, effectiveCategoryKey,
     isEditing, setIsEditing,
     isPerpanjangStatus, isAfkirStatus,
     openUploadModal, handleAfkir, handleAktifkan,
@@ -54,10 +54,33 @@ export default function DocumentHeader({ hook, item, onBack }) {
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
         </button>
         <div>
+          {(() => {
+            const getThemeName = (key) => {
+              const mapping = {
+                'peralatan-pabrik': 'Perizinan Peralatan Pabrik',
+                'perizinan-aset': 'Perizinan Aset',
+                'administrasi-lainnya': 'Administrasi Lainnya',
+                'bangunan-generic': 'Bangunan & Konstruksi',
+                'lingkungan-generic': 'Lingkungan Hidup',
+                'kesehatan-generic': 'Kesehatan & Keselamatan',
+                'proteksi-kebakaran': 'Proteksi Kebakaran',
+                'pesawat-angkat-angkut': 'Pesawat Angkat & Angkut',
+                'pesawat-tenaga-produksi': 'Pesawat Tenaga & Produksi',
+                'instalasi-penyalur-petir': 'Instalasi Penyalur Petir',
+                'esdm-generic': 'ESDM & Energi',
+                'komunikasi-generic': 'Komunikasi & Telekomunikasi',
+                'disnaker-generic': 'Ketenagakerjaan',
+                'haki-generic': 'HAKI / Hak Kekayaan Intelektual'
+              };
+              return mapping[key] || 'Dokumen / Proyek';
+            };
+            return (
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                {getThemeName(effectiveCategoryKey)}
+              </div>
+            );
+          })()}
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm">
-              {hook.isHaki ? 'HAKI / CIPTAAN' : hook.isEquipment ? 'ASET / PERALATAN' : 'DOKUMEN / PROYEK'}
-            </span>
             <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
               {formData.merekItem || formData.title || targetCert?.jenisSertifikat || formData.jenisPeralatan || 'Detail Dokumen'}
             </h2>
@@ -66,9 +89,6 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 {targetCert?.noSertifikat || formData.noSertifikat || 'Sertifikat'}
               </span>
             )}
-            <span className="px-2.5 py-0.5 bg-blue-50 text-[#005ea4] border border-blue-200 rounded-lg text-xs font-bold font-mono-data">
-              {isSingleCertScope ? `Entity: ${parentDoc?.id || item?.id}` : `ID: ${item?.id}`}
-            </span>
           </div>
           <p className="text-xs text-slate-500 font-mono-data mt-0.5">
             {isSingleCertScope
@@ -146,7 +166,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
               >
                 <RotateCcw className="w-4 h-4 text-slate-400" />
-                <span>Batal Afkir / Aktifkan</span>
+                <span>Batal Non Aktif / Aktifkan</span>
               </button>
             ) : (
               <button
@@ -154,7 +174,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
               >
                 <Ban className="w-4 h-4 text-slate-400" />
-                <span>Tandai Sebagai Afkir</span>
+                <span>Tandai Sebagai Non Aktif</span>
               </button>
             )}
 

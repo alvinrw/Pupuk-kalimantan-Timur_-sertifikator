@@ -59,6 +59,16 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     return rawStatus || 'Aktif';
   };
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   const loadData = async () => {
     try {
       setIsLoading(true);
@@ -71,8 +81,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         let primaryCert = null;
         if (activeCerts.length > 0) {
           primaryCert = activeCerts.slice().sort((a, b) => {
-            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            const dA = getTimestamp(a.expired);
+            const dB = getTimestamp(b.expired);
             if (dA !== dB) return dB - dA;
             const hasPdfA = !!a.fileUrl;
             const hasPdfB = !!b.fileUrl;
@@ -144,7 +154,9 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs,
           notificationSetting: doc.notificationSetting || null,
-          reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true
+          reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true,
+          validationStatus: doc.validationStatus || 'NEW',
+          validationErrors: doc.validationErrors || null
         };
       });
       setDocuments(mapped);
@@ -241,10 +253,6 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   };
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
-
-  useEffect(() => {
-    setVisibleColumnKeys(allColumns.map(c => c.key));
-  }, [allColumns]);
 
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>

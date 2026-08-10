@@ -15,6 +15,16 @@ export default function DocumentFormFields({ hook, item }) {
 
   if (!isEditing) return null;
 
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    // Jika format DD/MM/YYYY
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+    return dateStr;
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 font-mono-data">
       <form onSubmit={handleSave} className="space-y-6">
@@ -105,7 +115,7 @@ export default function DocumentFormFields({ hook, item }) {
                 <>
                   <div>
                     <label className="font-bold text-slate-800 block mb-1.5">Tanggal Ciptaan / Deklarasi</label>
-                    <input type="date" value={formData.tanggalCiptaan || ''}
+                    <input type="date" value={formatDateForInput(formData.tanggalCiptaan)}
                       onChange={(e) => setFormData({ ...formData, tanggalCiptaan: e.target.value, terbit: e.target.value })}
                       className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
                     />
@@ -133,7 +143,7 @@ export default function DocumentFormFields({ hook, item }) {
                   {!isHaki && (
                     <div>
                       <label className="font-bold text-slate-800 block mb-1.5">Tanggal Terbit / Berlaku</label>
-                      <input type="date" value={formData.terbit || ''}
+                      <input type="date" value={formatDateForInput(formData.terbit)}
                         onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
                         className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data"
                       />
@@ -209,8 +219,8 @@ export default function DocumentFormFields({ hook, item }) {
           </div>
         )}
 
-        {/* Pengaturan Notifikasi (Edit Mode) - ONLY FOR SINGLE CERT SCOPE */}
-        {hook.isSingleCertScope && (
+        {/* Pengaturan Notifikasi (Edit Mode) */}
+        {true && (
           <div className="mt-4 pt-4 border-t border-slate-200">
             <label className="font-bold text-slate-800 block mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider font-mono-data">
               Pengaturan Pengingat & Notifikasi
