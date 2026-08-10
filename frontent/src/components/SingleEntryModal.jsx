@@ -164,6 +164,12 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       return;
     }
 
+    const isMinus = (val) => (val || '').trim() === '-';
+    if (isMinus(formData.jenisPeralatan) && isMinus(formData.merekItem) && isMinus(formData.nomorSeri)) {
+      alert("⚠️ Penolakan Sistem: Isian wajib (Merek/Nama Peralatan, Tipe, dan Nomor Seri) tidak boleh semuanya diisi dengan karakter '-' (strip). Minimal harus ada data valid pada salah satu kolom.");
+      return;
+    }
+
     try {
       const checkRes = await fetch(`${API_BASE}/master-items/check-duplicate`, {
         method: 'POST',
