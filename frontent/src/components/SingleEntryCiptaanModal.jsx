@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Sparkles, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X } from 'lucide-react';
-import { scanPdfDocument } from '../services/ocrService';
+import { Sparkles, Save, Upload, FileCheck, Loader2, X } from 'lucide-react';
 import { API_BASE, getFullFileUrl } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 
@@ -22,10 +21,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
   const [selectedFile, setSelectedFile] = useState(null);
   const [sertifikatMode, setSertifikatMode] = useState('dengan');
   
-  const [isScanningOcr, setIsScanningOcr] = useState(false);
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
-  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
-  const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -295,7 +291,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
                     }
                   }}
                   className="hidden"
-                  disabled={isUploadingTemp || isScanningOcr}
+                  disabled={isUploadingTemp}
                 />
                 <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
                 <div className="flex flex-col items-center">
@@ -306,27 +302,12 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
                 </div>
               </div>
 
-              {(isUploadingTemp || isScanningOcr) && (
+              {isUploadingTemp && (
                 <div className="flex flex-col gap-2 mt-3">
-                  {isUploadingTemp && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                      <span>Menyiapkan preview dokumen...</span>
-                    </div>
-                  )}
-                  {isScanningOcr && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                      <span>AI sedang mengekstrak data...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {ocrSuccess && !isScanningOcr && (
-                <div className="flex items-start gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 mt-2">
-                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>AI berhasil mengisi form! Verifikasi kembali dengan preview PDF.</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                    <span>Menyiapkan preview dokumen...</span>
+                  </div>
                 </div>
               )}
             </div>

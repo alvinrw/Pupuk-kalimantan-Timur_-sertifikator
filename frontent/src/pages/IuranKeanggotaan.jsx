@@ -30,6 +30,8 @@ export default function IuranKeanggotaan() {
     handleSubmit,
     handleDelete: defaultHandleDelete,
     setData,
+    sortOrder,
+    setSortOrder
   } = useIuranKeanggotaan();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,21 +94,29 @@ export default function IuranKeanggotaan() {
   };
 
   const filteredData = useMemo(() => {
-    return data.filter(item => {
+    let result = data.filter((item) => {
       const matchSearch =
         (item.kompartemen || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.unitKerja || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.asosiasi || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.nama || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.npk || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       const matchKompartemen = filterKompartemen
         ? item.kompartemen === filterKompartemen
         : true;
 
       return matchSearch && matchKompartemen;
     });
-  }, [data, searchTerm, filterKompartemen]);
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+
+    return result;
+  }, [data, searchTerm, filterKompartemen, sortOrder]);
 
   return (
     <div className="p-6 space-y-6 font-sans-clean">
@@ -148,6 +158,15 @@ export default function IuranKeanggotaan() {
             {filteredData.length} data ditemukan
           </div>
 
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value)}
+            className="text-xs bg-white border border-[#e2e8f0] rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+          >
+            <option value="desc">Terbaru</option>
+            <option value="asc">Terlama</option>
+          </select>
+
           {filterKompartemen && (
             <button
               onClick={() => setFilterKompartemen('')}
@@ -186,14 +205,13 @@ export default function IuranKeanggotaan() {
                       <label
                         key={col.key}
                         onClick={() => toggleColumn(col.key)}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
-                          checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                          }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="rounded border-slate-300 accent-[#005ea4]"
                         />
                         <span className="text-xs">{col.label}</span>
@@ -313,11 +331,10 @@ export default function IuranKeanggotaan() {
                     )}
                     {isVisible('status') && (
                       <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${
-                          item.status === 'Perusahaan' ? 'bg-blue-100 text-blue-700' : 
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wide uppercase ${item.status === 'Perusahaan' ? 'bg-blue-100 text-blue-700' :
                           item.status === 'Karyawan' ? 'bg-emerald-100 text-emerald-700' :
-                          'bg-slate-100 text-slate-700'
-                        }`}>
+                            'bg-slate-100 text-slate-700'
+                          }`}>
                           {item.status || '-'}
                         </span>
                       </td>
@@ -327,15 +344,15 @@ export default function IuranKeanggotaan() {
                     {isVisible('keterangan') && <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-center align-middle">{item.keterangan || '-'}</td>}
                     <td className="py-3 px-4 text-center whitespace-nowrap align-middle">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <button 
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setHistoryModalItem(item);
+                            handleOpenEditModal(item);
                           }}
-                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-[#005ea4] text-[#005ea4] rounded-lg shadow-sm font-bold text-[10px] hover:bg-blue-50 transition-colors mt-1 w-full max-w-[90px] cursor-pointer"
+                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-[#005ea4] text-[#005ea4] rounded-lg shadow-sm font-bold text-[10px] hover:bg-blue-50 transition-colors mt-1 w-full max-w-[100px] cursor-pointer"
                         >
-                          <Settings className="w-3.5 h-3.5" />
-                          <span>Riwayat</span>
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Lihat Detail</span>
                         </button>
                       </div>
                     </td>
@@ -356,6 +373,7 @@ export default function IuranKeanggotaan() {
         handleCloseModal={handleCloseModal}
         handleInputChange={handleInputChange}
         handleSubmit={handleSubmit}
+        onDelete={() => requestDeleteRow(formData)}
       />
 
       {/* Delete Confirmation Modal */}
@@ -372,9 +390,9 @@ export default function IuranKeanggotaan() {
                 <span className="font-bold text-slate-800">"{pendingDeleteRowItem?.asosiasi || '-'}"</span> ?<br />
                 Tindakan ini tidak dapat dibatalkan.
               </p>
-              
+
               <div className="w-full border-t border-slate-100 mt-4 pt-6"></div>
-              
+
               <div className="flex justify-center gap-3 w-full">
                 <button
                   type="button"
@@ -399,56 +417,6 @@ export default function IuranKeanggotaan() {
         </div>
       )}
 
-      {/* History Modal */}
-      {historyModalItem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm font-sans-clean" onClick={() => setHistoryModalItem(null)}>
-          <div className="bg-white rounded-xl w-full max-w-sm shadow-2xl overflow-hidden border border-slate-200" onClick={(e) => e.stopPropagation()}>
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <Settings className="w-4 h-4 text-blue-600" />
-                Riwayat Input Data
-              </h3>
-              <button 
-                onClick={() => setHistoryModalItem(null)}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 text-center">
-              <div className="inline-flex items-center justify-center w-12 h-12 bg-blue-50 rounded-full mb-4">
-                <History className="w-6 h-6 text-blue-600" />
-              </div>
-              <p className="text-sm text-slate-600 mb-1">Data ini pertama kali diinput pada:</p>
-              <p className="text-lg font-bold text-slate-800">
-                {historyModalItem.createdAt 
-                  ? new Date(historyModalItem.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-                  : 'Baru saja'}
-              </p>
-            </div>
-            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 space-y-2">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    handleOpenEditModal(historyModalItem);
-                    setHistoryModalItem(null);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors cursor-pointer"
-                >
-                  <Edit2 className="w-4 h-4" />
-                  Edit Data
-                </button>
-              </div>
-              <button
-                onClick={() => setHistoryModalItem(null)}
-                className="w-full px-4 py-2 text-sm font-bold text-white bg-[#005ea4] rounded-lg hover:bg-[#004d88] transition-colors cursor-pointer"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

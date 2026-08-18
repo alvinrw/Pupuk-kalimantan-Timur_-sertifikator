@@ -17,6 +17,7 @@ export default function DocumentModals({ hook, item }) {
     selectedHistoryFile, setSelectedHistoryFile,
     editHistoryFileInputRef, handleSaveHistoryRowEdit,
     deletingLinkedCertId, setDeletingLinkedCertId, handleDeleteLinkedCert,
+    activeCertId, setActiveCertId,
     selectedHistoryToDelete, setSelectedHistoryToDelete, handleDeleteHistoryRow,
     isDeleteDialogOpen, setIsDeleteDialogOpen, isDeleting, handleDeleteMasterItem,
     isAfkirModalOpen, setIsAfkirModalOpen, isAfkiring, confirmAfkir,
@@ -60,7 +61,8 @@ export default function DocumentModals({ hook, item }) {
       <ModalConfirm
         isOpen={!!deletingLinkedCertId}
         onClose={() => setDeletingLinkedCertId(null)}
-        onConfirm={() => handleDeleteLinkedCert(deletingLinkedCertId)}
+        onConfirm={() => handleDeleteLinkedCert(deletingLinkedCertId, activeCertId, setActiveCertId)}
+        isLoading={hook.linkedCertsHook?.isDeletingLinkedCert}
         title="Hapus Sertifikat Terhubung?"
         description="Sertifikat ini akan dihapus dari daftar. Data lainnya tidak terpengaruh."
         confirmLabel="Ya, Hapus"
@@ -74,6 +76,7 @@ export default function DocumentModals({ hook, item }) {
         isOpen={!!selectedHistoryToDelete}
         onClose={() => setSelectedHistoryToDelete(null)}
         onConfirm={() => handleDeleteHistoryRow(selectedHistoryToDelete.id)}
+        isLoading={hook.historyHook?.isDeletingHistory}
         title="Konfirmasi Hapus Sertifikat"
         description={<>Hapus berkas sertifikat <b>{selectedHistoryToDelete?.noSertifikat}</b> ({selectedHistoryToDelete?.periode}) dari histori?</>}
         confirmLabel="Ya, Hapus Sertifikat"

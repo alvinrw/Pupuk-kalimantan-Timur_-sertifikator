@@ -20,6 +20,7 @@ model MasterItem {
   issueDate    String?  // Tanggal terbit
   expiryDate   String?  // Tanggal expired
   keterangan   String?
+  imageUrl     String?  // URL/Path file foto di MinIO Storage
   
   // Status kelengkapan dokumen (PENDING_DOC, COMPLETED, EXEMPT)
   documentStatus String   @default("PENDING_DOC")

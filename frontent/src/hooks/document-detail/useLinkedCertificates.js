@@ -5,18 +5,27 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
   const [linkedCerts, setLinkedCerts] = useState(item?.linkedCertificates || []);
   const [isAddCertModalOpen, setIsAddCertModalOpen] = useState(false);
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
+  const [isDeletingLinkedCert, setIsDeletingLinkedCert] = useState(false);
   
   const [newCertData, setNewCertData] = useState({
     jenisSertifikat: '', noSertifikat: '', instansi: '',
     terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: ''
   });
 
+  const [sortDateOrder, setSortDateOrder] = useState('desc');
+
   useEffect(() => {
     const doc = item;
     if (doc && doc.linkedCertificates) {
-      setLinkedCerts(doc.linkedCertificates);
+      const certs = [...doc.linkedCertificates];
+      certs.sort((a, b) => {
+        const timeA = new Date(a.createdAt || 0).getTime();
+        const timeB = new Date(b.createdAt || 0).getTime();
+        return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      });
+      setLinkedCerts(certs);
     }
-  }, [item]);
+  }, [item, sortDateOrder]);
 
   const certStats = useMemo(() => {
     return (linkedCerts && linkedCerts.length > 0 ? linkedCerts : (targetCert ? [targetCert] : [])).reduce((acc, c) => {
@@ -64,6 +73,7 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
 
   const handleDeleteLinkedCert = async (id, activeCertId, setActiveCertId) => {
     try {
+      setIsDeletingLinkedCert(true);
       if (id) {
         await deleteCertificate(id);
       }
@@ -76,6 +86,7 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
       console.error('Failed to delete linked certificate:', err);
       alert('Gagal menghapus sertifikat terhubung: ' + (err.message || 'Error'));
     } finally {
+      setIsDeletingLinkedCert(false);
       setDeletingLinkedCertId(null);
     }
   };
@@ -85,7 +96,9 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
     certStats,
     isAddCertModalOpen, setIsAddCertModalOpen,
     deletingLinkedCertId, setDeletingLinkedCertId,
+    isDeletingLinkedCert,
     newCertData, setNewCertData,
-    handleAddLinkedCert, handleDeleteLinkedCert
+    handleAddLinkedCert, handleDeleteLinkedCert,
+    sortDateOrder, setSortDateOrder
   };
 }

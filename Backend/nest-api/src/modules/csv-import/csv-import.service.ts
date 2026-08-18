@@ -353,7 +353,7 @@ export class CsvImportService {
       orderBy: { createdAt: 'desc' }
     });
 
-    const filtered = categoryKey 
+    const filtered = categoryKey
       ? logs.filter(log => {
           if (!log.detail) return true;
           try {
@@ -365,84 +365,74 @@ export class CsvImportService {
         })
       : logs;
 
-    // Urutkan dari terlama ke terbaru untuk melacak timeline "claim" item ID
+    // Chronological ownership: oldest log claims items first.
+    // After deleting an older log, the remaining log becomes the owner (Berhasil).
     const sortedLogs = [...filtered].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-    const claimedByOlderLogs = new Set<string>();
+    const claimedIds = new Set<string>(); // IDs already owned by an earlier log
 
-    const updatedLogs = [];
+    const processedLogs = [];
     for (const log of sortedLogs) {
-      if (!log.detail) {
-        updatedLogs.push(log);
-        continue;
-      }
-
+      if (!log.detail) { processedLogs.push(log); continue; }
       try {
         const detailObj = JSON.parse(log.detail);
         const importedIds: string[] = detailObj.importedIds || [];
-        const originalFailCount = detailObj.failCount || 0;
-        const originalProtectedCount = detailObj.protectedCount || 0;
+        const originalFailCount = detailObj.failCount ?? 0;
 
         if (importedIds.length > 0) {
-          // Ambil status item di database saat ini
-          const items = await this.prisma.masterItem.findMany({
+          // Check which IDs still exist in DB
+          const existingItems = await this.prisma.masterItem.findMany({
             where: { id: { in: importedIds } },
-            select: { id: true, documentStatus: true, validationStatus: true }
+            select: { id: true }
           });
-
-          // Peta pencarian cepat berdasarkan ID
-          const itemMap = new Map<string, any>();
-          for (const item of items) {
-            itemMap.set(item.id, item);
-          }
+          const existingIdSet = new Set(existingItems.map(i => i.id));
 
           let successCount = 0;
           let duplicateCount = 0;
-          let failCount = originalFailCount;
-
-          const seenInThisLog = new Set<string>();
+          let removedCount = 0;
 
           for (const id of importedIds) {
-            const item = itemMap.get(id);
-            if (!item) continue; // Data sudah dihapus dari DB
-
-            const isAlreadyClaimed = claimedByOlderLogs.has(id);
-            const isIntraFileDuplicate = seenInThisLog.has(id);
-
-            if (isAlreadyClaimed || isIntraFileDuplicate) {
-              // Jika sudah diklaim oleh upload sebelumnya ATAU sudah pernah muncul di baris awal file yang sama (intra-file duplicate)
-              duplicateCount++;
+            if (!existingIdSet.has(id)) {
+              removedCount++; // deleted from DB since import
+            } else if (claimedIds.has(id)) {
+              duplicateCount++; // exists but already claimed by an older log
             } else {
-              if (item.documentStatus !== 'PENDING_DOC' || item.validationStatus === 'NEW') {
-                successCount++;
-              } else if (item.validationStatus === 'DUPLICATE') {
-                duplicateCount++;
-              } else if (item.validationStatus === 'FAILED') {
-                failCount++;
-              }
+              successCount++; // exists and not yet claimed = this log owns it
             }
-            seenInThisLog.add(id);
           }
 
-          // Tandai semua ID aktif di log ini sebagai ter-klaim agar riwayat upload yang lebih baru mendeteksinya sebagai duplikat
-          items.forEach(item => claimedByOlderLogs.add(item.id));
+          // Claim all existing items from this log
+          existingItems.forEach(item => claimedIds.add(item.id));
 
-          detailObj.successCount = successCount;
-          detailObj.duplicateCount = duplicateCount;
-          detailObj.failCount = failCount;
-          detailObj.totalRows = successCount + duplicateCount + originalProtectedCount + failCount;
+          processedLogs.push({
+            ...log,
+            detail: JSON.stringify({
+              ...detailObj,
+              successCount,
+              duplicateCount,
+              failCount: originalFailCount + removedCount,
+              totalRows: importedIds.length + originalFailCount,
+            })
+          });
+        } else {
+          // No importedIds — return original stored stats
+          processedLogs.push({
+            ...log,
+            detail: JSON.stringify({
+              ...detailObj,
+              successCount: detailObj.successCount ?? 0,
+              duplicateCount: (detailObj.duplicateCount ?? 0) + (detailObj.protectedCount ?? 0),
+              failCount: detailObj.failCount ?? 0,
+              totalRows: detailObj.totalRows ?? detailObj.importedCount ?? 0,
+            })
+          });
         }
-
-        updatedLogs.push({
-          ...log,
-          detail: JSON.stringify(detailObj)
-        });
-      } catch (e) {
-        updatedLogs.push(log);
+      } catch {
+        processedLogs.push(log);
       }
     }
 
-    // Kembalikan ke urutan terbaru dulu (descending) sebelum dikembalikan ke client
-    return updatedLogs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    // Return newest first
+    return processedLogs.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   }
 
   async processBulkNested(groupedData: any[], categoryKey: string, fileName?: string) {
@@ -509,7 +499,8 @@ export class CsvImportService {
       }
 
       // 2. Cek Duplikat Internal (dalam File)
-      const compareKey = getCompareKey(rawTitle, rawCode);
+      const certNo = group.certificates && group.certificates.length > 0 ? group.certificates[0].noSertifikat : '';
+      const compareKey = getCompareKey(rawTitle, rawCode) + '|' + norm(certNo);
       const firstSeenRow = fileProcessedKeys.get(compareKey);
 
       if (firstSeenRow !== undefined) {
@@ -530,10 +521,13 @@ export class CsvImportService {
 
       // Cari di DB (case-insensitive) untuk duplicate check
       const existingInDb = await this.prisma.masterItem.findFirst({
-        where: {
+        where: rawCode ? {
           categoryKey: categoryKey || '',
           title: { equals: rawTitle, mode: 'insensitive' },
           code: { equals: rawCode, mode: 'insensitive' },
+        } : {
+          categoryKey: categoryKey || '',
+          title: { equals: rawTitle, mode: 'insensitive' },
         },
         select: { id: true, documentStatus: true, isManuallyEdited: true }
       });
@@ -547,8 +541,32 @@ export class CsvImportService {
       // Tentukan status validasi jika tidak FAILED
       if (!isFailed) {
         if (existingInDb) {
-          finalValidationStatus = 'DUPLICATE';
-          duplicateCount++;
+          const certNo = group.certificates && group.certificates.length > 0 ? group.certificates[0].noSertifikat : '';
+          const cleanNoCert = certNo ? String(certNo).trim() : '';
+          
+          let isTrueDuplicate = true;
+          if (cleanNoCert && cleanNoCert !== '-' && cleanNoCert.toLowerCase() !== 'tanpa sertifikat') {
+             const existingCert = await this.prisma.certificate.findFirst({
+               where: {
+                 itemId: existingInDb.id,
+                 noSertifikat: { equals: cleanNoCert, mode: 'insensitive' }
+               }
+             });
+             console.log(`[DEBUG] Row ${i+1} - Cert: ${cleanNoCert}, existingCert found: ${!!existingCert}`);
+             if (!existingCert) {
+               isTrueDuplicate = false; // Ada sertifikat baru, jadi ini sukses ditambahkan (sebagai anak)
+             }
+          } else {
+             console.log(`[DEBUG] Row ${i+1} - SKIPPED check! cleanNoCert: '${cleanNoCert}'`);
+          }
+          
+          if (isTrueDuplicate) {
+            finalValidationStatus = 'DUPLICATE';
+            duplicateCount++;
+          } else {
+            finalValidationStatus = 'NEW';
+            successCount++;
+          }
         } else {
           finalValidationStatus = 'NEW';
           successCount++;
@@ -636,6 +654,7 @@ export class CsvImportService {
         detail: JSON.stringify({
           fileName: fileName || `impor_${categoryKey}.csv`,
           importedCount: totalRows,
+          masterCount: createdMasters.length,
           successCount: successCount,
           duplicateCount: duplicateCount,
           protectedCount: protectedCount,

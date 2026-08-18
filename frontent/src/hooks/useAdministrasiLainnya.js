@@ -134,7 +134,15 @@ export default function useAdministrasiLainnya() {
     try {
       setIsLoading(true);
       const data = await getMasterItems(CATEGORY_KEY);
-      setCiptaanList(data.map(mapItemToRow));
+      const mapped = data.map(mapItemToRow);
+      setCiptaanList(mapped);
+
+      // Auto-update detailModalItem to reflect changes (e.g. deleted linked certificates)
+      setDetailModalItem(prev => {
+        if (!prev) return null;
+        const updated = mapped.find(m => m.id === prev.id || m.MasterId === prev.MasterId);
+        return updated ? updated : prev;
+      });
     } catch (error) {
       console.error('Failed to load AdministrasiLainnya', error);
     } finally {
@@ -162,8 +170,10 @@ export default function useAdministrasiLainnya() {
     [ciptaanList]
   );
 
+  const [sortDateOrder, setSortDateOrder] = useState('desc');
+
   const filteredData = useMemo(() => {
-    return ciptaanList.filter((item) => {
+    let result = ciptaanList.filter((item) => {
       const matchesTab =
         activeMainTab === 'staging'
           ? item.documentStatus === 'PENDING_DOC'
@@ -186,7 +196,15 @@ export default function useAdministrasiLainnya() {
 
       return matchesTab && matchesSearch && matchesJenis && matchesMasa && matchesHasSertifikat;
     });
-  }, [ciptaanList, searchTerm, filterJenis, filterMasa, filterHasSertifikat, activeMainTab]);
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.tanggalCiptaan || a.createdAt || 0).getTime();
+      const timeB = new Date(b.tanggalCiptaan || b.createdAt || 0).getTime();
+      return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+
+    return result;
+  }, [ciptaanList, searchTerm, filterJenis, filterMasa, filterHasSertifikat, activeMainTab, sortDateOrder]);
 
   const filteredTargetList = useMemo(
     () =>
@@ -440,7 +458,10 @@ export default function useAdministrasiLainnya() {
     // Handlers
     loadData,
     handleCsvImported,
+    handleZipMatched,
     handleSingleAdded,
+    sortDateOrder,
+    setSortDateOrder,
     getRowStatusStyle,
   };
 }

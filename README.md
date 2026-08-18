@@ -166,6 +166,30 @@ Buka terminal baru lagi, lalu jalankan perintah berikut:
 
 ---
 
+### Langkah 4: Penanganan Saat Server/Komputer Restart (Troubleshooting)
+
+Jika komputer atau server baru saja di-restart, terkadang database PostgreSQL di dalam Docker container ter-reset atau belum tersinkronisasi. Hal ini menyebabkan Anda tidak bisa login (muncul error `Unauthorized` atau `User tidak ditemukan`). 
+
+Lakukan langkah-langkah pemulihan berikut di terminal baru pada direktori `backend/nest-api`:
+
+1. **Pastikan Database Sudah Tersinkronisasi**
+   ```bash
+   npx prisma db push
+   ```
+
+2. **Buat Ulang Data Awal (Seeding)**
+   ```bash
+   npx prisma db seed
+   ```
+   *(Perintah ini akan secara otomatis membuatkan role dan akun Super Admin bawaan).*
+
+3. **Login Menggunakan Akun Default**
+   Gunakan kredensial berikut untuk masuk kembali ke sistem:
+   - **Username / NPK:** `muhfi_admin`
+   - **Password:** `admin123`
+
+---
+
 ## 🛠️ Tech Stack
 
 - **Frontend**:

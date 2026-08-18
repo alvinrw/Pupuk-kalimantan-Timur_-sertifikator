@@ -49,6 +49,8 @@ export default function DocumentDetailPage({
       setActiveCertId: hook.setActiveCertId,
       setIsAddCertModalOpen: hook.setIsAddCertModalOpen,
       setDeletingLinkedCertId: hook.setDeletingLinkedCertId,
+      sortDateOrder: hook.sortDateOrder,
+      setSortDateOrder: hook.setSortDateOrder,
     };
   } catch (err) {
     alert("Crash in useDocumentDetail: " + err.message + "\n\n" + err.stack);
@@ -62,6 +64,7 @@ export default function DocumentDetailPage({
     activeCertId, setActiveCertId,
     setIsAddCertModalOpen,
     setDeletingLinkedCertId,
+    sortDateOrder, setSortDateOrder
   } = hookVars;
 
   return (
@@ -70,9 +73,6 @@ export default function DocumentDetailPage({
 
         {/* TOP NAVIGATION + AKSI DROPDOWN */}
         <DocumentHeader hook={hook} item={item} onBack={onBack} />
-
-        {/* STATUS BAR */}
-        <DocumentStatusBar hook={hook} item={item} />
 
         {/* FORM EDIT (mode editing) */}
         <DocumentFormFields hook={hook} item={item} />
@@ -88,6 +88,8 @@ export default function DocumentDetailPage({
             onSelectCert={setActiveCertId}
             onAddCert={() => setIsAddCertModalOpen(true)}
             onDeleteCert={(id) => setDeletingLinkedCertId(id)}
+            sortDateOrder={sortDateOrder}
+            setSortDateOrder={setSortDateOrder}
           />
         )}
 

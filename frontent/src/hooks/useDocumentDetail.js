@@ -91,7 +91,8 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     keterangan: parsedKet.text,
     additionalEntities: parsedKet.additionalEntities,
     fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
-    namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || ''
+    namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
+    imageUrl: item.imageUrl || ''
   });
 
   const handleSave = async (e) => {
@@ -119,7 +120,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
   const historyHook = useDocumentHistory({ item, targetCert, onRefreshRequired });
   const uploadHook = useDocumentUpload({ item, fetchHistory: historyHook.fetchHistory, onSaveUpdate, onRefreshRequired });
-  const statusHook = useDocumentStatus({ item, formData, setFormData, onSaveUpdate, onDeleteSuccess });
+  const statusHook = useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess });
   const linkedCertsHook = useLinkedCertificates({ item, targetCert, fetchHistory: historyHook.fetchHistory, onRefreshRequired });
   const notificationHook = useNotificationSettings({ item, targetCert });
 

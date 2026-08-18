@@ -184,23 +184,7 @@ export default function MonitoringSertifikasi() {
                   className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
                 />
               </div>
-              {/* Export */}
-              {!isViewer && (
-                <>
-                  <button
-                    onClick={() => m.handleExportCSV(displayedCertificates)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition-colors font-mono-data"
-                  >
-                    Export CSV
-                  </button>
-                  <button
-                    onClick={() => m.handleExportJSON(displayedCertificates)}
-                    className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs rounded-lg transition-colors font-mono-data"
-                  >
-                    Export JSON
-                  </button>
-                </>
-              )}
+              {/* Export buttons removed */}
             </div>
           </div>
 
@@ -250,10 +234,12 @@ export default function MonitoringSertifikasi() {
           </div>
         </div>
 
-        {/* MONITORING TABLE */}
         <MonitoringTable
           filteredCertificates={displayedCertificates}
           customUrgentDays={m.customUrgentDays}
+          sortKey={m.sortKey}
+          sortOrder={m.sortOrder}
+          onSort={m.toggleSort}
           onOpenDetail={(doc) => m.setSelectedDetailDoc(doc)}
           onCompleteModal={m.openCompleteModal}
           onCancelAction={m.handleCancelAction}

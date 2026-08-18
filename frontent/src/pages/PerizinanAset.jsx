@@ -54,6 +54,8 @@ export default function PerizinanAset({ title, subtitle }) {
     handleCsvImported,
     handleZipMatched,
     handleSingleAdded,
+    sortDateOrder,
+    setSortDateOrder,
   } = usePerizinanAset();
 
   if (detailModalItem) {
@@ -99,7 +101,7 @@ export default function PerizinanAset({ title, subtitle }) {
           </p>
         </div>
 
-        {/* UNIFIED SINGLE ACTION DROPDOWN BUTTON */}
+        {/* Action Dropdown */}
         <div className="relative">
           <button
             onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
@@ -110,7 +112,6 @@ export default function PerizinanAset({ title, subtitle }) {
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {/* Unified Popover Menu */}
           {isImportMenuOpen && (
             <div className="absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean">
               <button
@@ -120,21 +121,19 @@ export default function PerizinanAset({ title, subtitle }) {
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
                   <span className="block">+ Input 1 Data Manual</span>
-                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Termasuk unggah berkas PDF sertifikat</span>
+                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Termasuk unggah foto / PDF sertifikat</span>
                 </div>
               </button>
-
               <button
                 onClick={() => { setIsCsvModalOpen(true); setIsImportMenuOpen(false); }}
                 className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                <FileSpreadsheet className="w-4 h-4 text-[#005ea4]" />
                 <div>
                   <span className="block">Impor CSV Master</span>
-                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Muat CSV gabungan multi-unit</span>
+                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Format data tabel massal</span>
                 </div>
               </button>
-
               <button
                 onClick={() => { setIsZipModalOpen(true); setIsImportMenuOpen(false); }}
                 className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
@@ -154,11 +153,10 @@ export default function PerizinanAset({ title, subtitle }) {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
         <button
           onClick={() => setActiveMainTab('main')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            activeMainTab === 'main'
-              ? 'bg-[#005ea4] text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeMainTab === 'main'
+            ? 'bg-[#005ea4] text-white shadow-xs'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
         >
           <Building2 className="w-4 h-4" />
           <span>Data Utama</span>
@@ -166,11 +164,10 @@ export default function PerizinanAset({ title, subtitle }) {
 
         <button
           onClick={() => setActiveMainTab('staging')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
-            activeMainTab === 'staging'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${activeMainTab === 'staging'
+            ? 'bg-amber-600 text-white shadow-xs'
+            : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+            }`}
         >
           <FileWarning className="w-4 h-4 text-amber-500" />
           <span>Menunggu Dokumen (Staging)</span>
@@ -199,6 +196,16 @@ export default function PerizinanAset({ title, subtitle }) {
           <div className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-mono-data">
             {filteredDocs.length} data ditemukan
           </div>
+
+          {/* Sort Dropdown */}
+          <select
+            value={sortDateOrder}
+            onChange={(e) => setSortDateOrder(e.target.value)}
+            className="text-xs bg-white border border-slate-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+          >
+            <option value="desc">Terbaru</option>
+            <option value="asc">Terlama</option>
+          </select>
 
           {/* COLUMN VISIBILITY */}
           <div className="relative">
@@ -230,14 +237,13 @@ export default function PerizinanAset({ title, subtitle }) {
                       <label
                         key={col.key}
                         onClick={() => toggleColumn(col.key)}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
-                          checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                          }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="rounded border-slate-300 accent-[#005ea4]"
                         />
                         <span className="text-xs">{col.label}</span>
@@ -257,7 +263,7 @@ export default function PerizinanAset({ title, subtitle }) {
           <div className="text-amber-800 text-xs font-bold">
             {selectedStagingIds.length} item terpilih
           </div>
-          <button 
+          <button
             onClick={() => setBulkExemptModalOpen(true)}
             disabled={isSubmittingBulkExempt}
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -445,14 +451,14 @@ export default function PerizinanAset({ title, subtitle }) {
                 <ShieldAlert className="w-5 h-5 text-amber-500" />
                 Tandai Tanpa Sertifikat
               </h3>
-              <button 
+              <button
                 onClick={() => setBulkExemptModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             {/* Body */}
             <div className="p-5 space-y-4">
               <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -460,7 +466,7 @@ export default function PerizinanAset({ title, subtitle }) {
                   Anda akan menandai <strong>{selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).
                 </p>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Catatan / Alasan <span className="text-rose-500">*</span>
@@ -474,7 +480,7 @@ export default function PerizinanAset({ title, subtitle }) {
                 ></textarea>
               </div>
             </div>
-            
+
             {/* Footer */}
             <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
               <button

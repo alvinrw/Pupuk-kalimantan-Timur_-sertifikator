@@ -59,7 +59,6 @@ export default function CertHistorySection({
                 <th className="py-2.5 px-3 font-bold">TGL TERBIT</th>
                 <th className="py-2.5 px-3 font-bold">TGL EXPIRED</th>
                 <th className="py-2.5 px-3 font-bold">DIINPUT OLEH</th>
-                <th className="py-2.5 px-3 font-bold text-center">STATUS SERTIFIKAT</th>
                 <th className="py-2.5 px-3 font-bold text-right">AKSI </th>
               </tr>
             </thead>
@@ -90,14 +89,6 @@ export default function CertHistorySection({
                       ) : (
                         <span className="text-slate-400 italic text-[11px]">Tidak Tercatat</span>
                       )}
-                    </td>
-                    <td className="py-3 px-3 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${row.isCurrent
-                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                          : 'bg-slate-200 text-slate-700 border-slate-300'
-                        }`}>
-                        {row.status}
-                      </span>
                     </td>
                     <td className="py-3 px-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -153,15 +144,26 @@ export default function CertHistorySection({
         <div className="relative pl-6 border-l-2 border-slate-200 space-y-4 font-mono-data text-xs">
           {historyList.map((row) => (
             <div key={row.id} className="relative">
-              <span className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-white ${row.isCurrent ? 'bg-emerald-500 ring-2 ring-emerald-200' : 'bg-slate-400'
+              <span className={`absolute -left-[31px] top-0.5 w-4 h-4 rounded-full border-2 border-white ${
+                  (row.status || '').toLowerCase() === 'expired'
+                    ? 'bg-rose-500 ring-2 ring-rose-200'
+                    : (row.status || '').toLowerCase() === 'exempt'
+                    ? 'bg-amber-500 ring-2 ring-amber-200'
+                    : row.isCurrent 
+                    ? 'bg-emerald-500 ring-2 ring-emerald-200' 
+                    : 'bg-slate-400'
                 }`} />
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-1">
                 <div className="flex justify-between font-bold text-slate-900">
                   <span>{row.periode} — {row.namaSertifikat || row.jenisSertifikat || 'Sertifikat'} (No. SK: {row.noSertifikat})</span>
                   <span className={`px-2.5 py-0.5 rounded-lg text-[10px] border ${
-                    row.isCurrent
-                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200 font-bold'
-                      : 'text-slate-500 bg-slate-100 border-slate-200'
+                      (row.status || '').toLowerCase() === 'expired'
+                        ? 'text-rose-700 bg-rose-50 border-rose-200 font-bold'
+                        : (row.status || '').toLowerCase() === 'exempt'
+                        ? 'text-amber-700 bg-amber-50 border-amber-200 font-bold'
+                        : row.isCurrent
+                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200 font-bold'
+                        : 'text-slate-500 bg-slate-100 border-slate-200'
                     }`}>
                     {row.status}
                   </span>

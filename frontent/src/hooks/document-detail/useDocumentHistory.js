@@ -6,6 +6,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const [historyList, setHistoryList] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false);
   const [editingHistoryRow, setEditingHistoryRow] = useState(null);
   const [selectedHistoryFile, setSelectedHistoryFile] = useState(null);
   const editHistoryFileInputRef = useRef(null);
@@ -95,13 +96,30 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const handleDeleteHistoryRow = async () => {
     try {
       if (!selectedHistoryToDelete?.id) return;
-      await deleteCertificate(selectedHistoryToDelete.id);
+      setIsDeletingHistory(true);
+
+      if (historyList.length === 1 && selectedHistoryToDelete.isCurrent) {
+        // Ini adalah baris satu-satunya (child). Jangan hapus agar "slot" tidak hilang,
+        // melainkan reset isinya ke kosong (Belum Ada)
+        await updateCertificate(selectedHistoryToDelete.id, {
+          noSertifikat: 'Tanpa Sertifikat',
+          terbit: null,
+          expired: null,
+          fileUrl: null,
+          status: 'EXEMPT',
+          instansi: 'Dihapus dari histori'
+        });
+      } else {
+        await deleteCertificate(selectedHistoryToDelete.id);
+      }
+
       await fetchHistory();
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       console.error('Failed to delete history row:', err);
       alert('Gagal menghapus baris histori: ' + (err.message || 'Error'));
     } finally {
+      setIsDeletingHistory(false);
       setSelectedHistoryToDelete(null);
     }
   };
@@ -154,6 +172,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
     historyList, setHistoryList,
     isLoadingHistory, fetchHistory,
     selectedHistoryToDelete, setSelectedHistoryToDelete,
+    isDeletingHistory,
     editingHistoryRow, setEditingHistoryRow,
     selectedHistoryFile, setSelectedHistoryFile,
     editHistoryFileInputRef,

@@ -1,19 +1,24 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FileText, ChevronLeft, ChevronRight, Crosshair, Loader2, X, ScanLine, ZoomIn, ZoomOut } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import Tesseract from 'tesseract.js';
 import 'pdfjs-dist/web/pdf_viewer.css';
 
 // Label yang ditampilkan di overlay saat scan mode aktif
 const SCAN_LABELS = {
+  jenisSertifikat: 'Jenis / Nama Sertifikat',
   noSertifikat: 'No. Sertifikat',
   terbit: 'Tanggal Terbit',
   expired: 'Tanggal Berakhir',
+  instansi: 'Instansi Penerbit',
 };
 
 const SCAN_COLORS = {
+  jenisSertifikat: '#f59e0b',
   noSertifikat: '#005ea4',
   terbit: '#059669',
   expired: '#dc2626',
+  instansi: '#8b5cf6',
 };
 
 export default function PdfCanvasOcrViewer({
@@ -137,6 +142,43 @@ export default function PdfCanvasOcrViewer({
     } catch (e) {
       console.warn('Text layer render failed:', e);
     }
+
+    // ─── Draw Watermark ───
+    try {
+      const userStr = sessionStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const userName = user.name || user.nama || user.username || 'USER';
+        const userCode = user.nik || user.employeeId || 'PKT';
+        const dateStr = new Date().toLocaleString('id-ID', {
+          day: 'numeric',
+          month: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        
+        const watermarkText = `DIKUNJUNGI OLEH ${userName.toUpperCase()} (${userCode}) PADA ${dateStr}`;
+        
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(-Math.PI / 6); // -30 degrees
+        
+        const fontSize = Math.max(16, canvas.width / 25);
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.fillStyle = 'rgba(220, 38, 38, 0.25)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.fillText(watermarkText, 0, 0);
+        ctx.fillText(watermarkText, 0, -canvas.height / 3);
+        ctx.fillText(watermarkText, 0, canvas.height / 3);
+        
+        ctx.restore();
+      }
+    } catch (e) {
+      console.warn('Failed to draw watermark on canvas:', e);
+    }
   };
 
   // ─── Drag-to-Select Logic ──────────────────────────────────────────────────
@@ -246,45 +288,37 @@ export default function PdfCanvasOcrViewer({
 
     try {
       setIsOcrRunning(true);
-      setOcrStatusMsg('Mengirim gambar ke Backend AI (PaddleOCR)...');
+      setOcrStatusMsg('Mengirim gambar ke OCR Engine...');
 
-      // Convert canvas ke Blob untuk dikirim via FormData
-      cropCanvas.toBlob(async (blob) => {
-        try {
-          console.log('Mengirim crop image ke backend... Size:', blob.size, 'bytes');
-          const fd = new FormData();
-          fd.append('file', blob, 'crop.png');
-          
-          setOcrStatusMsg('Sedang memindai dengan AI...');
-          // Gunakan 127.0.0.1 untuk mencegah masalah resolusi IPv6 'localhost' di Windows
-          const res = await fetch(`http://127.0.0.1:8000/api/v1/ocr/ocr-crop`, {
-            method: 'POST',
-            body: fd
-          });
-          
-          console.log('Response status:', res.status);
-          const json = await res.json();
-          if (!res.ok) throw new Error(json.detail || 'Gagal OCR backend');
-          
-          setOcrStatusMsg('Selesai!');
-          console.log('OCR Result:', json);
-          onScanComplete(scanMode, json.data?.text || '');
-        } catch (err) {
-          console.error('Backend OCR Fetch error:', err.message, err);
-          setOcrStatusMsg(`Error: ${err.message}`);
-          setTimeout(() => setOcrStatusMsg(''), 4000);
-        } finally {
-          setIsOcrRunning(false);
-          const selCanvas = selectionCanvasRef.current;
-          if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
-        }
-      }, 'image/png');
-
+      // Convert canvas ke Data URL untuk Tesseract.js
+      const dataUrl = cropCanvas.toDataURL('image/png');
+      
+      setOcrStatusMsg('Sedang mengekstrak teks dengan AI...');
+      
+      // Menggunakan Tesseract.js secara lokal di browser
+      const { data: { text } } = await Tesseract.recognize(dataUrl, 'ind+eng', {
+        logger: m => console.log(m)
+      });
+      
+      setOcrStatusMsg('Selesai!');
+      console.log('OCR Result:', text);
+      
+      // Cleanup teks: hapus spasi berlebih
+      const cleanText = (text || '').replace(/\n/g, ' ').trim();
+      onScanComplete(scanMode, cleanText);
+      
+      // Reset scan mode in Modal (parent will call onScanComplete which might not reset scanMode immediately, but ModalAddLinkedCert does reset it via onScanComplete callback if we pass the right signature)
+      // Wait, ModalAddLinkedCert expects onScanComplete(text) if we change it?
+      // In ModalAddLinkedCert: handleOcrResult = (text) => { ... }
+      // So wait, Modal expects ONLY 1 argument? Let me check ModalAddLinkedCert.jsx
     } catch (err) {
-      console.error('Canvas toBlob error:', err);
+      console.error('Tesseract OCR error:', err.message, err);
+      setOcrStatusMsg(`Error: Gagal mengekstrak teks.`);
+      setTimeout(() => setOcrStatusMsg(''), 4000);
+    } finally {
       setIsOcrRunning(false);
-      setOcrStatusMsg('Gagal memproses gambar crop.');
-      setTimeout(() => setOcrStatusMsg(''), 3000);
+      const selCanvas = selectionCanvasRef.current;
+      if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
     }
   }, [scanMode, onScanComplete]);
 

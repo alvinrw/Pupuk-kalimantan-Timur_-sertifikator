@@ -19,7 +19,13 @@ export class RolesGuard implements CanActivate {
         throw new ForbiddenException('User tidak terautentikasi.');
     }
 
-    if (!requiredRoles.includes(user.role)) {
+    // Support wildcard matching for Admin 1, Admin 2, Admin 3
+    const hasRole = requiredRoles.some(role => {
+      if (role === 'Admin' && user.role.startsWith('Admin')) return true;
+      return role === user.role;
+    });
+
+    if (!hasRole) {
       throw new ForbiddenException(`Akses Ditolak. Membutuhkan role: ${requiredRoles.join(', ')}`);
     }
     return true;

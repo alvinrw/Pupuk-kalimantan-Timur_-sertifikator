@@ -329,6 +329,19 @@ export default function CertDetailModal({
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
                   />
                 </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Catatan / Keterangan Tambahan
+                  </label>
+                  <textarea
+                    name="keterangan"
+                    value={formData.keterangan || ''}
+                    onChange={handleInputChange}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none min-h-[60px] resize-none"
+                    placeholder="misal: Sertifikat sedang dalam proses pengurusan di kementerian..."
+                  />
+                </div>
               </div>
 
               {/* Upload PDF Section */}
@@ -487,6 +500,11 @@ export default function CertDetailModal({
                     <span className="text-slate-400 block mb-0.5 font-medium">Tanggal Expired</span>
                     <span className="font-bold text-rose-600">{formData.expired || '-'}</span>
                   </div>
+
+                  <div className="col-span-2 md:col-span-4 mt-2">
+                    <span className="text-slate-400 block mb-0.5 font-medium">Catatan / Keterangan Tambahan</span>
+                    <strong className="text-slate-900 whitespace-pre-wrap">{formData.keterangan || cert.keterangan || '-'}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -639,7 +657,6 @@ export default function CertDetailModal({
                         <th className="py-2.5 px-4 text-left">NO. SERTIFIKAT / SK</th>
                         <th className="py-2.5 px-4">TGL TERBIT</th>
                         <th className="py-2.5 px-4">TGL EXPIRED</th>
-                        <th className="py-2.5 px-4">STATUS SERTIFIKAT</th>
                         <th className="py-2.5 px-4">AKSI</th>
                       </tr>
                     </thead>
@@ -660,11 +677,6 @@ export default function CertDetailModal({
                             <td className="py-3 px-4 text-slate-600">{hItem.terbit || formData.terbit || '-'}</td>
                             <td className={`py-3 px-4 font-bold ${isExpiredH ? 'text-rose-600' : 'text-rose-700'}`}>
                               {hItem.expired || formData.expired || '-'}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                {hItem.status || 'Aktif'}
-                              </span>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex items-center justify-center gap-1.5">

@@ -92,9 +92,11 @@ export const updateMasterItem = async (id, data) => {
     ? data.categoryKey
     : (validCategories.includes(data.jenisPeralatan) ? data.jenisPeralatan : undefined);
 
+  const isPeralatan = mappedCategoryKey === 'peralatan-pabrik';
+
   const payload = {
-    title: data.title || data.merekItem,
-    code: data.code || data.tipe || data.noSertifikat,
+    title: data.merekItem || data.title,
+    code: data.nomorSeri || data.code || data.tipe || data.noSertifikat,
     categoryKey: mappedCategoryKey,
     unitLocation: data.unitLocation || data.lokasi,
     status: data.status,
@@ -104,7 +106,8 @@ export const updateMasterItem = async (id, data) => {
     issueDate: data.issueDate || data.terbit || data.tanggalInspeksi || data.tanggalCiptaan,
     expiryDate: data.expiryDate || data.berakhir,
     keterangan: data.keterangan,
-    documentStatus: data.documentStatus
+    documentStatus: data.documentStatus,
+    imageUrl: data.imageUrl
   };
 
   // Clean undefined properties

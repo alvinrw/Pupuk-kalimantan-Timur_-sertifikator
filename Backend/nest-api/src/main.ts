@@ -13,6 +13,10 @@ async function bootstrap() {
     credentials: true,
   });
 
+  const bodyParser = require('body-parser');
+  app.use(bodyParser.json({ limit: '50mb' }));
+  app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
   // Global Input Validation
   app.useGlobalPipes(
     new ValidationPipe({

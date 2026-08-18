@@ -48,4 +48,8 @@ export class CreateMasterItemDto {
   @IsString()
   @IsOptional()
   documentStatus?: string;
+
+  @IsString()
+  @IsOptional()
+  imageUrl?: string;
 }

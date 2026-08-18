@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCcw } from 'lucide-react';
+import { Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 /**
@@ -18,6 +18,9 @@ export default function MonitoringTable({
   onCancelAfkir,
   onQuickRenew,
   onQuickDecommission,
+  sortKey,
+  sortOrder,
+  onSort,
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
@@ -65,8 +68,19 @@ export default function MonitoringTable({
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">MEREK / NAMA ITEM</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NOMOR SERI / TAG</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>
-              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL EXPIRATION</th>
-              <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">STATUS PERIZINAN</th>
+              <th 
+                onClick={() => onSort('tglExpired')}
+                className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle cursor-pointer hover:bg-slate-200/80 transition-colors select-none"
+              >
+                <div className="flex items-center justify-center gap-1.5">
+                  <span>TGL EXPIRATION</span>
+                  {sortKey === 'tglExpired' ? (
+                    sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#005ea4]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#005ea4]" />
+                  ) : (
+                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  )}
+                </div>
+              </th>
               {!isViewer && (
               <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">AKSI WORKFLOW</th>
               )}
@@ -125,21 +139,8 @@ export default function MonitoringTable({
                       {doc.tglExpired && doc.tglExpired !== '2030-01-01' ? doc.tglExpired : (doc.expiryDate && doc.expiryDate !== '2030-01-01' ? doc.expiryDate : '-')}
                       {doc.sisaHari !== null && doc.sisaHari !== undefined && doc.tglExpired !== '-' && (
                         <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
-                          ({isDecommissioned ? 'Nonaktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
+                          ({isDecommissioned ? 'Nonaktif' : doc.sisaHari < 0 ? `Expired ${Math.abs(doc.sisaHari)} hr lalu` : doc.sisaHari === 0 ? 'Expired hari ini' : `${doc.sisaHari} hr lagi`})
                         </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap font-mono-data font-bold align-middle">
-                      {isDecommissioned ? (
-                        <span className="text-slate-400">Non-Aktif</span>
-                      ) : isExempt ? (
-                        <span className="text-indigo-600">Catatan Khusus</span>
-                      ) : doc.sisaHari <= 0 ? (
-                        <span className="text-rose-600">Expired</span>
-                      ) : doc.sisaHari <= (parseInt(customUrgentDays) || 30) ? (
-                        <span className="text-amber-600">&lt; {customUrgentDays || 30} Hari</span>
-                      ) : (
-                        <span className="text-emerald-600">Aktif</span>
                       )}
                     </td>
                     {!isViewer && (

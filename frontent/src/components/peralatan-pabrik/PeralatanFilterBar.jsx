@@ -11,7 +11,8 @@ export default function PeralatanFilterBar({
   filterStatus, setFilterStatus,
   isColumnDropdownOpen, setIsColumnDropdownOpen,
   visibleColumnKeys, allColumns,
-  selectAllColumns, toggleColumn
+  selectAllColumns, toggleColumn,
+  sortDateOrder, setSortDateOrder
 }) {
   return (
     <div className="bg-white p-4 rounded-lg border border-[#e2e8fo] shadow-2xs flex flex-wrap items-center justify-between gap-3 relative">
@@ -40,6 +41,16 @@ export default function PeralatanFilterBar({
             Reset Filter Header
           </button>
         )}
+
+        {/* Sort Dropdown */}
+        <select
+          value={sortDateOrder}
+          onChange={(e) => setSortDateOrder(e.target.value)}
+          className="text-xs bg-white border border-slate-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+        >
+          <option value="desc">Terbaru</option>
+          <option value="asc">Terlama</option>
+        </select>
 
         {/* COLUMN VISIBILITY DROPDOWN */}
         <div className="relative">

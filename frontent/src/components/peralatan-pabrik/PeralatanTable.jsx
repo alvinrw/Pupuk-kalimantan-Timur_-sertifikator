@@ -18,7 +18,10 @@ export default function PeralatanTable({
   uniqueJenis, uniqueLokasi, uniqueUser,
   setDetailModalItem,
   setResolveTargetItem,
-  getRowStatusStyle
+  getRowStatusStyle,
+  sortKey,
+  sortOrder,
+  toggleSort
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
@@ -123,8 +126,40 @@ export default function PeralatanTable({
               {isVisible("namaSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">NAMA SERTIFIKAT</th>}
               {isVisible("noSertifikat") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>}
               {isVisible("tanggalInspeksi") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TANGGAL INSPEKSI</th>}
-              {isVisible("terbit") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">TERBIT</th>}
-              {isVisible("berakhir") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">BERAKHIR</th>}
+              {isVisible("terbit") && (
+                <th 
+                  onClick={() => toggleSort('terbit')}
+                  className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle cursor-pointer transition-colors select-none ${
+                    sortKey === 'terbit'
+                      ? 'bg-blue-50 text-[#005ea4] hover:bg-blue-100'
+                      : 'hover:bg-slate-100/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>TERBIT</span>
+                    <span className={`text-[11px] font-bold ${sortKey === 'terbit' ? 'text-[#005ea4]' : 'text-slate-400'}`}>
+                      {sortKey === 'terbit' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                    </span>
+                  </div>
+                </th>
+              )}
+              {isVisible("berakhir") && (
+                <th 
+                  onClick={() => toggleSort('berakhir')}
+                  className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle cursor-pointer transition-colors select-none ${
+                    sortKey === 'berakhir'
+                      ? 'bg-blue-50 text-[#005ea4] hover:bg-blue-100'
+                      : 'hover:bg-slate-100/80'
+                  }`}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    <span>BERAKHIR</span>
+                    <span className={`text-[11px] font-bold ${sortKey === 'berakhir' ? 'text-[#005ea4]' : 'text-slate-400'}`}>
+                      {sortKey === 'berakhir' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                    </span>
+                  </div>
+                </th>
+              )}
               {isVisible("keterangan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">KETERANGAN</th>}
               <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">AKSI</th>
             </tr>
@@ -162,11 +197,15 @@ export default function PeralatanTable({
                     )}
                     {isVisible("merekItem") && (
                       <td
-                        onClick={() => setDetailModalItem(item)}
-                        className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap text-center align-middle ${
-                          isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                        onClick={() => {
+                          if (activeMainTab !== 'staging') setDetailModalItem(item);
+                        }}
+                        className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${
+                          activeMainTab === 'staging' 
+                            ? 'cursor-default text-slate-800' 
+                            : (isAfkir ? 'cursor-pointer hover:underline text-white' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')
                         }`}
-                        title="Klik untuk Lihat Detail"
+                        title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : "Klik untuk Lihat Detail"}
                       >
                         {item.merekItem}
                       </td>

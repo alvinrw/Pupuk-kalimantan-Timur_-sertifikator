@@ -34,6 +34,49 @@ export function usePeralatanPabrik() {
   const [equipmentList, setEquipmentList] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [sortKey, setSortKey] = useState(null); // 'terbit' | 'berakhir'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+  const [sortDateOrder, setSortDateOrder] = useState('desc'); // 'asc' | 'desc' untuk Terbaru/Terlama (createdAt)
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
+
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
+  const formatToDDMMYYYY = (rawDateStr) => {
+    if (!rawDateStr || rawDateStr === '-') return '-';
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+    // Handle ISO format: YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}/.test(rawDateStr)) {
+      const parts = rawDateStr.substring(0, 10).split('-');
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    try {
+      const dObj = new Date(rawDateStr);
+      if (!isNaN(dObj.getTime())) {
+        const dd = String(dObj.getDate()).padStart(2, '0');
+        const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+        const yyyy = dObj.getFullYear();
+        return `${dd}/${mm}/${yyyy}`;
+      }
+    } catch (_) {}
+    return rawDateStr;
+  };
+
   // Ganti Target Sertifikat Modal State
   const [reassignCertRowItem, setReassignCertRowItem] = useState(null);
   const [searchTargetItemTerm, setSearchTargetItemTerm] = useState('');
@@ -58,15 +101,6 @@ export function usePeralatanPabrik() {
 
   const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
 
-  const getTimestamp = (dateStr) => {
-    if (!dateStr || dateStr === '-') return 0;
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-      const parts = dateStr.split('/');
-      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
-    }
-    const t = new Date(dateStr).getTime();
-    return isNaN(t) ? 0 : t;
-  };
 
   const loadData = async () => {
     try {
@@ -148,9 +182,11 @@ export function usePeralatanPabrik() {
           keterangan: primaryCert?.keterangan || meta.keteranganAsli || '-',
           fileUrl: primaryCert?.fileUrl || null,
           hasPdf: !!primaryCert?.fileUrl,
+          imageUrl: item.imageUrl || null,
           certificates: certs,
           validationStatus: item.validationStatus || 'NEW',
           validationErrors: item.validationErrors || null,
+          createdAt: item.createdAt || null
         };
       });
 
@@ -298,9 +334,39 @@ export function usePeralatanPabrik() {
     });
   }, [equipmentList, activeMainTab, searchTerm, filterJenis, filterLokasi, filterUser, filterStatus, filterHasSertifikat]);
 
+  const sortedFilteredData = useMemo(() => {
+    let result = [...filteredData];
+
+    // 1. Sort by createdAt (Terbaru / Terlama)
+    result.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+
+    // 2. Sort by specific key if active
+    if (sortKey) {
+      result.sort((a, b) => {
+        const valA = sortKey === 'terbit' ? (a.terbit || a.issueDate) : (a.berakhir || a.expiryDate);
+        const valB = sortKey === 'terbit' ? (b.terbit || b.issueDate) : (b.berakhir || b.expiryDate);
+        
+        const tA = getTimestamp(valA);
+        const tB = getTimestamp(valB);
+        
+        if (tA === 0 && tB === 0) return 0;
+        if (tA === 0) return 1;
+        if (tB === 0) return -1;
+        
+        return sortOrder === 'asc' ? tA - tB : tB - tA;
+      });
+    }
+    
+    return result;
+  }, [filteredData, sortKey, sortOrder, sortDateOrder]);
+
   const expandedRows = useMemo(() => {
     const rows = [];
-    filteredData.forEach((item) => {
+    sortedFilteredData.forEach((item) => {
       let terbitVal = item.terbit || item.issueDate || '-';
       let berakhirVal = item.berakhir || item.expiryDate || '-';
       let statusVal = item.status || 'Aktif';
@@ -364,9 +430,9 @@ export function usePeralatanPabrik() {
             isLinked: true,
             noSertifikat: lc.noSertifikat || '-',
             jenisPeralatan: lc.jenisSertifikat || item.jenisPeralatan,
-            tanggalInspeksi: lc.terbit || '-',
-            terbit: lc.terbit || '-',
-            berakhir: lc.expired || '-',
+            tanggalInspeksi: formatToDDMMYYYY(lc.terbit) || '-',
+            terbit: formatToDDMMYYYY(lc.terbit) || '-',
+            berakhir: formatToDDMMYYYY(lc.expired) || '-',
             keterangan: lc.instansi || item.keterangan,
             status: lc.status || 'Aktif',
             namaSertifikat: lc.namaSertifikat || '-',
@@ -376,7 +442,7 @@ export function usePeralatanPabrik() {
       }
     });
     return rows;
-  }, [filteredData]);
+  }, [sortedFilteredData]);
 
   const handleCsvImported = async () => {
     setActiveMainTab('staging');
@@ -593,6 +659,8 @@ export function usePeralatanPabrik() {
     toggleColumn, selectAllColumns, isVisible, getRowStatusStyle,
     uniqueJenis, uniqueLokasi, uniqueUser, pendingCount, filteredData, expandedRows,
     handleSingleAdded, handleCsvImported, handleZipMatched, requestDeleteRow, confirmDeleteRow,
-    openReassignTargetModal, confirmReassignTargetRow, filteredTargetEquipmentList
+    openReassignTargetModal, confirmReassignTargetRow, filteredTargetEquipmentList,
+    sortKey, sortOrder, toggleSort,
+    sortDateOrder, setSortDateOrder
   };
 }

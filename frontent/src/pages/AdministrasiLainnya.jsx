@@ -87,7 +87,10 @@ export default function AdministrasiLainnya() {
 
     loadData,
     handleCsvImported,
+    handleZipMatched,
     handleSingleAdded,
+    sortDateOrder,
+    setSortDateOrder,
     getRowStatusStyle
   } = useAdministrasiLainnya();
 
@@ -175,11 +178,10 @@ export default function AdministrasiLainnya() {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
         <button
           onClick={() => setActiveMainTab('main')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            activeMainTab === 'main'
-              ? 'bg-[#005ea4] text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeMainTab === 'main'
+            ? 'bg-[#005ea4] text-white shadow-xs'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
         >
           <Building2 className="w-4 h-4" />
           <span>Data Utama</span>
@@ -187,11 +189,10 @@ export default function AdministrasiLainnya() {
 
         <button
           onClick={() => setActiveMainTab('staging')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
-            activeMainTab === 'staging'
-              ? 'bg-amber-600 text-white shadow-xs'
-              : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${activeMainTab === 'staging'
+            ? 'bg-amber-600 text-white shadow-xs'
+            : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
+            }`}
         >
           <FileWarning className="w-4 h-4 text-amber-500" />
           <span>Menunggu Dokumen (Staging)</span>
@@ -230,6 +231,16 @@ export default function AdministrasiLainnya() {
             </button>
           )}
 
+          {/* Sort Dropdown */}
+          <select
+            value={sortDateOrder}
+            onChange={(e) => setSortDateOrder(e.target.value)}
+            className="text-xs bg-white border border-slate-300 rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+          >
+            <option value="desc">Terbaru</option>
+            <option value="asc">Terlama</option>
+          </select>
+
           {/* COLUMN VISIBILITY */}
           <div className="relative">
             <button
@@ -260,14 +271,13 @@ export default function AdministrasiLainnya() {
                       <label
                         key={col.key}
                         onClick={() => toggleColumn(col.key)}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${
-                          checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                        }`}
+                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                          }`}
                       >
                         <input
                           type="checkbox"
                           checked={checked}
-                          onChange={() => {}}
+                          onChange={() => { }}
                           className="rounded border-slate-300 accent-[#005ea4]"
                         />
                         <span className="text-xs">{col.label}</span>
@@ -287,7 +297,7 @@ export default function AdministrasiLainnya() {
           <div className="text-amber-800 text-xs font-bold">
             {selectedStagingIds.length} item terpilih
           </div>
-          <button 
+          <button
             onClick={() => setBulkExemptModalOpen(true)}
             disabled={isSubmittingBulkExempt}
             className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
@@ -316,7 +326,7 @@ export default function AdministrasiLainnya() {
                 )}
                 {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">NO.</th>}
                 {isVisible("judulCiptaan") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">JUDUL CIPTAAN</th>}
-                
+
                 {/* JENIS CIPTAAN FILTER */}
                 {isVisible("jenisCiptaan") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
@@ -405,9 +415,8 @@ export default function AdministrasiLainnya() {
                       {isVisible("judulCiptaan") && (
                         <td
                           onClick={() => setDetailModalItem({ ...item, merekItem: item.judulCiptaan, jenisPeralatan: item.jenisCiptaan, berakhir: item.kapanBerakhir })}
-                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap text-center align-middle ${
-                            isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
-                          }`}
+                          className={`py-3.5 px-4 font-bold cursor-pointer hover:underline whitespace-nowrap text-center align-middle ${isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
+                            }`}
                           title="Klik untuk Lihat Detail"
                         >
                           <div className="flex items-center justify-center gap-2">
@@ -519,11 +528,10 @@ export default function AdministrasiLainnya() {
                     <div
                       key={eq.id}
                       onClick={() => setSelectedNewTargetItem(eq)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-blue-50/90 border-[#005ea4] ring-1 ring-[#005ea4]'
-                          : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
-                      }`}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${isSelected
+                        ? 'bg-blue-50/90 border-[#005ea4] ring-1 ring-[#005ea4]'
+                        : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+                        }`}
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
@@ -628,14 +636,14 @@ export default function AdministrasiLainnya() {
                 <ShieldAlert className="w-5 h-5 text-amber-500" />
                 Tandai Tanpa Sertifikat
               </h3>
-              <button 
+              <button
                 onClick={() => setBulkExemptModalOpen(false)}
                 className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-lg hover:bg-slate-200 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
-            
+
             {/* Body */}
             <div className="p-5 space-y-4">
               <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -643,7 +651,7 @@ export default function AdministrasiLainnya() {
                   Anda akan menandai <strong>{selectedStagingIds.length} item terpilih</strong> sebagai tidak memerlukan dokumen/sertifikat (EXEMPT).
                 </p>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
                   Catatan / Alasan <span className="text-rose-500">*</span>
@@ -657,7 +665,7 @@ export default function AdministrasiLainnya() {
                 ></textarea>
               </div>
             </div>
-            
+
             {/* Footer */}
             <div className="px-5 py-3.5 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2">
               <button

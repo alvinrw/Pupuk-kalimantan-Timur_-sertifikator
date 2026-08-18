@@ -1,6 +1,7 @@
-import React from 'react';
-import { Edit3, Save, Trash2, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit3, Save, Trash2, Plus, UploadCloud } from 'lucide-react';
 import { updateNotificationSetting } from '../../services/masterItemsService';
+import { API_BASE, getFullFileUrl } from '../../config/api';
 
 export default function DocumentFormFields({ hook, item }) {
   const {
@@ -12,6 +13,8 @@ export default function DocumentFormFields({ hook, item }) {
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
   } = hook;
+
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   if (!isEditing) return null;
 
@@ -96,6 +99,70 @@ export default function DocumentFormFields({ hook, item }) {
                       )}
                     </select>
                   </div>
+                  
+                  {showMasterFields && (
+                    <div>
+                      <label className="font-bold text-slate-800 block mb-1.5">Foto Dokumentasi (Master)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          id="equipment-photo-upload"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const uploaderData = new FormData();
+                            uploaderData.append('file', file);
+                            try {
+                              setIsUploadingPhoto(true);
+                              const token = sessionStorage.getItem('token');
+                              const response = await fetch(`${API_BASE}/document-history/upload`, {
+                                method: 'POST',
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                body: uploaderData,
+                              });
+                              const resJson = await response.json();
+                              if (response.ok && resJson.data) {
+                                const url = resJson.data.url || resJson.data.fileUrl || (typeof resJson.data === 'string' ? resJson.data : '');
+                                setFormData({ ...formData, imageUrl: url });
+                              } else {
+                                alert('Gagal unggah foto: ' + (resJson.message || 'Error'));
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert('Gagal unggah foto');
+                            } finally {
+                              setIsUploadingPhoto(false);
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="equipment-photo-upload"
+                          className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-slate-700 inline-flex items-center gap-1.5"
+                        >
+                          <UploadCloud className="w-4 h-4 text-slate-500" />
+                          <span>{isUploadingPhoto ? 'Mengunggah...' : 'Unggah Foto'}</span>
+                        </label>
+                        {formData.imageUrl && (
+                          <div className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden">
+                            <img
+                              src={getFullFileUrl(formData.imageUrl)}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                              className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-0.5 w-4 h-4 flex items-center justify-center text-[8px]"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Upload, CheckCircle2, Loader2, AlertTriangle, CheckCircle, FileCheck, Save, Sparkles, Crosshair } from 'lucide-react';
-import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE, getFullFileUrl } from '../config/api';
 import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting, updateCertificate } from '../services/masterItemsService';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
@@ -31,12 +30,12 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
   const [selectedFile, setSelectedFile] = useState(null);
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
   
-  // OCR & Temp Storage States
-  const [isScanningOcr, setIsScanningOcr] = useState(false);
-  const [isUploadingTemp, setIsUploadingTemp] = useState(false);
-  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
-  const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [isUploadingTemp, setIsUploadingTemp] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
+  const [ocrSuccess, setOcrSuccess] = useState(false);
+  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
   const [scanMode, setScanMode] = useState(null);
 
   // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
@@ -84,7 +83,6 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       setSelectedFile(null);
       setTempUrl(null);
       setSertifikatMode(activeDoc.documentStatus === 'EXEMPT' ? 'tanpa' : 'dengan');
-      setIsScanningOcr(false);
       setIsUploadingTemp(false);
       setOcrErrorMsg('');
       setOcrSuccess(false);
@@ -135,20 +133,33 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       }
     }
 
-    const targetId = activeDoc.MasterId || activeDoc.id;
+    const targetId = activeDoc.itemId || activeDoc.masterItemId || activeDoc.MasterId || activeDoc.id;
 
     try {
       if (activeDoc.isChild || activeDoc.certId || activeDoc.masterItemId) {
         // Update existing child certificate
+        const isExempt = sertifikatMode === 'tanpa';
         await updateCertificate(activeDoc.id || activeDoc.certId, {
           namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat,
-          noSertifikat: formData.noSertifikat,
+          noSertifikat: isExempt ? (formData.noSertifikat || 'EXEMPT') : formData.noSertifikat,
           instansi: formData.instansi,
           terbit: formData.terbit,
           expired: formData.expired,
-          fileUrl: finalUrl,
-          status: 'Aktif'
+          fileUrl: isExempt ? null : finalUrl,
+          status: isExempt ? 'EXEMPT' : 'Aktif'
         });
+
+        // If exempt mode, also resolve the master item
+        if (isExempt) {
+          const masterItemId = activeDoc.itemId || activeDoc.masterItemId || activeDoc.MasterId;
+          if (masterItemId) {
+            try {
+              await resolveMasterItemExemption(masterItemId, formData.keterangan || 'Tanpa Sertifikat (Input Manual)');
+            } catch (err) {
+              console.error("Exemption resolve error (child):", err);
+            }
+          }
+        }
       } else {
         // Create new certificate for master item
         await createCertificateForMasterItem({
@@ -186,14 +197,17 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       console.error("Notification setting update error:", err);
     }
 
+    const isExemptMode = sertifikatMode === 'tanpa';
     const updatedData = {
       ...activeDoc,
       ...formData,
       file: sertifikatMode === 'dengan' ? selectedFile : null,
-      fileUrl: finalUrl,
-      documentStatus: sertifikatMode === 'tanpa' ? 'EXEMPT' : 'COMPLETED',
-      hasCertificatePdf: sertifikatMode === 'dengan' && (!!selectedFile || !!finalUrl),
-      noSertifikat: formData.noSertifikat || (sertifikatMode === 'tanpa' ? "Tanpa Sertifikat" : "BELUM_ADA_SERTIFIKAT"),
+      fileUrl: isExemptMode ? null : finalUrl,
+      status: isExemptMode ? 'EXEMPT' : 'Aktif',
+      documentStatus: isExemptMode ? 'EXEMPT' : 'COMPLETED',
+      hasCertificatePdf: !isExemptMode && (!!selectedFile || !!finalUrl),
+      hasPdf: !isExemptMode && (!!selectedFile || !!finalUrl),
+      noSertifikat: formData.noSertifikat || (isExemptMode ? 'EXEMPT' : 'BELUM_ADA_SERTIFIKAT'),
       notificationSetting: {
         isEnabled: formData.reminderEnabled,
         triggerType: formData.reminderType,
@@ -217,7 +231,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       headerIcon={CheckCircle2}
       formId="resolveDocumentForm"
       onSubmit={handleSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr || (sertifikatMode === 'dengan' && !selectedFile && !tempUrl && !activeDoc.fileUrl)}
+      submitDisabled={isUploadingTemp || isScanningOcr || !!uploadError || (sertifikatMode === 'dengan' && !selectedFile && !tempUrl && !activeDoc.fileUrl)}
       submitText="Simpan & Selesaikan"
       submitIcon={Save}
       tempUrl={tempUrl || activeDoc.fileUrl}
@@ -281,6 +295,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                     setSelectedFile(file);
                     setTempUrl(null);
                     setOcrSuccess(false);
+                    setUploadError(null);
 
                     if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
                       try {
@@ -295,45 +310,34 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                         });
                         if (uploadRes.ok) {
                           const json = await uploadRes.json();
-                          setTempUrl(json.data.url);
+                          if (json.data?.url) {
+                            setTempUrl(json.data.url);
+                          } else {
+                            setUploadError('Server tidak mengembalikan URL file. Coba lagi.');
+                          }
+                        } else {
+                          let errMsg = `Upload gagal (status ${uploadRes.status})`;
+                          try {
+                            const errJson = await uploadRes.json();
+                            errMsg = errJson?.message || errMsg;
+                          } catch(_) {}
+                          setUploadError(errMsg);
+                          console.error('Upload temp error:', errMsg);
                         }
                       } catch (err) {
+                        const msg = err?.message || 'Koneksi gagal. Pastikan server backend berjalan.';
+                        setUploadError(msg);
                         console.error('Upload temp error:', err);
                       } finally {
                         setIsUploadingTemp(false);
                       }
-
-                      const hasExistingCertDetails = !!(activeDoc.noSertifikat || activeDoc.certificateNo) && 
-                                                    !!(activeDoc.terbit || activeDoc.tanggalInspeksi) && 
-                                                    !!(activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir);
-
-                      if (!hasExistingCertDetails) {
-                        try {
-                          setIsScanningOcr(true);
-                          const ocrData = await scanPdfDocument(file);
-                          if (ocrData) {
-                            setFormData(prev => ({
-                              ...prev,
-                              namaSertifikat: ocrData.namaSertifikat || prev.namaSertifikat,
-                              noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
-                              terbit: ocrData.terbit || prev.terbit || '',
-                              expired: ocrData.expired || prev.expired || '',
-                              instansi: ocrData.instansi || prev.instansi || ''
-                            }));
-                            setOcrSuccess(true);
-                            setOcrErrorMsg((!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) ? "AI tidak mendeteksi data. Silakan isi form manual." : "");
-                          }
-                        } catch (err) {
-                          setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
-                        } finally {
-                          setIsScanningOcr(false);
-                        }
-                      }
+                    } else {
+                      setUploadError('Format file tidak didukung. Harap pilih file PDF.');
                     }
                   }
                 }}
                 className="hidden"
-                disabled={isUploadingTemp || isScanningOcr}
+                disabled={isUploadingTemp}
               />
               <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
               <div className="flex flex-col items-center">
@@ -344,24 +348,29 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               </div>
             </div>
 
-            {(isUploadingTemp || isScanningOcr) && (
-              <div className="flex flex-col gap-2 mt-3">
-                {isUploadingTemp && (
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                    <span>Menyiapkan preview dokumen...</span>
-                  </div>
-                )}
-                {isScanningOcr && (
-                  <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                    <span>AI sedang mengekstrak data...</span>
-                  </div>
-                )}
+            {isUploadingTemp && (
+              <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse mt-3">
+                <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                <span>Menyiapkan preview dokumen...</span>
               </div>
             )}
-            
 
+            {uploadError && !isUploadingTemp && (
+              <div className="flex items-start gap-2 text-xs font-bold text-red-700 bg-red-50 p-2.5 rounded-lg border border-red-200 mt-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                <div>
+                  <div>Upload gagal: {uploadError}</div>
+                  <div className="font-normal mt-0.5 text-red-500">Pastikan backend &amp; MinIO berjalan, lalu coba pilih file lagi.</div>
+                </div>
+              </div>
+            )}
+
+            {tempUrl && !isUploadingTemp && !uploadError && (
+              <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 mt-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>File berhasil diunggah ke server. Siap disimpan.</span>
+              </div>
+            )}
 
             {ocrErrorMsg && (
               <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
@@ -516,6 +525,17 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                   </button>
                   )}
                 </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">Keterangan / Catatan Tambahan</label>
+                <textarea
+                  rows="2"
+                  value={formData.keterangan}
+                  onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+                  placeholder="Tambahkan catatan jika diperlukan..."
+                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4] font-mono-data resize-none"
+                />
               </div>
             </div>
           )}

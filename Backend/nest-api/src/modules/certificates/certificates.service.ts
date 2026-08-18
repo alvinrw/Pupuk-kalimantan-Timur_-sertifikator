@@ -34,12 +34,16 @@ export class CertificatesService {
           data: { isResolved: true, resolvedAt: new Date() },
         }).catch(() => {});
 
+        const pendingCertsCount = await this.prisma.certificate.count({
+          where: { itemId: createCertificateDto.itemId, OR: [{ fileUrl: null }, { fileUrl: '' }] }
+        });
         await this.prisma.masterItem.update({
           where: { id: createCertificateDto.itemId },
           data: { 
-            documentStatus: 'COMPLETED',
             isManuallyEdited: true,
-            lastEditSource: 'MANUAL'
+            lastEditSource: 'MANUAL',
+            documentStatus: pendingCertsCount > 0 ? 'PENDING_DOC' : 'COMPLETED',
+            exemptionNote: null,
           },
         }).catch(() => {});
 
@@ -60,14 +64,18 @@ export class CertificatesService {
         data: { isResolved: true, resolvedAt: new Date() },
       }).catch(() => {});
 
+      const pendingCertsCount = await this.prisma.certificate.count({
+        where: { itemId: createCertificateDto.itemId, OR: [{ fileUrl: null }, { fileUrl: '' }] }
+      });
       await this.prisma.masterItem.update({
         where: { id: createCertificateDto.itemId },
         data: { 
-          documentStatus: 'COMPLETED',
           issueDate: createCertificateDto.terbit || null,
           expiryDate: createCertificateDto.expired || null,
           isManuallyEdited: true,
-          lastEditSource: 'MANUAL'
+          lastEditSource: 'MANUAL',
+          documentStatus: pendingCertsCount > 0 ? 'PENDING_DOC' : 'COMPLETED',
+          exemptionNote: null,
         },
       }).catch(() => {});
     }
@@ -94,9 +102,16 @@ export class CertificatesService {
 
   async update(id: string, updateCertificateDto: UpdateCertificateDto) {
     const cert = await this.findOne(id);
+    
+    // Auto-activate certificate if it was EXEMPT but is now being updated
+    const updatedStatus = cert.status === 'EXEMPT' ? 'Aktif' : undefined;
+
     const result = await this.prisma.certificate.update({
       where: { id },
-      data: updateCertificateDto,
+      data: {
+        ...updateCertificateDto,
+        status: updateCertificateDto.status || updatedStatus || cert.status,
+      },
     });
 
     if (cert.itemId) {
@@ -105,14 +120,15 @@ export class CertificatesService {
         data: { isResolved: true, resolvedAt: new Date() },
       }).catch(() => {});
 
+      // Only update housekeeping metadata — do NOT auto-promote documentStatus.
+      // The master item moves to Data Utama only when the user explicitly clicks "Pindah ke Utama".
       await this.prisma.masterItem.update({
         where: { id: cert.itemId },
         data: {
-          documentStatus: 'COMPLETED',
           isManuallyEdited: true,
           lastEditSource: 'MANUAL',
-          issueDate: updateCertificateDto.terbit !== undefined ? updateCertificateDto.terbit : undefined,
-          expiryDate: updateCertificateDto.expired !== undefined ? updateCertificateDto.expired : undefined,
+          ...(updateCertificateDto.terbit !== undefined ? { issueDate: updateCertificateDto.terbit } : {}),
+          ...(updateCertificateDto.expired !== undefined ? { expiryDate: updateCertificateDto.expired } : {}),
         }
       }).catch(() => {});
     }

@@ -8,8 +8,8 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
   const [selectedUploadFile, setSelectedUploadFile] = useState(null);
   const manualFileInputRef = useRef(null);
 
-  const openUploadModal = (type) => {
-    setUploadData({ type, namaSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '' });
+  const openUploadModal = (type, rowId = null) => {
+    setUploadData({ type, rowId, namaSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '' });
     setSelectedUploadFile(null);
     setIsUploadModalOpen(true);
   };
@@ -61,6 +61,7 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
             instansi: uploadData.instansi || undefined,
             terbit: uploadData.terbit || undefined,
             expired: uploadData.expired || undefined,
+            status: 'Aktif',
           };
           if (newFileUrl) updatePayload.fileUrl = newFileUrl;
           await updateCertificate(item.currentCert.id, updatePayload);
@@ -76,6 +77,7 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
             instansi: uploadData.instansi || undefined,
             terbit: uploadData.terbit || undefined,
             expired: uploadData.expired || undefined,
+            status: 'Aktif',
           };
           if (newFileUrl) updatePayload.fileUrl = newFileUrl;
           await updateCertificate(uploadData.rowId, updatePayload);

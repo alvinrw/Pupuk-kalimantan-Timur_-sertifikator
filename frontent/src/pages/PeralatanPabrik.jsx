@@ -148,8 +148,12 @@ export default function PeralatanPabrik() {
         filterUser={data.filterUser} setFilterUser={data.setFilterUser}
         filterStatus={data.filterStatus} setFilterStatus={data.setFilterStatus}
         isColumnDropdownOpen={data.isColumnDropdownOpen} setIsColumnDropdownOpen={data.setIsColumnDropdownOpen}
-        visibleColumnKeys={data.visibleColumnKeys} allColumns={data.allColumns}
-        selectAllColumns={data.selectAllColumns} toggleColumn={data.toggleColumn}
+        visibleColumnKeys={data.visibleColumnKeys}
+        allColumns={data.allColumns}
+        selectAllColumns={data.selectAllColumns}
+        toggleColumn={data.toggleColumn}
+        sortDateOrder={data.sortDateOrder}
+        setSortDateOrder={data.setSortDateOrder}
       />
 
       {data.activeMainTab === 'staging' && data.selectedStagingIds.length > 0 && (
@@ -185,6 +189,9 @@ export default function PeralatanPabrik() {
         setDetailModalItem={data.setDetailModalItem}
         setResolveTargetItem={data.setResolveTargetItem}
         getRowStatusStyle={data.getRowStatusStyle}
+        sortKey={data.sortKey}
+        sortOrder={data.sortOrder}
+        toggleSort={data.toggleSort}
       />
 
       <PeralatanModals

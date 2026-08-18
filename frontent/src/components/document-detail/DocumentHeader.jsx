@@ -19,8 +19,8 @@ export default function DocumentHeader({ hook, item, onBack }) {
     setIsDeleteDialogOpen,
     setSelectedHistoryToDelete,
     historyList,
+    isMultiCertItem,
   } = hook;
-
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const actionMenuRef = useRef(null);
@@ -130,7 +130,8 @@ export default function DocumentHeader({ hook, item, onBack }) {
             )}
 
             {/* Perpanjang / Upload */}
-            {isPerpanjangStatus ? (
+            {(!isMultiCertItem || isSingleCertScope) && (
+              isPerpanjangStatus ? (
               <>
                 <button
                   onClick={() => { openUploadModal('archive'); setIsActionMenuOpen(false); }}
@@ -155,10 +156,11 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 <RotateCcw className="w-4 h-4 text-slate-400" />
                 <span>Perpanjang Dokumen</span>
               </button>
-            )}
+            ))}
 
             {/* Afkir / Aktifkan */}
-            {isAfkirStatus ? (
+            {(!isMultiCertItem || isSingleCertScope) && (
+              isAfkirStatus ? (
               <button
                 onClick={() => { handleAktifkan(); setIsActionMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
@@ -174,12 +176,13 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 <Ban className="w-4 h-4 text-slate-400" />
                 <span>Tandai Sebagai Non Aktif</span>
               </button>
-            )}
+            ))}
 
             <div className="h-px bg-slate-100 my-1 mx-2" />
 
             {/* Hapus Sertifikat */}
-            {primaryCert ? (
+            {(!isMultiCertItem || isSingleCertScope) && (
+              primaryCert ? (
               <button
                 onClick={() => { setSelectedHistoryToDelete(primaryCert); setIsActionMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
@@ -196,7 +199,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 <Trash2 className="w-4 h-4 text-slate-300" />
                 <span>Hapus Data Item (Sertifikat)</span>
               </button>
-            )}
+            ))}
 
             <div className="h-px bg-slate-100 my-1 mx-2" />
 

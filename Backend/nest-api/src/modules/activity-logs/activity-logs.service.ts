@@ -22,7 +22,12 @@ export class ActivityLogsService {
       role: log.user.role.name,
       action: log.action,
       module: log.targetTable,
-      target: log.targetId || '-'
+      target: log.targetId || '-',
+      details: log.details || ''
     }));
+  }
+
+  async clearAll() {
+    return this.prisma.activityLog.deleteMany({});
   }
 }

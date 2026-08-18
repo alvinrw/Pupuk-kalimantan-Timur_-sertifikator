@@ -150,27 +150,15 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    // Periksa apakah item ini sudah memiliki data lengkap di primaryCert atau permit
-    let hasCertData = false;
-    if (item.certificates && item.certificates.length > 0) {
-      const c = item.certificates[0];
-      if (c.noSertifikat && c.terbit && c.expired) hasCertData = true;
-    } else if (item.permits && item.permits.length > 0) {
-      const p = item.permits[0];
-      if (p.noIzin && p.terbit && p.expired) hasCertData = true;
-    } else {
-      if (item.issueDate && item.expiryDate) hasCertData = true;
-    }
-
-    // Jika datanya lengkap (diunggah dari Staging/CSV), maka 'Tanpa Sertifikat' berarti hanya Bypass Upload PDF
-    const newStatus = hasCertData ? 'COMPLETED' : 'EXEMPT';
-    const newNote = hasCertData ? 'Sertifikat Aktif (Bypass Upload PDF)' : (note || 'Tidak memerlukan sertifikat');
-
+    // Note: We do NOT auto-promote the master item to COMPLETED/EXEMPT here.
+    // The master item only moves to Data Utama when the user explicitly clicks "Pindah ke Utama".
+    // Just store the exemption note for reference.
     const updated = await this.prisma.masterItem.update({
       where: { id },
       data: {
-        documentStatus: newStatus,
-        exemptionNote: newNote,
+        exemptionNote: note || 'Tidak memerlukan sertifikat',
+        isManuallyEdited: true,
+        lastEditSource: 'MANUAL',
       },
     });
 
@@ -322,8 +310,8 @@ export class MasterItemsService implements OnModuleInit {
           }
         }
 
-        const isMingguIni = activeDate >= startOfWeek && activeDate <= endOfWeek;
-        const isBulanIni = activeDate >= startOfMonth && activeDate <= endOfMonth;
+        const isMingguIni = !isExpired && expiry >= startOfWeek && expiry <= endOfWeek;
+        const isBulanIni = !isExpired && expiry >= startOfMonth && expiry <= endOfMonth;
 
         // Fill stats
         if (isEnabled) stats.aktif++;

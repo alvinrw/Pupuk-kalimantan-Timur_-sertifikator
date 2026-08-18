@@ -91,6 +91,13 @@ export default function usePerizinanAset() {
         };
       });
       setDocuments(mapped);
+
+      // Auto-update detailModalItem to reflect changes (e.g. deleted linked certificates)
+      setDetailModalItem(prev => {
+        if (!prev) return null;
+        const updated = mapped.find(m => m.id === prev.id || m.MasterId === prev.MasterId);
+        return updated ? updated : prev;
+      });
     } catch (error) {
       console.error('Failed to load PerizinanAset', error);
     } finally {
@@ -107,13 +114,33 @@ export default function usePerizinanAset() {
     return documents.filter((doc) => doc.documentStatus === 'PENDING_DOC').length;
   }, [documents]);
 
+  const [sortDateOrder, setSortDateOrder] = useState('desc');
+
   const filteredDocs = useMemo(() => {
-    return documents.filter((doc) => {
+    let result = documents.filter((doc) => {
       return activeMainTab === 'staging'
         ? doc.documentStatus === 'PENDING_DOC'
         : doc.documentStatus !== 'PENDING_DOC';
     });
-  }, [documents, activeMainTab]);
+
+    if (searchTerm) {
+      const lower = searchTerm.toLowerCase();
+      result = result.filter(d => 
+        (d.title || '').toLowerCase().includes(lower) || 
+        (d.certificateNo || '').toLowerCase().includes(lower) ||
+        (d.location || '').toLowerCase().includes(lower) ||
+        (d.code || '').toLowerCase().includes(lower)
+      );
+    }
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.submissionDate || a.createdAt || 0).getTime();
+      const timeB = new Date(b.submissionDate || b.createdAt || 0).getTime();
+      return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+
+    return result;
+  }, [documents, activeMainTab, searchTerm, sortDateOrder]);
 
   const expandedRows = useMemo(() => {
     const rows = [];
@@ -382,5 +409,7 @@ export default function usePerizinanAset() {
     handleCsvImported,
     handleZipMatched,
     handleSingleAdded,
+    sortDateOrder,
+    setSortDateOrder,
   };
 }

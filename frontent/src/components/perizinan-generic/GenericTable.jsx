@@ -1,5 +1,16 @@
 import React from 'react';
 import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronRight, FileText, Plus } from 'lucide-react';
+import { getFullFileUrl } from '../../config/api';
+
+const getTimestamp = (dateStr) => {
+  if (!dateStr || dateStr === '-') return 0;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const parts = dateStr.split('/');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+  }
+  const t = new Date(dateStr).getTime();
+  return isNaN(t) ? 0 : t;
+};
 
 export default function GenericTable({
   activeMainTab,
@@ -32,7 +43,10 @@ export default function GenericTable({
   visibleColumnKeys,
   setViewingCert,
   setAddCertTargetMaster,
-  setActiveCertId
+  setActiveCertId,
+  sortKey,
+  sortOrder,
+  toggleSort
 }) {
   const rowsToRender = masterRows || expandedRows || [];
 
@@ -163,7 +177,7 @@ export default function GenericTable({
               {rowsToRender.length > 0 ? (
                 rowsToRender.map((row, index) => {
                   const doc = row.parentDoc;
-                  const rowClass = getRowStatusStyle({ status: row.status });
+                  const rowClass = getRowStatusStyle ? getRowStatusStyle({ status: row.status, documentStatus: row.documentStatus }) : 'bg-white hover:bg-slate-50 border-b border-slate-200';
                   const statusStr = (row.status || '').toLowerCase();
                   const isAfkir = statusStr === 'afkir' || statusStr === 'decommissioned';
                   const isExpired = statusStr === 'expired';
@@ -181,7 +195,7 @@ export default function GenericTable({
                   return (
                     <React.Fragment key={row.id || index}>
                       {/* Master Row */}
-                      <tr className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                      <tr className={`transition-colors font-mono-data text-xs bg-white hover:bg-slate-50 border-b border-slate-200 text-slate-800`}>
                         {activeMainTab === 'staging' && (
                           <td className="py-3.5 px-3 text-center">
                             <input
@@ -220,27 +234,25 @@ export default function GenericTable({
 
                         {isVisible("namaItem") && (
                           <td
-                            onClick={() => setDetailModalItem(doc)}
-                            className={`py-3.5 px-4 font-bold cursor-pointer hover:underline font-sans text-center align-middle ${
-                              isAfkir ? 'text-white' : 'text-slate-900 hover:text-[#005ea4]'
-                            }`}
-                            title={`Klik untuk Lihat Detail - ${namaItemLabel}`}
+                            onClick={() => activeMainTab !== 'staging' && setDetailModalItem(doc)}
+                            className={`py-3.5 px-4 font-bold font-sans text-center align-middle ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]'}`}
+                            title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : `Klik untuk Lihat Detail - ${namaItemLabel}`}
                           >
                             <div className="flex items-center justify-center gap-2">
-                              <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? (isAfkir ? 'text-slate-300' : 'text-emerald-600') : 'text-slate-400'}`} />
+                              <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? 'text-emerald-600' : 'text-slate-400'}`} />
                               <span className="max-w-[240px] truncate block">{row.docNamaItem}</span>
                             </div>
                           </td>
                         )}
 
                         {isVisible("code") && (
-                          <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
+                          <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle text-[#005ea4]`}>
                             {row.docCode}
                           </td>
                         )}
 
                         {isVisible("jenisItem") && (
-                          <td className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-slate-800'}`}>
+                          <td className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle text-slate-800`}>
                             {row.docJenis}
                           </td>
                         )}
@@ -264,14 +276,6 @@ export default function GenericTable({
                                 <FileWarning className="w-3.5 h-3.5" />
                                 Menunggu Dokumen
                               </span>
-                            ) : row.documentStatus === 'EXEMPT' ? (
-                              <button
-                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
-                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer"
-                              >
-                                <XCircle className="w-3.5 h-3.5" />
-                                Tanpa Sertifikat (Pengecualian)
-                              </button>
                             ) : row.certs.length > 0 ? (
                               <button
                                 onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
@@ -280,6 +284,14 @@ export default function GenericTable({
                                 <FileCheck className="w-3.5 h-3.5" />
                                 <span>{row.certs.length} Sertifikat</span>
                                 {isExpanded ? <ChevronDown className="w-3 h-3 ml-0.5" /> : <ChevronRight className="w-3 h-3 ml-0.5" />}
+                              </button>
+                            ) : row.documentStatus === 'EXEMPT' ? (
+                              <button
+                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                Tanpa Sertifikat (Pengecualian)
                               </button>
                             ) : (
                               <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
@@ -308,7 +320,7 @@ export default function GenericTable({
                         <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
                           {activeMainTab === 'staging' ? (
                             (() => {
-                              const isReadyToMove = row.documentStatus === 'EXEMPT' || (row.certs.length > 0 && row.certs.every(c => c.hasPdf));
+                              const isReadyToMove = row.documentStatus === 'EXEMPT' || (row.certs.length > 0 && row.certs.every(c => c.hasPdf || c.status === 'EXEMPT'));
                               
                               if (isReadyToMove) {
                                 return (
@@ -362,7 +374,7 @@ export default function GenericTable({
                           <td colSpan={100} className="p-4 text-left font-sans">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                               {/* Sub-table Header */}
-                              <div className="bg-slate-100/90 px-4 py-2.5 border-b border-slate-200 flex items-center justify-between">
+                              <div className="bg-slate-50 px-4 py-2.5 flex items-center justify-between border-b border-slate-200">
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-4 h-4 text-[#005ea4]" />
                                   <span className="font-bold text-xs text-slate-800 font-mono-data uppercase tracking-wide">
@@ -375,8 +387,14 @@ export default function GenericTable({
                                   </span>
                                   {setAddCertTargetMaster && (
                                     <button
-                                      onClick={() => setAddCertTargetMaster(row.parentDoc || row)}
-                                      className="px-2.5 py-1 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                      onClick={() => activeMainTab !== 'staging' && setAddCertTargetMaster(row.parentDoc || row)}
+                                      disabled={activeMainTab === 'staging'}
+                                      className={`px-2.5 py-1 text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1 transition-colors ${
+                                        activeMainTab === 'staging'
+                                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'
+                                          : 'bg-[#005ea4] hover:bg-[#004881] text-white cursor-pointer'
+                                      }`}
+                                      title={activeMainTab === 'staging' ? 'Tidak dapat menambah sertifikat di mode Staging' : 'Tambah Sertifikat'}
                                     >
                                       <Plus className="w-3.5 h-3.5" />
                                       <span>+ Tambah Sertifikat</span>
@@ -398,76 +416,102 @@ export default function GenericTable({
                                         <th className="py-2.5 px-3 w-10 text-center">NO</th>
                                         <th className="py-2.5 px-4 text-left">NAMA SERTIFIKAT</th>
                                         <th className="py-2.5 px-4 text-center">NOMOR SERTIFIKAT</th>
-                                        <th className="py-2.5 px-4 text-center">TANGGAL TERBIT</th>
-                                        <th className="py-2.5 px-4 text-center">MASA BERLAKU (EXPIRED)</th>
-                                        <th className="py-2.5 px-4 text-center">STATUS</th>
-                                        <th className="py-2.5 px-4 text-center">DOKUMEN PDF</th>
+                                         <th 
+                                           onClick={() => toggleSort('terbit')}
+                                           className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                                         >
+                                           <div className="flex items-center justify-center gap-1">
+                                             <span>TANGGAL TERBIT</span>
+                                             <span className="text-[9px] text-slate-400">
+                                               {sortKey === 'terbit' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                             </span>
+                                           </div>
+                                         </th>
+                                         <th 
+                                           onClick={() => toggleSort('berakhir')}
+                                           className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                                         >
+                                           <div className="flex items-center justify-center gap-1">
+                                             <span>MASA BERLAKU (EXPIRED)</span>
+                                             <span className="text-[9px] text-slate-400">
+                                               {sortKey === 'berakhir' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                             </span>
+                                           </div>
+                                         </th>
                                         <th className="py-2.5 px-4 text-center">AKSI</th>
                                       </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-100">
                                       {row.certs.map((cert, certIdx) => {
                                         const certStatusLower = (cert.status || '').toLowerCase();
-                                        const isCertExpired = certStatusLower === 'expired';
+                                        const certExpiredTimestamp = getTimestamp(cert.expired || cert.berakhir);
+                                        const todayTimestamp = new Date().setHours(0, 0, 0, 0);
+                                        
+                                        const isTerbitEmpty = !cert.terbit || String(cert.terbit).trim() === '-' || String(cert.terbit).trim() === '';
+                                        const isExpiredEmpty = !cert.expired || String(cert.expired).trim() === '-' || String(cert.expired).trim() === '';
+                                        const isMissingBothDates = isTerbitEmpty && isExpiredEmpty;
+
+                                        const isCertExpiredReal = certExpiredTimestamp > 0 && certExpiredTimestamp < todayTimestamp;
+                                        const isCertExpired = certStatusLower === 'expired' || isCertExpiredReal || isMissingBothDates;
+                                        
+                                        const isCertAfkir = certStatusLower === 'afkir' || certStatusLower === 'decommissioned' || certStatusLower === 'dicabut';
                                         const isCertPerpanjang = certStatusLower === 'perpanjang' || certStatusLower === 'perpanjangan' || certStatusLower === 'in progress';
 
+                                        const childRowClass = getRowStatusStyle 
+                                          ? getRowStatusStyle({ 
+                                              status: isCertExpired ? 'expired' : cert.status, 
+                                              documentStatus: isCertExpired ? 'expired' : cert.status 
+                                            }) 
+                                          : 'bg-white hover:bg-blue-50/40';
+
                                         return (
-                                          <tr key={cert.id || certIdx} className="hover:bg-blue-50/40 transition-colors">
-                                            <td className="py-2.5 px-3 font-bold text-slate-500 text-center">{certIdx + 1}</td>
+                                          <tr key={cert.id || certIdx} className={`transition-colors ${childRowClass}`}>
+                                            <td className={`py-2.5 px-3 font-bold text-center ${isCertAfkir ? 'text-slate-400' : 'text-slate-500'}`}>{certIdx + 1}</td>
                                             <td 
                                               onClick={(e) => {
                                                 e.stopPropagation();
                                                 e.preventDefault();
+                                                if (activeMainTab === 'staging') return;
                                                 const raw = cert.certObj || cert || {};
                                                 const targetId = raw.id || cert.id;
                                                 if (setActiveCertId) setActiveCertId(targetId);
                                                 setDetailModalItem(row.parentDoc || row);
                                               }}
-                                              className="py-2.5 px-4 text-left font-bold text-slate-900 cursor-pointer hover:text-[#005ea4] hover:underline"
-                                              title="Klik untuk Lihat Detail Halaman Penuh Sertifikat"
+                                              className={`py-2.5 px-4 text-left font-bold ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : (isCertAfkir ? 'cursor-pointer hover:underline text-white hover:text-blue-300' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')}`}
+                                              title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : 'Klik untuk Lihat Detail Halaman Penuh Sertifikat'}
                                             >
                                               {cert.namaSertifikat}
                                             </td>
-                                            <td className="py-2.5 px-4 text-center font-bold text-[#005ea4]">{cert.noSertifikat}</td>
-                                            <td className="py-2.5 px-4 text-center text-slate-600">{cert.terbit}</td>
-                                            <td className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : 'text-slate-800'}`}>
+                                            <td className={`py-2.5 px-4 text-center font-bold ${isCertAfkir ? 'text-blue-300' : 'text-[#005ea4]'}`}>{cert.noSertifikat}</td>
+                                            <td className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>{cert.terbit}</td>
+                                            <td className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : (isCertAfkir ? 'text-slate-200' : 'text-slate-800')}`}>
                                               {cert.expired}
                                             </td>
-                                            <td className="py-2.5 px-4 text-center">
-                                              <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                                                isCertExpired 
-                                                  ? 'bg-rose-50 text-rose-700 border-rose-200' 
-                                                  : isCertPerpanjang 
-                                                  ? 'bg-amber-50 text-amber-700 border-amber-200' 
-                                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                              }`}>
-                                                {cert.status}
-                                              </span>
-                                            </td>
-                                            <td className="py-2.5 px-4 text-center">
-                                              {cert.hasPdf && cert.fileUrl ? (
-                                                <a
-                                                  href={cert.fileUrl}
-                                                  target="_blank"
-                                                  rel="noopener noreferrer"
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#005ea4] text-[11px] font-bold rounded-md border border-blue-200 transition-colors"
-                                                >
-                                                  <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                                  <span>Lihat PDF</span>
-                                                </a>
-                                              ) : (
-                                                <span className="text-slate-400 text-[11px] italic">Tidak Ada File</span>
-                                              )}
-                                            </td>
+
+
                                             <td className="py-2.5 px-4 text-center whitespace-nowrap font-mono-data">
                                               <div className="flex items-center justify-center gap-1.5">
                                                 {activeMainTab === 'staging' ? (
-                                                  cert.hasPdf ? (
-                                                    <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-bold rounded-md border border-emerald-300 inline-flex items-center gap-1">
-                                                      <CheckCircle2 className="w-3.5 h-3.5" />
-                                                      <span>Sudah</span>
+                                                  certStatusLower === 'exempt' ? (
+                                                    <span className="px-2.5 py-1 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-md border border-amber-300 inline-flex items-center gap-1">
+                                                      <ShieldAlert className="w-3.5 h-3.5" />
+                                                      <span>Tidak Perlu</span>
                                                     </span>
+                                                  ) : cert.hasPdf ? (
+                                                    <button
+                                                      type="button"
+                                                      onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        e.preventDefault();
+                                                        if (setActiveCertId) setActiveCertId(null);
+                                                        const raw = cert.certObj || cert || {};
+                                                        setViewingCert(raw);
+                                                      }}
+                                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-md border border-emerald-600 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                                    >
+                                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                                      <span>Sudah Lengkap</span>
+                                                    </button>
                                                   ) : (
                                                     <button
                                                       type="button"
@@ -477,34 +521,43 @@ export default function GenericTable({
                                                         const raw = cert.certObj || cert || {};
                                                         setResolveTargetItem({ ...raw, isChild: true });
                                                       }}
-                                                      className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold rounded-md border border-amber-600 inline-flex items-center gap-1 cursor-pointer transition-colors"
-                                                      title="Upload dokumen PDF"
+                                                      className={`px-2.5 py-1 text-white text-[11px] font-bold rounded-md border inline-flex items-center gap-1 cursor-pointer transition-colors ${
+                                                        cert.noSertifikat && cert.noSertifikat !== '-' && cert.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' 
+                                                        ? 'bg-blue-600 hover:bg-blue-700 border-blue-600'
+                                                        : 'bg-amber-600 hover:bg-amber-700 border-amber-600'
+                                                      }`}
                                                     >
                                                       <FileWarning className="w-3.5 h-3.5" />
-                                                      <span>Lengkapi</span>
+                                                      <span>
+                                                        {cert.noSertifikat && cert.noSertifikat !== '-' && cert.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' 
+                                                          ? 'Upload PDF' 
+                                                          : 'Lengkapi'}
+                                                      </span>
                                                     </button>
                                                   )
                                                 ) : (
                                                   <>
-                                                    <button
-                                                      type="button"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        e.preventDefault();
-                                                        const raw = cert.certObj || cert || {};
-                                                        const targetId = raw.id || cert.id;
-                                                        if (setActiveCertId) setActiveCertId(targetId);
-                                                        setDetailModalItem(row.parentDoc || row);
-                                                      }}
-                                                      className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-md border border-slate-300 inline-flex items-center gap-1 cursor-pointer transition-colors"
-                                                      title="Lihat Detail Halaman Penuh Sertifikat"
-                                                    >
-                                                      <Eye className="w-3.5 h-3.5 text-[#005ea4]" />
-                                                      <span>Lihat Detail</span>
-                                                    </button>
+                                                    {activeMainTab !== 'staging' && (
+                                                      <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          e.preventDefault();
+                                                          const raw = cert.certObj || cert || {};
+                                                          const targetId = raw.id || cert.id;
+                                                          if (setActiveCertId) setActiveCertId(targetId);
+                                                          setDetailModalItem(row.parentDoc || row);
+                                                        }}
+                                                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold rounded-md border border-slate-300 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                                        title="Lihat Detail Halaman Penuh Sertifikat"
+                                                      >
+                                                        <Eye className="w-3.5 h-3.5 text-[#005ea4]" />
+                                                        <span>Lihat Detail</span>
+                                                      </button>
+                                                    )}
                                                     {cert.hasPdf && cert.fileUrl && (
                                                       <a
-                                                        href={cert.fileUrl}
+                                                        href={getFullFileUrl(cert.fileUrl)}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         onClick={(e) => e.stopPropagation()}

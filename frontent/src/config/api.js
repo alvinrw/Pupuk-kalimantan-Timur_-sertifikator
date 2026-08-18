@@ -15,10 +15,14 @@ export function getFullFileUrl(path) {
   if (!path) return null;
   
   const token = sessionStorage.getItem('token') || '';
-  // Check if it's a PDF file
-  const isPdf = path.toLowerCase().endsWith('.pdf') || path.includes('.pdf?');
+  // Check if it's a PDF or Image file
+  const isViewable = 
+    path.toLowerCase().endsWith('.pdf') || path.includes('.pdf?') ||
+    path.toLowerCase().endsWith('.png') || path.includes('.png?') ||
+    path.toLowerCase().endsWith('.jpg') || path.includes('.jpg?') ||
+    path.toLowerCase().endsWith('.jpeg') || path.includes('.jpeg?');
   
-  if (isPdf) {
+  if (isViewable) {
     return `${API_BASE}/document-history/view-watermarked?token=${encodeURIComponent(token)}&filePath=${encodeURIComponent(path)}`;
   }
   

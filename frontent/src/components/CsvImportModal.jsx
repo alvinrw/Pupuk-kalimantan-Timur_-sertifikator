@@ -7,13 +7,21 @@ import {
   History,
   Trash2,
   AlertTriangle,
-  Download
+  Download,
+  AlertCircle,
+  CheckCircle2,
+  Search,
+  Filter,
+  Sparkles,
+  UserCheck
 } from 'lucide-react';
 import { uploadCsv, getCsvHistory, deleteCsvHistory } from '../services/csvService';
 import { bulkCreateMastersWithCertificates } from '../services/masterItemsService';
+import { useAuth } from '../contexts/AuthContext';
 import * as xlsx from 'xlsx';
 
 export default function CsvImportModal({ isOpen, onClose, onImportSuccess, importType = 'master_items', categoryKey = '', moduleName = '' }) {
+  const { user } = useAuth();
   const fileInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('upload'); // 'upload' | 'history'
   const [step, setStep] = useState('upload'); // upload -> preview -> success
@@ -73,6 +81,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
               targetCategory: getCategoryLabel(detail.categoryKey || categoryKey),
               uploadDate: new Date(log.createdAt).toISOString().replace('T', ' ').substring(0, 19),
               totalRows: detail.totalRows ?? detail.importedCount ?? 1,
+              masterCount: detail.masterCount ?? 0,
               successCount: detail.successCount ?? detail.importedCount ?? 1,
               duplicateCount: detail.duplicateCount ?? 0,
               protectedCount: detail.protectedCount ?? 0,
@@ -177,17 +186,17 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             const cols = parsedRows[i];
             if (!cols || cols.length < 2) continue;
             
-            const title = getVal(cols, ['title', 'merekitem', 'merek', 'namaperalatan', 'namaproduk', 'judul', 'nama']);
-            const tipe = getVal(cols, ['jenis', 'tipe', 'peruntukan']);
-            const code = getVal(cols, ['code', 'registrasi', 'noslf', 'certificateno', 'nomorseri']);
-            const unitLocation = getVal(cols, ['unit', 'lokasi']);
+            const title = getVal(cols, ['title', 'merekitem', 'merek', 'namaperalatan', 'namaproduk', 'judul', 'nama', 'namaaset']);
+            const tipe = getVal(cols, ['jenis', 'tipe', 'peruntukan', 'jenisaset']);
+            const code = getVal(cols, ['code', 'registrasi', 'noslf', 'certificateno', 'nomorseri', 'noseriaset', 'noproyek', 'noseri']);
+            const unitLocation = getVal(cols, ['unit', 'lokasi', 'lokasiaset']);
             const penanggungJawab = getVal(cols, ['user', 'kontraktor', 'pencipta', 'penanggungjawab']);
-            const status = getVal(cols, ['status', 'kondisi']);
+            const status = getVal(cols, ['status', 'kondisi', 'statusaset']);
             
             const namaSertifikat = getVal(cols, ['namasertifikat', 'jenissertifikat']) || tipe || 'Sertifikat Utama';
             const noSertifikat = getVal(cols, ['nosertifikat', 'certificateno', 'noslf', 'nosurat']);
             const terbit = getVal(cols, ['terbit', 'issuedate', 'tanggalawal', 'tanggalinspeksi']);
-            const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim']);
+            const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim', 'expired']);
             
             // Skip completely empty noise rows
             if (!title && !tipe && !code && !unitLocation && !penanggungJawab && !noSertifikat) {
@@ -197,7 +206,13 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             groupedData.push({
               master: { title, tipe, code, unitLocation, penanggungJawab, status },
               certificates: (noSertifikat && noSertifikat !== '-' && noSertifikat.toLowerCase() !== 'tanpa sertifikat')
-                ? [{ namaSertifikat, noSertifikat, terbit, expired }]
+                ? [{ 
+                    namaSertifikat, 
+                    noSertifikat, 
+                    terbit, 
+                    expired,
+                    uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / CSV Import'
+                  }]
                 : []
             });
           }
@@ -206,12 +221,14 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           
           const res = await bulkCreateMastersWithCertificates(groupedData, categoryKey, f.name);
           
+          const totalCalculatedRows = (res.successCount || 0) + (res.duplicateCount || 0) + (res.failCount || 0) + (res.protectedCount || 0);
           newHistories.push({
             id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             fileName: f.name,
             targetCategory: currentCategoryTitle,
             uploadDate: new Date().toISOString().replace('T', ' ').substring(0, 19),
-            totalRows: res.importedCount ?? 1,
+            totalRows: totalCalculatedRows > 0 ? totalCalculatedRows : (res.successCount || 0),
+            masterCount: res.importedCount ?? 0,
             successCount: res.successCount ?? 1,
             duplicateCount: res.duplicateCount ?? 0,
             failCount: res.failCount ?? 0,
@@ -300,6 +317,13 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                     const link = document.createElement("a");
                     link.setAttribute("href", "/Template_perizinan Alat pabrik.xlsx");
                     link.setAttribute("download", "Template_perizinan Alat pabrik.xlsx");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  } else if (categoryKey === 'perizinan-aset') {
+                    const link = document.createElement("a");
+                    link.setAttribute("href", "/Template_perizinan Aset.xlsx");
+                    link.setAttribute("download", "Template_perizinan Aset.xlsx");
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -456,7 +480,9 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                         )}
                       </div>
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
-                        {item.uploadDate} - Total {item.totalRows} baris (<span className="text-emerald-700 font-bold">{item.successCount} Berhasil</span>, <span className="text-amber-700 font-bold">{item.duplicateCount + (item.protectedCount || 0)} Duplikat (Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>)
+                        {item.uploadDate} - <strong>{item.totalRows} baris CSV diproses</strong>
+                        <br/>
+                        <span className="text-emerald-700 font-bold">{item.successCount} Berhasil Disimpan</span> (Mencakup {item.masterCount > 0 ? `${item.masterCount} Master Baru & ` : ''}Sertifikat), <span className="text-amber-700 font-bold">{item.duplicateCount + (item.protectedCount || 0)} Duplikat (Diabaikan/Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
                         <button 

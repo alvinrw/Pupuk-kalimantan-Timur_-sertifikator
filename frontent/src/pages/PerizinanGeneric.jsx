@@ -69,6 +69,8 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         selectAllColumns={data.selectAllColumns}
         isVisible={data.isVisible}
         toggleColumn={data.toggleColumn}
+        sortDateOrder={data.sortDateOrder}
+        setSortDateOrder={data.setSortDateOrder}
       />
 
       <GenericTable
@@ -103,6 +105,9 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         visibleColumnKeys={data.visibleColumnKeys}
         setViewingCert={data.setViewingCert}
         setAddCertTargetMaster={data.setAddCertTargetMaster}
+        sortKey={data.sortKey}
+        sortOrder={data.sortOrder}
+        toggleSort={data.toggleSort}
       />
 
       <GenericModals

@@ -57,7 +57,7 @@ export default function ManajemenPengguna() {
         npk: user.npk, 
         username: user.username, 
         password: '', // Kosongkan agar tidak perlu diisi jika tidak ingin ganti password
-        roleName: user.role 
+        roleName: user.role.replace(/Admin \d+/, 'Admin')
       });
     }
     setIsModalOpen(true);
@@ -143,7 +143,9 @@ export default function ManajemenPengguna() {
     switch (role) {
       case 'Super Admin': return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'Admin':
-      case 'Admin': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Admin 1':
+      case 'Admin 2':
+      case 'Admin 3': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'User': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'Viewer': return 'bg-slate-100 text-slate-700 border-slate-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -231,14 +233,16 @@ export default function ManajemenPengguna() {
                         {u.nama.charAt(0)}
                       </div>
                       {u.nama}
-                      {isAdmin1 && <Shield className="w-3.5 h-3.5 text-purple-500 ml-1" title="Super Admin" />}
                     </td>
                     <td className="px-6 py-4 text-slate-500 font-mono text-xs">{u.npk}</td>
                     <td className="px-6 py-4 text-slate-500">{u.username}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${getRoleBadge(u.role)}`}>
-                        {u.role}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${getRoleBadge(u.role)}`}>
+                          {u.role.replace(/Admin \d+/, 'Admin')}
+                        </span>
+                        {isAdmin1 && <Shield className="w-3.5 h-3.5 text-purple-500" title="Super Admin" />}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -309,7 +313,6 @@ export default function ManajemenPengguna() {
                 <label className="text-sm font-semibold text-slate-700">Pilih Role</label>
                 <select name="roleName" value={formData.roleName} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none">
                   <option value="Super Admin" disabled={currentUser.role !== 'Super Admin'}>Super Admin</option>
-                  <option value="Admin">Admin</option>
                   <option value="Admin">Admin</option>
                   <option value="User">User</option>
                   <option value="Viewer">Viewer</option>

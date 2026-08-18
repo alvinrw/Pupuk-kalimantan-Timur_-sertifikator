@@ -3,9 +3,8 @@
  * Dipisah dari DocumentDetailPage (sebelumnya ~200 baris inline).
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Link2, CheckSquare, Upload, CheckCircle, Loader2, AlertTriangle, FileText, ShieldAlert, Crosshair } from 'lucide-react';
-import { UPLOAD_ENDPOINT, API_BASE } from '../../config/api';
-import { scanPdfDocument } from '../../services/ocrService';
+import { X, Link2, Upload, Loader2, ShieldAlert, Crosshair, CheckCircle, AlertTriangle, FileText } from 'lucide-react';
+import { API_BASE } from '../../config/api';
 import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 
 export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
@@ -17,38 +16,64 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
   
-  // OCR & Temp Storage
-  const [isScanningOcr, setIsScanningOcr] = useState(false);
-  const [isUploadingTemp, setIsUploadingTemp] = useState(false);
-  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
-  const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [isUploadingTemp, setIsUploadingTemp] = useState(false);
+  const [ocrSuccess, setOcrSuccess] = useState(false);
+  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
+  const [isScanningOcr, setIsScanningOcr] = useState(false);
   const [scanMode, setScanMode] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  const handleOcrResult = (text) => {
-    if (!text || !scanMode) {
+  const handleOcrResult = async (mode, text) => {
+    if (!text || !mode) {
       setScanMode(null);
       return;
     }
+    
+    let parsedText = text.trim();
+    
+    try {
+      const { parseDate, parseCertificateNumber } = await import('../../utils/ocrTextParser');
+      
+      if (mode === 'terbit' || mode === 'expired') {
+        const parsed = parseDate(text);
+        if (parsed) {
+          parsedText = parsed.iso;
+        } else {
+          setOcrErrorMsg(`Gagal mendeteksi tanggal untuk ${mode === 'terbit' ? 'Tanggal Terbit' : 'Tanggal Expired'}.`);
+          setScanMode(null);
+          return; // Skip update state
+        }
+      } else if (mode === 'noSertifikat') {
+        const certNo = parseCertificateNumber(text);
+        parsedText = certNo || text.replace(/\n+/g, ' ').trim();
+      } else {
+        parsedText = text.replace(/\n+/g, ' ').trim();
+      }
+    } catch (err) {
+      console.error("Gagal memproses hasil OCR:", err);
+    }
+
     setCertData(prev => ({
       ...prev,
-      [scanMode]: text.trim()
+      [mode]: parsedText
     }));
+    setOcrSuccess(true);
     setScanMode(null);
   };
 
   useEffect(() => {
     if (!isOpen) {
-      setCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', pdfName: '' });
+      setCertData({ jenisSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '', status: 'Aktif', pdfName: '', keterangan: '' });
       setPdfFile(null);
       setTempUrl(null);
       setSertifikatMode('dengan');
-      setIsScanningOcr(false);
       setIsUploadingTemp(false);
-      setOcrErrorMsg('');
       setOcrSuccess(false);
+      setOcrErrorMsg('');
+      setIsScanningOcr(false);
+      setScanMode(null);
     }
   }, [isOpen]);
 
@@ -87,6 +112,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
           terbit: certData.terbit || undefined,
           expired: certData.expired || undefined,
           status: certData.status || 'Aktif',
+          keterangan: certData.keterangan || undefined,
           fileUrl: finalUrl // pass this if needed by parent hook
         },
         pdfFile: sertifikatMode === 'dengan' && !finalUrl ? pdfFile : null, // fallback if tempUrl failed
@@ -158,11 +184,11 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                   <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat <span className="text-rose-500">*</span></label>
                   <div
                     onClick={() => {
-                      if (isUploadingTemp || isScanningOcr) return;
+                      if (isUploadingTemp) return;
                       fileInputRef.current?.click();
                     }}
                     className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
-                      (isUploadingTemp || isScanningOcr) 
+                      isUploadingTemp
                         ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-70' 
                         : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50 cursor-pointer'
                     }`}
@@ -199,38 +225,11 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                             } finally {
                               setIsUploadingTemp(false);
                             }
-
-                            try {
-                              setIsScanningOcr(true);
-                              const ocrData = await scanPdfDocument(file);
-                              if (ocrData) {
-                                setCertData(prev => ({
-                                  ...prev,
-                                  jenisSertifikat: ocrData.jenisSertifikat || prev.jenisSertifikat || '',
-                                  noSertifikat: ocrData.noSertifikat || prev.noSertifikat || '',
-                                  terbit: ocrData.terbit || prev.terbit || '',
-                                  expired: ocrData.expired || prev.expired || '',
-                                  instansi: ocrData.instansi || prev.instansi || '',
-                                }));
-                                
-                                setOcrSuccess(true);
-                                
-                                if (!ocrData.noSertifikat && !ocrData.terbit && !ocrData.expired) {
-                                  setOcrErrorMsg("AI tidak mendeteksi data. Silakan isi form manual.");
-                                } else {
-                                  setOcrErrorMsg("");
-                                }
-                              }
-                            } catch (err) {
-                              setOcrErrorMsg("Gagal memindai OCR. Anda dapat mengetik manual.");
-                            } finally {
-                              setIsScanningOcr(false);
-                            }
                           }
                         }
                       }}
                       className="hidden"
-                      disabled={isUploadingTemp || isScanningOcr}
+                      disabled={isUploadingTemp}
                     />
                     <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
                     <div className="flex flex-col items-center">
@@ -241,20 +240,12 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                     </div>
                   </div>
 
-                  {(isUploadingTemp || isScanningOcr) && (
+                  {isUploadingTemp && (
                     <div className="flex flex-col gap-2 mt-3">
-                      {isUploadingTemp && (
-                        <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                          <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                          <span>Menyiapkan preview dokumen...</span>
-                        </div>
-                      )}
-                      {isScanningOcr && (
-                        <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                          <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                          <span>AI sedang mengekstrak data...</span>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                        <span>Menyiapkan preview dokumen...</span>
+                      </div>
                     </div>
                   )}
                   
@@ -415,6 +406,20 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                   <option value="Dicabut">Dicabut / Dibatalkan</option>
                 </select>
               </div>
+
+              {sertifikatMode === 'tanpa' && (
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1">
+                    Catatan / Alasan (Opsional)
+                  </label>
+                  <textarea
+                    value={certData.keterangan || ''}
+                    onChange={(e) => setCertData({ ...certData, keterangan: e.target.value })}
+                    placeholder="Tulis alasan mengapa sertifikat ini tidak memiliki dokumen..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] min-h-[80px] resize-none"
+                  />
+                </div>
+              )}
             </form>
             
             {/* Modal Footer terikat dengan Sisi Kiri */}

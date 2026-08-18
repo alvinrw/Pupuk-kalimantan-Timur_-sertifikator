@@ -25,7 +25,9 @@ export default function GenericFilterBar({
   setIsColumnDropdownOpen,
   selectAllColumns,
   isVisible,
-  toggleColumn
+  toggleColumn,
+  sortDateOrder,
+  setSortDateOrder
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
@@ -45,42 +47,42 @@ export default function GenericFilterBar({
 
         {/* Dropdown Menu "+ Kelola / Impor Dokumen" */}
         {!isViewer && (
-        <div className="relative font-mono-data">
-          <button
-            onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Kelola / Impor Data {categoryName}</span>
-            <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
-          </button>
+          <div className="relative font-mono-data">
+            <button
+              onClick={() => setIsImportMenuOpen(!isImportMenuOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Kelola / Impor Data {categoryName}</span>
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
 
-          {isImportMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs">
-              <button
-                onClick={() => { setIsSingleModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
-              >
-                <PlusCircle className="w-4 h-4 text-[#005ea4]" />
-                <div>
-                  <span className="block">+ Tambah Data {categoryName} Baru</span>
-                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Input manual 1 entitas master {categoryName}</span>
-                </div>
-              </button>
+            {isImportMenuOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs">
+                <button
+                  onClick={() => { setIsSingleModalOpen(true); setIsImportMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
+                >
+                  <PlusCircle className="w-4 h-4 text-[#005ea4]" />
+                  <div>
+                    <span className="block">+ Tambah Data {categoryName} Baru</span>
+                    <span className="text-[10px] text-slate-500 font-normal font-mono-data">Input manual 1 entitas master {categoryName}</span>
+                  </div>
+                </button>
 
-              <button
-                onClick={() => { setIsCsvModalOpen(true); setIsImportMenuOpen(false); }}
-                className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
-              >
-                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
-                <div>
-                  <span className="block">Impor CSV Master {categoryName}</span>
-                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Muat CSV daftar list entitas master</span>
-                </div>
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  onClick={() => { setIsCsvModalOpen(true); setIsImportMenuOpen(false); }}
+                  className="w-full text-left px-3 py-2.5 hover:bg-slate-50 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                  <div>
+                    <span className="block">Impor CSV Master {categoryName}</span>
+                    <span className="text-[10px] text-slate-500 font-normal font-mono-data">Muat CSV daftar list entitas master</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
 
@@ -88,33 +90,31 @@ export default function GenericFilterBar({
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
         <button
           onClick={() => setActiveMainTab('main')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-            activeMainTab === 'main'
-              ? 'bg-[#005ea4] text-white shadow-xs'
-              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-          }`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${activeMainTab === 'main'
+            ? 'bg-[#005ea4] text-white shadow-xs'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+            }`}
         >
           <Building2 className="w-4 h-4" />
           <span>Data Utama</span>
         </button>
 
         {!isViewer && (
-        <button
-          onClick={() => setActiveMainTab('staging')}
-          className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${
-            activeMainTab === 'staging'
+          <button
+            onClick={() => setActiveMainTab('staging')}
+            className={`flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer relative ${activeMainTab === 'staging'
               ? 'bg-amber-600 text-white shadow-xs'
               : 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100'
-          }`}
-        >
-          <FileWarning className="w-4 h-4 text-amber-500" />
-          <span>Menunggu Dokumen (Staging)</span>
-          {pendingCount > 0 && (
-            <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">
-              {pendingCount}
-            </span>
-          )}
-        </button>
+              }`}
+          >
+            <FileWarning className="w-4 h-4 text-amber-500" />
+            <span>Menunggu Dokumen (Staging)</span>
+            {pendingCount > 0 && (
+              <span className="px-2 py-0.5 text-[10px] bg-amber-500 text-white font-bold rounded-full animate-pulse">
+                {pendingCount}
+              </span>
+            )}
+          </button>
         )}
       </div>
 
@@ -141,6 +141,17 @@ export default function GenericFilterBar({
               <span>Reset Filter</span>
             </button>
           )}
+
+          {/* Sort Dropdown */}
+          <select
+            value={sortDateOrder}
+            onChange={(e) => setSortDateOrder(e.target.value)}
+            className="text-xs bg-white border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+          >
+            <option value="desc">Terbaru</option>
+            <option value="asc">Terlama</option>
+          </select>
+
 
           {/* Column Visibility Selector Dropdown */}
           <div className="relative">

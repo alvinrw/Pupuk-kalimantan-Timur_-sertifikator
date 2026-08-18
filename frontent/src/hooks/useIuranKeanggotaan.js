@@ -18,7 +18,9 @@ export default function useIuranKeanggotaan() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
+  const [sortOrder, setSortOrder] = useState('desc');
   const [formData, setFormData] = useState({
+    id: '',
     nomer: '',
     kompartemen: '',
     unitKerja: '',
@@ -55,6 +57,7 @@ export default function useIuranKeanggotaan() {
     setModalMode('add');
     setSelectedItem(null);
     setFormData({
+      id: '',
       nomer: '',
       kompartemen: '',
       unitKerja: '',
@@ -86,6 +89,7 @@ export default function useIuranKeanggotaan() {
     }
 
     setFormData({
+      id: item.id || '',
       nomer: item.nomer || '',
       kompartemen: item.kompartemen || '',
       unitKerja: item.unitKerja || '',
@@ -180,5 +184,7 @@ export default function useIuranKeanggotaan() {
     handleDelete,
     setData,
     fetchData,
+    sortOrder,
+    setSortOrder
   };
 }
