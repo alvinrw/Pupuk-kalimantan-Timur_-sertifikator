@@ -209,10 +209,24 @@ export function useMonitoring() {
         };
 
         if (certs.length > 0) {
-          certs.forEach(cert => {
-            if (cert.status === 'EXEMPT' || cert.noSertifikat === 'Tanpa Sertifikat') return;
-            mapToRow(cert);
-          });
+          const validCerts = certs.filter(cert => cert.status !== 'EXEMPT' && cert.noSertifikat !== 'Tanpa Sertifikat');
+          if (validCerts.length > 0) {
+            // Sort to find the primary cert: Active first, then by newest
+            const sortedCerts = validCerts.slice().sort((a, b) => {
+              const aActive = a.status?.toLowerCase() === 'aktif' || a.status?.toLowerCase() === 'active';
+              const bActive = b.status?.toLowerCase() === 'aktif' || b.status?.toLowerCase() === 'active';
+              if (aActive !== bActive) return aActive ? -1 : 1;
+              
+              const tA = getTimestamp(a.expired);
+              const tB = getTimestamp(b.expired);
+              if (tA !== tB) return tB - tA; // Highest expiration date first
+              
+              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+            });
+            
+            // Only show ONE row per master item (the primary/latest certificate)
+            mapToRow(sortedCerts[0]);
+          }
         }
       });
       setAllCertificates(flattened);
