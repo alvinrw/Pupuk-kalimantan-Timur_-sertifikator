@@ -30,7 +30,7 @@ export default function DocumentReadView({ hook, item }) {
     const statusLower = (cert.status || '').toLowerCase();
     const isExempt = statusLower === 'exempt';
     const isAfkir = statusLower === 'afkir' || statusLower === 'decommissioned' || statusLower === 'dicabut';
-    const isProses = statusLower === 'perpanjangan' || statusLower === 'proses' || statusLower === 'in progress' || statusLower === 'sedang diperpanjang';
+    const isProses = statusLower === 'perpanjangan' || statusLower === 'proses' || statusLower === 'in progress' || statusLower === 'sedang diperpanjang' || statusLower === 'perpanjang';
 
     const expiredStr = cert.expired || cert.berakhir;
     if (!expiredStr || expiredStr === '-') {
@@ -106,7 +106,7 @@ export default function DocumentReadView({ hook, item }) {
     }
   }
 
-  const childStatusInfo = (isSingleCertScope && primaryCert) ? calculateCertStatus(primaryCert) : null;
+  const childStatusInfo = (!isMultiCertItem || isSingleCertScope) ? calculateCertStatus(primaryCert || formData) : null;
 
   return (
     <div className="space-y-6">
