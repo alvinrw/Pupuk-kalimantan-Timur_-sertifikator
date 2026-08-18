@@ -25,16 +25,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
   const confirmAfkir = async () => {
     setIsAfkiring(true);
     try {
+      const targetId = item?.MasterId || item?.id;
+      if (targetId) await updateMasterItem(targetId, { status: 'Afkir' });
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Afkir' });
-        setFormData(prev => ({ ...prev, status: 'Afkir' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir' });
-      } else {
-        const targetId = item?.MasterId || item?.id;
-        await updateMasterItem(targetId, { status: 'Afkir' });
-        setFormData(prev => ({ ...prev, status: 'Afkir' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir', id: targetId });
       }
+      setFormData(prev => ({ ...prev, status: 'Afkir' }));
+      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir', id: targetId });
       if (onRefreshRequired) onRefreshRequired();
       setIsAfkirModalOpen(false);
     } catch (err) {
@@ -46,16 +43,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
   const confirmAktifkan = async () => {
     setIsAktifkaning(true);
     try {
+      const targetId = item?.MasterId || item?.id;
+      if (targetId) await updateMasterItem(targetId, { status: 'Aktif' });
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
-        setFormData(prev => ({ ...prev, status: 'Aktif' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
-      } else {
-        const targetId = item?.MasterId || item?.id;
-        await updateMasterItem(targetId, { status: 'Aktif' });
-        setFormData(prev => ({ ...prev, status: 'Aktif' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
       }
+      setFormData(prev => ({ ...prev, status: 'Aktif' }));
+      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
       if (onRefreshRequired) onRefreshRequired();
       setIsAktifkanModalOpen(false);
     } catch (err) {
@@ -66,16 +60,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
   const confirmRenewHeader = async () => {
     setIsRenewingHeader(true);
     try {
+      const targetId = item?.MasterId || item?.id;
+      if (targetId) await updateMasterItem(targetId, { status: 'Perpanjang' });
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Perpanjang' });
-        setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang' });
-      } else {
-        const targetId = item?.MasterId || item?.id;
-        await updateMasterItem(targetId, { status: 'Perpanjang' });
-        setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang', id: targetId });
       }
+      setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
+      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang', id: targetId });
       if (onRefreshRequired) onRefreshRequired();
       setIsConfirmRenewHeaderModalOpen(false);
     } catch (err) {
@@ -86,16 +77,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
   const confirmCancelHeader = async () => {
     setIsCancelingHeader(true);
     try {
+      const targetId = item?.MasterId || item?.id;
+      if (targetId) await updateMasterItem(targetId, { status: 'Aktif' });
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
-        setFormData(prev => ({ ...prev, status: 'Aktif' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
-      } else {
-        const targetId = item?.MasterId || item?.id;
-        await updateMasterItem(targetId, { status: 'Aktif' });
-        setFormData(prev => ({ ...prev, status: 'Aktif' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
       }
+      setFormData(prev => ({ ...prev, status: 'Aktif' }));
+      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
       if (onRefreshRequired) onRefreshRequired();
       setIsConfirmCancelHeaderModalOpen(false);
     } catch (err) {

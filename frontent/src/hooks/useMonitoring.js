@@ -359,11 +359,10 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Perpanjang' });
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Perpanjang' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Perpanjang' });
       }
       await fetchMonitoringData();
       setIsRenewConfirmModalOpen(false);
@@ -388,11 +387,10 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Afkir' });
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Afkir' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Afkir' });
       }
       await fetchMonitoringData();
       setIsAfkirModalOpen(false);
@@ -417,11 +415,10 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Aktif' });
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Aktif' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Aktif' });
       }
       await fetchMonitoringData();
       setIsAktifkanModalOpen(false);
@@ -446,11 +443,10 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
+      await updateMasterItem(targetId, { status: 'Aktif' });
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Aktif' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Aktif' });
       }
       await fetchMonitoringData();
       setIsCancelRenewModalOpen(false);
