@@ -120,7 +120,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
   const historyHook = useDocumentHistory({ item, targetCert, onRefreshRequired });
   const uploadHook = useDocumentUpload({ item, fetchHistory: historyHook.fetchHistory, onSaveUpdate, onRefreshRequired });
-  const statusHook = useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess });
+  const statusHook = useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired });
   const linkedCertsHook = useLinkedCertificates({ item, targetCert, fetchHistory: historyHook.fetchHistory, onRefreshRequired });
   const notificationHook = useNotificationSettings({ item, targetCert });
 

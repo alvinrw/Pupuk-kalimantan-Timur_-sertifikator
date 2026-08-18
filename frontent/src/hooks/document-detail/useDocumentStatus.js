@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { updateMasterItem, deleteMasterItem, updateCertificate } from '../../services/masterItemsService';
 
-export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess }) {
+export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired }) {
   const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
   const [isAfkiring, setIsAfkiring] = useState(false);
 
@@ -35,6 +35,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
         setFormData(prev => ({ ...prev, status: 'Afkir' }));
         if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir', id: targetId });
       }
+      if (onRefreshRequired) onRefreshRequired();
       setIsAfkirModalOpen(false);
     } catch (err) {
       alert('Gagal Afkir: ' + (err.message || 'Error'));
@@ -55,6 +56,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
         setFormData(prev => ({ ...prev, status: 'Aktif' }));
         if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
       }
+      if (onRefreshRequired) onRefreshRequired();
       setIsAktifkanModalOpen(false);
     } catch (err) {
       alert('Gagal Aktifkan: ' + (err.message || 'Error'));
@@ -74,6 +76,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
         setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
         if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang', id: targetId });
       }
+      if (onRefreshRequired) onRefreshRequired();
       setIsConfirmRenewHeaderModalOpen(false);
     } catch (err) {
       alert('Gagal: ' + (err.message || 'Error'));
@@ -93,6 +96,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
         setFormData(prev => ({ ...prev, status: 'Aktif' }));
         if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
       }
+      if (onRefreshRequired) onRefreshRequired();
       setIsConfirmCancelHeaderModalOpen(false);
     } catch (err) {
       alert('Gagal: ' + (err.message || 'Error'));
@@ -107,6 +111,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       await updateMasterItem(targetId, { expiryDate: renewExemptDate, status: 'Aktif' });
       setFormData(prev => ({ ...prev, berakhir: renewExemptDate, status: 'Aktif' }));
       if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, berakhir: renewExemptDate, status: 'Aktif', id: targetId });
+      if (onRefreshRequired) onRefreshRequired();
       setIsRenewExemptModalOpen(false);
     } catch (err) {
       alert('Gagal: ' + (err.message || 'Error'));
