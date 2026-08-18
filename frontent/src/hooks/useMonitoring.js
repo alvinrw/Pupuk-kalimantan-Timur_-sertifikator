@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getMasterItems, updateMasterItem, createCertificateForMasterItem, updateCertificate } from '../services/masterItemsService';
+import api from '../services/api';
 
 export function useMonitoring() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -231,11 +232,8 @@ export function useMonitoring() {
       });
       setAllCertificates(flattened);
       try {
-        const reminderRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/master-items/reminders/active`);
-        if (reminderRes.ok) {
-          const reminderJson = await reminderRes.json();
-          setActiveReminders(reminderJson);
-        }
+        const reminderRes = await api.get('/master-items/reminders/active');
+        setActiveReminders(reminderRes.data);
       } catch (err) {
         console.error("Failed to fetch active reminders in monitoring:", err);
       }
@@ -500,14 +498,11 @@ export function useMonitoring() {
       if (uploadedFile) {
         const formDataUpload = new FormData();
         formDataUpload.append('file', uploadedFile);
-        const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/document-history/upload`, {
-          method: 'POST',
-          body: formDataUpload
+        const uploadRes = await api.post('/document-history/upload', formDataUpload, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
-        if (uploadRes.ok) {
-          const uploadJson = await uploadRes.json();
-          fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
-        }
+        const uploadJson = uploadRes.data;
+        fileUrl = uploadJson?.data?.url || uploadJson?.data?.fileUrl || null;
       }
 
       const targetId = activeModalItem.MasterId || activeModalItem.id;
