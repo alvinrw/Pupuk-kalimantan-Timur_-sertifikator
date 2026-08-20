@@ -94,9 +94,13 @@ export default function UploadRenewalModal({
           if (uploadRes.ok) {
             const json = await uploadRes.json();
             setTempUrl(json.data.url);
+          } else {
+            const errJson = await uploadRes.json().catch(() => ({}));
+            alert(`Gagal memuat preview dokumen (Error ${uploadRes.status}): ${errJson.message || uploadRes.statusText}`);
           }
         } catch (err) {
           console.error('Upload temp error:', err);
+          alert('Terjadi kesalahan jaringan saat memuat preview dokumen: ' + err.message);
         } finally {
           setIsUploadingTemp(false);
         }
