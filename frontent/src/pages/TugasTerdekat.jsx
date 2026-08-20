@@ -40,6 +40,13 @@ export default function TugasTerdekat() {
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
   const [selectedCertId, setSelectedCertId] = useState(null);
 
+  const getDisplayName = (task) => {
+    if (task.categoryKey === 'perizinan-proyek' && task.namaSertifikat && task.namaSertifikat !== 'Tanpa Sertifikat') {
+      return `${task.namaSertifikat} (${task.namaPeralatan || '-'})`;
+    }
+    return task.namaPeralatan || '-';
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -264,7 +271,7 @@ export default function TugasTerdekat() {
                   <div className={`text-[10px] font-bold px-2 py-0.5 rounded inline-block mb-3 border ${getBadgeStyle(t.statusReminder)}`}>
                     {t.statusReminder}
                   </div>
-                  <div className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug mb-1" title={t.namaPeralatan}>{t.namaPeralatan}</div>
+                  <div className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug mb-1" title={getDisplayName(t)}>{getDisplayName(t)}</div>
                   <div className="text-xs text-slate-500 font-mono-data truncate" title={t.nomorSertifikat}>{t.nomorSertifikat}</div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -392,7 +399,7 @@ export default function TugasTerdekat() {
                       </div>
                     </td>
                     <td className="p-3">
-                      <div className="font-bold text-slate-800 text-xs">{task.namaPeralatan}</div>
+                      <div className="font-bold text-slate-800 text-xs">{getDisplayName(task)}</div>
                     </td>
                     <td className="p-3">
                       <span className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-200 whitespace-nowrap">
