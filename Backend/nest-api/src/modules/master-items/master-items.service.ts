@@ -150,13 +150,11 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    // Note: We do NOT auto-promote the master item to COMPLETED/EXEMPT here.
-    // The master item only moves to Data Utama when the user explicitly clicks "Pindah ke Utama".
-    // Just store the exemption note for reference.
     const updated = await this.prisma.masterItem.update({
       where: { id },
       data: {
         exemptionNote: note || 'Tidak memerlukan sertifikat',
+        documentStatus: 'EXEMPT',
         isManuallyEdited: true,
         lastEditSource: 'MANUAL',
       },
