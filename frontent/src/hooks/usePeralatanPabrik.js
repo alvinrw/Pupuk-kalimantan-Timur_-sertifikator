@@ -497,8 +497,10 @@ export function usePeralatanPabrik() {
           const formData = new FormData();
           formData.append('file', newItem.file);
           try {
+            const token = sessionStorage.getItem('token');
             const uploadRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/document-history/upload`, {
               method: 'POST',
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
               body: formData,
             });
             if (uploadRes.ok) {
