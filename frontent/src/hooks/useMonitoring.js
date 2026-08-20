@@ -538,6 +538,12 @@ export function useMonitoring() {
 
       await createCertificateForMasterItem(certPayload);
 
+      // Archive the old certificate so it drops off the Agenda list
+      const oldCertId = activeModalItem.primaryCertId || activeModalItem.id;
+      if (oldCertId && oldCertId !== targetId) {
+        await updateCertificate(oldCertId, { status: 'Diarsipkan' });
+      }
+
       await updateMasterItem(targetId, {
         status: 'Aktif',
         issueDate: issueDate || activeModalItem.tglTerbit,
