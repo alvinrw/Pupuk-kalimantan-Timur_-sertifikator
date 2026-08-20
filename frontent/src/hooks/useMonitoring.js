@@ -202,6 +202,7 @@ export function useMonitoring() {
             statusLegal: calcStatus(hari),
             noSertifikat: targetCert?.noSertifikat || targetCert?.noIzin || (!targetCert && (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC') ? 'Tanpa Sertifikat' : '-'),
             nomorSertifikat: targetCert?.noSertifikat || targetCert?.noIzin || (!targetCert && (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC') ? 'Tanpa Sertifikat' : '-'),
+            jenisSertifikat: targetCert?.jenisSertifikat || item.categoryKey || '-',
             namaSertifikat: targetCert?.namaSertifikat || item.namaSertifikat || '-',
             instansiPenerbit: targetCert?.instansi || '-',
             nomorSK: '-',
@@ -217,7 +218,7 @@ export function useMonitoring() {
         if (certs.length === 0) {
           mapToRow(null);
         } else {
-          const validCerts = certs.filter(cert => cert.status !== 'EXEMPT' && cert.noSertifikat !== 'Tanpa Sertifikat');
+          const validCerts = certs.filter(cert => cert.status !== 'EXEMPT' && cert.noSertifikat !== 'Tanpa Sertifikat' && cert.status !== 'Diarsipkan');
           if (validCerts.length === 0) {
             mapToRow(null);
           } else {
@@ -528,7 +529,8 @@ export function useMonitoring() {
 
       const certPayload = {
         itemId: targetId,
-        jenisSertifikat: activeModalItem.jenisPeralatan || 'Riksa Uji Disnaker',
+        jenisSertifikat: activeModalItem.jenisSertifikat || activeModalItem.jenisPeralatan || 'Riksa Uji Disnaker',
+        namaSertifikat: activeModalItem.namaSertifikat !== '-' ? activeModalItem.namaSertifikat : undefined,
         noSertifikat: newCertNumber || activeModalItem.noSertifikat || `CERT-${Date.now()}`,
         status: 'Aktif',
       };
