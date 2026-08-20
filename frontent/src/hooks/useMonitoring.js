@@ -171,6 +171,11 @@ export function useMonitoring() {
           const expiredVal = formatToDDMMYYYY(rawExpired);
           const hari = calcDiff(rawExpired && rawExpired !== '2030-01-01' && rawExpired !== '-' ? rawExpired : '-');
 
+          let displayName = item.title || '-';
+          if (item.categoryKey === 'perizinan-proyek' && targetCert?.namaSertifikat && targetCert.namaSertifikat !== 'Tanpa Sertifikat') {
+            displayName = `${targetCert.namaSertifikat} (${item.title || item.code || item.id})`;
+          }
+
           flattened.push({
             id: targetCert?.id || item.id,
             MasterId: item.id,
@@ -179,7 +184,7 @@ export function useMonitoring() {
             kategoriDokumen: item.categoryKey || 'Lainnya',
             jenisItem: item.categoryKey || 'Peralatan',
             jenisPeralatan: item.categoryKey || 'Peralatan',
-            merekItem: item.title || '-',
+            merekItem: displayName,
             tipe: item.categoryKey || '-',
             code: item.code || item.id,
             nomorSeri: item.code || '-',
@@ -209,24 +214,38 @@ export function useMonitoring() {
           });
         };
 
-        if (certs.length > 0) {
+        if (certs.length === 0) {
+          mapToRow(null);
+        } else {
           const validCerts = certs.filter(cert => cert.status !== 'EXEMPT' && cert.noSertifikat !== 'Tanpa Sertifikat');
-          if (validCerts.length > 0) {
-            // Sort to find the primary cert: Active first, then by newest
-            const sortedCerts = validCerts.slice().sort((a, b) => {
-              const aActive = a.status?.toLowerCase() === 'aktif' || a.status?.toLowerCase() === 'active';
-              const bActive = b.status?.toLowerCase() === 'aktif' || b.status?.toLowerCase() === 'active';
-              if (aActive !== bActive) return aActive ? -1 : 1;
-              
-              const tA = getTimestamp(a.expired);
-              const tB = getTimestamp(b.expired);
-              if (tA !== tB) return tB - tA; // Highest expiration date first
-              
-              return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          if (validCerts.length === 0) {
+            mapToRow(null);
+          } else {
+            // Group certificates by name or type so we track each distinct certificate type
+            // (e.g. Sertifikat K3 vs Sertifikat Tekanan Tinggi) as separate rows.
+            const certGroups = {};
+            validCerts.forEach(cert => {
+              const key = (cert.namaSertifikat || cert.jenisSertifikat || 'Lainnya').toLowerCase().trim();
+              if (!certGroups[key]) certGroups[key] = [];
+              certGroups[key].push(cert);
             });
-            
-            // Only show ONE row per master item (the primary/latest certificate)
-            mapToRow(sortedCerts[0]);
+
+            Object.values(certGroups).forEach(groupCerts => {
+              const sortedCerts = groupCerts.slice().sort((a, b) => {
+                const aActive = a.status?.toLowerCase() === 'aktif' || a.status?.toLowerCase() === 'active';
+                const bActive = b.status?.toLowerCase() === 'aktif' || b.status?.toLowerCase() === 'active';
+                if (aActive !== bActive) return aActive ? -1 : 1;
+                
+                const tA = getTimestamp(a.expired);
+                const tB = getTimestamp(b.expired);
+                if (tA !== tB) return tB - tA; // Highest expiration date first
+                
+                return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+              });
+              
+              // Map the most recent certificate for this specific type
+              mapToRow(sortedCerts[0]);
+            });
           }
         }
       });
