@@ -239,7 +239,24 @@ export class MasterItemsService implements OnModuleInit {
 
     for (const item of items) {
       const certs = item.certificates || [];
-      const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+      const activeCertsRaw = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+
+      // Hanya ambil sertifikat terbaru (berdasarkan expiry) untuk tiap jenisSertifikat
+      const latestCertsMap = new Map<string, any>();
+      for (const cert of activeCertsRaw) {
+        const type = cert.jenisSertifikat || 'Unknown';
+        if (!latestCertsMap.has(type)) {
+          latestCertsMap.set(type, cert);
+        } else {
+          const existing = latestCertsMap.get(type);
+          const existingExp = existing.expired ? new Date(existing.expired).getTime() : 0;
+          const currentExp = cert.expired ? new Date(cert.expired).getTime() : 0;
+          if (currentExp > existingExp) {
+            latestCertsMap.set(type, cert);
+          }
+        }
+      }
+      const activeCerts = Array.from(latestCertsMap.values());
 
       // Parse metadata for penanggung jawab
       let meta: any = {};
