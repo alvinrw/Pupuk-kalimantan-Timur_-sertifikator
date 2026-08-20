@@ -34,15 +34,11 @@ export class CertificatesService {
           data: { isResolved: true, resolvedAt: new Date() },
         }).catch(() => {});
 
-        const pendingCertsCount = await this.prisma.certificate.count({
-          where: { itemId: createCertificateDto.itemId, OR: [{ fileUrl: null }, { fileUrl: '' }] }
-        });
         await this.prisma.masterItem.update({
           where: { id: createCertificateDto.itemId },
           data: { 
             isManuallyEdited: true,
             lastEditSource: 'MANUAL',
-            documentStatus: pendingCertsCount > 0 ? 'PENDING_DOC' : 'COMPLETED',
             exemptionNote: null,
           },
         }).catch(() => {});
@@ -64,9 +60,6 @@ export class CertificatesService {
         data: { isResolved: true, resolvedAt: new Date() },
       }).catch(() => {});
 
-      const pendingCertsCount = await this.prisma.certificate.count({
-        where: { itemId: createCertificateDto.itemId, OR: [{ fileUrl: null }, { fileUrl: '' }] }
-      });
       await this.prisma.masterItem.update({
         where: { id: createCertificateDto.itemId },
         data: { 
@@ -74,7 +67,6 @@ export class CertificatesService {
           expiryDate: createCertificateDto.expired || null,
           isManuallyEdited: true,
           lastEditSource: 'MANUAL',
-          documentStatus: pendingCertsCount > 0 ? 'PENDING_DOC' : 'COMPLETED',
           exemptionNote: null,
         },
       }).catch(() => {});
