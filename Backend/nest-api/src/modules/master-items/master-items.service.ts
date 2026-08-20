@@ -343,23 +343,15 @@ export class MasterItemsService implements OnModuleInit {
       };
 
       if (activeCerts.length > 0) {
-        const primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          if (dA !== dB) return dB - dA;
-          const hasPdfA = !!a.fileUrl;
-          const hasPdfB = !!b.fileUrl;
-          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        })[0];
-
-        evaluateTarget(
-          primaryCert.expired && primaryCert.expired !== '-' ? primaryCert.expired : item.expiryDate,
-          primaryCert.notificationSetting,
-          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || item.title || '-',
-          primaryCert.noSertifikat || item.code || '-',
-          primaryCert.id
-        );
+        for (const cert of activeCerts) {
+          evaluateTarget(
+            cert.expired && cert.expired !== '-' ? cert.expired : item.expiryDate,
+            cert.notificationSetting,
+            cert.namaSertifikat || cert.jenisSertifikat || item.title || '-',
+            cert.noSertifikat || item.code || '-',
+            cert.id
+          );
+        }
       } else {
         evaluateTarget(
           item.expiryDate,
