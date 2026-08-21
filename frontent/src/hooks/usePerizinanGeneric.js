@@ -86,13 +86,17 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
   const calculateCertStatus = (cert) => {
     const raw = formatStatus(cert.status || 'Aktif');
+    const expTime = getTimestamp(cert.expired || cert.expiryDate || cert.berakhir);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     if (raw.toLowerCase() === 'aktif' || raw.toLowerCase() === 'active') {
-      const expTime = getTimestamp(cert.expired || cert.expiryDate || cert.berakhir);
-      // Compare with start of today to be safe
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
       if (expTime > 0 && expTime < today.getTime()) {
         return 'Expired';
+      }
+    } else if (raw.toLowerCase() === 'expired') {
+      if (expTime >= today.getTime()) {
+        return 'Aktif';
       }
     }
     return raw;
@@ -182,6 +186,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           kondisi: doc.status || "Baik",
           description: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
           keterangan: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
+          rawKeterangan: doc.keterangan || null,
           namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
           status: formatStatus(doc.status),
           user: primaryCert?.instansi || meta.penanggungJawab || "Umum",

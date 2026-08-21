@@ -28,7 +28,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Afkir' });
         const targetId = item?.MasterId || item?.id;
-        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+        if (!isMultiCertItem && targetId) {
           await updateMasterItem(targetId, { status: 'Afkir' });
         }
         setFormData(prev => ({ ...prev, status: 'Afkir' }));
@@ -55,7 +55,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
         const targetId = item?.MasterId || item?.id;
-        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+        if (!isMultiCertItem && targetId) {
           await updateMasterItem(targetId, { status: 'Aktif' });
         }
         setFormData(prev => ({ ...prev, status: 'Aktif' }));
@@ -81,7 +81,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Perpanjang' });
         const targetId = item?.MasterId || item?.id;
-        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+        if (!isMultiCertItem && targetId) {
           await updateMasterItem(targetId, { status: 'Perpanjang' });
         }
         setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
@@ -107,7 +107,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
         const targetId = item?.MasterId || item?.id;
-        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+        if (!isMultiCertItem && targetId) {
           await updateMasterItem(targetId, { status: 'Aktif' });
         }
         setFormData(prev => ({ ...prev, status: 'Aktif' }));

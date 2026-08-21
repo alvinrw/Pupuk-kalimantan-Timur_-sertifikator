@@ -223,24 +223,9 @@ export function useMonitoring() {
           if (validCerts.length === 0) {
             mapToRow(null);
           } else {
-            // Group certificates by name or type so we track each distinct certificate type
-            // (e.g. Sertifikat K3 vs Sertifikat Tekanan Tinggi) as separate rows.
-            // EXCEPT for 'peralatan-pabrik' where one equipment only has 1 active certificate (others are history).
-            const certGroups = {};
-            validCerts.forEach(cert => {
-              let key;
-              if (item.categoryKey === 'peralatan-pabrik') {
-                key = 'ALL_PERALATAN_CERTS'; // Force all certs into one group so only the latest is picked
-              } else {
-                key = (cert.namaSertifikat || cert.jenisSertifikat || 'Lainnya').toLowerCase().trim();
-              }
-              
-              if (!certGroups[key]) certGroups[key] = [];
-              certGroups[key].push(cert);
-            });
-
-            Object.values(certGroups).forEach(groupCerts => {
-              const sortedCerts = groupCerts.slice().sort((a, b) => {
+            if (item.categoryKey === 'peralatan-pabrik') {
+              // Peralatan Pabrik: Kelompokkan semua sertifikat dan ambil yang teraktif/terbaru saja
+              const sortedCerts = validCerts.slice().sort((a, b) => {
                 const tA = getTimestamp(a.expired);
                 const tB = getTimestamp(b.expired);
                 if (tA !== tB) return tB - tA; // Highest expiration date first
@@ -251,10 +236,15 @@ export function useMonitoring() {
                 
                 return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
               });
-              
-              // Map the most recent certificate for this specific type
               mapToRow(sortedCerts[0]);
-            });
+            } else {
+              // Perizinan Aset, Produk, Proyek:
+              // Setiap sertifikat anak (child) yang aktif adalah dokumen mandiri.
+              // Render SETIAP sertifikat yang valid (tidak diarsipkan) sebagai baris terpisah secara penuh!
+              validCerts.forEach(cert => {
+                mapToRow(cert);
+              });
+            }
           }
         }
       });
@@ -391,7 +381,9 @@ export function useMonitoring() {
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Perpanjang' });
       }
-      await updateMasterItem(targetId, { status: 'Perpanjang' });
+      if (activeItemForAction.categoryKey === 'peralatan-pabrik') {
+        await updateMasterItem(targetId, { status: 'Perpanjang' });
+      }
       await fetchMonitoringData();
       setIsRenewConfirmModalOpen(false);
     } catch (err) {
@@ -419,7 +411,9 @@ export function useMonitoring() {
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Afkir' });
       }
-      await updateMasterItem(targetId, { status: 'Afkir' });
+      if (activeItemForAction.categoryKey === 'peralatan-pabrik') {
+        await updateMasterItem(targetId, { status: 'Afkir' });
+      }
       await fetchMonitoringData();
       setIsAfkirModalOpen(false);
     } catch (err) {
@@ -447,7 +441,9 @@ export function useMonitoring() {
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Aktif' });
       }
-      await updateMasterItem(targetId, { status: 'Aktif' });
+      if (activeItemForAction.categoryKey === 'peralatan-pabrik') {
+        await updateMasterItem(targetId, { status: 'Aktif' });
+      }
       await fetchMonitoringData();
       setIsAktifkanModalOpen(false);
     } catch (err) {
@@ -475,7 +471,9 @@ export function useMonitoring() {
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Aktif' });
       }
-      await updateMasterItem(targetId, { status: 'Aktif' });
+      if (activeItemForAction.categoryKey === 'peralatan-pabrik') {
+        await updateMasterItem(targetId, { status: 'Aktif' });
+      }
       await fetchMonitoringData();
       setIsCancelRenewModalOpen(false);
     } catch (err) {

@@ -15,6 +15,7 @@ export default function CertHistorySection({
   openUploadModal,
   setEditingHistoryRow,
   setSelectedHistoryToDelete,
+  primaryCert,
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
@@ -44,7 +45,7 @@ export default function CertHistorySection({
         </div>
         {!isViewer && (
         <button
-          onClick={() => openUploadModal('current')}
+          onClick={() => openUploadModal('archive', primaryCert?.id)}
           className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data shrink-0"
         >
           <UploadCloud className="w-4 h-4" />

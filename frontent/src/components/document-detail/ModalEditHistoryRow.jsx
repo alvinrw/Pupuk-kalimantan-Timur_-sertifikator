@@ -31,12 +31,30 @@ export default function ModalEditHistoryRow({
         <form onSubmit={(e) => { e.preventDefault(); onSubmit(editingHistoryRow); }} className="p-5 space-y-3.5 text-xs font-mono-data">
           {(() => {
             const formatDateForInput = (dateStr) => {
-              if (!dateStr) return '';
-              if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-                const parts = dateStr.split('/');
-                return `${parts[2]}-${parts[1]}-${parts[0]}`;
+              if (!dateStr || dateStr === '-') return '';
+              if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                return dateStr;
               }
-              return dateStr;
+              const slashParts = dateStr.split('/');
+              if (slashParts.length === 3) {
+                let day = slashParts[0].padStart(2, '0');
+                let month = slashParts[1].padStart(2, '0');
+                let year = slashParts[2];
+                if (year.length === 2) {
+                  year = '20' + year;
+                }
+                return `${year}-${month}-${day}`;
+              }
+              try {
+                const d = new Date(dateStr);
+                if (!isNaN(d.getTime())) {
+                  const dd = String(d.getDate()).padStart(2, '0');
+                  const mm = String(d.getMonth() + 1).padStart(2, '0');
+                  const yyyy = d.getFullYear();
+                  return `${yyyy}-${mm}-${dd}`;
+                }
+              } catch (_) {}
+              return '';
             };
 
             return (

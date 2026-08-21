@@ -20,9 +20,12 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
       
       // Jika ini adalah multi-cert item (punya linkedCertificates) dan kita sedang melihat detail 
       // sertifikat spesifik (targetCert), maka filter histori HANYA untuk sertifikat dengan nama yang sama.
-      if (targetCert && targetCert.id && item.linkedCertificates) {
+      if (targetCert && targetCert.id && (item.linkedCertificates || item.certificates)) {
+        const targetJenis = targetCert.jenisSertifikat;
         const targetName = targetCert.namaSertifikat || targetCert.jenisSertifikat;
-        if (targetName) {
+        if (targetJenis) {
+          listToProcess = masterCertList.filter(c => c.jenisSertifikat === targetJenis);
+        } else if (targetName) {
           listToProcess = masterCertList.filter(c => (c.namaSertifikat || c.jenisSertifikat) === targetName);
         } else {
           listToProcess = masterCertList.filter(c => c.id === targetCert.id);

@@ -2,7 +2,17 @@ import { useState, useRef } from 'react';
 import { updateCertificate, updateMasterItem, createCertificate } from '../../services/masterItemsService';
 import { UPLOAD_ENDPOINT } from '../../config/api';
 
-export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshRequired }) {
+const getTimestamp = (dateStr) => {
+  if (!dateStr || dateStr === '-') return 0;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const parts = dateStr.split('/');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+  }
+  const t = new Date(dateStr).getTime();
+  return isNaN(t) ? 0 : t;
+};
+
+export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate, onRefreshRequired, setActiveCertId }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadData, setUploadData] = useState(null);
   const [selectedUploadFile, setSelectedUploadFile] = useState(null);
@@ -40,23 +50,31 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
 
       const masterItemId = item?.MasterId || item?.id;
 
+      const currentExpiredTime = getTimestamp(targetCert?.expired || item?.currentCert?.expired || item?.berakhir);
+      const newExpiredTime = getTimestamp(uploadData.expired);
+
+      // Only treat the new certificate as active if its expiration date is later than the current one
+      const isNewer = newExpiredTime > currentExpiredTime;
+
       const certPayload = {
         itemId: masterItemId,
         noSertifikat: uploadData.noSertifikat || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`,
-        namaSertifikat: uploadData.namaSertifikat || 'Sertifikat Utama',
-        jenisSertifikat: uploadData.namaSertifikat || 'Sertifikat Utama',
-        instansi: uploadData.instansi || null,
+        namaSertifikat: uploadData.namaSertifikat || (targetCert ? targetCert.namaSertifikat : 'Sertifikat Utama'),
+        jenisSertifikat: (targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || 'Sertifikat Utama',
+        instansi: uploadData.instansi || targetCert?.instansi || null,
         terbit: uploadData.terbit || undefined,
         expired: uploadData.expired || undefined,
-        status: 'Aktif',
+        status: isNewer ? 'Aktif' : 'Diarsipkan',
         fileUrl: newFileUrl,
+        keterangan: targetCert?.keterangan || null,
       };
 
       if (uploadData.type === 'current') {
-        if (item.currentCert && item.currentCert.id) {
+        const certIdToUpdate = targetCert?.id || item?.currentCert?.id;
+        if (certIdToUpdate) {
           const updatePayload = {
             namaSertifikat: uploadData.namaSertifikat || undefined,
-            jenisSertifikat: uploadData.namaSertifikat || undefined,
+            jenisSertifikat: (targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || undefined,
             noSertifikat: uploadData.noSertifikat || undefined,
             instansi: uploadData.instansi || undefined,
             terbit: uploadData.terbit || undefined,
@@ -64,27 +82,32 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
             status: 'Aktif',
           };
           if (newFileUrl) updatePayload.fileUrl = newFileUrl;
-          await updateCertificate(item.currentCert.id, updatePayload);
-        } else {
-          await createCertificate(certPayload);
+          await updateCertificate(certIdToUpdate, updatePayload);
         }
       } else if (uploadData.type === 'archive') {
-        // Create a new active certificate
-        await createCertificate(certPayload);
+        // Create a new certificate
+        const saved = await createCertificate(certPayload);
 
-        // Archive the old certificate if it exists
-        if (uploadData.rowId && uploadData.rowId !== masterItemId) {
-          await updateCertificate(uploadData.rowId, { status: 'Diarsipkan' });
-        }
+        // Archive the old certificate only if the new one is newer
+        if (isNewer) {
+          if (uploadData.rowId && uploadData.rowId !== masterItemId) {
+            await updateCertificate(uploadData.rowId, { status: 'Diarsipkan' });
+          }
 
-        // Update the Master Item's status and dates to match the new certificate
-        if (masterItemId) {
-          await updateMasterItem(masterItemId, {
-            status: 'Aktif',
-            issueDate: uploadData.terbit || undefined,
-            expiryDate: uploadData.expired || undefined,
-            documentStatus: 'COMPLETED'
-          });
+          // Update active cert focus
+          if (setActiveCertId && saved?.id) {
+            setActiveCertId(saved.id);
+          }
+
+          // Update the Master Item's status and dates to match the new certificate
+          if (masterItemId) {
+            await updateMasterItem(masterItemId, {
+              status: 'Aktif',
+              issueDate: uploadData.terbit || undefined,
+              expiryDate: uploadData.expired || undefined,
+              documentStatus: 'COMPLETED'
+            });
+          }
         }
       }
 
@@ -93,7 +116,7 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
       await fetchHistory();
 
       const updatedFields = { fileUrl: newFileUrl };
-      if (uploadData.type === 'archive') {
+      if (uploadData.type === 'archive' && isNewer) {
         updatedFields.status = 'Aktif';
         if (uploadData.terbit) updatedFields.issueDate = uploadData.terbit;
         if (uploadData.expired) updatedFields.expiryDate = uploadData.expired;

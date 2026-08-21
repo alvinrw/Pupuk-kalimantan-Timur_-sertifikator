@@ -69,7 +69,7 @@ export default function ModalUploadCert({
     <BaseSplitScreenUploadModal
       isOpen={isOpen}
       onClose={onClose}
-      title={uploadData.target === 'current' ? 'Koreksi Sertifikat Aktif (Human Verification)' : 'Unggah Arsip Berkas PDF (Human Verification)'}
+      title={uploadData.type === 'current' ? 'Koreksi Sertifikat Aktif (Human Verification)' : 'Unggah Arsip Berkas PDF (Human Verification)'}
       subtitle="Silakan verifikasi hasil pembacaan AI dengan dokumen PDF asli di sebelah kanan."
       headerIcon={UploadCloud}
       formId="uploadCertForm"
@@ -92,7 +92,7 @@ export default function ModalUploadCert({
       <div className="space-y-4">
               {isSingleCertScope && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs mb-2">
-                  <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
+                  <strong>Mode:</strong> {uploadData.type === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
                 </div>
               )}
 

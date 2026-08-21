@@ -416,6 +416,7 @@ export default function GenericTable({
                                         <th className="py-2.5 px-3 w-10 text-center">NO</th>
                                         <th className="py-2.5 px-4 text-left">NAMA SERTIFIKAT</th>
                                         <th className="py-2.5 px-4 text-center">NOMOR SERTIFIKAT</th>
+                                        <th className="py-2.5 px-4 text-center">INSTANSI / PENERBIT</th>
                                          <th 
                                            onClick={() => toggleSort('terbit')}
                                            className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
@@ -483,6 +484,7 @@ export default function GenericTable({
                                               {cert.namaSertifikat}
                                             </td>
                                             <td className={`py-2.5 px-4 text-center font-bold ${isCertAfkir ? 'text-blue-300' : 'text-[#005ea4]'}`}>{cert.noSertifikat}</td>
+                                            <td className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>{cert.instansi || '-'}</td>
                                             <td className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>{cert.terbit}</td>
                                             <td className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : (isCertAfkir ? 'text-slate-200' : 'text-slate-800')}`}>
                                               {cert.expired}

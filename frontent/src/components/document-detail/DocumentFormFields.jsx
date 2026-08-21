@@ -20,13 +20,30 @@ export default function DocumentFormFields({ hook, item }) {
   if (!isEditing) return null;
 
   const formatDateForInput = (dateStr) => {
-    if (!dateStr) return '';
-    // Jika format DD/MM/YYYY
-    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-      const parts = dateStr.split('/');
-      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    if (!dateStr || dateStr === '-') return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
     }
-    return dateStr;
+    const slashParts = dateStr.split('/');
+    if (slashParts.length === 3) {
+      let day = slashParts[0].padStart(2, '0');
+      let month = slashParts[1].padStart(2, '0');
+      let year = slashParts[2];
+      if (year.length === 2) {
+        year = '20' + year;
+      }
+      return `${year}-${month}-${day}`;
+    }
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    } catch (_) {}
+    return '';
   };
 
   return (
@@ -210,6 +227,17 @@ export default function DocumentFormFields({ hook, item }) {
 
                   {!isHaki && (
                     <div>
+                      <label className="font-bold text-slate-800 block mb-1.5">Instansi Penerbit</label>
+                      <input type="text" value={formData.instansi || ''}
+                        onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                        placeholder="Contoh: DPMPTSP, BPN"
+                      />
+                    </div>
+                  )}
+
+                  {!isHaki && (
+                    <div>
                       <label className="font-bold text-slate-800 block mb-1.5">Tanggal Terbit / Berlaku</label>
                       <input type="date" value={formatDateForInput(formData.terbit)}
                         onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
@@ -240,7 +268,7 @@ export default function DocumentFormFields({ hook, item }) {
         })()}
 
         {/* Spesifikasi Tambahan */}
-        {(!hook.isMultiCertItem || !hook.isSingleCertScope) && (
+        {true && (
           <div className="mt-4 pt-4 border-t border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider font-mono-data flex items-center gap-1.5">

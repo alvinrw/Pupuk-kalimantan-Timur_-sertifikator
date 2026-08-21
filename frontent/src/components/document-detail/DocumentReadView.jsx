@@ -7,6 +7,27 @@ import { getFullFileUrl } from '../../config/api';
 import CertHistorySection from './CertHistorySection';
 
 export default function DocumentReadView({ hook, item }) {
+  const parseKeteranganText = (ket) => {
+    if (!ket) return '-';
+    try {
+      if (typeof ket === 'string' && ket.trim().startsWith('{')) {
+        const parsed = JSON.parse(ket);
+        return parsed.keteranganAsli !== undefined ? parsed.keteranganAsli : ket;
+      }
+    } catch (_) {}
+    return ket;
+  };
+
+  const getAdditionalEntities = (ket) => {
+    try {
+      if (ket && typeof ket === 'string' && ket.trim().startsWith('{')) {
+        const parsed = JSON.parse(ket);
+        return Array.isArray(parsed.additionalEntities) ? parsed.additionalEntities : [];
+      }
+    } catch (_) {}
+    return [];
+  };
+
   const {
     formData, isHaki, isEquipment, effectiveCategoryKey, isSingleCertScope, isMultiCertItem,
     localDocumentStatus, historyList, isLoadingHistory,
@@ -169,7 +190,7 @@ export default function DocumentReadView({ hook, item }) {
                             : (formData.status === 'Spare' ? 'Spare (Cadangan)' : formData.status === 'Rusak' ? 'Rusak (Out of Service)' : formData.status),
                           cls: 'font-bold text-slate-800'
                         },
-                        ...(formData.additionalEntities || []).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' }))
+                        ...getAdditionalEntities(item?.rawKeterangan || item?.keterangan).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' }))
                       ].map(({ label, val, cls }) => (
                         <div key={label}>
                           <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
@@ -187,10 +208,12 @@ export default function DocumentReadView({ hook, item }) {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 font-mono-data text-xs">
                           {[
                             { label: 'Nama Sertifikat', val: formData.namaSertifikat || '-', cls: 'font-bold text-slate-800' },
-                            { label: 'No. Sertifikat Active', val: displayNoSert, cls: 'font-bold text-slate-800' },
+                            { label: 'No. Sertifikat Active', val: displayNoSert, cls: 'font-bold text-slate-800 font-mono' },
+                            { label: 'Instansi Penerbit', val: formData.instansi || '-', cls: 'font-bold text-slate-800' },
                             { label: 'Tanggal Terbit', val: formData.terbit || '-', cls: 'font-bold text-slate-800' },
                             { label: 'Tanggal Expired', val: displayExpired, cls: 'font-bold text-slate-800' },
-                            { label: 'Catatan / Pengecualian', val: formData.exemptionNote || formData.keterangan || '-', cls: 'font-bold text-slate-800 whitespace-pre-wrap' },
+                            { label: 'Catatan / Pengecualian', val: formData.exemptionNote || parseKeteranganText(formData.keterangan) || '-', cls: 'font-bold text-slate-800 whitespace-pre-wrap' },
+                            ...(isSingleCertScope ? (formData.additionalEntities || []).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' })) : [])
                           ].map(({ label, val, cls }) => (
                             <div key={label}>
                               <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
@@ -274,6 +297,7 @@ export default function DocumentReadView({ hook, item }) {
           openUploadModal={openUploadModal}
           setEditingHistoryRow={setEditingHistoryRow}
           setSelectedHistoryToDelete={setSelectedHistoryToDelete}
+          primaryCert={primaryCert}
         />
       )}
 
@@ -364,7 +388,7 @@ export default function DocumentReadView({ hook, item }) {
                       </div>
                       <div>
                         <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Catatan / Keterangan</span>
-                        <span className="font-bold text-slate-800 text-sm block whitespace-pre-wrap">{cert?.keterangan || formData.keterangan || formData.exemptionNote || '-'}</span>
+                        <span className="font-bold text-slate-800 text-sm block whitespace-pre-wrap">{parseKeteranganText(cert?.keterangan || formData.keterangan || formData.exemptionNote)}</span>
                       </div>
                     </div>
                     <div className="pt-3 flex items-center justify-between text-xs border-t border-slate-100 mt-2">

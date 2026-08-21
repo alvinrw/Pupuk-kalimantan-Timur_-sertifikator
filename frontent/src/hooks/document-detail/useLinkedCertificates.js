@@ -11,7 +11,15 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
     const t = new Date(dateStr).getTime();
     return isNaN(t) ? 0 : t;
   };
-  const [linkedCerts, setLinkedCerts] = useState(item?.linkedCertificates || []);
+  const filterActiveCerts = (certsList) => {
+    if (!certsList) return [];
+    return certsList.filter(c => {
+      const s = (c.status || '').toLowerCase();
+      return s !== 'diarsipkan' && s !== 'direvisi';
+    });
+  };
+
+  const [linkedCerts, setLinkedCerts] = useState(filterActiveCerts(item?.linkedCertificates || item?.certificates));
   const [isAddCertModalOpen, setIsAddCertModalOpen] = useState(false);
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
   const [isDeletingLinkedCert, setIsDeletingLinkedCert] = useState(false);
@@ -33,8 +41,9 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
     // (bukan sekadar re-render akibat refresh data yang sama)
     if (prevItemIdRef.current !== currentItemId || !prevItemIdRef.current) {
       prevItemIdRef.current = currentItemId;
-      if (doc && doc.linkedCertificates) {
-        const certs = [...doc.linkedCertificates];
+      const targetList = doc?.linkedCertificates || doc?.certificates;
+      if (targetList) {
+        const certs = filterActiveCerts(targetList);
         certs.sort((a, b) => {
           const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit) || new Date(a.createdAt || 0).getTime();
           const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit) || new Date(b.createdAt || 0).getTime();
@@ -85,7 +94,8 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
           fileUrl = json?.data?.url || json?.data?.fileUrl || null;
         }
       }
-      const masterItemId = item?.MasterId || item?.id;
+      // Prioritize MasterId, then parentDoc.id (if item is a child-scoped view), then item.id
+      const masterItemId = item?.MasterId || item?.parentDoc?.id || item?.id;
       const payload = { itemId: masterItemId, ...certPayload };
       if (fileUrl) payload.fileUrl = fileUrl;
       const saved = await createCertificateForMasterItem(payload);
