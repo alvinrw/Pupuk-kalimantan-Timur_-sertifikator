@@ -41,7 +41,8 @@ export default function TugasTerdekat() {
   const [selectedCertId, setSelectedCertId] = useState(null);
 
   const getDisplayName = (task) => {
-    if (task.categoryKey === 'perizinan-proyek' && task.namaSertifikat && task.namaSertifikat !== 'Tanpa Sertifikat') {
+    const isChildCategory = ['perizinan-aset', 'perizinan-proyek', 'perizinan-produk'].includes(task.categoryKey);
+    if (isChildCategory && task.certificateId && task.namaSertifikat && task.namaSertifikat !== 'Tanpa Sertifikat') {
       return `${task.namaSertifikat} (${task.namaPeralatan || '-'})`;
     }
     return task.namaPeralatan || '-';

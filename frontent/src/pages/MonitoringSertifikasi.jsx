@@ -57,7 +57,8 @@ export default function MonitoringSertifikasi() {
   if (m.selectedDetailDoc) {
     return (
       <DocumentDetailPage
-        item={m.selectedDetailDoc}
+        item={m.selectedDetailDoc.rawItem || m.selectedDetailDoc}
+        initialCertId={m.selectedDetailDoc.primaryCertId}
         onBack={() => { m.setSelectedDetailDoc(null); m.fetchMonitoringData(); }}
         onSaveUpdate={(updatedDoc) => {
           const updateItem = (d) => {
@@ -114,7 +115,7 @@ export default function MonitoringSertifikasi() {
             Monitoring &amp; Evaluasi
           </h2>
           <p className="text-xs text-slate-500 font-mono-data mt-0.5">
-            Rekapitulasi tenggat perpanjangan sertifikat dan anggaran
+            Rekapitulasi dan monitoring detail perpanjangan sertifikat
           </p>
         </div>
 

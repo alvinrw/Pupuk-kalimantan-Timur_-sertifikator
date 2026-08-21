@@ -115,6 +115,9 @@ export default function PeralatanTable({
                     >
                       <option value="All">Semua</option>
                       <option value="Aktif">Aktif</option>
+                      <option value="Expired">Expired</option>
+                      <option value="Perpanjang">Perpanjang</option>
+                      <option value="Afkir">Afkir</option>
                       <option value="Spare">Spare</option>
                       <option value="Rusak">Rusak</option>
                     </select>

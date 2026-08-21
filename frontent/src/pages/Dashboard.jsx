@@ -86,22 +86,6 @@ export default function Dashboard() {
       if (item.documentStatus === 'PENDING_DOC') return;
 
       const certs = item.certificates || [];
-      const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
-
-      let primaryCert = null;
-      if (activeCerts.length > 0) {
-        primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          if (dA !== dB) return dB - dA;
-          const hasPdfA = !!a.fileUrl;
-          const hasPdfB = !!b.fileUrl;
-          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        })[0];
-      } else if (certs.length > 0) {
-        primaryCert = certs[0];
-      }
 
       const formatToDDMMYYYY = (rawDateStr) => {
         if (!rawDateStr || rawDateStr === '-') return '-';
@@ -118,30 +102,86 @@ export default function Dashboard() {
         return rawDateStr;
       };
 
-      const rawExp = primaryCert?.expired || item.expiryDate;
-      const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
-      const hari = calcDiff(dateVal);
-      const tglExpiredFormatted = formatToDDMMYYYY(dateVal);
+      if (item.categoryKey === 'peralatan-pabrik') {
+        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
 
-      const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
+        let primaryCert = null;
+        if (activeCerts.length > 0) {
+          primaryCert = activeCerts.slice().sort((a, b) => {
+            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
+            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            if (dA !== dB) return dB - dA;
+            const hasPdfA = !!a.fileUrl;
+            const hasPdfB = !!b.fileUrl;
+            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+          })[0];
+        } else if (certs.length > 0) {
+          primaryCert = certs[0];
+        }
 
-      const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
-      const tglTerbitFormatted = formatToDDMMYYYY(rawTerbit);
+        const rawExp = primaryCert?.expired || item.expiryDate;
+        const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+        const hari = calcDiff(dateVal);
+        const tglExpiredFormatted = formatToDDMMYYYY(dateVal);
 
-      flattened.push({
-        id: item.id,
-        kategori: item.categoryKey || 'Lainnya',
-        jenis: item.title || 'Unknown',
-        unit: item.unitLocation || 'Umum',
-        opStatus: item.status || 'Aktif',
-        sisaHari: hari,
-        workflowStatus: wfStatus,
-        merekItem: item.title || '-',
-        nomorSeriTipe: item.code || '-',
-        nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
-        tglExpired: tglExpiredFormatted,
-        tglTerbit: tglTerbitFormatted
-      });
+        const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
+
+        const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
+        const tglTerbitFormatted = formatToDDMMYYYY(rawTerbit);
+
+        flattened.push({
+          id: item.id,
+          kategori: item.categoryKey || 'Lainnya',
+          jenis: item.title || 'Unknown',
+          unit: item.unitLocation || 'Umum',
+          opStatus: item.status || 'Aktif',
+          sisaHari: hari,
+          workflowStatus: wfStatus,
+          merekItem: item.title || '-',
+          nomorSeriTipe: item.code || '-',
+          nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
+          tglExpired: tglExpiredFormatted,
+          tglTerbit: tglTerbitFormatted
+        });
+      } else {
+        if (certs.length === 0) {
+          const dateVal = (item.expiryDate && item.expiryDate !== '2030-01-01' && item.expiryDate !== '-') ? item.expiryDate : '-';
+          flattened.push({
+            id: item.id,
+            kategori: item.categoryKey || 'Lainnya',
+            jenis: item.title || 'Unknown',
+            unit: item.unitLocation || 'Umum',
+            opStatus: item.status || 'Aktif',
+            sisaHari: calcDiff(dateVal),
+            workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT'),
+            merekItem: item.title || '-',
+            nomorSeriTipe: item.code || '-',
+            nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-',
+            tglExpired: formatToDDMMYYYY(dateVal),
+            tglTerbit: formatToDDMMYYYY(item.issueDate || '-')
+          });
+        } else {
+          certs.forEach(cert => {
+            const rawExp = cert.expired || '-';
+            const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+            flattened.push({
+              id: cert.id || item.id,
+              kategori: item.categoryKey || 'Lainnya',
+              jenis: item.title || 'Unknown',
+              unit: item.unitLocation || 'Umum',
+              opStatus: cert.status || item.status || 'Aktif',
+              sisaHari: calcDiff(dateVal),
+              workflowStatus: getWfStatus(cert.status || item.status, cert.status === 'EXEMPT' ? 'EXEMPT' : item.documentStatus || 'EXEMPT'),
+              merekItem: item.title || '-',
+              nomorSeriTipe: item.code || '-',
+              nomorSertifikat: cert.noSertifikat || cert.noIzin || '-',
+              tglExpired: formatToDDMMYYYY(dateVal),
+              tglTerbit: formatToDDMMYYYY(cert.terbit || '-')
+            });
+          });
+        }
+      }
     });
     return flattened;
   }, [rawItems]);
@@ -173,8 +213,6 @@ export default function Dashboard() {
 
   const statusPieData = [
     { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
-    { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
-    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
   ];
 
@@ -186,11 +224,10 @@ export default function Dashboard() {
       const catItems = filteredItems.filter(i => i.kategori === cat);
       return {
         name: cat,
-        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length,
-        Urgent: catItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length,
+        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length + catItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length,
         Expired: catItems.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length,
       };
-    }).filter(u => u.Valid > 0 || u.Urgent > 0 || u.Expired > 0 || filterKategori === u.name);
+    }).filter(u => u.Valid > 0 || u.Expired > 0 || filterKategori === u.name);
   }, [filteredItems, allDashboardItems, filterKategori, customUrgentDays]);
 
   // Filtering untuk list tabel Terbit di bagian bawah
@@ -320,7 +357,7 @@ export default function Dashboard() {
             Dashboard Overview
           </h1>
           <p className="text-slate-500 font-mono-data text-xs md:text-sm max-w-2xl leading-relaxed">
-            Ringkasan status legalitas dan operasional seluruh aset, peralatan pabrik, proyek, dan dokumen HAKI.
+
           </p>
         </div>
 
@@ -351,56 +388,22 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* SUMMARY CARDS — 6 cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-        {/* Card 1: Urgent */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-col space-y-2">
-            <div className="flex items-center gap-1 text-slate-500">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span className="font-mono-data text-[10px] font-bold uppercase">Urgent ≤</span>
-              <input
-                type="number"
-                value={customUrgentDays}
-                onChange={(e) => setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-12 px-1.5 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
-              />
-              <span className="font-mono-data text-[10px] font-bold uppercase">Hr</span>
-            </div>
-            <div className="flex items-end gap-1">
-              <span className="text-3xl font-extrabold text-slate-800">{stats.urgent}</span>
-              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Sertifikat Aktif */}
+      {/* SUMMARY CARDS — 4 cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Card 1: Sertifikat Aktif */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Aktif
             </span>
             <div className="flex items-end gap-1">
-              <span className="text-3xl font-extrabold text-slate-800">{stats.valid}</span>
+              <span className="text-3xl font-extrabold text-slate-800">{stats.valid + stats.urgent}</span>
               <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
           </div>
         </div>
 
-        {/* Card 3: Non-Sertifikat */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-col space-y-2">
-            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
-              <FileX className="w-3.5 h-3.5" /> Non-Sertifikat
-            </span>
-            <div className="flex items-end gap-1">
-              <span className="text-3xl font-extrabold text-slate-800">{stats.exempt}</span>
-              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Expired */}
+        {/* Card 2: Expired */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
@@ -413,7 +416,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Card 5: Non-Aktif / Afkir */}
+        {/* Card 3: Non-Aktif / Afkir */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
@@ -426,7 +429,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Card 6: Total Keseluruhan */}
+        {/* Card 4: Total Keseluruhan */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
@@ -504,7 +507,6 @@ export default function Dashboard() {
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                 <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
                 <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

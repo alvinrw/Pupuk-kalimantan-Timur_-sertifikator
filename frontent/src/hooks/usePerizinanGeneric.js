@@ -41,6 +41,17 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [isLoading, setIsLoading] = useState(true);
 
   const [sortDateOrder, setSortDateOrder] = useState('desc'); // 'desc' = terbaru, 'asc' = terlama
+  const [sortKey, setSortKey] = useState(null); // 'terbit' | 'berakhir'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
 
   const isAsetCategory = useMemo(() => {
     return categoryName?.toLowerCase().includes('aset');
@@ -174,7 +185,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
           status: formatStatus(doc.status),
           user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
-          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
+          documentStatus: doc.documentStatus || doc.document_status || 'PENDING_DOC',
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs,
           notificationSetting: doc.notificationSetting || null,
@@ -446,6 +457,22 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             certObj: cert
           });
         });
+
+        if (sortKey) {
+          processedCerts.sort((a, b) => {
+            const valA = sortKey === 'terbit' ? a.terbit : a.expired;
+            const valB = sortKey === 'terbit' ? b.terbit : b.expired;
+            
+            const tA = getTimestamp(valA);
+            const tB = getTimestamp(valB);
+            
+            if (tA === 0 && tB === 0) return 0;
+            if (tA === 0) return 1;
+            if (tB === 0) return -1;
+            
+            return sortOrder === 'asc' ? tA - tB : tB - tA;
+          });
+        }
       }
 
       return {
@@ -463,7 +490,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         certs: processedCerts
       };
     });
-  }, [filteredDocs, categoryName]);
+  }, [filteredDocs, categoryName, sortKey, sortOrder]);
 
   const toggleSelectAllStaging = (rows) => {
     const targetRows = rows || masterRows;
@@ -519,17 +546,20 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
 
       if (targetItemId) {
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
-          namaSertifikat: newItem.namaSertifikat || undefined,
-          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
-          status: newItem.documentStatus === 'EXEMPT' ? 'EXEMPT' : 'Aktif',
-          terbit: newItem.terbit || undefined,
-          expired: newItem.expired || undefined,
-          fileUrl: newItem.fileUrl || null,
-          uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Single Entry',
-        });
+        const hasCertDetails = !!(newItem.noSertifikat && newItem.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' && newItem.noSertifikat !== 'Tanpa Sertifikat');
+        if (hasCertDetails) {
+          await createCertificateForMasterItem({
+            itemId: targetItemId,
+            jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
+            namaSertifikat: newItem.namaSertifikat || undefined,
+            noSertifikat: newItem.noSertifikat,
+            status: newItem.documentStatus === 'EXEMPT' ? 'EXEMPT' : 'Aktif',
+            terbit: newItem.terbit || undefined,
+            expired: newItem.expired || undefined,
+            fileUrl: newItem.fileUrl || null,
+            uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Single Entry',
+          });
+        }
 
         if (newItem.documentStatus === 'EXEMPT') {
           await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');
@@ -570,7 +600,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     }
   };
 
-  const handleAddCertSuccess = async (certPayload, pdfFile) => {
+  const handleAddCertSuccess = async ({ certPayload, pdfFile }) => {
     try {
       if (!addCertTargetMaster) return;
       const targetItemId = addCertTargetMaster.id || addCertTargetMaster.MasterId || addCertTargetMaster.parentDoc?.id;
@@ -591,14 +621,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Tambah Terhubung'
       });
 
-      // Jika dokumen berasal dari staging (PENDING_DOC), otomatis ubah jadi COMPLETED karena sudah diberi sertifikat
-      if (addCertTargetMaster.documentStatus === 'PENDING_DOC' || addCertTargetMaster.status === 'PENDING' || addCertTargetMaster.documentStatus === 'EXPIRED') {
-        try {
-          await updateMasterItem(targetItemId, { documentStatus: 'COMPLETED', status: 'Aktif' });
-        } catch (updateErr) {
-          console.warn("Gagal update status master ke COMPLETED, mungkin tidak di-support oleh dummy API:", updateErr);
-        }
-      }
+      // Jangan otomatis ubah documentStatus jadi COMPLETED di sini.
+      // Jika master memiliki banyak child cert, mengunggah 1 PDF tidak berarti semuanya selesai.
+      // User harus menggunakan tombol "Pindah ke Utama" yang sudah ada logic-nya di tabel 
+      // (hanya aktif jika semua child cert sudah punya PDF).
 
       setAddCertTargetMaster(null);
       await loadData();
@@ -656,6 +682,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     toggleSelectAllStaging,
     resetFilters, handleCsvImported, handleSingleAdded,
     getRowStatusStyle,
-    sortDateOrder, setSortDateOrder
+    sortDateOrder, setSortDateOrder,
+    sortKey, sortOrder, toggleSort
   };
 }

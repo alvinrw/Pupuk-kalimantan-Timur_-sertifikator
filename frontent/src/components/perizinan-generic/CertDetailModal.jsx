@@ -540,92 +540,7 @@ export default function CertDetailModal({
                 </div>
               </div>
 
-              {/* SECTION 3: Status Legalitas Sertifikat Active */}
-              <div className="bg-blue-50/50 rounded-xl border border-blue-200 shadow-xs overflow-hidden">
-                <div className="px-5 py-3 bg-blue-100/70 border-b border-blue-200 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <FileCheck className="w-4 h-4 text-[#005ea4]" />
-                    <h4 className="font-bold text-xs text-[#005ea4] uppercase tracking-wide">
-                      Status Legalitas Sertifikat Active
-                    </h4>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    Terverifikasi {formData.instansi || 'Disnaker / Kemenperin'}
-                  </span>
-                </div>
-
-                <div className="p-5 space-y-4">
-                  <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-2xs grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-                    <div>
-                      <span className="text-slate-400 block mb-0.5 font-medium">Nama Sertifikat</span>
-                      <strong className="text-slate-900">{formData.namaSertifikat || formData.jenisSertifikat || '-'}</strong>
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400 block mb-0.5 font-medium">No. Sertifikat Active</span>
-                      <strong className="text-[#005ea4] font-mono">{formData.noSertifikat || '-'}</strong>
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400 block mb-0.5 font-medium">Tanggal Terbit</span>
-                      <span className="font-semibold text-slate-700">{formData.terbit || '-'}</span>
-                    </div>
-
-                    <div>
-                      <span className="text-slate-400 block mb-0.5 font-medium">Tanggal Expired (Kadaluarsa)</span>
-                      <span className="font-bold text-rose-600">{formData.expired || '-'}</span>
-                    </div>
-                  </div>
-
-                  {/* Dokumen Digital SK Viewer / Upload */}
-                  <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <FileText className={`w-8 h-8 ${fullUrl ? 'text-emerald-600' : 'text-slate-300'}`} />
-                      <div>
-                        <span className="font-bold text-xs text-slate-800 block">
-                          Dokumen Digital SK ({fullUrl ? 'Berkas PDF Tersedia' : 'Belum Ada File'})
-                        </span>
-                        <span className="text-[11px] text-slate-500 font-mono">
-                          {fullUrl ? formData.fileUrl.split('/').pop() : 'Silakan unggah dokumen PDF SK resmi'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {fullUrl ? (
-                        <>
-                          <a
-                            href={fullUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3.5 py-1.5 rounded-lg bg-[#005ea4] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-colors shadow-2xs"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" /> Buka PDF
-                          </a>
-                          <a
-                            href={fullUrl}
-                            download
-                            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-200 border border-slate-300 transition-colors"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Unduh
-                          </a>
-                        </>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setIsEditing(true)}
-                          className="px-3.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
-                        >
-                          <Upload className="w-3.5 h-3.5 text-amber-600" />
-                          <span>+ Unggah File PDF</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 4: Histori & Riwayat Dokumen Sertifikat Fisik / Digital */}
+              {/* SECTION 4: Histori & Riwayat Dokumen Sertifikat Fisik / Digital (Moved to Top) */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
                   <div>
@@ -737,6 +652,93 @@ export default function CertDetailModal({
                   </div>
                 </div>
               </div>
+
+              {/* SECTION 3: Status Legalitas Sertifikat Active */}
+              <div className="bg-blue-50/50 rounded-xl border border-blue-200 shadow-xs overflow-hidden">
+                <div className="px-5 py-3 bg-blue-100/70 border-b border-blue-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileCheck className="w-4 h-4 text-[#005ea4]" />
+                    <h4 className="font-bold text-xs text-[#005ea4] uppercase tracking-wide">
+                      Status Legalitas Sertifikat Active
+                    </h4>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    Terverifikasi {formData.instansi || 'Disnaker / Kemenperin'}
+                  </span>
+                </div>
+
+                <div className="p-5 space-y-4">
+                  <div className="bg-white p-4 rounded-xl border border-blue-100 shadow-2xs grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                    <div>
+                      <span className="text-slate-400 block mb-0.5 font-medium">Nama Sertifikat</span>
+                      <strong className="text-slate-900">{formData.namaSertifikat || formData.jenisSertifikat || '-'}</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block mb-0.5 font-medium">No. Sertifikat Active</span>
+                      <strong className="text-[#005ea4] font-mono">{formData.noSertifikat || '-'}</strong>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block mb-0.5 font-medium">Tanggal Terbit</span>
+                      <span className="font-semibold text-slate-700">{formData.terbit || '-'}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-400 block mb-0.5 font-medium">Tanggal Expired (Kadaluarsa)</span>
+                      <span className="font-bold text-rose-600">{formData.expired || '-'}</span>
+                    </div>
+                  </div>
+
+                  {/* Dokumen Digital SK Viewer / Upload */}
+                  <div className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <FileText className={`w-8 h-8 ${fullUrl ? 'text-emerald-600' : 'text-slate-300'}`} />
+                      <div>
+                        <span className="font-bold text-xs text-slate-800 block">
+                          Dokumen Digital SK ({fullUrl ? 'Berkas PDF Tersedia' : 'Belum Ada File'})
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-mono">
+                          {fullUrl ? formData.fileUrl.split('/').pop() : 'Silakan unggah dokumen PDF SK resmi'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {fullUrl ? (
+                        <>
+                          <a
+                            href={fullUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3.5 py-1.5 rounded-lg bg-[#005ea4] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-colors shadow-2xs"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" /> Buka PDF
+                          </a>
+                          <a
+                            href={fullUrl}
+                            download
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1.5 hover:bg-slate-200 border border-slate-300 transition-colors"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Unduh
+                          </a>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditing(true)}
+                          className="px-3.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
+                        >
+                          <Upload className="w-3.5 h-3.5 text-amber-600" />
+                          <span>+ Unggah File PDF</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+
             </>
           )}
 

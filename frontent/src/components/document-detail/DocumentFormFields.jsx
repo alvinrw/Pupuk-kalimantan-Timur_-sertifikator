@@ -12,6 +12,7 @@ export default function DocumentFormFields({ hook, item }) {
     triggerType, setTriggerType,
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
+    saveSettings,
   } = hook;
 
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -302,13 +303,7 @@ export default function DocumentFormFields({ hook, item }) {
                     const isChecked = e.target.checked;
                     setReminderEnabled(isChecked);
                     try {
-                      const tId = item?.MasterId || item?.id;
-                      await updateNotificationSetting(tId, {
-                        isEnabled: isChecked,
-                        triggerType,
-                        triggerDays: parseInt(reminderDays) || 30,
-                        triggerDate: triggerType === 'DATE' ? triggerDate : null
-                      });
+                      await saveSettings({ reminderEnabled: isChecked });
                     } catch(err) {
                       console.error('Auto-save failed:', err);
                     }
@@ -325,7 +320,13 @@ export default function DocumentFormFields({ hook, item }) {
                     <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tipe Pemicu</label>
                     <select
                       value={triggerType}
-                      onChange={(e) => setTriggerType(e.target.value)}
+                      onChange={async (e) => {
+                        const nextVal = e.target.value;
+                        setTriggerType(nextVal);
+                        try {
+                          await saveSettings({ triggerType: nextVal });
+                        } catch(err) {}
+                      }}
                       className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
                     >
                       <option value="DAYS">Berdasarkan Sisa Hari (H-)</option>
@@ -337,7 +338,13 @@ export default function DocumentFormFields({ hook, item }) {
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
                       <input
                         type="number" min="1" value={reminderDays}
-                        onChange={(e) => setReminderDays(e.target.value === '' ? '' : parseInt(e.target.value))}
+                        onChange={async (e) => {
+                          const nextVal = e.target.value === '' ? '' : parseInt(e.target.value);
+                          setReminderDays(nextVal);
+                          try {
+                            await saveSettings({ reminderDays: nextVal });
+                          } catch(err) {}
+                        }}
                         className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
                       />
                     </div>
@@ -346,7 +353,13 @@ export default function DocumentFormFields({ hook, item }) {
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tanggal Pemicu</label>
                       <input
                         type="date" value={triggerDate}
-                        onChange={(e) => setTriggerDate(e.target.value)}
+                        onChange={async (e) => {
+                          const nextVal = e.target.value;
+                          setTriggerDate(nextVal);
+                          try {
+                            await saveSettings({ triggerDate: nextVal });
+                          } catch(err) {}
+                        }}
                         className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
                       />
                     </div>

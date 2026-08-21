@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { updateMasterItem } from '../services/masterItemsService';
 
 // Sub-hooks
@@ -14,10 +14,16 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   const effectiveCategoryKey = item?.categoryKey || '';
 
   const [activeCertId, setActiveCertId] = useState(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
+  const prevInitialCertIdRef = useRef(initialCertId);
 
+  // Only reset activeCertId if initialCertId explicitly changes (e.g. user clicked a different cert
+  // from the parent list). Do NOT reset on item data refresh - that causes tab jumping after upload.
   useEffect(() => {
-    setActiveCertId(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
-  }, [item, initialCertId]);
+    if (prevInitialCertIdRef.current !== initialCertId) {
+      prevInitialCertIdRef.current = initialCertId;
+      setActiveCertId(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
+    }
+  }, [initialCertId]);
 
   const getTimestamp = (dateStr) => {
     if (!dateStr || dateStr === '-') return 0;
@@ -30,7 +36,13 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   };
 
   const allItemCerts = item?.certificates || [];
-  const activeItemCert = allItemCerts.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status).sort((a,b) => getTimestamp(b.expired) - getTimestamp(a.expired))[0];
+  const validItemCerts = allItemCerts.filter(c => {
+    const s = (c.status || '').toLowerCase();
+    return s !== 'diarsipkan';
+  });
+  const activeItemCert = validItemCerts.length > 0
+    ? validItemCerts.slice().sort((a, b) => getTimestamp(b.expired || b.expiryDate) - getTimestamp(a.expired || a.expiryDate))[0]
+    : (allItemCerts.length > 0 ? allItemCerts.slice().sort((a, b) => getTimestamp(b.expired || b.expiryDate) - getTimestamp(a.expired || a.expiryDate))[0] : null);
 
   const rawTargetCert = item?.currentCert || item?.cert || activeItemCert || null;
   const targetCert = activeCertId && item.linkedCertificates
@@ -120,9 +132,9 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
   const historyHook = useDocumentHistory({ item, targetCert, onRefreshRequired });
   const uploadHook = useDocumentUpload({ item, fetchHistory: historyHook.fetchHistory, onSaveUpdate, onRefreshRequired });
-  const statusHook = useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired });
+  const statusHook = useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired, isSingleCertScope, isMultiCertItem });
   const linkedCertsHook = useLinkedCertificates({ item, targetCert, fetchHistory: historyHook.fetchHistory, onRefreshRequired });
-  const notificationHook = useNotificationSettings({ item, targetCert });
+  const notificationHook = useNotificationSettings({ item, targetCert, onRefreshRequired });
 
   const currentStatus = formData.status || item.status || 'Aktif';
   const lowerStatus = currentStatus.toLowerCase();

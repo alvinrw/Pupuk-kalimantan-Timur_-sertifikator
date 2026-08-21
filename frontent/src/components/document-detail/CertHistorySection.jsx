@@ -19,6 +19,16 @@ export default function CertHistorySection({
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-6">
       {/* Header */}
@@ -66,9 +76,9 @@ export default function CertHistorySection({
               {historyList
                 .slice()
                 .sort((a, b) => {
-                  if (a.isCurrent && !b.isCurrent) return -1;
-                  if (!a.isCurrent && b.isCurrent) return 1;
-                  return new Date(b.expired || b.terbit || '1970-01-01') - new Date(a.expired || a.terbit || '1970-01-01');
+                  const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit);
+                  const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit);
+                  return timeB - timeA;
                 })
                 .map((row) => (
                   <tr

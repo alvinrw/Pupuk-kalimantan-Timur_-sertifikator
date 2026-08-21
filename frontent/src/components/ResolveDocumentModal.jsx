@@ -135,11 +135,14 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
 
     const targetId = activeDoc.itemId || activeDoc.masterItemId || activeDoc.MasterId || activeDoc.id;
 
+    let finalCertId = null;
+
     try {
       if (activeDoc.isChild || activeDoc.certId || activeDoc.masterItemId) {
         // Update existing child certificate
+        finalCertId = activeDoc.id || activeDoc.certId;
         const isExempt = sertifikatMode === 'tanpa';
-        await updateCertificate(activeDoc.id || activeDoc.certId, {
+        await updateCertificate(finalCertId, {
           namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat,
           noSertifikat: isExempt ? (formData.noSertifikat || 'EXEMPT') : formData.noSertifikat,
           instansi: formData.instansi,
@@ -149,38 +152,28 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
           status: isExempt ? 'EXEMPT' : 'Aktif'
         });
 
-        // If exempt mode, also resolve the master item
-        if (isExempt) {
-          const masterItemId = activeDoc.itemId || activeDoc.masterItemId || activeDoc.MasterId;
-          if (masterItemId) {
-            try {
-              await resolveMasterItemExemption(masterItemId, formData.keterangan || 'Tanpa Sertifikat (Input Manual)');
-            } catch (err) {
-              console.error("Exemption resolve error (child):", err);
-            }
-          }
-        }
+        // If exempt mode, we only update the child cert.
+        // We DO NOT resolve the entire master item, because there might be other certs that are still pending.
+        // The master item will stay in Staging until the user explicitly clicks "Pindah ke Utama".
       } else {
         // Create new certificate for master item
-        await createCertificateForMasterItem({
+        const isExempt = sertifikatMode === 'tanpa';
+        const newCert = await createCertificateForMasterItem({
           itemId: targetId,
           jenisSertifikat: activeDoc.jenisSertifikat || activeDoc.jenisPeralatan || activeDoc.jenisCiptaan || activeDoc.categoryKey || activeDoc.title || "Sertifikat",
           namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat || "Sertifikat Baru",
-          noSertifikat: formData.noSertifikat,
+          noSertifikat: isExempt ? (formData.noSertifikat || 'EXEMPT') : formData.noSertifikat,
           instansi: formData.instansi,
           terbit: formData.terbit,
           expired: formData.expired,
-          fileUrl: finalUrl,
-          status: 'Aktif'
+          fileUrl: isExempt ? null : finalUrl,
+          status: isExempt ? 'EXEMPT' : 'Aktif'
         });
+        
+        finalCertId = newCert?.id || newCert?.data?.id;
 
-        if (sertifikatMode === 'tanpa') {
-          try {
-            await resolveMasterItemExemption(targetId, formData.keterangan || 'Tanpa Sertifikat (Input Manual)');
-          } catch (err) {
-            console.error("Exemption resolve error:", err);
-          }
-        }
+        // We only create the exempt child certificate above.
+        // We DO NOT resolve the entire master item here, to prevent it from jumping out of Staging.
       }
     } catch (err) {
       console.error("Certificate resolve error:", err);
@@ -188,6 +181,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
 
     try {
       await updateNotificationSetting(targetId, {
+        certificateId: finalCertId,
         isEnabled: formData.reminderEnabled,
         triggerType: formData.reminderType,
         triggerDays: parseInt(formData.reminderDays) || 30,

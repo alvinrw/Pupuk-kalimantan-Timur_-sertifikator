@@ -1,7 +1,16 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createCertificateForMasterItem, deleteCertificate } from '../../services/masterItemsService';
 
 export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefreshRequired }) {
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
   const [linkedCerts, setLinkedCerts] = useState(item?.linkedCertificates || []);
   const [isAddCertModalOpen, setIsAddCertModalOpen] = useState(false);
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
@@ -14,18 +23,37 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
 
   const [sortDateOrder, setSortDateOrder] = useState('desc');
 
+  const prevItemIdRef = useRef(item?.id);
+
   useEffect(() => {
+    const currentItemId = item?.id || item?.MasterId;
     const doc = item;
-    if (doc && doc.linkedCertificates) {
-      const certs = [...doc.linkedCertificates];
-      certs.sort((a, b) => {
-        const timeA = new Date(a.createdAt || 0).getTime();
-        const timeB = new Date(b.createdAt || 0).getTime();
-        return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+
+    // Hanya sync ulang linkedCerts dari server jika item yang ditampilkan ganti
+    // (bukan sekadar re-render akibat refresh data yang sama)
+    if (prevItemIdRef.current !== currentItemId || !prevItemIdRef.current) {
+      prevItemIdRef.current = currentItemId;
+      if (doc && doc.linkedCertificates) {
+        const certs = [...doc.linkedCertificates];
+        certs.sort((a, b) => {
+          const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit) || new Date(a.createdAt || 0).getTime();
+          const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit) || new Date(b.createdAt || 0).getTime();
+          return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+        });
+        setLinkedCerts(certs);
+      }
+    } else {
+      // item ID sama tapi sortDateOrder berubah - hanya sort ulang tanpa ganti referensi
+      setLinkedCerts(prev => {
+        if (!prev || prev.length === 0) return prev;
+        return [...prev].sort((a, b) => {
+          const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit) || new Date(a.createdAt || 0).getTime();
+          const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit) || new Date(b.createdAt || 0).getTime();
+          return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+        });
       });
-      setLinkedCerts(certs);
     }
-  }, [item, sortDateOrder]);
+  }, [item?.id, item?.MasterId, sortDateOrder]);
 
   const certStats = useMemo(() => {
     return (linkedCerts && linkedCerts.length > 0 ? linkedCerts : (targetCert ? [targetCert] : [])).reduce((acc, c) => {

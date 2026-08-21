@@ -93,13 +93,17 @@ export default function MonitoringTable({
                 const isDecommissioned = doc.workflowStatus === 'decommissioned';
                 const isExempt = doc.workflowStatus === 'exempt';
 
+                const expVal = (doc.tglExpired && doc.tglExpired !== '2030-01-01') ? doc.tglExpired : ((doc.expiryDate && doc.expiryDate !== '2030-01-01') ? doc.expiryDate : '-');
+                const issueVal = (doc.tglTerbit || doc.issueDate || '-');
+                const missingDate = expVal === '-' || issueVal === '-';
+
                 let rowStyleClass = "hover:bg-slate-50/80 transition-colors";
                 if (isDecommissioned) {
                   rowStyleClass = "bg-[#0f172a] text-slate-100 transition-colors hover:bg-slate-800";
                 } else if (isInProgress) {
                   rowStyleClass = "bg-amber-50/70 hover:bg-amber-100/70 text-slate-900 transition-colors";
-                } else if (doc.sisaHari !== null && doc.sisaHari <= 0) {
-                  rowStyleClass = "bg-rose-50/70 hover:bg-rose-100/70 text-slate-900 transition-colors";
+                } else if ((doc.sisaHari !== null && doc.sisaHari <= 0) || missingDate) {
+                  rowStyleClass = "bg-rose-50 hover:bg-rose-100 text-slate-900 transition-colors";
                 }
 
                 return (
@@ -135,12 +139,17 @@ export default function MonitoringTable({
                         doc.certificateNo || doc.noSertifikat || '-'
                       )}
                     </td>
-                    <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap text-center align-middle ${isDecommissioned ? 'text-slate-300' : 'text-slate-900'}`}>
-                      {doc.tglExpired && doc.tglExpired !== '2030-01-01' ? doc.tglExpired : (doc.expiryDate && doc.expiryDate !== '2030-01-01' ? doc.expiryDate : '-')}
-                      {doc.sisaHari !== null && doc.sisaHari !== undefined && doc.tglExpired !== '-' && (
+                    <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap text-center align-middle ${
+                      isDecommissioned ? 'text-slate-300' : missingDate ? 'text-rose-600' : 'text-slate-900'
+                    }`}>
+                      {expVal}
+                      {doc.sisaHari !== null && doc.sisaHari !== undefined && expVal !== '-' && (
                         <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
                           ({isDecommissioned ? 'Nonaktif' : doc.sisaHari < 0 ? `Expired ${Math.abs(doc.sisaHari)} hr lalu` : doc.sisaHari === 0 ? 'Expired hari ini' : `${doc.sisaHari} hr lagi`})
                         </span>
+                      )}
+                      {missingDate && expVal === '-' && (
+                        <span className="text-[10px] block font-normal text-rose-400">Belum diisi</span>
                       )}
                     </td>
                     {!isViewer && (

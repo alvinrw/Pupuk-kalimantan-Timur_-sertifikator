@@ -35,10 +35,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const activeCerts = historyList.filter(c => (c.status || '').toLowerCase() === 'aktif' || (c.status || '').toLowerCase() === 'active');
-  const primaryCert = activeCerts.length > 0
-    ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
-    : (historyList.length > 0 ? historyList[0] : null);
+  const primaryCert = historyList.find(c => c.isCurrent) || (historyList.length > 0 ? historyList[0] : null);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
@@ -130,11 +127,11 @@ export default function DocumentHeader({ hook, item, onBack }) {
             )}
 
             {/* Perpanjang / Upload */}
-            {(!isMultiCertItem || isSingleCertScope) && (
+            {(!isMultiCertItem || isSingleCertScope) && !isAfkirStatus && (
               isPerpanjangStatus ? (
               <>
                 <button
-                  onClick={() => { openUploadModal('archive'); setIsActionMenuOpen(false); }}
+                  onClick={() => { openUploadModal('archive', primaryCert?.id); setIsActionMenuOpen(false); }}
                   className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
                 >
                   <UploadCloud className="w-4 h-4 text-slate-400" />

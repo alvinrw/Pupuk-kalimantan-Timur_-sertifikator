@@ -22,11 +22,10 @@ export default function VideoTutorials({
           {/* TYPE 1: MULTI-SERTIFIKAT (CLICKABLE) */}
           <div
             onClick={() => setSelectedJenisTutorial('jenis1')}
-            className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
-              selectedJenisTutorial === 'jenis1'
-                ? 'bg-blue-50/70 border-2 border-[#005ea4] shadow-xs'
-                : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
-            }`}
+            className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${selectedJenisTutorial === 'jenis1'
+              ? 'bg-blue-50/70 border-2 border-[#005ea4] shadow-xs'
+              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
+              }`}
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <div className="flex items-center gap-2.5 text-[#005ea4] font-bold text-sm">
@@ -55,11 +54,10 @@ export default function VideoTutorials({
           {/* TYPE 2: SINGLE SERTIFIKAT (CLICKABLE) */}
           <div
             onClick={() => setSelectedJenisTutorial('jenis2')}
-            className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${
-              selectedJenisTutorial === 'jenis2'
-                ? 'bg-slate-100 border-2 border-slate-700 shadow-xs'
-                : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
-            }`}
+            className={`p-5 rounded-2xl border transition-all cursor-pointer space-y-3 ${selectedJenisTutorial === 'jenis2'
+              ? 'bg-slate-100 border-2 border-slate-700 shadow-xs'
+              : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-2xs'
+              }`}
           >
             <div className="flex items-center justify-between border-b border-slate-200 pb-2">
               <div className="flex items-center gap-2.5 text-slate-900 font-bold text-sm">
@@ -127,7 +125,7 @@ export default function VideoTutorials({
                   <span>Klik "+ Kelola / Impor"</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Pada kanan atas tabel, klik tombol <b>+ Kelola / Impor Dokumen</b> lalu pilih opsi <b>+ Input 1 Data Manual</b>.
+                  Pada kanan atas tabel, klik tombol <b>Unggah Data</b> lalu pilih opsi <b>+ Input Manual</b>.
                 </p>
               </div>
 
@@ -250,7 +248,7 @@ export default function VideoTutorials({
                   <span>Klik "+ Input Data Manual"</span>
                 </div>
                 <p className="text-slate-600 leading-relaxed">
-                  Klik tombol <b>+ Kelola / Impor</b> lalu pilih opsi <b>+ Input 1 Data Manual</b> untuk membuka formulir registrasi.
+                  Klik tombol <b>+ Kelola / Impor</b> lalu pilih opsi <b>+ Input Manual</b> untuk membuka formulir registrasi.
                 </p>
               </div>
 

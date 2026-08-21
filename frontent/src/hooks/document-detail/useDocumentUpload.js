@@ -69,27 +69,37 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
           await createCertificate(certPayload);
         }
       } else if (uploadData.type === 'archive') {
-        if (uploadData.rowId) {
-          const updatePayload = {
-            namaSertifikat: uploadData.namaSertifikat || undefined,
-            jenisSertifikat: uploadData.namaSertifikat || undefined,
-            noSertifikat: uploadData.noSertifikat || undefined,
-            instansi: uploadData.instansi || undefined,
-            terbit: uploadData.terbit || undefined,
-            expired: uploadData.expired || undefined,
+        // Create a new active certificate
+        await createCertificate(certPayload);
+
+        // Archive the old certificate if it exists
+        if (uploadData.rowId && uploadData.rowId !== masterItemId) {
+          await updateCertificate(uploadData.rowId, { status: 'Diarsipkan' });
+        }
+
+        // Update the Master Item's status and dates to match the new certificate
+        if (masterItemId) {
+          await updateMasterItem(masterItemId, {
             status: 'Aktif',
-          };
-          if (newFileUrl) updatePayload.fileUrl = newFileUrl;
-          await updateCertificate(uploadData.rowId, updatePayload);
-        } else {
-          await createCertificate(certPayload);
+            issueDate: uploadData.terbit || undefined,
+            expiryDate: uploadData.expired || undefined,
+            documentStatus: 'COMPLETED'
+          });
         }
       }
 
       setIsUploadModalOpen(false);
       setSelectedUploadFile(null);
       await fetchHistory();
-      if (onSaveUpdate) onSaveUpdate({ ...item, fileUrl: newFileUrl });
+
+      const updatedFields = { fileUrl: newFileUrl };
+      if (uploadData.type === 'archive') {
+        updatedFields.status = 'Aktif';
+        if (uploadData.terbit) updatedFields.issueDate = uploadData.terbit;
+        if (uploadData.expired) updatedFields.expiryDate = uploadData.expired;
+        updatedFields.documentStatus = 'COMPLETED';
+      }
+      if (onSaveUpdate) onSaveUpdate({ ...item, ...updatedFields });
       if (onRefreshRequired) onRefreshRequired();
       
     } catch (err) {

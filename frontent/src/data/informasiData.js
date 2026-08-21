@@ -83,12 +83,12 @@ export const modulesGuide = [
     items: "Mengelola dan memantau status sertifikasi K3 untuk seluruh peralatan operasional pabrik seperti Bejana Tekan, Crane, dan Instalasi Listrik."
   },
   {
-    title: "Perizinan Aset & Bangunan",
+    title: "Perizinan Aset ",
     icon: Building2,
     items: "Mengurus legalitas kepemilikan dan kelayakan fungsi dari aset tetap perusahaan, termasuk Gedung, Lahan, dan Fasilitas Lingkungan."
   },
   {
-    title: "Perizinan Proyek & Konstruksi",
+    title: "Perizinan Proyek ",
     icon: FolderKanban,
     items: "Memantau kelengkapan izin konstruksi, sertifikat laik fungsi, dan dokumen legal lainnya untuk proyek ekspansi atau pembangunan baru."
   },
@@ -98,7 +98,7 @@ export const modulesGuide = [
     items: "Mengelola administrasi pengesahan standar mutu produk (SNI, Halal, Industri Hijau) agar selalu valid dan memenuhi regulasi."
   },
   {
-    title: "Administrasi Lainnya / HAKI",
+    title: "Administrasi Lainnya ",
     icon: FileSpreadsheet,
     items: "Menyimpan dan mengawasi masa berlaku perlindungan hak cipta (HAKI) untuk program komputer, buku panduan, dan karya intelektual lainnya."
   },

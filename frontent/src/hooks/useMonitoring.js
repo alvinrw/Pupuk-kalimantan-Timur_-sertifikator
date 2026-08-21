@@ -211,35 +211,43 @@ export function useMonitoring() {
             primaryCertId: targetCert?.id || null,
             workflowStatus: getWfStatus(item.status, item.documentStatus || item.document_status || 'PENDING_DOC', targetCert?.status, !!targetCert),
             notificationSetting: item.notificationSetting || null,
-            reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true
+            reminderEnabled: item.notificationSetting ? item.notificationSetting.isEnabled : true,
+            rawItem: item
           });
         };
 
         if (certs.length === 0) {
           mapToRow(null);
         } else {
-          const validCerts = certs.filter(cert => cert.status !== 'EXEMPT' && cert.noSertifikat !== 'Tanpa Sertifikat' && cert.status !== 'Diarsipkan');
+          const validCerts = certs.filter(cert => cert.status !== 'EXEMPT' && cert.status !== 'Diarsipkan');
           if (validCerts.length === 0) {
             mapToRow(null);
           } else {
             // Group certificates by name or type so we track each distinct certificate type
             // (e.g. Sertifikat K3 vs Sertifikat Tekanan Tinggi) as separate rows.
+            // EXCEPT for 'peralatan-pabrik' where one equipment only has 1 active certificate (others are history).
             const certGroups = {};
             validCerts.forEach(cert => {
-              const key = (cert.namaSertifikat || cert.jenisSertifikat || 'Lainnya').toLowerCase().trim();
+              let key;
+              if (item.categoryKey === 'peralatan-pabrik') {
+                key = 'ALL_PERALATAN_CERTS'; // Force all certs into one group so only the latest is picked
+              } else {
+                key = (cert.namaSertifikat || cert.jenisSertifikat || 'Lainnya').toLowerCase().trim();
+              }
+              
               if (!certGroups[key]) certGroups[key] = [];
               certGroups[key].push(cert);
             });
 
             Object.values(certGroups).forEach(groupCerts => {
               const sortedCerts = groupCerts.slice().sort((a, b) => {
-                const aActive = a.status?.toLowerCase() === 'aktif' || a.status?.toLowerCase() === 'active';
-                const bActive = b.status?.toLowerCase() === 'aktif' || b.status?.toLowerCase() === 'active';
-                if (aActive !== bActive) return aActive ? -1 : 1;
-                
                 const tA = getTimestamp(a.expired);
                 const tB = getTimestamp(b.expired);
                 if (tA !== tB) return tB - tA; // Highest expiration date first
+
+                const aActive = ['aktif', 'active'].includes((a.status || '').toLowerCase()) || (a.status || '').toLowerCase().includes('perpanjang') || (a.status || '').toLowerCase().includes('proses');
+                const bActive = ['aktif', 'active'].includes((b.status || '').toLowerCase()) || (b.status || '').toLowerCase().includes('perpanjang') || (b.status || '').toLowerCase().includes('proses');
+                if (aActive !== bActive) return aActive ? -1 : 1;
                 
                 return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
               });
@@ -379,12 +387,11 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Perpanjang' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Perpanjang' });
       }
+      await updateMasterItem(targetId, { status: 'Perpanjang' });
       await fetchMonitoringData();
       setIsRenewConfirmModalOpen(false);
     } catch (err) {
@@ -408,12 +415,11 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Afkir' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Afkir' });
       }
+      await updateMasterItem(targetId, { status: 'Afkir' });
       await fetchMonitoringData();
       setIsAfkirModalOpen(false);
     } catch (err) {
@@ -437,12 +443,11 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Aktif' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Aktif' });
       }
+      await updateMasterItem(targetId, { status: 'Aktif' });
       await fetchMonitoringData();
       setIsAktifkanModalOpen(false);
     } catch (err) {
@@ -466,12 +471,11 @@ export function useMonitoring() {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
+      const targetId = activeItemForAction.MasterId || activeItemForAction.id;
       if (activeItemForAction.primaryCertId) {
         await updateCertificate(activeItemForAction.primaryCertId, { status: 'Aktif' });
-      } else {
-        const targetId = activeItemForAction.MasterId || activeItemForAction.id;
-        await updateMasterItem(targetId, { status: 'Aktif' });
       }
+      await updateMasterItem(targetId, { status: 'Aktif' });
       await fetchMonitoringData();
       setIsCancelRenewModalOpen(false);
     } catch (err) {

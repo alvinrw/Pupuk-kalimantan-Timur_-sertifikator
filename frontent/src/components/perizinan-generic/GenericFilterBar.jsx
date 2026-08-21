@@ -53,7 +53,7 @@ export default function GenericFilterBar({
               className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>+ Kelola / Impor Data {categoryName}</span>
+              <span>Unggah Dokumen {categoryName}</span>
               <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
@@ -65,8 +65,8 @@ export default function GenericFilterBar({
                 >
                   <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                   <div>
-                    <span className="block">+ Tambah Data {categoryName} Baru</span>
-                    <span className="text-[10px] text-slate-500 font-normal font-mono-data">Input manual 1 entitas master {categoryName}</span>
+                    <span className="block">Unggah data manual {categoryName} Baru</span>
+                    <span className="text-[10px] text-slate-500 font-normal font-mono-data"> {categoryName}</span>
                   </div>
                 </button>
 
@@ -76,8 +76,8 @@ export default function GenericFilterBar({
                 >
                   <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
                   <div>
-                    <span className="block">Impor CSV Master {categoryName}</span>
-                    <span className="text-[10px] text-slate-500 font-normal font-mono-data">Muat CSV daftar list entitas master</span>
+                    <span className="block">Unggah Template {categoryName}</span>
+                    <span className="text-[10px] text-slate-500 font-normal font-mono-data"></span>
                   </div>
                 </button>
               </div>

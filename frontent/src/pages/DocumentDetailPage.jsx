@@ -27,35 +27,19 @@ export default function DocumentDetailPage({
   hideLinkedCertificates,
   initialCertId,
 }) {
-  if (!item) return null;
+  // PENTING: hook HARUS dipanggil tanpa kondisi apapun sebelumnya (Rules of Hooks)
+  // `if (!item) return null` dipindah ke SETELAH semua hooks dipanggil
+  const hook = useDocumentDetail({
+    item: item || {},
+    onBack,
+    onSaveUpdate,
+    onDeleteSuccess,
+    onRefreshRequired,
+    initialCertId,
+  });
 
-  let hook = {};
-  let hookVars = {};
-  try {
-    hook = useDocumentDetail({
-      item,
-      onBack,
-      onSaveUpdate,
-      onDeleteSuccess,
-      onRefreshRequired,
-      initialCertId,
-    });
-    
-    hookVars = {
-      isEditing: hook.isEditing,
-      isMultiCertItem: hook.isMultiCertItem,
-      linkedCerts: hook.linkedCerts,
-      activeCertId: hook.activeCertId,
-      setActiveCertId: hook.setActiveCertId,
-      setIsAddCertModalOpen: hook.setIsAddCertModalOpen,
-      setDeletingLinkedCertId: hook.setDeletingLinkedCertId,
-      sortDateOrder: hook.sortDateOrder,
-      setSortDateOrder: hook.setSortDateOrder,
-    };
-  } catch (err) {
-    alert("Crash in useDocumentDetail: " + err.message + "\n\n" + err.stack);
-    return <div className="p-10 text-red-500 font-bold">Error Loading Page! {err.message}</div>;
-  }
+  // Null-guard setelah hooks
+  if (!item) return null;
 
   const {
     isEditing,
@@ -65,7 +49,7 @@ export default function DocumentDetailPage({
     setIsAddCertModalOpen,
     setDeletingLinkedCertId,
     sortDateOrder, setSortDateOrder
-  } = hookVars;
+  } = hook;
 
   return (
     <ErrorBoundary>

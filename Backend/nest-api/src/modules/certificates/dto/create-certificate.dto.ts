@@ -40,4 +40,8 @@ export class CreateCertificateDto {
   @IsString()
   @IsOptional()
   uploadedBy?: string; // Diisi otomatis dari req.user di controller
+
+  @IsString()
+  @IsOptional()
+  keterangan?: string;
 }

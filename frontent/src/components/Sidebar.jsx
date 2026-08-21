@@ -14,12 +14,13 @@ import {
   Users,
   ChevronDown,
   ChevronRight,
-  LogOut
+  LogOut,
+  X
 } from 'lucide-react';
 import RoleGuard from './RoleGuard';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobileClose }) {
   const { user, logout } = useAuth();
   const [openDropdowns, setOpenDropdowns] = useState({ 'admin-dropdown': false, 'informasi-dropdown': false });
 
@@ -28,6 +29,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       ...prev,
       [dropdownId]: !prev[dropdownId]
     }));
+  };
+
+  const handleNavClick = (tabId) => {
+    setActiveTab(tabId);
+    if (onMobileClose) onMobileClose(); // tutup drawer di mobile setelah navigasi
   };
 
   const menuGroups = [
@@ -79,13 +85,20 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     }
   ];
 
-  return (
-    <aside className="w-64 bg-white text-slate-800 flex flex-col shrink-0 h-screen sticky top-0 z-30 font-sans-clean border-r border-slate-200 shadow-xs">
-      {/* Brand Header: CLEAN TULISAN SERTIFIKATOR */}
-      <div className="h-16 px-6 flex items-center border-b border-slate-200 bg-slate-50/50">
+  const sidebarContent = (
+    <aside className="w-64 bg-white text-slate-800 flex flex-col h-full font-sans-clean border-r border-slate-200 shadow-xs">
+      {/* Brand Header */}
+      <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50 shrink-0">
         <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none">
           SERTIFIKATOR
         </h1>
+        {/* Tombol close untuk mobile drawer */}
+        <button
+          onClick={onMobileClose}
+          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Navigation List */}
@@ -108,9 +121,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                       <button
                         onClick={() => {
                           toggleDropdown(item.id);
-                          // If dropdown is currently closed and user clicks, navigate to first sub-item
                           if (!isOpen) {
-                            setActiveTab(item.subItems[0].id);
+                            handleNavClick(item.subItems[0].id);
                           }
                         }}
                         className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors duration-150 ${
@@ -138,7 +150,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                               return (
                                 <button
                                   key={subItem.id}
-                                  onClick={() => setActiveTab(subItem.id)}
+                                  onClick={() => handleNavClick(subItem.id)}
                                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors duration-150 ${
                                     isSubActive
                                       ? "bg-[#005ea4] text-white shadow-xs"
@@ -161,7 +173,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 const buttonElement = (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => handleNavClick(item.id)}
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors duration-150 ${
                       isActive
                         ? "bg-[#005ea4] text-white shadow-xs"
@@ -188,7 +200,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       </div>
 
       {/* User Profile Widget */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50/50">
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
         <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white shadow-xs">
           <img 
             src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nama || 'User')}&background=eff6ff&color=005ea4`} 
@@ -223,5 +235,31 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       </div>
     </aside>
   );
-}
 
+  return (
+    <>
+      {/* ── Desktop: sticky sidebar (lg dan ke atas) ── */}
+      <div className="hidden lg:flex h-screen sticky top-0 z-30 shrink-0">
+        {sidebarContent}
+      </div>
+
+      {/* ── Mobile: drawer + overlay ── */}
+      {/* Overlay backdrop */}
+      <div
+        className={`lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+          isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onMobileClose}
+      />
+
+      {/* Drawer slide-in dari kiri */}
+      <div
+        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-64 transform transition-transform duration-300 ease-in-out ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent}
+      </div>
+    </>
+  );
+}

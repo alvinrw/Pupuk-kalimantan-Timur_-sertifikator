@@ -27,12 +27,16 @@ export default function DocumentReadView({ hook, item }) {
   };
 
   const calculateCertStatus = (cert) => {
-    const statusLower = (cert.status || '').toLowerCase();
-    const isExempt = statusLower === 'exempt';
-    const isAfkir = statusLower === 'afkir' || statusLower === 'decommissioned' || statusLower === 'dicabut';
-    const isProses = statusLower === 'perpanjangan' || statusLower === 'proses' || statusLower === 'in progress' || statusLower === 'sedang diperpanjang' || statusLower === 'perpanjang';
+    const masterStatusLower = (formData.status || item?.status || '').toLowerCase();
+    const isMasterAfkir = masterStatusLower === 'afkir' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut';
+    const isMasterProses = masterStatusLower.includes('perpanjang') || masterStatusLower === 'in progress' || masterStatusLower === 'in_progress' || masterStatusLower === 'proses';
 
-    const expiredStr = cert.expired || cert.berakhir;
+    const statusLower = (cert?.status || '').toLowerCase();
+    const isExempt = statusLower === 'exempt';
+    const isAfkir = isMasterAfkir || statusLower === 'afkir' || statusLower === 'decommissioned' || statusLower === 'dicabut';
+    const isProses = !isAfkir && (isMasterProses || statusLower === 'perpanjangan' || statusLower === 'proses' || statusLower === 'in progress' || statusLower === 'sedang diperpanjang' || statusLower === 'perpanjang');
+
+    const expiredStr = cert?.expired || cert?.berakhir;
     if (!expiredStr || expiredStr === '-') {
       if (isExempt) return { text: 'Pengecualian (Tanpa Sertifikat)', label: 'EXEMPT', color: 'bg-slate-100 text-slate-700 border-slate-300' };
       if (isAfkir) return { text: 'Afkir / Dicabut', label: 'AFKIR', color: 'bg-slate-100 text-slate-500 border-slate-300' };
@@ -46,7 +50,7 @@ export default function DocumentReadView({ hook, item }) {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const todayTimestamp = now.getTime();
-    
+
     const diffTime = expiredTimestamp - todayTimestamp;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
@@ -70,16 +74,13 @@ export default function DocumentReadView({ hook, item }) {
 
     // Keep semantic color for EXEMPT, just override label
     if (isExempt) return { text: timeText, label: 'EXEMPT', color };
-    if (isAfkir) return { text: `${timeText} - Afkir`, label: 'AFKIR', color: 'bg-slate-100 text-slate-500 border-slate-300' };
+    if (isAfkir) return { text: 'Non-aktif', label: 'AFKIR', color: 'bg-slate-100 text-slate-500 border-slate-300' };
     if (isProses) return { text: `Sedang Diperpanjang (Semula ${timeText})`, label: 'PROSES', color: 'bg-blue-100 text-blue-700 border-blue-300 font-bold' };
 
     return { text: timeText, label, color };
   };
 
-  const activeCerts = historyList.filter(c => (c.status || '').toLowerCase() === 'aktif' || (c.status || '').toLowerCase() === 'active');
-  const primaryCert = activeCerts.length > 0
-    ? activeCerts.slice().sort((a, b) => getTimestamp(b.expired) - getTimestamp(a.expired))[0]
-    : (historyList.length > 0 ? historyList[0] : null);
+  const primaryCert = historyList.find(c => c.isCurrent) || (historyList.length > 0 ? historyList[0] : null);
 
   const displayNoSert = primaryCert?.noSertifikat || formData.noSertifikat || 'Belum Ada Sertifikat Active';
   const displayExpired = primaryCert?.expired || formData.berakhir || 'Belum Ada Data';
@@ -126,10 +127,10 @@ export default function DocumentReadView({ hook, item }) {
         <h4 className="font-bold text-sm text-slate-900 border-b border-slate-200 pb-3">
           <span>{isHaki ? 'Spesifikasi & Identitas Hak Cipta (HAKI)' : isEquipment ? 'Spesifikasi Utama & Identitas Aset Peralatan' : 'Spesifikasi Data'}</span>
         </h4>
-        
+
         {(() => {
           const shouldShowPhoto = (isEquipment && formData.imageUrl) || (!isEquipment && !isSingleCertScope && formData.imageUrl);
-          
+
           return (
             <div className={shouldShowPhoto ? "grid grid-cols-1 lg:grid-cols-4 gap-6" : ""}>
               <div className={shouldShowPhoto ? "lg:col-span-3" : ""}>
@@ -265,7 +266,16 @@ export default function DocumentReadView({ hook, item }) {
           </div>
         </div>
       )}
-
+      {/* SECTION 3: HISTORY (Moved to Top) */}
+      {(!isMultiCertItem || isSingleCertScope) && (
+        <CertHistorySection
+          historyList={historyList}
+          isLoadingHistory={isLoadingHistory}
+          openUploadModal={openUploadModal}
+          setEditingHistoryRow={setEditingHistoryRow}
+          setSelectedHistoryToDelete={setSelectedHistoryToDelete}
+        />
+      )}
 
       {/* SECTION 2: CERT LEGAL STATUS */}
       {effectiveDocumentStatus === 'EXEMPT' ? (
@@ -274,7 +284,7 @@ export default function DocumentReadView({ hook, item }) {
             Tanpa Sertifikat (Catatan / Exempt)
           </h4>
           <p className="text-sm font-bold text-slate-700 bg-white p-3 rounded-xl border border-slate-200 inline-block">
-            Alasan: { (isSingleCertScope && primaryCert?.status === 'EXEMPT') ? (primaryCert?.instansi || 'Tanpa Sertifikat / Dihapus') : (item?.exemptionNote || 'Tidak ada catatan khusus') }
+            Alasan: {(isSingleCertScope && primaryCert?.status === 'EXEMPT') ? (primaryCert?.instansi || 'Tanpa Sertifikat / Dihapus') : (item?.exemptionNote || 'Tidak ada catatan khusus')}
           </p>
           <div className="pt-4 mt-2 border-t border-slate-200 flex items-center justify-center gap-3">
             <button
@@ -310,7 +320,7 @@ export default function DocumentReadView({ hook, item }) {
                   return (order[statusA] || 99) - (order[statusB] || 99);
                 });
               }
-              
+
               if (certsToDisplay.length === 0) {
                 if (isMultiCertItem && !isSingleCertScope) {
                   return (
@@ -321,7 +331,7 @@ export default function DocumentReadView({ hook, item }) {
                 }
                 certsToDisplay = [primaryCert || formData];
               }
-              
+
               return certsToDisplay.map((cert, index) => {
                 const currentNoSert = cert?.noSertifikat || cert?.certNo || formData.noSertifikat || '-';
                 const currentExpired = cert?.expired || formData.berakhir || '-';
@@ -330,75 +340,66 @@ export default function DocumentReadView({ hook, item }) {
                 const currentNamaSert = cert?.namaSertifikat || cert?.jenisSertifikat || formData.namaSertifikat || '-';
                 const certStatusInfo = calculateCertStatus(cert || formData);
 
-              return (
-                <div key={cert?.id || index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative mt-4">
-                  <div className={`absolute top-4 right-4 text-sm px-3 py-1.5 rounded-lg border shadow-sm ${certStatusInfo.color}`}>
-                    {certStatusInfo.text}
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-3 mt-8">
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Nama Sertifikat</span>
-                      <span className="font-bold text-slate-800 text-sm block">{currentNamaSert}</span>
+                return (
+                  <div key={cert?.id || index} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm relative mt-4">
+                    <div className={`absolute top-4 right-4 text-sm px-3 py-1.5 rounded-lg border shadow-sm ${certStatusInfo.color}`}>
+                      {certStatusInfo.text}
                     </div>
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat</span>
-                      <span className="font-bold text-slate-800 text-sm block">{currentNoSert}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-3 mt-8">
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Nama Sertifikat</span>
+                        <span className="font-bold text-slate-800 text-sm block">{currentNamaSert}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">No. Sertifikat</span>
+                        <span className="font-bold text-slate-800 text-sm block">{currentNoSert}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Terbit</span>
+                        <span className="font-bold text-slate-800 text-sm block">{currentTerbit}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired</span>
+                        <span className="font-bold text-slate-800 text-sm block">{currentExpired}</span>
+                      </div>
+                      <div>
+                        <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Catatan / Keterangan</span>
+                        <span className="font-bold text-slate-800 text-sm block whitespace-pre-wrap">{cert?.keterangan || formData.keterangan || formData.exemptionNote || '-'}</span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Terbit</span>
-                      <span className="font-bold text-slate-800 text-sm block">{currentTerbit}</span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Tanggal Expired</span>
-                      <span className="font-bold text-slate-800 text-sm block">{currentExpired}</span>
-                    </div>
-                    <div>
-                      <span className="text-[11px] text-slate-500 font-sans block mb-0.5">Catatan / Keterangan</span>
-                      <span className="font-bold text-slate-800 text-sm block whitespace-pre-wrap">{cert?.keterangan || formData.keterangan || formData.exemptionNote || '-'}</span>
-                    </div>
-                  </div>
-                  <div className="pt-3 flex items-center justify-between text-xs border-t border-slate-100 mt-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-800">
-                        {currentFileUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
-                      </span>
-                    </div>
-                    {currentFileUrl ? (
-                      <button
-                        onClick={() => window.open(getFullFileUrl(currentFileUrl), '_blank')}
-                        className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-colors cursor-pointer"
-                      >
-                        Buka File PDF
-                      </button>
-                    ) : (
-                      (!isMultiCertItem || isSingleCertScope) && (
+                    <div className="pt-3 flex items-center justify-between text-xs border-t border-slate-100 mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800">
+                          {currentFileUrl ? 'Dokumen Digital SK (PDF Terlampir)' : 'Dokumen Digital SK (Belum Ada File)'}
+                        </span>
+                      </div>
+                      {currentFileUrl ? (
                         <button
-                          onClick={() => openUploadModal('current')}
-                          className="px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-xl transition-colors cursor-pointer"
+                          onClick={() => window.open(getFullFileUrl(currentFileUrl), '_blank')}
+                          className="px-4 py-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-colors cursor-pointer"
                         >
-                          Unggah File PDF
+                          Buka File PDF
                         </button>
-                      )
-                    )}
+                      ) : (
+                        (!isMultiCertItem || isSingleCertScope) && (
+                          <button
+                            onClick={() => openUploadModal('current')}
+                            className="px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-xl transition-colors cursor-pointer"
+                          >
+                            Unggah File PDF
+                          </button>
+                        )
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
+                );
               });
             })()}
           </div>
         </div>
       )}
 
-      {/* SECTION 3: HISTORY */}
-      {(!isMultiCertItem || isSingleCertScope) && (
-        <CertHistorySection
-          historyList={historyList}
-          isLoadingHistory={isLoadingHistory}
-          openUploadModal={openUploadModal}
-          setEditingHistoryRow={setEditingHistoryRow}
-          setSelectedHistoryToDelete={setSelectedHistoryToDelete}
-        />
-      )}
+
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { updateMasterItem, deleteMasterItem, updateCertificate } from '../../services/masterItemsService';
 
-export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired }) {
+export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired, isSingleCertScope, isMultiCertItem }) {
   const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
   const [isAfkiring, setIsAfkiring] = useState(false);
 
@@ -27,6 +27,12 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
     try {
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Afkir' });
+        const targetId = item?.MasterId || item?.id;
+        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+          await updateMasterItem(targetId, { status: 'Afkir' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Afkir' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir' });
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
@@ -48,6 +54,12 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
     try {
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
+        const targetId = item?.MasterId || item?.id;
+        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+          await updateMasterItem(targetId, { status: 'Aktif' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Aktif' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
@@ -68,6 +80,12 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
     try {
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Perpanjang' });
+        const targetId = item?.MasterId || item?.id;
+        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+          await updateMasterItem(targetId, { status: 'Perpanjang' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang' });
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
@@ -88,6 +106,12 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
     try {
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
+        const targetId = item?.MasterId || item?.id;
+        if ((!isMultiCertItem || isSingleCertScope) && targetId) {
+          await updateMasterItem(targetId, { status: 'Aktif' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Aktif' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {

@@ -126,6 +126,7 @@ export class MasterItemsController {
     @Body() body: { isEnabled: boolean; triggerType: string; triggerDays: number; triggerDate?: string | null; certificateId?: string | null },
     @Req() req: any,
   ) {
+    console.log(`[DEBUG] updateNotificationSetting called with itemId: ${itemId}, body:`, body);
     const res = await this.masterItemsService.updateNotificationSetting(itemId, body);
     return res;
   }

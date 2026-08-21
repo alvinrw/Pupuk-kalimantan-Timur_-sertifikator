@@ -83,17 +83,17 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
       try {
         setIsUploadingTemp(true);
-        
+
         const fdTemp = new FormData();
         fdTemp.append('file', file);
-        
+
         const token = sessionStorage.getItem('token');
         const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
-          method: 'POST', 
+          method: 'POST',
           body: fdTemp,
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
-        
+
         if (uploadRes.ok) {
           const json = await uploadRes.json();
           setTempUrl(json.data.url);
@@ -137,7 +137,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
       if (parsed) {
         console.log(`✅ [Frontend] Berhasil membaca Tanggal (${fieldKey}): ${parsed.display} -> Dimasukkan ke kalender sebagai ${parsed.iso}`);
         setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
-        
+
         if (parsed.isFuzzy) {
           setDateErrors(prev => ({ ...prev, [fieldKey]: `Hari tidak terbaca, diset otomatis 1 ${parsed.rawMonthYear}. Harap betulkan!` }));
         } else {
@@ -204,7 +204,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
           const token = sessionStorage.getItem('token');
           const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
             method: 'POST',
-            headers: { 
+            headers: {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
             },
@@ -220,8 +220,8 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
           const fd = new FormData();
           fd.append('file', selectedFile);
           const token = sessionStorage.getItem('token');
-          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, { 
-            method: 'POST', 
+          const uploadRes = await fetch(`${API_BASE}/document-history/upload`, {
+            method: 'POST',
             body: fd,
             headers: token ? { 'Authorization': `Bearer ${token}` } : {}
           });
@@ -229,7 +229,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
             const json = await uploadRes.json();
             finalUrl = json.data?.url || null;
           }
-        } catch (err) {}
+        } catch (err) { }
       }
     }
 
@@ -279,9 +279,9 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
           <X className="w-3.5 h-3.5" />
         ) : (
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-            <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-            <line x1="8" y1="12" x2="16" y2="12"/><line x1="12" y1="8" x2="12" y2="16"/>
+            <path d="M3 7V5a2 2 0 0 1 2-2h2" /><path d="M17 3h2a2 2 0 0 1 2 2v2" />
+            <path d="M21 17v2a2 2 0 0 1-2 2h-2" /><path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+            <line x1="8" y1="12" x2="16" y2="12" /><line x1="12" y1="8" x2="12" y2="16" />
           </svg>
         )}
       </button>
@@ -292,8 +292,8 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     <BaseSplitScreenUploadModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Input Data Perizinan Peralatan Baru (Human Verification)"
-      subtitle="Pastikan form master data sesuai dengan dokumen yang diunggah"
+      title="Input Data Baru "
+      subtitle=""
       headerIcon={PlusCircle}
       formId="singleEntryForm"
       onSubmit={handleSubmit}
@@ -326,14 +326,14 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                 </p>
               </div>
             </div>
-            
+
             <div className="p-5">
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-xs font-mono-data mb-5">
                 <div className="text-slate-500 mb-1">Item yang ditemukan:</div>
                 <div className="font-bold text-slate-800">{duplicateWarning.matchedItem.title}</div>
                 <div className="text-slate-600 mt-1">{duplicateWarning.matchedItem.code} • {duplicateWarning.matchedItem.unitLocation}</div>
               </div>
-              
+
               <div className="space-y-2">
                 <button
                   type="button"
@@ -463,151 +463,145 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
         {sertifikatMode === 'dengan' && (
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-700 block">File PDF Sertifikat (Wajib)</label>
-              <div
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                onClick={() => { if (!isUploadingTemp) fileInputRef.current?.click(); }}
-                className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
-                  isDragging ? 'border-[#005ea4] bg-blue-50' : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50'
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => { if (!isUploadingTemp) fileInputRef.current?.click(); }}
+              className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${isDragging ? 'border-[#005ea4] bg-blue-50' : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50'
                 } ${isUploadingTemp ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}
-              >
-                <input ref={fileInputRef} type="file" accept=".pdf"
-                  onChange={(e) => e.target.files[0] && processFile(e.target.files[0])}
-                  className="hidden" disabled={isUploadingTemp} />
-                <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
-                <div className="flex flex-col items-center">
-                  <span className="text-xs font-bold text-[#005ea4]">
-                    {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih / Drop File PDF Dokumen'}
-                  </span>
-                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+            >
+              <input ref={fileInputRef} type="file" accept=".pdf"
+                onChange={(e) => e.target.files[0] && processFile(e.target.files[0])}
+                className="hidden" disabled={isUploadingTemp} />
+              <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
+              <div className="flex flex-col items-center">
+                <span className="text-xs font-bold text-[#005ea4]">
+                  {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih / Drop File PDF Dokumen'}
+                </span>
+                <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+              </div>
+            </div>
+
+            {isUploadingTemp && (
+              <div className="flex flex-col gap-2 mt-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                  <span>Menyiapkan preview dokumen...</span>
                 </div>
               </div>
+            )}
 
-              {isUploadingTemp && (
-                <div className="flex flex-col gap-2 mt-3">
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                    <span>Menyiapkan preview dokumen...</span>
-                  </div>
-                </div>
-              )}
-
-              {tempUrl && (
-                <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-1">
-                  <span className="text-base leading-none">🎯</span>
-                  <span>Klik <strong>🎯</strong> di samping field untuk drag-select area PDF di kanan → auto-fill.</span>
-                </div>
-              )}
-            </div>
+            {tempUrl && (
+              <div className="flex items-center gap-2 text-[10px] text-slate-500 bg-blue-50 border border-blue-100 rounded-lg px-3 py-2 mt-1">
+                <span className="text-base leading-none">🎯</span>
+                <span>Klik <strong>🎯</strong> di samping field untuk drag-select area PDF di kanan → auto-fill.</span>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Data Section */}
-      <div className="space-y-4">
-        <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
-              <input type="text" value={formData.namaSertifikat}
-                onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-                placeholder="Contoh: SKP Pesawat Angkat"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold" />
-            </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
+            <input type="text" value={formData.namaSertifikat}
+              onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+              placeholder="Contoh: SKP Pesawat Angkat"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold" />
+          </div>
 
-            {/* No. Sertifikat + Scan Button */}
+          {/* No. Sertifikat + Scan Button */}
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">
+              No. Sertifikat <span className="text-rose-500">*</span>
+              {scanMode === 'noSertifikat' && (
+                <span className="ml-2 text-[#005ea4] font-normal animate-pulse text-[10px]">— Drag area di PDF kanan →</span>
+              )}
+            </label>
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                required
+                value={formData.noSertifikat}
+                onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                placeholder="Contoh: SKP-2024/DISNAKER/1234"
+                className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 font-bold text-xs transition-all ${scanMode === 'noSertifikat'
+                  ? 'border-[#005ea4] ring-2 ring-[#005ea4]/30 bg-blue-50/60'
+                  : 'border-slate-300 focus:ring-[#005ea4]'
+                  }`}
+              />
+              <ScanButton fieldKey="noSertifikat" label="No. Sertifikat" />
+            </div>
+          </div>
+
+          {/* Tanggal Terbit + Tanggal Berakhir + Scan Buttons */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-slate-700 block mb-1">
-                No. Sertifikat <span className="text-rose-500">*</span>
-                {scanMode === 'noSertifikat' && (
-                  <span className="ml-2 text-[#005ea4] font-normal animate-pulse text-[10px]">— Drag area di PDF kanan →</span>
+              <label className={`text-xs font-bold block mb-1 transition-colors ${scanMode === 'terbit' ? 'text-emerald-700' : 'text-slate-700'
+                }`}>
+                Tanggal Terbit
+                {scanMode === 'terbit' && (
+                  <span className="ml-1 font-normal text-[10px] animate-pulse">← Drag di PDF →</span>
                 )}
               </label>
               <div className="flex gap-2 items-center">
                 <input
-                  type="text"
-                  required
-                  value={formData.noSertifikat}
-                  onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                  placeholder="Contoh: SKP-2024/DISNAKER/1234"
-                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 font-bold text-xs transition-all ${
-                    scanMode === 'noSertifikat'
-                      ? 'border-[#005ea4] ring-2 ring-[#005ea4]/30 bg-blue-50/60'
+                  type="date"
+                  value={formData.terbit}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, terbit: e.target.value }));
+                    setDateErrors(prev => ({ ...prev, terbit: false }));
+                  }}
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${dateErrors.terbit
+                    ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
+                    : scanMode === 'terbit'
+                      ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/50'
                       : 'border-slate-300 focus:ring-[#005ea4]'
-                  }`}
+                    }`}
                 />
-                <ScanButton fieldKey="noSertifikat" label="No. Sertifikat" />
+                <ScanButton fieldKey="terbit" label="Tanggal Terbit" />
               </div>
+              {dateErrors.terbit && (
+                <p className="text-[10px] text-rose-600 mt-1">
+                  {typeof dateErrors.terbit === 'string' ? dateErrors.terbit : 'Wajib diisi'}
+                </p>
+              )}
             </div>
 
-            {/* Tanggal Terbit + Tanggal Berakhir + Scan Buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={`text-xs font-bold block mb-1 transition-colors ${
-                  scanMode === 'terbit' ? 'text-emerald-700' : 'text-slate-700'
+            <div>
+              <label className={`text-xs font-bold block mb-1 transition-colors ${scanMode === 'expired' ? 'text-rose-600' : 'text-rose-700'
                 }`}>
-                  Tanggal Terbit
-                  {scanMode === 'terbit' && (
-                    <span className="ml-1 font-normal text-[10px] animate-pulse">← Drag di PDF →</span>
-                  )}
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="date"
-                    value={formData.terbit}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, terbit: e.target.value }));
-                      setDateErrors(prev => ({ ...prev, terbit: false }));
-                    }}
-                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${
-                      dateErrors.terbit
-                        ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
-                        : scanMode === 'terbit'
-                          ? 'border-emerald-500 ring-2 ring-emerald-200 bg-emerald-50/50'
-                          : 'border-slate-300 focus:ring-[#005ea4]'
-                    }`}
-                  />
-                  <ScanButton fieldKey="terbit" label="Tanggal Terbit" />
-                </div>
-                {dateErrors.terbit && (
-                  <p className="text-[10px] text-rose-600 mt-1">
-                    {typeof dateErrors.terbit === 'string' ? dateErrors.terbit : 'Wajib diisi'}
-                  </p>
+                Tanggal Berakhir
+                {scanMode === 'expired' && (
+                  <span className="ml-1 font-normal text-[10px] animate-pulse">← Drag di PDF →</span>
                 )}
-              </div>
-
-              <div>
-                <label className={`text-xs font-bold block mb-1 transition-colors ${
-                  scanMode === 'expired' ? 'text-rose-600' : 'text-rose-700'
-                }`}>
-                  Tanggal Berakhir
-                  {scanMode === 'expired' && (
-                    <span className="ml-1 font-normal text-[10px] animate-pulse">← Drag di PDF →</span>
-                  )}
-                </label>
-                <div className="flex gap-2 items-center">
-                  <input
-                    type="date"
-                    value={formData.expired}
-                    onChange={(e) => {
-                      setFormData(prev => ({ ...prev, expired: e.target.value }));
-                      setDateErrors(prev => ({ ...prev, expired: false }));
-                    }}
-                    className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${
-                      dateErrors.expired
-                        ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
-                        : scanMode === 'expired'
-                          ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/50'
-                          : 'border-slate-300 focus:ring-[#005ea4]'
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="date"
+                  value={formData.expired}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, expired: e.target.value }));
+                    setDateErrors(prev => ({ ...prev, expired: false }));
+                  }}
+                  className={`flex-1 px-3 py-2 border rounded-lg focus:ring-2 text-xs transition-all ${dateErrors.expired
+                    ? 'border-rose-400 ring-2 ring-rose-200 bg-rose-50'
+                    : scanMode === 'expired'
+                      ? 'border-rose-500 ring-2 ring-rose-200 bg-rose-50/50'
+                      : 'border-slate-300 focus:ring-[#005ea4]'
                     }`}
-                  />
-                  <ScanButton fieldKey="expired" label="Tanggal Berakhir" />
-                </div>
-                {dateErrors.expired && (
-                  <p className="text-[10px] text-rose-600 mt-1">
-                    {typeof dateErrors.expired === 'string' ? dateErrors.expired : 'Wajib diisi'}
-                  </p>
-                )}
+                />
+                <ScanButton fieldKey="expired" label="Tanggal Berakhir" />
               </div>
+              {dateErrors.expired && (
+                <p className="text-[10px] text-rose-600 mt-1">
+                  {typeof dateErrors.expired === 'string' ? dateErrors.expired : 'Wajib diisi'}
+                </p>
+              )}
             </div>
-      </div>
+          </div>
+        </div>
       </div>
 
       {/* SECTION 3: NOTIFIKASI & DEADLINE */}

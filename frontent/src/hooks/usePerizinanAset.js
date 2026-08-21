@@ -334,16 +334,20 @@ export default function usePerizinanAset() {
           }
         }
 
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.namaSertifikat || 'Sertifikat Aset',
-          namaSertifikat: newItem.namaSertifikat || undefined,
-          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
-          status: 'Aktif',
-          terbit: newItem.terbit || undefined,
-          expired: newItem.expired || undefined,
-          fileUrl,
-        });
+        const hasCertDetails = (newItem.noSertifikat && newItem.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' && newItem.noSertifikat !== 'Tanpa Sertifikat') || newItem.file || fileUrl;
+
+        if (hasCertDetails) {
+          await createCertificateForMasterItem({
+            itemId: targetItemId,
+            jenisSertifikat: newItem.namaSertifikat || 'Sertifikat Aset',
+            namaSertifikat: newItem.namaSertifikat || undefined,
+            noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
+            status: 'Aktif',
+            terbit: newItem.terbit || undefined,
+            expired: newItem.expired || undefined,
+            fileUrl,
+          });
+        }
 
         if (newItem.documentStatus === 'EXEMPT') {
           await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');

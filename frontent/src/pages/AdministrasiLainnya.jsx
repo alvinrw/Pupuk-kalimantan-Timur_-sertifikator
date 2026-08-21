@@ -100,7 +100,10 @@ export default function AdministrasiLainnya() {
         item={detailModalItem}
         hideLinkedCertificates={true}
         onBack={() => setDetailModalItem(null)}
-        onSaveUpdate={() => loadData()}
+        onSaveUpdate={(updatedDoc) => {
+          setDetailModalItem(prev => (prev && prev.id === updatedDoc.id ? { ...prev, ...updatedDoc } : prev));
+          loadData();
+        }}
         onQuickRenew={(id) => alert(`Inisiasi Perpanjangan untuk ciptaan ${id}. Menuju menu Monitoring.`)}
         onQuickDecommission={(id) => alert(`Menandai ciptaan ${id} sebagai Afkir.`)}
         onDeleteSuccess={() => {
@@ -141,7 +144,7 @@ export default function AdministrasiLainnya() {
             className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>+ Kelola / Impor Dokumen</span>
+            <span>Unggah Data</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
@@ -154,7 +157,7 @@ export default function AdministrasiLainnya() {
               >
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
-                  <span className="block">+ Input 1 Data Manual</span>
+                  <span className="block">+ Input  Manual</span>
                   <span className="text-[10px] text-slate-500 font-normal font-mono-data">Termasuk unggah berkas PDF sertifikat</span>
                 </div>
               </button>
@@ -165,8 +168,8 @@ export default function AdministrasiLainnya() {
               >
                 <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
                 <div>
-                  <span className="block">Impor CSV Master</span>
-                  <span className="text-[10px] text-slate-500 font-normal font-mono-data">Muat CSV gabungan multi-unit</span>
+                  <span className="block">Unggah Template</span>
+                  <span className="text-[10px] text-slate-500 font-normal font-mono-data"></span>
                 </div>
               </button>
             </div>

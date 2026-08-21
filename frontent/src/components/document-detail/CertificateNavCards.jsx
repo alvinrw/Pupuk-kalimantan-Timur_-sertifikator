@@ -36,8 +36,8 @@ export default function CertificateNavCards({
             onChange={(e) => setSortDateOrder(e.target.value)}
             className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs font-mono-data"
           >
-            <option value="desc">Terbaru</option>
-            <option value="asc">Terlama</option>
+            <option value="desc">Expired Paling Lama</option>
+            <option value="asc">Expired Terdekat</option>
           </select>
           <button
             onClick={onAddCert}

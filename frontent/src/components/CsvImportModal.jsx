@@ -34,8 +34,8 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
     if (moduleName) return moduleName;
     switch (key) {
       case 'peralatan-pabrik': return 'Peralatan Pabrik';
-      case 'perizinan-aset': return 'Perizinan Aset & Bangunan';
-      case 'perizinan-proyek': return 'Perizinan Proyek & Lingkungan';
+      case 'perizinan-aset': return 'Perizinan Aset ';
+      case 'perizinan-proyek': return 'Perizinan Proyek ';
       case 'sertifikat-ciptaan': return 'Sertifikat Hak Cipta & Paten';
       case 'administrasi-lainnya': return 'Administrasi & Perizinan Lainnya';
       default: return 'Master Perizinan & Dokumen';
@@ -70,11 +70,11 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           // Do nothing if API failed
           return;
         }
-        
+
         if (logs && logs.length > 0) {
           const mappedLogs = logs.map(log => {
             let detail = {};
-            try { detail = JSON.parse(log.detail); } catch {}
+            try { detail = JSON.parse(log.detail); } catch { }
             return {
               id: log.id,
               fileName: detail.fileName || 'file_impor.csv',
@@ -135,17 +135,17 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
   const handleConfirmImport = async () => {
     if (files.length === 0) return;
-    
+
     try {
       setIsUploading(true);
-      
+
       const newHistories = [];
       let anySuccess = false;
-      
+
       for (const f of files) {
         try {
           const isExcel = f.name.toLowerCase().endsWith('.xlsx') || f.name.toLowerCase().endsWith('.xls');
-          
+
           let parsedRows = [];
           if (isExcel) {
             const arrayBuffer = await f.arrayBuffer();
@@ -169,9 +169,9 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           }
 
           if (parsedRows.length < 2) throw new Error("File kosong atau tidak valid");
-          
+
           const headers = Array.from(parsedRows[0] || []).map(h => (h || '').toString().toLowerCase().replace(/[^a-z0-9]/g, ''));
-          
+
           const getVal = (cols, possibleNames) => {
             for (const name of possibleNames) {
               const idx = headers.findIndex(h => h && h.includes(name));
@@ -185,19 +185,19 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           for (let i = 1; i < parsedRows.length; i++) {
             const cols = parsedRows[i];
             if (!cols || cols.length < 2) continue;
-            
+
             const title = getVal(cols, ['title', 'merekitem', 'merek', 'namaperalatan', 'namaproduk', 'judul', 'nama', 'namaaset']);
             const tipe = getVal(cols, ['jenis', 'tipe', 'peruntukan', 'jenisaset']);
             const code = getVal(cols, ['code', 'registrasi', 'noslf', 'certificateno', 'nomorseri', 'noseriaset', 'noproyek', 'noseri']);
             const unitLocation = getVal(cols, ['unit', 'lokasi', 'lokasiaset']);
             const penanggungJawab = getVal(cols, ['user', 'kontraktor', 'pencipta', 'penanggungjawab']);
             const status = getVal(cols, ['status', 'kondisi', 'statusaset']);
-            
+
             const namaSertifikat = getVal(cols, ['namasertifikat', 'jenissertifikat']) || tipe || 'Sertifikat Utama';
             const noSertifikat = getVal(cols, ['nosertifikat', 'certificateno', 'noslf', 'nosurat']);
             const terbit = getVal(cols, ['terbit', 'issuedate', 'tanggalawal', 'tanggalinspeksi']);
             const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim', 'expired']);
-            
+
             // Skip completely empty noise rows
             if (!title && !tipe && !code && !unitLocation && !penanggungJawab && !noSertifikat) {
               continue;
@@ -206,21 +206,21 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             groupedData.push({
               master: { title, tipe, code, unitLocation, penanggungJawab, status },
               certificates: (noSertifikat && noSertifikat !== '-' && noSertifikat.toLowerCase() !== 'tanpa sertifikat')
-                ? [{ 
-                    namaSertifikat, 
-                    noSertifikat, 
-                    terbit, 
-                    expired,
-                    uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / CSV Import'
-                  }]
+                ? [{
+                  namaSertifikat,
+                  noSertifikat,
+                  terbit,
+                  expired,
+                  uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / CSV Import'
+                }]
                 : []
             });
           }
-          
+
           if (groupedData.length === 0) throw new Error("Tidak ada data master yang valid");
-          
+
           const res = await bulkCreateMastersWithCertificates(groupedData, categoryKey, f.name);
-          
+
           const totalCalculatedRows = (res.successCount || 0) + (res.duplicateCount || 0) + (res.failCount || 0) + (res.protectedCount || 0);
           newHistories.push({
             id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -253,7 +253,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           });
         }
       }
-      
+
       await new Promise(r => setTimeout(r, 800));
 
       const updatedHistory = [...newHistories.reverse(), ...uploadHistory];
@@ -263,7 +263,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       } catch (e) {
         console.error("Failed to sync save history", e);
       }
-      
+
       setStep('upload');
       setFiles([]);
       if (anySuccess && onImportSuccess) {
@@ -302,10 +302,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             </div>
             <div>
               <h3 className="font-bold text-base text-slate-900">
-                Impor CSV &rarr; <span className="text-[#005ea4]">{currentCategoryTitle}</span>
+                Upload Template &rarr; <span className="text-[#005ea4]">{currentCategoryTitle}</span>
               </h3>
               <p className="text-xs text-slate-500 font-mono-data">
-                Unggah berkas CSV khusus untuk modul perizinan {currentCategoryTitle}
+                {currentCategoryTitle}
               </p>
             </div>
           </div>
@@ -328,7 +328,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                     link.click();
                     document.body.removeChild(link);
                   } else {
-                    const csvContent = 
+                    const csvContent =
                       "Nama Aset / Master (Wajib),Jenis Kategori,Kode / No Seri,Lokasi Unit,Penanggung Jawab,Status Aset,Nama Sertifikat (Child),No Sertifikat Active,Tgl Terbit,Tgl Expired\n" +
                       "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Layak Operasi,SLO-12345,2026-01-01,2027-01-01\n" +
                       "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Inspeksi K3,K3-9998,2026-02-15,2027-02-15\n" +
@@ -360,11 +360,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
         <div className="px-6 border-b border-slate-200 bg-slate-100/50 flex gap-6 text-xs font-bold font-mono-data">
           <button
             onClick={() => setActiveTab('upload')}
-            className={`py-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === 'upload'
-                ? 'border-[#005ea4] text-[#005ea4]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'upload'
+              ? 'border-[#005ea4] text-[#005ea4]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             <Upload className="w-3.5 h-3.5" />
             <span>Unggah Berkas</span>
@@ -372,11 +371,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`py-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${
-              activeTab === 'history'
-                ? 'border-[#005ea4] text-[#005ea4]'
-                : 'border-transparent text-slate-500 hover:text-slate-800'
-            }`}
+            className={`py-2.5 border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === 'history'
+              ? 'border-[#005ea4] text-[#005ea4]'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
           >
             <History className="w-3.5 h-3.5" />
             <span>Riwayat Upload ({uploadHistory.length})</span>
@@ -388,7 +386,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           {activeTab === 'upload' && (
             <>
               <input type="file" ref={fileInputRef} accept=".csv, .xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" multiple className="hidden" onChange={handleFileChange} />
-              
+
               {step === 'upload' && (
                 <>
                   <div
@@ -425,10 +423,10 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                         </div>
                       ))}
                     </div>
-                    
+
                     {!isUploading && (
-                      <button 
-                        onClick={() => fileInputRef.current?.click()} 
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
                         className="w-full mt-2 py-2 border border-dashed border-[#005ea4] text-[#005ea4] rounded-lg text-xs font-bold hover:bg-[#005ea4]/5 transition-colors flex items-center justify-center gap-1.5"
                       >
                         <Upload className="w-3.5 h-3.5" /> Tambah Berkas Lainnya
@@ -446,7 +444,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                     ) : (
                       <>
                         <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mb-3">
-                           <FileSpreadsheet className="w-6 h-6" />
+                          <FileSpreadsheet className="w-6 h-6" />
                         </div>
                         <p className="font-bold text-slate-800 text-sm">File Siap Diimpor</p>
                         <p className="text-xs text-slate-500 mt-1">Klik tombol 'Simpan ke Database' untuk memulai impor.</p>
@@ -481,12 +479,12 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                       </div>
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
                         {item.uploadDate} - <strong>{item.totalRows} baris CSV diproses</strong>
-                        <br/>
+                        <br />
                         <span className="text-emerald-700 font-bold">{item.successCount} Berhasil Disimpan</span> (Mencakup {item.masterCount > 0 ? `${item.masterCount} Master Baru & ` : ''}Sertifikat), <span className="text-amber-700 font-bold">{item.duplicateCount + (item.protectedCount || 0)} Duplikat (Diabaikan/Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
-                        <button 
-                          onClick={() => setViewFailedRows(item.failedRows)} 
+                        <button
+                          onClick={() => setViewFailedRows(item.failedRows)}
                           className="mt-1 text-[10px] text-rose-600 hover:text-rose-800 font-bold underline bg-rose-50 px-2 py-0.5 rounded-full inline-block"
                         >
                           Lihat Detail Gagal
@@ -508,22 +506,21 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
         {/* Modal Footer */}
         <div className="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-2">
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             disabled={isUploading}
             className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Batal
           </button>
           {activeTab === 'upload' && step === 'preview' && (
-            <button 
-              onClick={handleConfirmImport} 
+            <button
+              onClick={handleConfirmImport}
               disabled={isUploading}
-              className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all ${
-                isUploading 
-                  ? 'bg-slate-400 cursor-not-allowed' 
-                  : 'bg-[#005ea4] hover:bg-[#004881]'
-              }`}
+              className={`px-4 py-2 text-white text-xs font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all ${isUploading
+                ? 'bg-slate-400 cursor-not-allowed'
+                : 'bg-[#005ea4] hover:bg-[#004881]'
+                }`}
             >
               {isUploading ? (
                 <>

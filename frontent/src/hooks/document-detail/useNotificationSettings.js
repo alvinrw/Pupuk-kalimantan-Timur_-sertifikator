@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { updateNotificationSetting } from '../../services/masterItemsService';
 
-export function useNotificationSettings({ item, targetCert }) {
+export function useNotificationSettings({ item, targetCert, onRefreshRequired }) {
   const [reminderEnabled, setReminderEnabled] = useState(() => {
     if (item && item.notificationSetting) return item.notificationSetting.isEnabled !== false;
     if (item && item.reminderEnabled !== undefined) return !!item.reminderEnabled;
@@ -53,22 +53,40 @@ export function useNotificationSettings({ item, targetCert }) {
     }
   }, [item, targetCert]);
 
+  const saveSettings = async (updates = {}) => {
+    const nextEnabled = updates.reminderEnabled !== undefined ? updates.reminderEnabled : reminderEnabled;
+    const nextType = updates.triggerType !== undefined ? updates.triggerType : triggerType;
+    const nextDays = updates.reminderDays !== undefined ? updates.reminderDays : reminderDays;
+    const nextDate = updates.triggerDate !== undefined ? updates.triggerDate : triggerDate;
+
+    try {
+      const targetId = item?.MasterId || item?.id;
+      if (targetId && targetId !== 'administrasi-lainnya') {
+        await updateNotificationSetting(targetId, {
+          isEnabled: nextEnabled,
+          triggerType: nextType,
+          triggerDays: parseInt(nextDays) || 30,
+          triggerDate: nextType === 'DATE' ? nextDate : null,
+          certificateId: targetCert?.id || null
+        });
+        // JANGAN panggil onRefreshRequired di sini!
+        // Ini akan trigger loadData() → setDocuments() → item berubah
+        // → useEffect di useLinkedCertificates berjalan → linkedCerts di-reset
+        // → tab aktif berpindah ke kartu pertama
+      }
+    } catch (err) {
+      console.error('Failed to save reminder setting:', err);
+      throw err;
+    }
+  };
+
   const handleToggleReminder = async (newVal) => {
     const isChecked = typeof newVal === 'boolean' ? newVal : !reminderEnabled;
     setReminderEnabled(isChecked);
     
     try {
-      const targetId = item?.MasterId || item?.id;
-      if (targetId) {
-        await updateNotificationSetting(targetId, {
-          isEnabled: isChecked,
-          triggerType: triggerType,
-          triggerDays: parseInt(reminderDays) || 30,
-          triggerDate: triggerType === 'DATE' ? triggerDate : null
-        });
-      }
+      await saveSettings({ reminderEnabled: isChecked });
     } catch (err) {
-      console.error('Failed to save reminder setting:', err);
       alert('Gagal menyimpan pengaturan pengingat: ' + err.message);
       setReminderEnabled(!isChecked);
     }
@@ -79,6 +97,7 @@ export function useNotificationSettings({ item, targetCert }) {
     triggerType, setTriggerType,
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
-    handleToggleReminder
+    handleToggleReminder,
+    saveSettings
   };
 }

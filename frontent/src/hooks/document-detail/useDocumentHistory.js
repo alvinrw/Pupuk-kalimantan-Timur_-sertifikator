@@ -59,15 +59,35 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         return match ? match[0] : '2024';
       };
 
-      const parentList = listToProcess.map(m => {
-        let isCurrent = false;
-        if (targetCert && targetCert.id === m.id) {
-          isCurrent = true;
-        } else if (!targetCert && item.currentCert && item.currentCert.id === m.id) {
-          isCurrent = true;
-        } else if (!targetCert && !item.currentCert && (m.status === 'Aktif' || m.status === 'Active' || !m.status)) {
-          isCurrent = true;
+      const getTimestampLocal = (dateStr) => {
+        if (!dateStr || dateStr === '-') return 0;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+          const parts = dateStr.split('/');
+          return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
         }
+        const t = new Date(dateStr).getTime();
+        return isNaN(t) ? 0 : t;
+      };
+
+      let activeCertId = null;
+      if (targetCert && targetCert.id) {
+        activeCertId = targetCert.id;
+      } else {
+        const validForActive = listToProcess.filter(c => {
+          const s = (c.status || '').toLowerCase();
+          return s !== 'diarsipkan';
+        });
+        if (validForActive.length > 0) {
+          const sorted = validForActive.slice().sort((a, b) => getTimestampLocal(b.expired || b.expiryDate) - getTimestampLocal(a.expired || a.expiryDate));
+          activeCertId = sorted[0].id;
+        } else if (listToProcess.length > 0) {
+          const sorted = listToProcess.slice().sort((a, b) => getTimestampLocal(b.expired || b.expiryDate) - getTimestampLocal(a.expired || a.expiryDate));
+          activeCertId = sorted[0].id;
+        }
+      }
+
+      const parentList = listToProcess.map(m => {
+        let isCurrent = m.id === activeCertId;
         return {
           ...m,
           periode: m.periode || `${getYearFromStr(m.terbit || m.issueDate)} - ${getYearFromStr(m.expired || m.expiryDate)}`,

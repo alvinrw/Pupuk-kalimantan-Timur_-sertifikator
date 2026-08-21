@@ -109,7 +109,10 @@ export function usePeralatanPabrik() {
       
       const mapped = data.map(item => {
         const certs = item.certificates || [];
-        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+        const activeCerts = certs.filter(c => {
+          const s = (c.status || '').toLowerCase();
+          return s === 'aktif' || s === 'active' || s.includes('perpanjang') || s.includes('proses') || !c.status;
+        });
 
         let primaryCert = null;
         if (activeCerts.length > 0) {
@@ -371,6 +374,15 @@ export function usePeralatanPabrik() {
       let berakhirVal = item.berakhir || item.expiryDate || '-';
       let statusVal = item.status || 'Aktif';
 
+      if (statusVal.toLowerCase() === 'aktif' && berakhirVal !== '-') {
+        const tEnd = getTimestamp(berakhirVal);
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        if (tEnd > 0 && tEnd < today.getTime()) {
+          statusVal = 'Expired';
+        }
+      }
+
       rows.push({
         rowId: `${item.id}-primary`,
         parentItem: item,
@@ -434,7 +446,16 @@ export function usePeralatanPabrik() {
             terbit: formatToDDMMYYYY(lc.terbit) || '-',
             berakhir: formatToDDMMYYYY(lc.expired) || '-',
             keterangan: lc.instansi || item.keterangan,
-            status: lc.status || 'Aktif',
+            status: (() => {
+              let s = lc.status || 'Aktif';
+              if (s.toLowerCase() === 'aktif' && lc.expired) {
+                const tEnd = getTimestamp(formatToDDMMYYYY(lc.expired));
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                if (tEnd > 0 && tEnd < today.getTime()) s = 'Expired';
+              }
+              return s;
+            })(),
             namaSertifikat: lc.namaSertifikat || '-',
             hasPdf: !!lc.fileUrl
           });
