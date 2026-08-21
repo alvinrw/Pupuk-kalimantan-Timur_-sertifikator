@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { getMasterItems, createMasterItem, resolveMasterItemExemption, createCertificateForMasterItem } from '../services/masterItemsService';
+import api from '../services/api';
 
 export function usePeralatanPabrik() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,24 +83,44 @@ export function usePeralatanPabrik() {
   const [searchTargetItemTerm, setSearchTargetItemTerm] = useState('');
   const [selectedNewTargetItem, setSelectedNewTargetItem] = useState(null);
 
-  const allColumns = [
-    { key: "no", label: "No." },
-    { key: "jenisPeralatan", label: "Jenis Peralatan Pabrik" },
-    { key: "merekItem", label: "Merek/Item" },
-    { key: "tipe", label: "Tipe" },
-    { key: "nomorSeri", label: "Nomor Seri" },
-    { key: "lokasi", label: "Lokasi" },
-    { key: "user", label: "User" },
-    { key: "status", label: "Status" },
-    { key: "hasSertifikat", label: "Ada Sertifikat" },
-    { key: "namaSertifikat", label: "Nama Sertifikat" },
-    { key: "noSertifikat", label: "No. Sertifikat" },
-    { key: "terbit", label: "Terbit" },
-    { key: "berakhir", label: "Berakhir" },
-    { key: "keterangan", label: "Keterangan" },
-  ];
+  const [allColumns, setAllColumns] = useState([]);
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState([]);
 
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
+  const loadColumns = async () => {
+    try {
+      const res = await api.get('/column-configs/peralatan-pabrik');
+      const fetchedCols = res.data || [];
+      const cols = fetchedCols.map(c => ({
+        key: c.fieldKey,
+        label: c.label,
+        isCustom: c.isCustom,
+        type: c.type
+      }));
+      setAllColumns(cols);
+      const visible = fetchedCols.filter(c => c.isVisible).map(c => c.fieldKey);
+      setVisibleColumnKeys(visible);
+    } catch (err) {
+      console.error("Failed to load columns config in usePeralatanPabrik:", err);
+      const defaultCols = [
+        { key: "no", label: "No." },
+        { key: "jenisPeralatan", label: "Jenis Peralatan Pabrik" },
+        { key: "merekItem", label: "Merek/Item" },
+        { key: "tipe", label: "Tipe" },
+        { key: "nomorSeri", label: "Nomor Seri" },
+        { key: "lokasi", label: "Lokasi" },
+        { key: "user", label: "User" },
+        { key: "status", label: "Status" },
+        { key: "hasSertifikat", label: "Ada Sertifikat" },
+        { key: "namaSertifikat", label: "Nama Sertifikat" },
+        { key: "noSertifikat", label: "No. Sertifikat" },
+        { key: "terbit", label: "Terbit" },
+        { key: "berakhir", label: "Berakhir" },
+        { key: "keterangan", label: "Keterangan" },
+      ];
+      setAllColumns(defaultCols);
+      setVisibleColumnKeys(defaultCols.map(c => c.key));
+    }
+  };
 
 
   const loadData = async () => {
@@ -189,7 +210,9 @@ export function usePeralatanPabrik() {
           certificates: certs,
           validationStatus: item.validationStatus || 'NEW',
           validationErrors: item.validationErrors || null,
-          createdAt: item.createdAt || null
+          createdAt: item.createdAt || null,
+          additionalEntities: meta.additionalEntities || [],
+          rawKeterangan: item.keterangan
         };
       });
 
@@ -210,6 +233,7 @@ export function usePeralatanPabrik() {
   };
 
   useEffect(() => {
+    loadColumns();
     loadData();
   }, []);
 

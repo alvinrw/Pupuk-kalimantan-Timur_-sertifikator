@@ -19,6 +19,7 @@ import { IuranKeanggotaanModule } from './modules/iuran-keanggotaan/iuran-keangg
 import { UsersModule } from './modules/users/users.module';
 import { ActivityLogsModule } from './modules/activity-logs/activity-logs.module';
 import { WebsocketsModule } from './modules/websockets/websockets.module';
+import { ColumnConfigsModule } from './modules/column-configs/column-configs.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { WebsocketsModule } from './modules/websockets/websockets.module';
     UsersModule,
     ActivityLogsModule,
     WebsocketsModule,
+    ColumnConfigsModule,
   ],
   controllers: [],
   providers: [

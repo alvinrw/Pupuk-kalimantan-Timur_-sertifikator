@@ -29,6 +29,7 @@ model MasterItem {
   validationErrors      String?
   validationStatus      String                 @default("NEW")
   imageUrl              String?
+  position              Int                    @default(0)
   certificates          Certificate[]
   documentHistories     DocumentHistory[]
   notificationSetting   NotificationSetting?
@@ -193,3 +194,20 @@ model ActivityLog {
 
   @@map("activity_logs")
 }
+
+model ColumnConfig {
+  id          String   @id @default(uuid())
+  categoryKey String
+  fieldKey    String
+  label       String
+  type        String   @default("text") // "text", "nominal", "date"
+  position    Int      @default(0)
+  isVisible   Boolean  @default(true)
+  isCustom    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([categoryKey, fieldKey])
+  @@map("column_configs")
+}
+

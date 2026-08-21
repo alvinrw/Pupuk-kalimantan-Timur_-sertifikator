@@ -68,6 +68,12 @@ export class MasterItemsController {
     return this.masterItemsService.findOne(id);
   }
 
+  @Roles('Super Admin', 'Admin')
+  @Put('reorder')
+  async reorder(@Body() body: { id: string; position: number }[]) {
+    return this.masterItemsService.reorder(body);
+  }
+
   @Roles('Super Admin', 'Admin', 'User')
   @Put(':id')
   async update(@Param('id') id: string, @Body() updateMasterItemDto: UpdateMasterItemDto, @Req() req: any) {

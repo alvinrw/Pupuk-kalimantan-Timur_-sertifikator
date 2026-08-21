@@ -74,7 +74,10 @@ export class MasterItemsService implements OnModuleInit {
 
     return this.prisma.masterItem.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { position: 'asc' },
+        { createdAt: 'desc' }
+      ],
       include: {
         certificates: {
           include: {
@@ -138,6 +141,18 @@ export class MasterItemsService implements OnModuleInit {
 
     await recalculateStagingStatuses(this.prisma, updated.categoryKey);
     return updated;
+  }
+
+  async reorder(items: { id: string; position: number }[]) {
+    await this.prisma.$transaction(
+      items.map(item =>
+        this.prisma.masterItem.update({
+          where: { id: item.id },
+          data: { position: item.position },
+        })
+      )
+    );
+    return { success: true };
   }
 
   async remove(id: string) {

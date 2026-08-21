@@ -65,6 +65,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
+        { id: "atur-kolom-baris", label: "Atur Kolom & Baris", icon: Settings, roleGuard: ['Super Admin', 'Admin'] },
         { id: "tugas-terdekat", label: "Agenda & Perpanjangan", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
         {
           id: "informasi-dropdown",

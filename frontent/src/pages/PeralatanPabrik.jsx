@@ -190,6 +190,7 @@ export default function PeralatanPabrik() {
         sortKey={data.sortKey}
         sortOrder={data.sortOrder}
         toggleSort={data.toggleSort}
+        allColumns={data.allColumns}
       />
 
       <PeralatanModals

@@ -17,6 +17,7 @@ import IuranKeanggotaan from './pages/IuranKeanggotaan';
 import TugasTerdekat from './pages/TugasTerdekat';
 import HistoriPencatatan from './pages/HistoriPencatatan';
 import ManajemenPengguna from './pages/ManajemenPengguna';
+import AturKolomBaris from './pages/AturKolomBaris';
 
 import {
   mockStats,
@@ -140,6 +141,8 @@ export default function App() {
         return <HistoriPencatatan />;
       case 'manajemen-pengguna':
         return <ManajemenPengguna />;
+      case 'atur-kolom-baris':
+        return <AturKolomBaris onBack={() => setActiveTab('peralatan-pabrik')} />;
       default:
         return (
           <Dashboard
