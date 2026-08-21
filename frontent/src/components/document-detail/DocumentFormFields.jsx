@@ -46,6 +46,13 @@ export default function DocumentFormFields({ hook, item }) {
     return '';
   };
 
+  const formatNumberString = (str) => {
+    if (!str) return '';
+    const clean = String(str).replace(/\D/g, '');
+    if (clean === '') return '';
+    return Number(clean).toLocaleString('id-ID');
+  };
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 font-mono-data">
       <form onSubmit={handleSave} className="space-y-6">
@@ -310,13 +317,15 @@ export default function DocumentFormFields({ hook, item }) {
                         newEnts[idx].value = e.target.value;
                         setFormData({ ...formData, additionalEntities: newEnts });
                       }}
-                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"
+                      onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
+                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white cursor-pointer"
                     />
                   ) : ent.type === 'nominal' ? (
-                    <input type="number" placeholder="Nilai (cth: 500000)" value={ent.value}
+                    <input type="text" placeholder="Nilai (cth: 5.000.000)" value={formatNumberString(ent.value)}
                       onChange={(e) => {
+                        const clean = e.target.value.replace(/\D/g, '');
                         const newEnts = [...formData.additionalEntities];
-                        newEnts[idx].value = e.target.value;
+                        newEnts[idx].value = clean;
                         setFormData({ ...formData, additionalEntities: newEnts });
                       }}
                       className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"

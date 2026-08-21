@@ -310,7 +310,7 @@ export default function UploadRenewalModal({
               <button
                 type="submit"
                 form="uploadRenewalForm"
-                disabled={!uploadedFile || isUploadingTemp || isOcrScanning}
+                disabled={isUploadingTemp || isOcrScanning}
                 className="px-5 py-2 bg-[#00a368] hover:bg-[#008f5a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs shadow-xs"
               >
                 <FileText className="w-4 h-4" />
