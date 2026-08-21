@@ -28,6 +28,25 @@ export default function DocumentReadView({ hook, item }) {
     return [];
   };
 
+  const formatEntityValue = (val, type) => {
+    if (!val) return '-';
+    if (type === 'date') {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+        const parts = val.split('-');
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      return val;
+    }
+    if (type === 'nominal') {
+      const num = Number(val);
+      if (!isNaN(num) && val.trim() !== '') {
+        return num.toLocaleString('id-ID');
+      }
+      return val;
+    }
+    return val;
+  };
+
   const {
     formData, isHaki, isEquipment, effectiveCategoryKey, isSingleCertScope, isMultiCertItem,
     localDocumentStatus, historyList, isLoadingHistory,
@@ -190,7 +209,7 @@ export default function DocumentReadView({ hook, item }) {
                             : (formData.status === 'Spare' ? 'Spare (Cadangan)' : formData.status === 'Rusak' ? 'Rusak (Out of Service)' : formData.status),
                           cls: 'font-bold text-slate-800'
                         },
-                        ...getAdditionalEntities(item?.rawKeterangan || item?.keterangan).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' }))
+                        ...getAdditionalEntities(item?.rawKeterangan || item?.keterangan).map(ent => ({ label: ent.key, val: formatEntityValue(ent.value, ent.type), cls: 'font-bold text-slate-800' }))
                       ].map(({ label, val, cls }) => (
                         <div key={label}>
                           <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
@@ -213,7 +232,7 @@ export default function DocumentReadView({ hook, item }) {
                             { label: 'Tanggal Terbit', val: formData.terbit || '-', cls: 'font-bold text-slate-800' },
                             { label: 'Tanggal Expired', val: displayExpired, cls: 'font-bold text-slate-800' },
                             { label: 'Catatan / Pengecualian', val: formData.exemptionNote || parseKeteranganText(formData.keterangan) || '-', cls: 'font-bold text-slate-800 whitespace-pre-wrap' },
-                            ...(isSingleCertScope ? (formData.additionalEntities || []).map(ent => ({ label: ent.key, val: ent.value, cls: 'font-bold text-slate-800' })) : [])
+                            ...(isSingleCertScope ? (formData.additionalEntities || []).map(ent => ({ label: ent.key, val: formatEntityValue(ent.value, ent.type), cls: 'font-bold text-slate-800' })) : [])
                           ].map(({ label, val, cls }) => (
                             <div key={label}>
                               <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
