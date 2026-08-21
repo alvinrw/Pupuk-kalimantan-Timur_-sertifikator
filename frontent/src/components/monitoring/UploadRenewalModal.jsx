@@ -151,7 +151,7 @@ export default function UploadRenewalModal({
               
               <div>
                 <label className="font-bold text-slate-900 block mb-1.5">
-                  1. Upload File Sertifikat Baru (Wajib) <span className="text-rose-500">*</span>
+                  1. Upload File Sertifikat Baru (Opsional)
                 </label>
                 <div
                   onDragEnter={handleDragOver}

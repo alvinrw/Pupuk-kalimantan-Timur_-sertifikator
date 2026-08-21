@@ -510,11 +510,6 @@ export function useMonitoring() {
     e.preventDefault();
     if (!activeModalItem) return;
 
-    if (!uploadedFile) {
-      alert("Harap pilih/upload file sertifikat baru terlebih dahulu!");
-      return;
-    }
-
     try {
       let fileUrl = null;
       if (uploadedFile) {
