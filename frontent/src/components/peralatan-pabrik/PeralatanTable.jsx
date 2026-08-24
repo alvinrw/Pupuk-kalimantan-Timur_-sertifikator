@@ -252,7 +252,7 @@ export default function PeralatanTable({
 
                       if (col.key === 'jenisPeralatan') {
                         const customEnt = item.additionalEntities?.find(e => e.key === col.label);
-                        const displayVal = customEnt ? customEnt.value : '';
+                        const displayVal = customEnt ? customEnt.value : (item.jenisPeralatan || row.jenisPeralatan || '');
                         return (
                           <td key="jenisPeralatan" className="py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle text-slate-800">
                             <span>{displayVal || '-'}</span>

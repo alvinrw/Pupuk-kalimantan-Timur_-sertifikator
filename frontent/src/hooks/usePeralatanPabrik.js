@@ -90,14 +90,15 @@ export function usePeralatanPabrik() {
     try {
       const res = await api.get('/column-configs/peralatan-pabrik');
       const fetchedCols = res.data || [];
-      const cols = fetchedCols.map(c => ({
+      const filteredCols = fetchedCols.filter(c => c.fieldKey !== 'certCount');
+      const cols = filteredCols.map(c => ({
         key: c.fieldKey,
         label: c.label,
         isCustom: c.isCustom,
         type: c.type
       }));
       setAllColumns(cols);
-      const visible = fetchedCols.filter(c => c.isVisible).map(c => c.fieldKey);
+      const visible = filteredCols.filter(c => c.isVisible).map(c => c.fieldKey);
       setVisibleColumnKeys(visible);
     } catch (err) {
       console.error("Failed to load columns config in usePeralatanPabrik:", err);
