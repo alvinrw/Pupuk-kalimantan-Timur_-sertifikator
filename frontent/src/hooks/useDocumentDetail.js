@@ -104,7 +104,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
     lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
-    user: targetCert?.instansi || item.user || item.issuer || 'Umum',
+    user: isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'),
     status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
       ? item.status
       : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
@@ -149,7 +149,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
       nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
       kapasitas: item.kapasitas || '',
       lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
-      user: targetCert?.instansi || item.user || item.issuer || 'Umum',
+      user: isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'),
       status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
         ? item.status
         : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
@@ -171,11 +171,22 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   const handleSave = async (e) => {
     e.preventDefault();
     try {
+      let origMeta = {};
+      try {
+        if (initialKetRaw && initialKetRaw.startsWith('{')) {
+          origMeta = JSON.parse(initialKetRaw);
+        }
+      } catch (_) {}
+
       const payloadData = { ...formData };
       if (formData.additionalEntities) {
         payloadData.keterangan = JSON.stringify({
+          ...origMeta,
           keteranganAsli: formData.keterangan || '',
-          additionalEntities: formData.additionalEntities
+          additionalEntities: formData.additionalEntities,
+          penanggungJawab: formData.user || origMeta.penanggungJawab || 'Umum',
+          tipe: formData.tipe || origMeta.tipe || '',
+          nomorSeri: formData.nomorSeri || origMeta.nomorSeri || ''
         });
       }
       
