@@ -41,6 +41,23 @@ export class ColumnConfigsService {
           orderBy: { position: 'asc' },
         });
       }
+
+      // Sync default column labels in DB if they were changed in the code
+      for (const d of defaultConfigs) {
+        const existing = configs.find(c => c.fieldKey === d.fieldKey);
+        if (existing && !existing.isCustom && existing.label !== d.label) {
+          await this.prisma.columnConfig.update({
+            where: {
+              categoryKey_fieldKey: {
+                categoryKey,
+                fieldKey: d.fieldKey,
+              },
+            },
+            data: { label: d.label },
+          });
+          existing.label = d.label; // update in memory array
+        }
+      }
     }
 
     return configs;
@@ -191,11 +208,12 @@ export class ColumnConfigsService {
 
     const isProyek = categoryKey.includes('proyek');
     const isProduk = categoryKey.includes('produk') || categoryKey.includes('ciptaan');
+    const isAset = categoryKey.includes('aset');
     const configs = [
       { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },
-      { categoryKey, fieldKey: 'title', label: isProyek ? 'NAMA PROYEK' : isProduk ? 'NAMA PRODUK' : 'NAMA ITEM', type: 'text', position: 1, isVisible: true, isCustom: false },
-      { categoryKey, fieldKey: 'code', label: isProyek ? 'KODE PROYEK' : isProduk ? 'KODE PRODUK' : 'KODE REGISTRASI', type: 'text', position: 2, isVisible: true, isCustom: false },
-      { categoryKey, fieldKey: 'jenisItem', label: isProyek ? 'KATEGORI PROYEK' : isProduk ? 'JENIS PRODUK' : 'JENIS ITEM', type: 'text', position: 3, isVisible: true, isCustom: false },
+      { categoryKey, fieldKey: 'title', label: isProyek ? 'NAMA PROYEK' : isProduk ? 'NAMA PRODUK' : isAset ? 'NAMA ASET' : 'NAMA ITEM', type: 'text', position: 1, isVisible: true, isCustom: false },
+      { categoryKey, fieldKey: 'code', label: isProyek ? 'KODE PROYEK' : isProduk ? 'KODE PERIZINAN' : isAset ? 'NOMOR SERI ASSET' : 'KODE REGISTRASI', type: 'text', position: 2, isVisible: true, isCustom: false },
+      { categoryKey, fieldKey: 'jenisItem', label: isProyek ? 'KATEGORI PROYEK' : isProduk ? 'JENIS PRODUK' : isAset ? 'JENIS ASET' : 'JENIS ITEM', type: 'text', position: 3, isVisible: true, isCustom: false },
     ];
 
     let pos = 4;
