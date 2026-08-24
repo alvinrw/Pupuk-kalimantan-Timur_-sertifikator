@@ -40,7 +40,8 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       // 2. Load Master Items (Rows)
       const rowRes = await api.get(`/master-items?categoryKey=${categoryKey}`);
       const rawRows = rowRes.data || [];
-      const parsedRows = rawRows.map(row => {
+      const nonStagingRows = rawRows.filter(row => row.documentStatus !== 'PENDING_DOC');
+      const parsedRows = nonStagingRows.map(row => {
         let keteranganAsli = '';
         let additionalEntities = [];
         try {

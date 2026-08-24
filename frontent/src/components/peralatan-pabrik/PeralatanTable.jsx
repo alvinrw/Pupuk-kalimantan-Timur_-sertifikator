@@ -215,10 +215,47 @@ export default function PeralatanTable({
                         );
                       }
 
-                      if (col.key === 'jenisPeralatan') {
+                      if (col.key === 'title') {
                         return (
-                          <td key="jenisPeralatan" className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                            <span>{row.jenisPeralatan}</span>
+                          <td
+                            key="title"
+                            onClick={() => {
+                              if (activeMainTab !== 'staging') setDetailModalItem(item);
+                            }}
+                            className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${
+                              activeMainTab === 'staging' 
+                                ? 'cursor-default text-slate-800' 
+                                : (isAfkir ? 'cursor-pointer hover:underline text-white' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')
+                            }`}
+                            title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : "Klik untuk Lihat Detail"}
+                          >
+                            {item.title || row.jenisPeralatan || '-'}
+                          </td>
+                        );
+                      }
+
+                      if (col.key === 'code') {
+                        return (
+                          <td key="code" className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-mono-data font-semibold">
+                            {item.code || item.merekItem || '-'}
+                          </td>
+                        );
+                      }
+
+                      if (col.key === 'unitLocation') {
+                        return (
+                          <td key="unitLocation" className="py-3.5 px-4 font-medium whitespace-nowrap text-center align-middle">
+                            {item.unitLocation || item.lokasi || '-'}
+                          </td>
+                        );
+                      }
+
+                      if (col.key === 'jenisPeralatan') {
+                        const customEnt = item.additionalEntities?.find(e => e.key === col.label);
+                        const displayVal = customEnt ? customEnt.value : '';
+                        return (
+                          <td key="jenisPeralatan" className="py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle text-slate-800">
+                            <span>{displayVal || '-'}</span>
                           </td>
                         );
                       }
