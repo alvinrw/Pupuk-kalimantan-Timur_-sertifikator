@@ -33,7 +33,9 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     try {
       // 1. Load Column Configs
       const colRes = await api.get(`/column-configs/${categoryKey}`);
-      setColumns(colRes.data || []);
+      const fetchedCols = colRes.data || [];
+      const filteredCols = fetchedCols.filter(c => c.fieldKey !== 'certCount');
+      setColumns(filteredCols);
 
       // 2. Load Master Items (Rows)
       const rowRes = await api.get(`/master-items?categoryKey=${categoryKey}`);
