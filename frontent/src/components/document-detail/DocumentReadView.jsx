@@ -209,7 +209,7 @@ export default function DocumentReadView({ hook, item }) {
                             : (formData.status === 'Spare' ? 'Spare (Cadangan)' : formData.status === 'Rusak' ? 'Rusak (Out of Service)' : formData.status),
                           cls: 'font-bold text-slate-800'
                         },
-                        ...getAdditionalEntities(item?.rawKeterangan || item?.keterangan).map(ent => ({ label: ent.key, val: formatEntityValue(ent.value, ent.type), cls: 'font-bold text-slate-800' }))
+                        ...((formData.additionalEntities || []).map(ent => ({ label: ent.key, val: formatEntityValue(ent.value, ent.type), cls: 'font-bold text-slate-800' })))
                       ].map(({ label, val, cls }) => (
                         <div key={label}>
                           <span className="text-[11px] text-slate-500 font-sans block mb-0.5">{label}</span>
@@ -265,7 +265,7 @@ export default function DocumentReadView({ hook, item }) {
       </div>
 
       {/* SECTION 1.5: NOTIFICATION SETTINGS (Read-only) */}
-      {(!isMultiCertItem || isSingleCertScope) && (
+      {(targetCert || !isMultiCertItem || isSingleCertScope) && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-4">
           <h4 className="font-bold text-sm text-slate-900 border-b border-slate-200 pb-3">
             Pengaturan Notifikasi & Deadline

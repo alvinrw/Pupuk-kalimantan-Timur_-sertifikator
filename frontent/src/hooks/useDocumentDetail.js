@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { updateMasterItem, updateCertificate } from '../services/masterItemsService';
+import api from '../services/api';
 
 // Sub-hooks
 import { useDocumentHistory } from './document-detail/useDocumentHistory';
@@ -81,6 +82,19 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
   const parsedKet = parseKeterangan(initialKetRaw);
 
+  const [columnConfigs, setColumnConfigs] = useState([]);
+  
+  useEffect(() => {
+    if (effectiveCategoryKey) {
+      api.get(`/column-configs/${effectiveCategoryKey}`)
+        .then(res => {
+          const fetchedCols = res.data || [];
+          setColumnConfigs(fetchedCols);
+        })
+        .catch(err => console.error(err));
+    }
+  }, [effectiveCategoryKey]);
+
   const [localDocumentStatus, setLocalDocumentStatus] = useState(item.documentStatus || 'PENDING_DOC');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -111,6 +125,22 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   useEffect(() => {
     const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
     const parsedKet = parseKeterangan(initialKetRaw);
+    const parsedEntities = parsedKet.additionalEntities || [];
+
+    let finalEntities = parsedEntities;
+    if (columnConfigs.length > 0) {
+      const customCols = columnConfigs.filter(c => c.isCustom);
+      const mergedEntities = customCols.map(col => {
+        const existing = parsedEntities.find(e => e.key === col.label);
+        return {
+          key: col.label,
+          value: existing ? existing.value : '',
+          type: col.type || 'text'
+        };
+      });
+      const otherEntities = parsedEntities.filter(e => !customCols.some(c => c.label === e.key));
+      finalEntities = [...mergedEntities, ...otherEntities];
+    }
 
     setFormData({
       merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
@@ -131,12 +161,12 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
       terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
       berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
       keterangan: parsedKet.text,
-      additionalEntities: parsedKet.additionalEntities,
+      additionalEntities: finalEntities,
       fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
       namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
       imageUrl: item.imageUrl || ''
     });
-  }, [activeCertId, item]);
+  }, [activeCertId, item, columnConfigs]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -221,6 +251,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
     isEditing, setIsEditing, formData, setFormData, handleSave, localDocumentStatus,
     activeCertId, setActiveCertId,
+    columnConfigs,
     
     ...historyHook,
     ...uploadHook,
