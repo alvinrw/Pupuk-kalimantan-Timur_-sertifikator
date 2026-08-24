@@ -11,11 +11,30 @@ export class ColumnConfigsService {
       orderBy: { position: 'asc' },
     });
 
+    const defaultConfigs = this.getDefaultConfigs(categoryKey);
+
     if (configs.length === 0) {
-      const defaultConfigs = this.getDefaultConfigs(categoryKey);
       if (defaultConfigs.length > 0) {
         await this.prisma.columnConfig.createMany({
           data: defaultConfigs,
+        });
+        configs = await this.prisma.columnConfig.findMany({
+          where: { categoryKey },
+          orderBy: { position: 'asc' },
+        });
+      }
+    } else {
+      const missing = defaultConfigs.filter(
+        def => !configs.some(c => c.fieldKey === def.fieldKey)
+      );
+      if (missing.length > 0) {
+        const maxPos = configs.length > 0 ? Math.max(...configs.map(c => c.position)) : -1;
+        const toCreate = missing.map((item, idx) => ({
+          ...item,
+          position: maxPos + 1 + idx,
+        }));
+        await this.prisma.columnConfig.createMany({
+          data: toCreate,
         });
         configs = await this.prisma.columnConfig.findMany({
           where: { categoryKey },
@@ -150,8 +169,10 @@ export class ColumnConfigsService {
         { categoryKey, fieldKey: 'jenisPeralatan', label: 'JENIS PERALATAN PABRIK', type: 'text', position: 3, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'unitLocation', label: 'LOKASI', type: 'text', position: 4, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'user', label: 'PENANGGUNG JAWAB', type: 'text', position: 5, isVisible: true, isCustom: false },
-        { categoryKey, fieldKey: 'certCount', label: 'SERTIFIKAT TERHUBUNG', type: 'text', position: 6, isVisible: true, isCustom: false },
-        { categoryKey, fieldKey: 'status', label: 'STATUS', type: 'text', position: 7, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'terbit', label: 'TANGGAL TERBIT', type: 'text', position: 6, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'berakhir', label: 'TANGGAL EXPIRED', type: 'text', position: 7, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'certCount', label: 'SERTIFIKAT TERHUBUNG', type: 'text', position: 8, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'status', label: 'STATUS', type: 'text', position: 9, isVisible: true, isCustom: false },
       ];
     }
 
