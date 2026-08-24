@@ -35,6 +35,25 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     }, 3000);
   };
 
+  const [confirmModal, setConfirmModal] = useState({
+    isOpen: false,
+    title: 'Konfirmasi Hapus',
+    message: '',
+    onConfirm: null
+  });
+
+  const showConfirm = (message, title = 'Konfirmasi Hapus', onConfirm) => {
+    setConfirmModal({
+      isOpen: true,
+      title,
+      message,
+      onConfirm: () => {
+        onConfirm();
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   // Load Columns and Rows Data
   const loadData = async () => {
     setIsLoading(true);
@@ -173,18 +192,24 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     }
   };
 
-  const handleDeleteColumn = async (fieldKey) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus kolom kustom ini? Data pada kolom ini di item perizinan akan diabaikan.')) return;
-    try {
-      setIsSaving(true);
-      await api.delete(`/column-configs/${categoryKey}/${fieldKey}`);
-      loadData();
-    } catch (err) {
-      console.error('Failed to delete column config:', err);
-      showToast('Gagal menghapus kolom.', 'error');
-    } finally {
-      setIsSaving(false);
-    }
+  const handleDeleteColumn = (fieldKey) => {
+    showConfirm(
+      'Apakah Anda yakin ingin menghapus kolom kustom ini? Data pada kolom ini di item perizinan akan diabaikan.',
+      'Hapus Kolom Kustom',
+      async () => {
+        try {
+          setIsSaving(true);
+          await api.delete(`/column-configs/${categoryKey}/${fieldKey}`);
+          showToast('Kolom kustom berhasil dihapus!', 'success');
+          loadData();
+        } catch (err) {
+          console.error('Failed to delete column config:', err);
+          showToast('Gagal menghapus kolom.', 'error');
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    );
   };
 
   // ==========================================
@@ -294,18 +319,24 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     setRows([...rows, newRow]);
   };
 
-  const handleDeleteRow = async (id) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus baris data peralatan ini? Semua riwayat perizinan dan sertifikat terlampir juga akan ikut terhapus.')) return;
-    try {
-      setIsSaving(true);
-      await api.delete(`/master-items/${id}`);
-      loadData();
-    } catch (err) {
-      console.error('Failed to delete master item:', err);
-      showToast('Gagal menghapus baris data.', 'error');
-    } finally {
-      setIsSaving(false);
-    }
+  const handleDeleteRow = (id) => {
+    showConfirm(
+      'Apakah Anda yakin ingin menghapus baris data peralatan ini? Semua riwayat perizinan dan sertifikat terlampir juga akan ikut terhapus.',
+      'Hapus Baris Data',
+      async () => {
+        try {
+          setIsSaving(true);
+          await api.delete(`/master-items/${id}`);
+          showToast('Baris data berhasil dihapus!', 'success');
+          loadData();
+        } catch (err) {
+          console.error('Failed to delete master item:', err);
+          showToast('Gagal menghapus baris data.', 'error');
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    );
   };
 
   const getModuleLabel = () => {
@@ -774,6 +805,36 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
         <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
           {toast.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-red-600" /> }
           <p className="text-sm font-semibold">{toast.message}</p>
+        </div>
+      )}
+
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600">
+              <AlertCircle className="w-6 h-6 shrink-0" />
+              <h3 className="font-bold text-base text-slate-900">{confirmModal.title}</h3>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed font-mono-data">
+              {confirmModal.message}
+            </p>
+            <div className="flex justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl border border-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+              >
+                Ya, Hapus
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
