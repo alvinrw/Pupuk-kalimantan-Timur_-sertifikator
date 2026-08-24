@@ -141,8 +141,14 @@ export default function App() {
         return <HistoriPencatatan />;
       case 'manajemen-pengguna':
         return <ManajemenPengguna />;
-      case 'atur-kolom-baris':
-        return <AturKolomBaris onBack={() => setActiveTab('peralatan-pabrik')} />;
+      case 'atur-kolom-baris-peralatan':
+        return <AturKolomBaris categoryKey="peralatan-pabrik" onBack={() => setActiveTab('peralatan-pabrik')} />;
+      case 'atur-kolom-baris-aset':
+        return <AturKolomBaris categoryKey="perizinan-aset" onBack={() => setActiveTab('perizinan-aset')} />;
+      case 'atur-kolom-baris-proyek':
+        return <AturKolomBaris categoryKey="perizinan-proyek" onBack={() => setActiveTab('perizinan-proyek')} />;
+      case 'atur-kolom-baris-produk':
+        return <AturKolomBaris categoryKey="perizinan-produk" onBack={() => setActiveTab('perizinan-produk')} />;
       default:
         return (
           <Dashboard

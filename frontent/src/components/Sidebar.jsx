@@ -65,7 +65,19 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
-        { id: "atur-kolom-baris", label: "Atur Kolom & Baris", icon: Settings, roleGuard: ['Super Admin', 'Admin'] },
+        { 
+          id: "atur-kolom-baris-dropdown", 
+          label: "Atur Kolom & Baris", 
+          icon: Settings,
+          isDropdown: true,
+          roleGuard: ['Super Admin', 'Admin'],
+          subItems: [
+            { id: "atur-kolom-baris-peralatan", label: "Peralatan Pabrik" },
+            { id: "atur-kolom-baris-aset", label: "Perizinan Aset" },
+            { id: "atur-kolom-baris-proyek", label: "Perizinan Proyek" },
+            { id: "atur-kolom-baris-produk", label: "Perizinan Produk" },
+          ]
+        },
         { id: "tugas-terdekat", label: "Agenda & Perpanjangan", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
         {
           id: "informasi-dropdown",

@@ -6,11 +6,17 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 
-export default function AturKolomBaris({ onBack }) {
+export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack }) {
   const [activeTab, setActiveTab] = useState('kolom'); // 'kolom' | 'baris'
-  const [categoryKey, setCategoryKey] = useState('peralatan-pabrik');
+  const [categoryKey, setCategoryKey] = useState(propCategoryKey || 'peralatan-pabrik');
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (propCategoryKey) {
+      setCategoryKey(propCategoryKey);
+    }
+  }, [propCategoryKey]);
 
   // States for Columns
   const [columns, setColumns] = useState([]);
@@ -284,38 +290,31 @@ export default function AturKolomBaris({ onBack }) {
     }
   };
 
+  const getModuleLabel = () => {
+    switch (categoryKey) {
+      case 'peralatan-pabrik': return 'Perizinan Peralatan Pabrik';
+      case 'perizinan-aset': return 'Perizinan Aset';
+      case 'perizinan-proyek': return 'Perizinan Proyek';
+      case 'perizinan-produk': return 'Perizinan Produk';
+      default: return 'Perizinan Peralatan Pabrik';
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 font-sans-clean">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-        <div className="flex items-center gap-3">
-          {onBack && (
-            <button 
-              onClick={onBack}
-              className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-slate-200 bg-white"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-700" />
-            </button>
-          )}
-          <div className="flex flex-col gap-0.5">
-            <h2 className="font-bold text-xl text-[#0F172A]">Atur Kolom & Baris</h2>
-            <p className="text-xs text-[#64748B] font-mono-data">Konfigurasi struktur dinamis tabel perizinan</p>
-          </div>
-        </div>
-
-        {/* Dropdown Modul Selector */}
-        <div className="flex items-center gap-2 bg-white px-3 py-1.5 border border-slate-200 rounded-xl shadow-2xs">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Modul:</label>
-          <select
-            value={categoryKey}
-            onChange={(e) => setCategoryKey(e.target.value)}
-            className="bg-transparent border-none outline-none text-xs text-slate-800 font-bold cursor-pointer font-sans-clean"
+      <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="p-1.5 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer border border-slate-200 bg-white"
           >
-            <option value="peralatan-pabrik">Perizinan Peralatan Pabrik</option>
-            <option value="perizinan-aset">Perizinan Aset</option>
-            <option value="perizinan-proyek">Perizinan Proyek</option>
-            <option value="perizinan-produk">Perizinan Produk</option>
-          </select>
+            <ArrowLeft className="w-4 h-4 text-slate-700" />
+          </button>
+        )}
+        <div className="flex flex-col gap-0.5">
+          <h2 className="font-bold text-xl text-[#0F172A]">Atur Kolom & Baris</h2>
+          <p className="text-xs text-[#64748B] font-mono-data">Modul: {getModuleLabel()}</p>
         </div>
       </div>
 
