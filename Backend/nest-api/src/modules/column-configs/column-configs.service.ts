@@ -27,14 +27,24 @@ export class ColumnConfigsService {
     return configs;
   }
 
-  async create(categoryKey: string, data: { fieldKey: string; label: string; type: string }) {
+  private getModuleLabel(categoryKey: string): string {
+    switch (categoryKey) {
+      case 'peralatan-pabrik': return 'Peralatan Pabrik';
+      case 'perizinan-aset': return 'Perizinan Aset';
+      case 'perizinan-proyek': return 'Perizinan Proyek';
+      case 'perizinan-produk': return 'Perizinan Produk';
+      default: return categoryKey;
+    }
+  }
+
+  async create(categoryKey: string, data: { fieldKey: string; label: string; type: string }, userId?: string) {
     const lastConfig = await this.prisma.columnConfig.findFirst({
       where: { categoryKey },
       orderBy: { position: 'desc' },
     });
     const nextPosition = lastConfig ? lastConfig.position + 1 : 0;
 
-    return this.prisma.columnConfig.create({
+    const result = await this.prisma.columnConfig.create({
       data: {
         categoryKey,
         fieldKey: data.fieldKey,
@@ -45,9 +55,24 @@ export class ColumnConfigsService {
         isCustom: true,
       },
     });
+
+    if (userId) {
+      const moduleLabel = this.getModuleLabel(categoryKey);
+      await this.prisma.activityLog.create({
+        data: {
+          userId,
+          action: 'INSERT',
+          targetTable: categoryKey,
+          targetId: data.label,
+          details: JSON.stringify({ message: `Menambahkan kolom kustom "${data.label}" pada modul ${moduleLabel}` }),
+        },
+      }).catch(() => {});
+    }
+
+    return result;
   }
 
-  async reorder(categoryKey: string, items: { fieldKey: string; position: number; isVisible: boolean }[]) {
+  async reorder(categoryKey: string, items: { fieldKey: string; position: number; isVisible: boolean }[], userId?: string) {
     await this.prisma.$transaction(
       items.map(item =>
         this.prisma.columnConfig.update({
@@ -64,11 +89,25 @@ export class ColumnConfigsService {
         })
       )
     );
+
+    if (userId) {
+      const moduleLabel = this.getModuleLabel(categoryKey);
+      await this.prisma.activityLog.create({
+        data: {
+          userId,
+          action: 'UPDATE',
+          targetTable: categoryKey,
+          targetId: 'COLUMN_ORDER',
+          details: JSON.stringify({ message: `Mengubah susunan atau visibilitas kolom pada modul ${moduleLabel}` }),
+        },
+      }).catch(() => {});
+    }
+
     return { success: true };
   }
 
-  async remove(categoryKey: string, fieldKey: string) {
-    return this.prisma.columnConfig.delete({
+  async remove(categoryKey: string, fieldKey: string, userId?: string) {
+    const config = await this.prisma.columnConfig.findUnique({
       where: {
         categoryKey_fieldKey: {
           categoryKey,
@@ -76,6 +115,30 @@ export class ColumnConfigsService {
         },
       },
     });
+
+    const result = await this.prisma.columnConfig.delete({
+      where: {
+        categoryKey_fieldKey: {
+          categoryKey,
+          fieldKey,
+        },
+      },
+    });
+
+    if (userId && config) {
+      const moduleLabel = this.getModuleLabel(categoryKey);
+      await this.prisma.activityLog.create({
+        data: {
+          userId,
+          action: 'DELETE',
+          targetTable: categoryKey,
+          targetId: config.label,
+          details: JSON.stringify({ message: `Menghapus kolom kustom "${config.label}" pada modul ${moduleLabel}` }),
+        },
+      }).catch(() => {});
+    }
+
+    return result;
   }
 
   private getDefaultConfigs(categoryKey: string) {

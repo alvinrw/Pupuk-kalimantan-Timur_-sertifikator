@@ -78,15 +78,27 @@ export class MasterItemsController {
   @Put('bulk')
   async bulkUpdate(@Body() body: any[], @Req() req: any) {
     const result = await this.masterItemsService.bulkUpdate(body);
-    await this.prisma.activityLog.create({
-      data: {
-        userId: req.user.id,
-        action: 'UPDATE',
-        targetTable: 'master_items',
-        targetId: 'BULK',
-        details: JSON.stringify({ message: `Melakukan update massal data baris untuk ${body.length} item` }),
-      },
-    }).catch(() => {});
+    
+    // Log individual inserts and updates
+    for (const item of body) {
+      const isTemp = String(item.id).startsWith('temp-');
+      const action = isTemp ? 'INSERT' : 'UPDATE';
+      const actionDesc = isTemp ? 'Membuat' : 'Mengupdate';
+      const targetTable = item.categoryKey || 'master_items';
+      
+      await this.prisma.activityLog.create({
+        data: {
+          userId: req.user.id,
+          action: action,
+          targetTable: targetTable,
+          targetId: item.title || 'Master Item',
+          details: JSON.stringify({ 
+            message: `${actionDesc} Master Item: "${item.title}" (melalui spreadsheet)` 
+          }),
+        },
+      }).catch(() => {});
+    }
+
     return result;
   }
 

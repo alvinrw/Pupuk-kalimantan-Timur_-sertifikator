@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Req } from '@nestjs/common';
 import { ColumnConfigsService } from './column-configs.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -19,26 +19,29 @@ export class ColumnConfigsController {
   @Post(':categoryKey')
   create(
     @Param('categoryKey') categoryKey: string,
-    @Body() body: { fieldKey: string; label: string; type: string }
+    @Body() body: { fieldKey: string; label: string; type: string },
+    @Req() req: any
   ) {
-    return this.columnConfigsService.create(categoryKey, body);
+    return this.columnConfigsService.create(categoryKey, body, req.user?.id);
   }
 
   @Roles('Super Admin', 'Admin')
   @Put(':categoryKey/reorder')
   reorder(
     @Param('categoryKey') categoryKey: string,
-    @Body() body: { fieldKey: string; position: number; isVisible: boolean }[]
+    @Body() body: { fieldKey: string; position: number; isVisible: boolean }[],
+    @Req() req: any
   ) {
-    return this.columnConfigsService.reorder(categoryKey, body);
+    return this.columnConfigsService.reorder(categoryKey, body, req.user?.id);
   }
 
   @Roles('Super Admin', 'Admin')
   @Delete(':categoryKey/:fieldKey')
   remove(
     @Param('categoryKey') categoryKey: string,
-    @Param('fieldKey') fieldKey: string
+    @Param('fieldKey') fieldKey: string,
+    @Req() req: any
   ) {
-    return this.columnConfigsService.remove(categoryKey, fieldKey);
+    return this.columnConfigsService.remove(categoryKey, fieldKey, req.user?.id);
   }
 }
