@@ -26,6 +26,8 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
 
   // States for Rows
   const [rows, setRows] = useState([]);
+  const [barisMode, setBarisMode] = useState('master'); // 'master' | 'child'
+  const [modifiedCerts, setModifiedCerts] = useState({}); // id -> cert updates
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const showToast = (message, type = 'success') => {
@@ -57,6 +59,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
   // Load Columns and Rows Data
   const loadData = async () => {
     setIsLoading(true);
+    setModifiedCerts({});
     try {
       // 1. Load Column Configs
       const colRes = await api.get(`/column-configs/${categoryKey}`);
@@ -339,6 +342,88 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     );
   };
 
+  const handleChildCellChange = (certId, fieldKey, value) => {
+    setRows(prevRows => prevRows.map(row => {
+      const certs = row.certificates || row.linkedCertificates || [];
+      if (!certs.some(c => c.id === certId)) return row;
+
+      const updatedCerts = certs.map(c => {
+        if (c.id !== certId) return c;
+        const updatedCert = { ...c, [fieldKey]: value };
+        
+        setModifiedCerts(prev => ({
+          ...prev,
+          [certId]: {
+            ...(prev[certId] || {}),
+            ...updatedCert
+          }
+        }));
+
+        return updatedCert;
+      });
+
+      return {
+        ...row,
+        certificates: updatedCerts,
+        linkedCertificates: updatedCerts
+      };
+    }));
+  };
+
+  const handleSaveCertsSpreadsheet = async () => {
+    const certsToSave = Object.values(modifiedCerts);
+    if (certsToSave.length === 0) {
+      showToast('Tidak ada perubahan data sertifikat yang perlu disimpan.', 'info');
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await Promise.all(
+        certsToSave.map(c => {
+          const payload = {
+            namaSertifikat: c.namaSertifikat,
+            noSertifikat: c.noSertifikat,
+            instansi: c.instansi,
+            terbit: c.terbit,
+            expired: c.expired,
+            status: c.status,
+            keterangan: c.keterangan
+          };
+          return api.put(`/certificates/${c.id}`, payload);
+        })
+      );
+
+      showToast('Semua perubahan data sertifikat berhasil disimpan!', 'success');
+      loadData();
+    } catch (err) {
+      console.error('Failed to save certificates:', err);
+      showToast('Gagal menyimpan perubahan data sertifikat.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteCert = (id) => {
+    showConfirm(
+      'Apakah Anda yakin ingin menghapus data sertifikat ini? Berkas sertifikat terlampir juga akan ikut terhapus.',
+      'Hapus Data Sertifikat',
+      async () => {
+        try {
+          setIsSaving(true);
+          await api.delete(`/certificates/${id}`);
+          showToast('Data sertifikat berhasil dihapus!', 'success');
+          loadData();
+        } catch (err) {
+          console.error('Failed to delete certificate:', err);
+          showToast('Gagal menghapus data sertifikat.', 'error');
+        } finally {
+          setIsSaving(false);
+        }
+      }
+    );
+  };
+
   const getModuleLabel = () => {
     switch (categoryKey) {
       case 'peralatan-pabrik': return 'Perizinan Peralatan Pabrik';
@@ -348,6 +433,18 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       default: return 'Perizinan Peralatan Pabrik';
     }
   };
+
+  const childRows = [];
+  rows.forEach(master => {
+    const certs = master.certificates || master.linkedCertificates || [];
+    certs.forEach(cert => {
+      childRows.push({
+        ...cert,
+        masterId: master.id,
+        masterTitle: master.title
+      });
+    });
+  });
 
   return (
     <div className="p-6 space-y-6 font-sans-clean">
@@ -536,13 +633,12 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                 <div className="flex items-center gap-2">
                   <Rows className="w-4 h-4 text-slate-500" />
                   <h3 className="font-bold text-sm text-slate-900">
-                    Susunan & Manajemen Baris Data ({rows.length})
+                    Susunan & Manajemen Baris Data ({barisMode === 'master' ? rows.length : childRows.length})
                   </h3>
                 </div>
                 <div className="flex gap-2">
-
                   <button
-                    onClick={handleSaveRowsSpreadsheet}
+                    onClick={barisMode === 'master' ? handleSaveRowsSpreadsheet : handleSaveCertsSpreadsheet}
                     disabled={isSaving}
                     className="px-3 py-1.5 bg-[#00a368] hover:bg-[#008f5a] disabled:opacity-50 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                   >
@@ -552,8 +648,37 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                 </div>
               </div>
 
+              {categoryKey !== 'peralatan-pabrik' && (
+                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl max-w-xs mb-4">
+                  <button
+                    onClick={() => setBarisMode('master')}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      barisMode === 'master'
+                        ? 'bg-white text-slate-800 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Data Master
+                  </button>
+                  <button
+                    onClick={() => setBarisMode('child')}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      barisMode === 'child'
+                        ? 'bg-white text-slate-800 shadow-2xs'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    Data Child (Sertifikat)
+                  </button>
+                </div>
+              )}
+
               <p className="text-[11px] text-slate-500 leading-relaxed mb-4">
-                * Gunakan handle <GripVertical className="inline w-3.5 h-3.5 text-slate-400" /> di sebelah kiri untuk menyeret baris ke atas/bawah guna mengatur urutan prioritas atau visual data. Anda juga dapat langsung mengklik dan mengedit isi sel di bawah ini layaknya tabel Excel/Spreadsheet. Urutan dan perubahan nilai akan disimpan permanen ketika tombol hijau di atas diklik.
+                {barisMode === 'master' ? (
+                  <>* Gunakan handle <GripVertical className="inline w-3.5 h-3.5 text-slate-400" /> di sebelah kiri untuk menyeret baris ke atas/bawah guna mengatur urutan prioritas atau visual data. Anda juga dapat langsung mengklik dan mengedit isi sel di bawah ini layaknya tabel Excel/Spreadsheet. Urutan dan perubahan nilai akan disimpan permanen ketika tombol hijau di atas diklik.</>
+                ) : (
+                  <>* Di bawah ini adalah daftar semua sertifikat terhubung (data child) yang dapat diedit langsung dalam format spreadsheet. Klik pada sel data sertifikat untuk mengubah nilainya, lalu simpan dengan tombol hijau di atas.</>
+                )}
               </p>
 
               {/* Data Table with Draggable Rows & Inline Inputs */}
@@ -562,160 +687,275 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono-data uppercase tracking-wider font-bold">
-                        <th className="p-3 w-10 text-center"></th>
-                        {columns.filter(c => c.isVisible).map(col => (
-                          <th key={col.fieldKey} className={`p-3 ${col.fieldKey === 'status' || col.fieldKey === 'no' ? 'text-center' : ''}`}>
-                            {col.label}
-                          </th>
-                        ))}
+                        {barisMode === 'master' ? (
+                          <>
+                            <th className="p-3 w-10 text-center"></th>
+                            {columns.filter(c => c.isVisible).map(col => (
+                              <th key={col.fieldKey} className={`p-3 ${col.fieldKey === 'status' || col.fieldKey === 'no' ? 'text-center' : ''}`}>
+                                {col.label}
+                              </th>
+                            ))}
+                          </>
+                        ) : (
+                          <>
+                            <th className="p-3 w-12 text-center">No</th>
+                            <th className="p-3 min-w-[150px]">Item Induk</th>
+                            <th className="p-3 min-w-[150px]">Nama Sertifikat</th>
+                            <th className="p-3 min-w-[150px]">Nomor Sertifikat</th>
+                            <th className="p-3 min-w-[150px]">Instansi Penerbit</th>
+                            <th className="p-3 min-w-[150px] text-center">Tanggal Terbit</th>
+                            <th className="p-3 min-w-[150px] text-center">Tanggal Expired</th>
+                            <th className="p-3 min-w-[120px] text-center">Status</th>
+                            <th className="p-3 min-w-[200px]">Keterangan / Catatan</th>
+                          </>
+                        )}
                         <th className="p-3 text-right w-16">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {rows.map((row, idx) => (
-                        <tr 
-                          key={row.id}
-                          draggable
-                          onDragStart={(e) => handleRowDragStart(e, idx)}
-                          onDragOver={handleRowDragOver}
-                          onDrop={(e) => handleRowDrop(e, idx)}
-                          className="hover:bg-slate-50/50 bg-white transition-colors group"
-                        >
-                          <td className="p-3 text-center cursor-grab active:cursor-grabbing w-10">
-                            <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-slate-600 mx-auto transition-colors" />
-                          </td>
-                          {columns.filter(c => c.isVisible).map(col => {
-                            if (col.fieldKey === 'no') {
-                              return (
-                                <td key={col.fieldKey} className="p-3 text-center font-mono-data text-slate-400 font-bold w-12">
-                                  {idx + 1}
-                                </td>
-                              );
-                            }
+                      {barisMode === 'master' ? (
+                        rows.map((row, idx) => (
+                          <tr 
+                            key={row.id}
+                            draggable
+                            onDragStart={(e) => handleRowDragStart(e, idx)}
+                            onDragOver={handleRowDragOver}
+                            onDrop={(e) => handleRowDrop(e, idx)}
+                            className="hover:bg-slate-50/50 bg-white transition-colors group"
+                          >
+                            <td className="p-3 text-center cursor-grab active:cursor-grabbing w-10">
+                              <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-slate-600 mx-auto transition-colors" />
+                            </td>
+                            {columns.filter(c => c.isVisible).map(col => {
+                              if (col.fieldKey === 'no') {
+                                return (
+                                  <td key={col.fieldKey} className="p-3 text-center font-mono-data text-slate-400 font-bold w-12">
+                                    {idx + 1}
+                                  </td>
+                                );
+                              }
 
-                            if (col.fieldKey === 'status') {
-                              return (
-                                <td key={col.fieldKey} className="p-3 text-center w-36">
-                                  <select
-                                    value={row.status || 'Aktif'}
-                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
-                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1 outline-none text-xs font-bold text-center w-full cursor-pointer transition-colors"
-                                  >
-                                    <option value="Aktif">Aktif</option>
-                                    <option value="Expired">Expired</option>
-                                    <option value="Perpanjang">Perpanjang</option>
-                                    <option value="Afkir">Afkir</option>
-                                    <option value="Spare">Spare</option>
-                                    <option value="Rusak">Rusak</option>
-                                  </select>
-                                </td>
-                              );
-                            }
+                              if (col.fieldKey === 'status') {
+                                return (
+                                  <td key={col.fieldKey} className="p-3 text-center w-36">
+                                    <select
+                                      value={row.status || 'Aktif'}
+                                      onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                      className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1 outline-none text-xs font-bold text-center w-full cursor-pointer transition-colors"
+                                    >
+                                      <option value="Aktif">Aktif</option>
+                                      <option value="Expired">Expired</option>
+                                      <option value="Perpanjang">Perpanjang</option>
+                                      <option value="Afkir">Afkir</option>
+                                      <option value="Spare">Spare</option>
+                                      <option value="Rusak">Rusak</option>
+                                    </select>
+                                  </td>
+                                );
+                              }
 
-                            if (col.fieldKey === 'certCount') {
-                              return (
-                                <td key={col.fieldKey} className="p-3 text-center text-slate-600 font-mono-data font-bold w-36">
-                                  {row.certificates?.length || 0}
-                                </td>
-                              );
-                            }
+                              if (col.fieldKey === 'certCount') {
+                                return (
+                                  <td key={col.fieldKey} className="p-3 text-center text-slate-600 font-mono-data font-bold w-36">
+                                    {row.certificates?.length || 0}
+                                  </td>
+                                );
+                              }
 
-                            if (col.fieldKey === 'user') {
-                               const val = row.rawMeta?.penanggungJawab || '';
-                               return (
-                                 <td key={col.fieldKey} className="p-1 min-w-[150px]">
-                                   <input
-                                     type="text"
-                                     value={val}
-                                     onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
-                                     placeholder="Ketik..."
-                                     className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
-                                   />
-                                 </td>
-                               );
-                             }
+                              if (col.fieldKey === 'user') {
+                                const val = row.rawMeta?.penanggungJawab || '';
+                                return (
+                                  <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                      placeholder="Ketik..."
+                                      className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                                    />
+                                  </td>
+                                );
+                              }
 
-                             if (!col.isCustom && col.fieldKey !== 'jenisPeralatan') {
-                               const val = col.fieldKey === 'title' ? (row.title || '') :
-                                           col.fieldKey === 'code' ? (row.code || '') :
-                                           col.fieldKey === 'unitLocation' ? (row.unitLocation || '') :
-                                           (row.keteranganAsli || '');
-                               return (
-                                 <td key={col.fieldKey} className="p-1 min-w-[150px]">
-                                   <input
-                                     type="text"
-                                     value={val}
-                                     onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
-                                     placeholder="Ketik..."
-                                     className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
-                                   />
-                                 </td>
-                               );
-                             }
+                              if (!col.isCustom && col.fieldKey !== 'jenisPeralatan') {
+                                const val = col.fieldKey === 'title' ? (row.title || '') :
+                                            col.fieldKey === 'code' ? (row.code || '') :
+                                            col.fieldKey === 'unitLocation' ? (row.unitLocation || '') :
+                                            (row.keteranganAsli || '');
+                                return (
+                                  <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                    <input
+                                      type="text"
+                                      value={val}
+                                      onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                      placeholder="Ketik..."
+                                      className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                                    />
+                                  </td>
+                                );
+                              }
 
-                             // Custom Column Cells (or jenisPeralatan which is stored in additionalEntities)
-                             const ent = row.additionalEntities?.find(e => e.key === col.label);
-                             const val = ent ? ent.value : (col.fieldKey === 'jenisPeralatan' ? (row.title || '') : '');
+                              // Custom Column Cells (or jenisPeralatan which is stored in additionalEntities)
+                              const ent = row.additionalEntities?.find(e => e.key === col.label);
+                              const val = ent ? ent.value : (col.fieldKey === 'jenisPeralatan' ? (row.title || '') : '');
 
-                            if (col.type === 'date') {
-                              return (
-                                <td key={col.fieldKey} className="p-1 min-w-[150px]">
-                                  <input
-                                    type="date"
-                                    value={val}
-                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
-                                    onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
-                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold"
-                                  />
-                                </td>
-                              );
-                            }
+                              if (col.type === 'date') {
+                                return (
+                                  <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                    <input
+                                      type="date"
+                                      value={val}
+                                      onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                      onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
+                                      className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold"
+                                    />
+                                  </td>
+                                );
+                              }
 
-                            if (col.type === 'nominal') {
+                              if (col.type === 'nominal') {
+                                return (
+                                  <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                    <input
+                                      type="text"
+                                      placeholder="Angka saja..."
+                                      value={val ? Number(val.replace(/\D/g, '')).toLocaleString('id-ID') : ''}
+                                      onChange={(e) => {
+                                        const rawNum = e.target.value.replace(/\D/g, '');
+                                        handleCellChange(row.id, col.fieldKey, col.isCustom, rawNum);
+                                      }}
+                                      className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full text-right transition-colors font-mono font-bold text-slate-800"
+                                    />
+                                  </td>
+                                );
+                              }
+
                               return (
                                 <td key={col.fieldKey} className="p-1 min-w-[150px]">
                                   <input
                                     type="text"
-                                    placeholder="Angka saja..."
-                                    value={val ? Number(val.replace(/\D/g, '')).toLocaleString('id-ID') : ''}
-                                    onChange={(e) => {
-                                      const rawNum = e.target.value.replace(/\D/g, '');
-                                      handleCellChange(row.id, col.fieldKey, col.isCustom, rawNum);
-                                    }}
-                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full text-right transition-colors font-mono font-bold text-slate-800"
+                                    placeholder="Ketik..."
+                                    value={val}
+                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors text-slate-800 font-medium"
                                   />
                                 </td>
                               );
-                            }
+                            })}
+                            <td className="p-3 text-right whitespace-nowrap w-16">
+                              <button
+                                onClick={() => handleDeleteRow(row.id)}
+                                className="p-1.5 hover:bg-rose-50 border border-rose-200 rounded-lg text-rose-600 transition-colors cursor-pointer inline-flex items-center gap-1 font-bold text-[10px]"
+                                title="Hapus Baris"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Hapus</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        childRows.map((c, idx) => (
+                          <tr key={c.id} className="hover:bg-slate-50/50 bg-white transition-colors">
+                            <td className="p-3 text-center text-slate-400 font-mono-data font-bold w-12">
+                              {idx + 1}
+                            </td>
+                            <td className="p-3 font-semibold text-slate-500 bg-slate-50/40 max-w-[200px] truncate" title={c.masterTitle}>
+                              {c.masterTitle}
+                            </td>
+                            <td className="p-1 min-w-[150px]">
+                              <input
+                                type="text"
+                                value={c.namaSertifikat || ''}
+                                onChange={(e) => handleChildCellChange(c.id, 'namaSertifikat', e.target.value)}
+                                placeholder="Ketik..."
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                              />
+                            </td>
+                            <td className="p-1 min-w-[150px]">
+                              <input
+                                type="text"
+                                value={c.noSertifikat || ''}
+                                onChange={(e) => handleChildCellChange(c.id, 'noSertifikat', e.target.value)}
+                                placeholder="Ketik..."
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold text-slate-800"
+                              />
+                            </td>
+                            <td className="p-1 min-w-[150px]">
+                              <input
+                                type="text"
+                                value={c.instansi || ''}
+                                onChange={(e) => handleChildCellChange(c.id, 'instansi', e.target.value)}
+                                placeholder="Ketik..."
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                              />
+                            </td>
+                            <td className="p-1 min-w-[150px]">
+                              <input
+                                type="date"
+                                value={c.terbit ? c.terbit.substring(0, 10) : ''}
+                                onChange={(e) => handleChildCellChange(c.id, 'terbit', e.target.value)}
+                                onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold text-center"
+                              />
+                            </td>
+                            <td className="p-1 min-w-[150px]">
+                              <input
+                                type="date"
+                                value={c.expired ? c.expired.substring(0, 10) : ''}
+                                onChange={(e) => handleChildCellChange(c.id, 'expired', e.target.value)}
+                                onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold text-center text-rose-700"
+                              />
+                            </td>
+                            <td className="p-3 text-center min-w-[120px]">
+                              <select
+                                value={c.status || 'Aktif'}
+                                onChange={(e) => handleChildCellChange(c.id, 'status', e.target.value)}
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1 outline-none text-xs font-bold text-center w-full cursor-pointer transition-colors"
+                              >
+                                <option value="Aktif">Aktif</option>
+                                <option value="Expired">Expired</option>
+                                <option value="Proses">Proses</option>
+                                <option value="Afkir">Afkir</option>
+                                <option value="EXEMPT">EXEMPT</option>
+                              </select>
+                            </td>
+                            <td className="p-1 min-w-[200px]">
+                              <input
+                                type="text"
+                                value={c.keterangan || ''}
+                                onChange={(e) => handleChildCellChange(c.id, 'keterangan', e.target.value)}
+                                placeholder="Ketik..."
+                                className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-medium text-slate-600"
+                              />
+                            </td>
+                            <td className="p-3 text-right whitespace-nowrap w-16">
+                              <button
+                                onClick={() => handleDeleteCert(c.id)}
+                                className="p-1.5 hover:bg-rose-50 border border-rose-200 rounded-lg text-rose-600 transition-colors cursor-pointer inline-flex items-center gap-1 font-bold text-[10px]"
+                                title="Hapus Sertifikat"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                <span>Hapus</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
 
-                            return (
-                              <td key={col.fieldKey} className="p-1 min-w-[150px]">
-                                <input
-                                  type="text"
-                                  placeholder="Ketik..."
-                                  value={val}
-                                  onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
-                                  className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors text-slate-800 font-medium"
-                                />
-                              </td>
-                            );
-                          })}
-                          <td className="p-3 text-right whitespace-nowrap w-16">
-                            <button
-                              onClick={() => handleDeleteRow(row.id)}
-                              className="p-1.5 hover:bg-rose-50 border border-rose-200 rounded-lg text-rose-600 transition-colors cursor-pointer inline-flex items-center gap-1 font-bold text-[10px]"
-                              title="Hapus Baris"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Hapus</span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {rows.length === 0 && (
+                      {barisMode === 'master' && rows.length === 0 && (
                         <tr>
                           <td colSpan={columns.filter(c => c.isVisible).length + 2} className="p-12 text-center text-slate-400 italic">
                             Belum ada baris data.
+                          </td>
+                        </tr>
+                      )}
+
+                      {barisMode === 'child' && childRows.length === 0 && (
+                        <tr>
+                          <td colSpan={10} className="p-12 text-center text-slate-400 italic">
+                            Belum ada data sertifikat (child).
                           </td>
                         </tr>
                       )}
