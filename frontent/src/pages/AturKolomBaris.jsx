@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   Columns, Rows, Plus, Eye, EyeOff, GripVertical, Trash2, 
   Edit3, Save, ArrowLeft, Loader2, PlusCircle, Settings, 
-  HelpCircle, Calendar, Hash, Type
+  HelpCircle, Calendar, Hash, Type, CheckCircle, AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -26,6 +26,14 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
 
   // States for Rows
   const [rows, setRows] = useState([]);
+
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
 
   // Load Columns and Rows Data
   const loadData = async () => {
@@ -67,7 +75,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       setRows(parsedRows);
     } catch (err) {
       console.error('Failed to load columns & rows configs:', err);
-      alert('Gagal memuat konfigurasi kolom dan baris.');
+      showToast('Gagal memuat konfigurasi kolom dan baris.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -117,11 +125,11 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
         isVisible: c.isVisible
       }));
       await api.put(`/column-configs/${categoryKey}/reorder`, payload);
-      alert('Susunan dan visibilitas kolom berhasil disimpan!');
+      showToast('Susunan dan visibilitas kolom berhasil disimpan!', 'success');
       loadData();
     } catch (err) {
       console.error('Failed to save columns configuration:', err);
-      alert('Gagal menyimpan susunan kolom.');
+      showToast('Gagal menyimpan susunan kolom.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -141,7 +149,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
 
     // Check if key already exists
     if (columns.some(c => c.fieldKey === cleanKey)) {
-      alert('Nama kolom sudah digunakan.');
+      showToast('Nama kolom sudah digunakan.', 'error');
       return;
     }
 
@@ -155,10 +163,11 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       setIsAddColOpen(false);
       setNewColLabel('');
       setNewColType('text');
+      showToast('Kolom kustom baru berhasil ditambahkan!', 'success');
       loadData();
     } catch (err) {
       console.error('Failed to create new column:', err);
-      alert('Gagal menambahkan kolom kustom baru.');
+      showToast('Gagal menambahkan kolom kustom baru.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -172,7 +181,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       loadData();
     } catch (err) {
       console.error('Failed to delete column config:', err);
-      alert('Gagal menghapus kolom.');
+      showToast('Gagal menghapus kolom.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -225,11 +234,11 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       });
 
       await api.put('/master-items/bulk', payload);
-      alert('Semua perubahan data dan posisi baris berhasil disimpan!');
+      showToast('Semua perubahan data dan posisi baris berhasil disimpan!', 'success');
       loadData();
     } catch (err) {
       console.error('Failed to save spreadsheet changes:', err);
-      alert('Gagal menyimpan perubahan spreadsheet.');
+      showToast('Gagal menyimpan perubahan spreadsheet.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -293,7 +302,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       loadData();
     } catch (err) {
       console.error('Failed to delete master item:', err);
-      alert('Gagal menghapus baris data.');
+      showToast('Gagal menghapus baris data.', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -761,6 +770,12 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
         </div>
       )}
 
+      {toast.show && (
+        <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg border flex items-center gap-3 animate-in fade-in slide-in-from-top-5 duration-300 ${toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+          {toast.type === 'success' ? <CheckCircle className="w-5 h-5 text-emerald-600" /> : <AlertCircle className="w-5 h-5 text-red-600" /> }
+          <p className="text-sm font-semibold">{toast.message}</p>
+        </div>
+      )}
 
     </div>
   );
