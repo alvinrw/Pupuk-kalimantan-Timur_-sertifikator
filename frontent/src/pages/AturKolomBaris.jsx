@@ -500,13 +500,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                   </h3>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleAddNewSpreadsheetRow}
-                    className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                  >
-                    <PlusCircle className="w-3.5 h-3.5" />
-                    <span>Tambah Baris Baru</span>
-                  </button>
+
                   <button
                     onClick={handleSaveRowsSpreadsheet}
                     disabled={isSaving}
