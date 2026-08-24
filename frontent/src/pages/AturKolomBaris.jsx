@@ -23,11 +23,15 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
   const [isAddColOpen, setIsAddColOpen] = useState(false);
   const [newColLabel, setNewColLabel] = useState('');
   const [newColType, setNewColType] = useState('text'); // 'text' | 'nominal' | 'date'
+  const [draggedColIndex, setDraggedColIndex] = useState(null);
+  const [dragOverColIndex, setDragOverColIndex] = useState(null);
 
   // States for Rows
   const [rows, setRows] = useState([]);
   const [barisMode, setBarisMode] = useState('master'); // 'master' | 'child'
   const [modifiedCerts, setModifiedCerts] = useState({}); // id -> cert updates
+  const [draggedRowIndex, setDraggedRowIndex] = useState(null);
+  const [dragOverRowIndex, setDragOverRowIndex] = useState(null);
 
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const showToast = (message, type = 'success') => {
@@ -113,24 +117,33 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
   // ==========================================
   
   const handleColDragStart = (e, index) => {
-    e.dataTransfer.setData('colIndex', index);
+    setDraggedColIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleColDragOver = (e) => {
+  const handleColDragOver = (e, index) => {
     e.preventDefault();
+    if (dragOverColIndex !== index) {
+      setDragOverColIndex(index);
+    }
   };
 
   const handleColDrop = (e, targetIndex) => {
-    const sourceIndex = parseInt(e.dataTransfer.getData('colIndex'), 10);
-    if (sourceIndex === targetIndex) return;
+    e.preventDefault();
+    if (draggedColIndex === null || draggedColIndex === targetIndex) {
+      setDraggedColIndex(null);
+      setDragOverColIndex(null);
+      return;
+    }
 
     const reordered = [...columns];
-    const [moved] = reordered.splice(sourceIndex, 1);
+    const [moved] = reordered.splice(draggedColIndex, 1);
     reordered.splice(targetIndex, 0, moved);
 
-    // Re-index position
     const updated = reordered.map((col, idx) => ({ ...col, position: idx }));
     setColumns(updated);
+    setDraggedColIndex(null);
+    setDragOverColIndex(null);
   };
 
   const toggleColVisibility = (idx) => {
@@ -221,24 +234,33 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
   // ==========================================
 
   const handleRowDragStart = (e, index) => {
-    e.dataTransfer.setData('rowIndex', index);
+    setDraggedRowIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleRowDragOver = (e) => {
+  const handleRowDragOver = (e, index) => {
     e.preventDefault();
+    if (dragOverRowIndex !== index) {
+      setDragOverRowIndex(index);
+    }
   };
 
   const handleRowDrop = (e, targetIndex) => {
-    const sourceIndex = parseInt(e.dataTransfer.getData('rowIndex'), 10);
-    if (sourceIndex === targetIndex) return;
+    e.preventDefault();
+    if (draggedRowIndex === null || draggedRowIndex === targetIndex) {
+      setDraggedRowIndex(null);
+      setDragOverRowIndex(null);
+      return;
+    }
 
     const reordered = [...rows];
-    const [moved] = reordered.splice(sourceIndex, 1);
+    const [moved] = reordered.splice(draggedRowIndex, 1);
     reordered.splice(targetIndex, 0, moved);
 
-    // Re-index position
     const updated = reordered.map((row, idx) => ({ ...row, position: idx }));
     setRows(updated);
+    setDraggedRowIndex(null);
+    setDragOverRowIndex(null);
   };
 
   const handleSaveRowsSpreadsheet = async () => {
@@ -573,11 +595,16 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                         key={col.fieldKey}
                         draggable
                         onDragStart={(e) => handleColDragStart(e, idx)}
-                        onDragOver={handleColDragOver}
+                        onDragOver={(e) => handleColDragOver(e, idx)}
+                        onDragLeave={() => setDragOverColIndex(null)}
                         onDrop={(e) => handleColDrop(e, idx)}
-                        className="flex items-center justify-between p-3 bg-white hover:bg-slate-50 transition-colors group cursor-grab active:cursor-grabbing"
+                        className={`flex items-center justify-between p-3 transition-all group cursor-grab active:cursor-grabbing border-l-4 ${
+                          dragOverColIndex === idx
+                            ? 'border-l-[#005ea4] bg-blue-50/40'
+                            : 'border-l-transparent bg-white hover:bg-slate-50'
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 pointer-events-none">
                           <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
                           <div>
                             <span className="font-bold text-xs text-slate-800 block">{col.label}</span>
@@ -727,11 +754,16 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                             key={row.id}
                             draggable
                             onDragStart={(e) => handleRowDragStart(e, idx)}
-                            onDragOver={handleRowDragOver}
+                            onDragOver={(e) => handleRowDragOver(e, idx)}
+                            onDragLeave={() => setDragOverRowIndex(null)}
                             onDrop={(e) => handleRowDrop(e, idx)}
-                            className="hover:bg-slate-50/50 bg-white transition-colors group"
+                            className={`transition-all group border-l-4 ${
+                              dragOverRowIndex === idx
+                                ? 'border-l-[#005ea4] bg-blue-50/40'
+                                : 'border-l-transparent bg-white hover:bg-slate-50'
+                            }`}
                           >
-                            <td className="p-3 text-center cursor-grab active:cursor-grabbing w-10">
+                            <td className="p-3 text-center cursor-grab active:cursor-grabbing w-10 pointer-events-none">
                               <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-slate-600 mx-auto transition-colors" />
                             </td>
                             {columns.filter(c => c.isVisible).map(col => {
