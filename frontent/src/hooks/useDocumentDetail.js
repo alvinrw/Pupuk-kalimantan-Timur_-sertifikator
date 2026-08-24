@@ -81,6 +81,9 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
   const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
   const parsedKet = parseKeterangan(initialKetRaw);
+  const initialEntities = parsedKet.additionalEntities || [];
+  const initialJenisPeralatanEnt = initialEntities.find(e => e.key === 'JENIS PERALATAN PABRIK');
+  const initialJenisPeralatan = initialJenisPeralatanEnt ? initialJenisPeralatanEnt.value : (parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset');
 
   const [columnConfigs, setColumnConfigs] = useState([]);
   
@@ -99,7 +102,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
-    jenisPeralatan: parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset',
+    jenisPeralatan: initialJenisPeralatan,
     tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
@@ -142,9 +145,12 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
       finalEntities = [...mergedEntities, ...otherEntities];
     }
 
+    const targetJenisPeralatanEnt = parsedEntities.find(e => e.key === 'JENIS PERALATAN PABRIK');
+    const targetJenisPeralatan = targetJenisPeralatanEnt ? targetJenisPeralatanEnt.value : (parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset');
+
     setFormData({
       merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
-      jenisPeralatan: parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset',
+      jenisPeralatan: targetJenisPeralatan,
       tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
       nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
       kapasitas: item.kapasitas || '',
@@ -180,10 +186,17 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
       const payloadData = { ...formData };
       if (formData.additionalEntities) {
+        const finalEntities = [...formData.additionalEntities];
+        const jenisIdx = finalEntities.findIndex(e => e.key === 'JENIS PERALATAN PABRIK');
+        if (jenisIdx > -1) {
+          finalEntities[jenisIdx] = { ...finalEntities[jenisIdx], value: formData.jenisPeralatan };
+        } else {
+          finalEntities.push({ key: 'JENIS PERALATAN PABRIK', value: formData.jenisPeralatan, type: 'text' });
+        }
         payloadData.keterangan = JSON.stringify({
           ...origMeta,
           keteranganAsli: formData.keterangan || '',
-          additionalEntities: formData.additionalEntities,
+          additionalEntities: finalEntities,
           penanggungJawab: formData.user || origMeta.penanggungJawab || 'Umum',
           tipe: formData.tipe || origMeta.tipe || '',
           nomorSeri: formData.nomorSeri || origMeta.nomorSeri || ''
