@@ -60,6 +60,32 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     });
   };
 
+  const convertToYYYYMMDD = (dateStr) => {
+    if (!dateStr || dateStr === '-') return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    } catch (_) {}
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      let part0 = parts[0].padStart(2, '0');
+      let part1 = parts[1].padStart(2, '0');
+      let year = parts[2];
+      if (year.length === 2) year = '20' + year;
+      if (parseInt(part0, 10) > 12) {
+        return `${year}-${part1}-${part0}`;
+      }
+      return `${year}-${part0}-${part1}`;
+    }
+    return '';
+  };
+
   // Load Columns and Rows Data
   const loadData = async () => {
     setIsLoading(true);
@@ -844,7 +870,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                                   <td key={col.fieldKey} className="p-1 min-w-[150px]">
                                     <input
                                       type="date"
-                                      value={val}
+                                      value={convertToYYYYMMDD(val)}
                                       onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
                                       onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
                                       className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold"
@@ -933,7 +959,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                             <td className="p-1 min-w-[150px]">
                               <input
                                 type="date"
-                                value={c.terbit ? c.terbit.substring(0, 10) : ''}
+                                value={convertToYYYYMMDD(c.terbit)}
                                 onChange={(e) => handleChildCellChange(c.id, 'terbit', e.target.value)}
                                 onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
                                 className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold text-center"
@@ -942,7 +968,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                             <td className="p-1 min-w-[150px]">
                               <input
                                 type="date"
-                                value={c.expired ? c.expired.substring(0, 10) : ''}
+                                value={convertToYYYYMMDD(c.expired)}
                                 onChange={(e) => handleChildCellChange(c.id, 'expired', e.target.value)}
                                 onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
                                 className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold text-center text-rose-700"
