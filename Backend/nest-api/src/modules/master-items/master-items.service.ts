@@ -155,6 +155,46 @@ export class MasterItemsService implements OnModuleInit {
     return { success: true };
   }
 
+  async bulkUpdate(items: any[]) {
+    await this.prisma.$transaction(
+      items.map(item => {
+        const isTemp = String(item.id).startsWith('temp-');
+        if (isTemp) {
+          return this.prisma.masterItem.create({
+            data: {
+              title: item.title,
+              code: item.code,
+              unitLocation: item.unitLocation,
+              status: item.status,
+              keterangan: item.keterangan,
+              position: item.position || 0,
+              categoryKey: item.categoryKey,
+            },
+          });
+        }
+        return this.prisma.masterItem.update({
+          where: { id: item.id },
+          data: {
+            title: item.title,
+            code: item.code,
+            unitLocation: item.unitLocation,
+            status: item.status,
+            keterangan: item.keterangan,
+            position: item.position,
+            isManuallyEdited: true,
+            lastEditSource: 'MANUAL',
+          },
+        });
+      })
+    );
+    
+    const categories = Array.from(new Set(items.map(item => item.categoryKey).filter(Boolean))) as string[];
+    for (const catKey of categories) {
+      await recalculateStagingStatuses(this.prisma, catKey);
+    }
+    return { success: true };
+  }
+
   async remove(id: string) {
     const item = await this.findOne(id); // Check if exists
     const deleted = await this.prisma.masterItem.delete({

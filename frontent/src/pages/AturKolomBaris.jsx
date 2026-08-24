@@ -20,16 +20,6 @@ export default function AturKolomBaris({ onBack }) {
 
   // States for Rows
   const [rows, setRows] = useState([]);
-  const [isAddRowOpen, setIsAddRowOpen] = useState(false);
-  const [editingRow, setEditingRow] = useState(null);
-  const [rowFormData, setRowFormData] = useState({
-    title: '',
-    code: '',
-    unitLocation: '',
-    status: 'Aktif',
-    keterangan: '',
-    additionalEntities: []
-  });
 
   // Load Columns and Rows Data
   const loadData = async () => {
@@ -41,7 +31,28 @@ export default function AturKolomBaris({ onBack }) {
 
       // 2. Load Master Items (Rows)
       const rowRes = await api.get(`/master-items?categoryKey=${categoryKey}`);
-      setRows(rowRes.data || []);
+      const rawRows = rowRes.data || [];
+      const parsedRows = rawRows.map(row => {
+        let keteranganAsli = '';
+        let additionalEntities = [];
+        try {
+          if (row.keterangan && row.keterangan.startsWith('{')) {
+            const parsed = JSON.parse(row.keterangan);
+            keteranganAsli = parsed.keteranganAsli || '';
+            additionalEntities = parsed.additionalEntities || [];
+          } else {
+            keteranganAsli = row.keterangan || '';
+          }
+        } catch (_) {
+          keteranganAsli = row.keterangan || '';
+        }
+        return {
+          ...row,
+          keteranganAsli,
+          additionalEntities
+        };
+      });
+      setRows(parsedRows);
     } catch (err) {
       console.error('Failed to load columns & rows configs:', err);
       alert('Gagal memuat konfigurasi kolom dan baris.');
@@ -180,107 +191,83 @@ export default function AturKolomBaris({ onBack }) {
     setRows(updated);
   };
 
-  const handleSaveRowsOrder = async () => {
+  const handleSaveRowsSpreadsheet = async () => {
     setIsSaving(true);
     try {
-      const payload = rows.map(r => ({
-        id: r.id,
-        position: r.position
-      }));
-      await api.put('/master-items/reorder', payload);
-      alert('Urutan baris data berhasil disimpan!');
-      loadData();
-    } catch (err) {
-      console.error('Failed to save rows order:', err);
-      alert('Gagal menyimpan urutan baris.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleOpenAddRow = () => {
-    setRowFormData({
-      title: '',
-      code: '',
-      unitLocation: '',
-      status: 'Aktif',
-      keterangan: '',
-      additionalEntities: columns
-        .filter(c => c.isCustom)
-        .map(c => ({ key: c.label, value: '', type: c.type }))
-    });
-    setIsAddRowOpen(true);
-  };
-
-  const handleOpenEditRow = (row) => {
-    setEditingRow(row);
-    
-    // Parse keterangan JSON
-    let parsedText = row.keterangan || '';
-    let parsedEntities = [];
-    try {
-      if (row.keterangan && row.keterangan.startsWith('{')) {
-        const parsed = JSON.parse(row.keterangan);
-        parsedText = parsed.keteranganAsli || '';
-        parsedEntities = parsed.additionalEntities || [];
-      }
-    } catch (_) {}
-
-    // Ensure all currently active custom columns exist in the editing entity list
-    const finalEntities = columns
-      .filter(c => c.isCustom)
-      .map(c => {
-        const existing = parsedEntities.find(e => e.key === c.label);
+      const payload = rows.map(r => {
+        const payloadKeterangan = JSON.stringify({
+          keteranganAsli: r.keteranganAsli || '',
+          additionalEntities: r.additionalEntities || []
+        });
         return {
-          key: c.label,
-          value: existing ? existing.value : '',
-          type: c.type
+          id: r.id,
+          title: r.title,
+          code: r.code || '',
+          unitLocation: r.unitLocation || '',
+          status: r.status || 'Aktif',
+          keterangan: payloadKeterangan,
+          position: r.position,
+          categoryKey
         };
       });
 
-    setRowFormData({
-      title: row.title || '',
-      code: row.code || '',
-      unitLocation: row.unitLocation || '',
-      status: row.status || 'Aktif',
-      keterangan: parsedText,
-      additionalEntities: finalEntities
-    });
-  };
-
-  const handleSaveRow = async (e) => {
-    e.preventDefault();
-    try {
-      setIsSaving(true);
-      const payloadKeterangan = JSON.stringify({
-        keteranganAsli: rowFormData.keterangan || '',
-        additionalEntities: rowFormData.additionalEntities
-      });
-
-      const payload = {
-        title: rowFormData.title,
-        code: rowFormData.code,
-        unitLocation: rowFormData.unitLocation,
-        status: rowFormData.status,
-        keterangan: payloadKeterangan,
-        categoryKey
-      };
-
-      if (editingRow) {
-        await api.put(`/master-items/${editingRow.id}`, payload);
-      } else {
-        await api.post('/master-items', payload);
-      }
-
-      setEditingRow(null);
-      setIsAddRowOpen(false);
+      await api.put('/master-items/bulk', payload);
+      alert('Semua perubahan data dan posisi baris berhasil disimpan!');
       loadData();
     } catch (err) {
-      console.error('Failed to save master item row:', err);
-      alert('Gagal menyimpan data.');
+      console.error('Failed to save spreadsheet changes:', err);
+      alert('Gagal menyimpan perubahan spreadsheet.');
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleCellChange = (rowId, fieldKey, isCustom, value) => {
+    setRows(prevRows => prevRows.map(row => {
+      if (row.id !== rowId) return row;
+
+      const updated = { ...row };
+
+      if (!isCustom) {
+        if (fieldKey === 'title') updated.title = value;
+        else if (fieldKey === 'code') updated.code = value;
+        else if (fieldKey === 'unitLocation') updated.unitLocation = value;
+        else if (fieldKey === 'status') updated.status = value;
+        else if (fieldKey === 'keterangan') updated.keteranganAsli = value;
+      } else {
+        const col = columns.find(c => c.fieldKey === fieldKey);
+        const colLabel = col ? col.label : fieldKey;
+
+        const entities = [...(row.additionalEntities || [])];
+        const idx = entities.findIndex(e => e.key === colLabel);
+        if (idx > -1) {
+          entities[idx] = { ...entities[idx], value };
+        } else {
+          entities.push({ key: colLabel, value, type: col?.type || 'text' });
+        }
+        updated.additionalEntities = entities;
+      }
+
+      return updated;
+    }));
+  };
+
+  const handleAddNewSpreadsheetRow = () => {
+    const newId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const newRow = {
+      id: newId,
+      title: 'Nama Alat Baru',
+      code: '',
+      unitLocation: '',
+      status: 'Aktif',
+      keteranganAsli: '',
+      additionalEntities: columns
+        .filter(c => c.isCustom)
+        .map(c => ({ key: c.label, value: '', type: c.type })),
+      position: rows.length,
+      categoryKey
+    };
+    setRows([...rows, newRow]);
   };
 
   const handleDeleteRow = async (id) => {
@@ -489,40 +476,40 @@ export default function AturKolomBaris({ onBack }) {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={handleOpenAddRow}
+                    onClick={handleAddNewSpreadsheetRow}
                     className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                   >
                     <PlusCircle className="w-3.5 h-3.5" />
                     <span>Tambah Baris Baru</span>
                   </button>
                   <button
-                    onClick={handleSaveRowsOrder}
+                    onClick={handleSaveRowsSpreadsheet}
                     disabled={isSaving}
                     className="px-3 py-1.5 bg-[#00a368] hover:bg-[#008f5a] disabled:opacity-50 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                   >
                     <Save className="w-3.5 h-3.5" />
-                    <span>{isSaving ? 'Menyimpan...' : 'Simpan Posisi Baris'}</span>
+                    <span>{isSaving ? 'Menyimpan...' : 'Simpan Semua Perubahan'}</span>
                   </button>
                 </div>
               </div>
 
               <p className="text-[11px] text-slate-500 leading-relaxed mb-4">
-                * Gunakan handle <GripVertical className="inline w-3.5 h-3.5 text-slate-400" /> di sebelah kiri untuk menyeret baris ke atas/bawah guna mengatur urutan prioritas atau visual data. Urutan ini akan disimpan di database dan diterapkan secara permanen.
+                * Gunakan handle <GripVertical className="inline w-3.5 h-3.5 text-slate-400" /> di sebelah kiri untuk menyeret baris ke atas/bawah guna mengatur urutan prioritas atau visual data. Anda juga dapat langsung mengklik dan mengedit isi sel di bawah ini layaknya tabel Excel/Spreadsheet. Urutan dan perubahan nilai akan disimpan permanen ketika tombol hijau di atas diklik.
               </p>
 
-              {/* Data Table with Draggable Rows */}
+              {/* Data Table with Draggable Rows & Inline Inputs */}
               <div className="border border-slate-200 rounded-xl overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
                       <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-mono-data uppercase tracking-wider font-bold">
                         <th className="p-3 w-10 text-center"></th>
-                        <th className="p-3 w-10 text-center">Pos</th>
-                        <th className="p-3">Nama Alat / Judul</th>
-                        <th className="p-3">Tag / Code</th>
-                        <th className="p-3">Lokasi</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-right">Aksi</th>
+                        {columns.filter(c => c.isVisible).map(col => (
+                          <th key={col.fieldKey} className={`p-3 ${col.fieldKey === 'status' || col.fieldKey === 'no' ? 'text-center' : ''}`}>
+                            {col.label}
+                          </th>
+                        ))}
+                        <th className="p-3 text-right w-16">Aksi</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -535,42 +522,114 @@ export default function AturKolomBaris({ onBack }) {
                           onDrop={(e) => handleRowDrop(e, idx)}
                           className="hover:bg-slate-50/50 bg-white transition-colors group"
                         >
-                          <td className="p-3 text-center cursor-grab active:cursor-grabbing">
+                          <td className="p-3 text-center cursor-grab active:cursor-grabbing w-10">
                             <GripVertical className="w-4 h-4 text-slate-400 group-hover:text-slate-600 mx-auto transition-colors" />
                           </td>
-                          <td className="p-3 text-center font-mono-data text-slate-400 font-bold">
-                            {idx + 1}
-                          </td>
-                          <td className="p-3 font-bold text-slate-800">
-                            {row.title || '-'}
-                          </td>
-                          <td className="p-3 font-mono-data text-slate-600 font-bold">
-                            {row.code || '-'}
-                          </td>
-                          <td className="p-3 text-slate-600">
-                            {row.unitLocation || '-'}
-                          </td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              row.status === 'Aktif' ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' :
-                              row.status === 'Expired' ? 'bg-rose-50 border border-rose-200 text-rose-700' :
-                              'bg-slate-50 border border-slate-200 text-slate-600'
-                            }`}>
-                              {row.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-right space-x-2 whitespace-nowrap">
-                            <button
-                              onClick={() => handleOpenEditRow(row)}
-                              className="p-1 hover:bg-slate-100 border border-slate-200 rounded text-slate-700 transition-colors cursor-pointer inline-flex items-center gap-1 font-bold text-[10px]"
-                              title="Edit Data"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                              <span>Edit</span>
-                            </button>
+                          {columns.filter(c => c.isVisible).map(col => {
+                            if (col.fieldKey === 'no') {
+                              return (
+                                <td key={col.fieldKey} className="p-3 text-center font-mono-data text-slate-400 font-bold w-12">
+                                  {idx + 1}
+                                </td>
+                              );
+                            }
+
+                            if (col.fieldKey === 'status') {
+                              return (
+                                <td key={col.fieldKey} className="p-3 text-center w-36">
+                                  <select
+                                    value={row.status || 'Aktif'}
+                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1 outline-none text-xs font-bold text-center w-full cursor-pointer transition-colors"
+                                  >
+                                    <option value="Aktif">Aktif</option>
+                                    <option value="Expired">Expired</option>
+                                    <option value="Perpanjang">Perpanjang</option>
+                                    <option value="Afkir">Afkir</option>
+                                    <option value="Spare">Spare</option>
+                                    <option value="Rusak">Rusak</option>
+                                  </select>
+                                </td>
+                              );
+                            }
+
+                            if (col.fieldKey === 'certCount') {
+                              return (
+                                <td key={col.fieldKey} className="p-3 text-center text-slate-600 font-mono-data font-bold w-36">
+                                  {row.certificates?.length || 0}
+                                </td>
+                              );
+                            }
+
+                            if (!col.isCustom) {
+                              const val = col.fieldKey === 'title' ? (row.title || '') :
+                                          col.fieldKey === 'code' ? (row.code || '') :
+                                          col.fieldKey === 'unitLocation' ? (row.unitLocation || '') :
+                                          (row.keteranganAsli || '');
+                              return (
+                                <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                  <input
+                                    type="text"
+                                    value={val}
+                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                    placeholder="Ketik..."
+                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                                  />
+                                </td>
+                              );
+                            }
+
+                            // Custom Column Cells
+                            const ent = row.additionalEntities?.find(e => e.key === col.label);
+                            const val = ent ? ent.value : '';
+
+                            if (col.type === 'date') {
+                              return (
+                                <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                  <input
+                                    type="date"
+                                    value={val}
+                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                    onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
+                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-mono font-bold"
+                                  />
+                                </td>
+                              );
+                            }
+
+                            if (col.type === 'nominal') {
+                              return (
+                                <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                  <input
+                                    type="text"
+                                    placeholder="Angka saja..."
+                                    value={val ? Number(val.replace(/\D/g, '')).toLocaleString('id-ID') : ''}
+                                    onChange={(e) => {
+                                      const rawNum = e.target.value.replace(/\D/g, '');
+                                      handleCellChange(row.id, col.fieldKey, col.isCustom, rawNum);
+                                    }}
+                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full text-right transition-colors font-mono font-bold text-slate-800"
+                                  />
+                                </td>
+                              );
+                            }
+
+                            return (
+                              <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                <input
+                                  type="text"
+                                  placeholder="Ketik..."
+                                  value={val}
+                                  onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                  className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors text-slate-800 font-medium"
+                                />
+                              </td>
+                            );
+                          })}
+                          <td className="p-3 text-right whitespace-nowrap w-16">
                             <button
                               onClick={() => handleDeleteRow(row.id)}
-                              className="p-1 hover:bg-rose-50 border border-rose-200 rounded text-rose-600 transition-colors cursor-pointer inline-flex items-center gap-1 font-bold text-[10px]"
+                              className="p-1.5 hover:bg-rose-50 border border-rose-200 rounded-lg text-rose-600 transition-colors cursor-pointer inline-flex items-center gap-1 font-bold text-[10px]"
                               title="Hapus Baris"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -581,7 +640,7 @@ export default function AturKolomBaris({ onBack }) {
                       ))}
                       {rows.length === 0 && (
                         <tr>
-                          <td colSpan={7} className="p-12 text-center text-slate-400 italic">
+                          <td colSpan={columns.filter(c => c.isVisible).length + 2} className="p-12 text-center text-slate-400 italic">
                             Belum ada baris data.
                           </td>
                         </tr>
@@ -668,165 +727,7 @@ export default function AturKolomBaris({ onBack }) {
         </div>
       )}
 
-      {/* =======================================================
-          MODAL 2: INPUT / EDIT BARIS DATA (MasterItem)
-          ======================================================= */}
-      {(isAddRowOpen || editingRow) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden my-8">
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <h4 className="font-bold text-sm">
-                {editingRow ? 'Edit Baris Data Peralatan' : 'Tambah Baris Data Peralatan Baru'}
-              </h4>
-              <button 
-                onClick={() => { setIsAddRowOpen(false); setEditingRow(null); }} 
-                className="text-slate-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <form onSubmit={handleSaveRow} className="p-6 space-y-4 text-xs font-mono-data max-h-[70vh] overflow-y-auto">
-              
-              {/* Merek / Nama Item */}
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Nama Peralatan / Merek <span className="text-rose-500">*</span></label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: Kompresor Nitrogen 10"
-                  value={rowFormData.title}
-                  onChange={(e) => setRowFormData({ ...rowFormData, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-bold"
-                />
-              </div>
 
-              {/* Tag / Code */}
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Nomor Seri / Tag Alat <span className="text-rose-500">*</span></label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Contoh: K3-KP010"
-                  value={rowFormData.code}
-                  onChange={(e) => setRowFormData({ ...rowFormData, code: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-mono"
-                />
-              </div>
-
-              {/* Lokasi */}
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Lokasi / Unit Pabrik</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Pabrik 2B"
-                  value={rowFormData.unitLocation}
-                  onChange={(e) => setRowFormData({ ...rowFormData, unitLocation: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-bold"
-                />
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Status Fisik Operasional</label>
-                <select
-                  value={rowFormData.status}
-                  onChange={(e) => setRowFormData({ ...rowFormData, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-bold bg-white"
-                >
-                  <option value="Aktif">Aktif</option>
-                  <option value="Spare">Spare (Cadangan)</option>
-                  <option value="Rusak">Rusak (Out of Service)</option>
-                </select>
-              </div>
-
-              {/* Keterangan & Catatan */}
-              <div>
-                <label className="font-bold text-slate-800 block mb-1">Catatan Asli / Keterangan</label>
-                <textarea
-                  rows={2}
-                  placeholder="Tulis deskripsi atau catatan mengenai peralatan..."
-                  value={rowFormData.keterangan}
-                  onChange={(e) => setRowFormData({ ...rowFormData, keterangan: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs"
-                />
-              </div>
-
-              {/* Dinamik Custom Fields dari Konfigurasi Kolom */}
-              {rowFormData.additionalEntities.length > 0 && (
-                <div className="pt-3 border-t border-slate-100 space-y-3">
-                  <h5 className="font-bold text-[10px] text-slate-400 uppercase tracking-wider">Entitas Kolom Kustom</h5>
-                  <div className="grid grid-cols-1 gap-3">
-                    {rowFormData.additionalEntities.map((ent, idx) => {
-                      const colType = ent.type || 'text';
-                      return (
-                        <div key={ent.key}>
-                          <label className="font-bold text-slate-800 block mb-1">
-                            {ent.key} <span className="text-[10px] text-slate-400 font-normal">({colType})</span>
-                          </label>
-                          {colType === 'date' ? (
-                            <input
-                              type="date"
-                              value={ent.value}
-                              onChange={(e) => {
-                                const updated = [...rowFormData.additionalEntities];
-                                updated[idx].value = e.target.value;
-                                setRowFormData({ ...rowFormData, additionalEntities: updated });
-                              }}
-                              onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-mono"
-                            />
-                          ) : colType === 'nominal' ? (
-                            <input
-                              type="number"
-                              placeholder="Nilai angka saja..."
-                              value={ent.value}
-                              onChange={(e) => {
-                                const updated = [...rowFormData.additionalEntities];
-                                updated[idx].value = e.target.value;
-                                setRowFormData({ ...rowFormData, additionalEntities: updated });
-                              }}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-mono"
-                            />
-                          ) : (
-                            <input
-                              type="text"
-                              placeholder="Masukkan nilai teks..."
-                              value={ent.value}
-                              onChange={(e) => {
-                                const updated = [...rowFormData.additionalEntities];
-                                updated[idx].value = e.target.value;
-                                setRowFormData({ ...rowFormData, additionalEntities: updated });
-                              }}
-                              className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-bold"
-                            />
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-4 border-t border-slate-200 flex justify-end gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => { setIsAddRowOpen(false); setEditingRow(null); }}
-                  className="px-4 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  {isSaving ? 'Menyimpan...' : 'Simpan Data'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

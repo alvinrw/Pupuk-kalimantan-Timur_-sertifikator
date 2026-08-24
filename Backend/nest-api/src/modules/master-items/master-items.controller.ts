@@ -74,6 +74,22 @@ export class MasterItemsController {
     return this.masterItemsService.reorder(body);
   }
 
+  @Roles('Super Admin', 'Admin')
+  @Put('bulk')
+  async bulkUpdate(@Body() body: any[], @Req() req: any) {
+    const result = await this.masterItemsService.bulkUpdate(body);
+    await this.prisma.activityLog.create({
+      data: {
+        userId: req.user.id,
+        action: 'UPDATE',
+        targetTable: 'master_items',
+        targetId: 'BULK',
+        details: JSON.stringify({ message: `Melakukan update massal data baris untuk ${body.length} item` }),
+      },
+    }).catch(() => {});
+    return result;
+  }
+
   @Roles('Super Admin', 'Admin', 'User')
   @Put(':id')
   async update(@Param('id') id: string, @Body() updateMasterItemDto: UpdateMasterItemDto, @Req() req: any) {
