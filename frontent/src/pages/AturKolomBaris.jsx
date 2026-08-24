@@ -44,11 +44,13 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       const parsedRows = nonStagingRows.map(row => {
         let keteranganAsli = '';
         let additionalEntities = [];
+        let rawMeta = {};
         try {
           if (row.keterangan && row.keterangan.startsWith('{')) {
             const parsed = JSON.parse(row.keterangan);
             keteranganAsli = parsed.keteranganAsli || '';
             additionalEntities = parsed.additionalEntities || [];
+            rawMeta = parsed;
           } else {
             keteranganAsli = row.keterangan || '';
           }
@@ -58,7 +60,8 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
         return {
           ...row,
           keteranganAsli,
-          additionalEntities
+          additionalEntities,
+          rawMeta
         };
       });
       setRows(parsedRows);
@@ -205,6 +208,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
     try {
       const payload = rows.map(r => {
         const payloadKeterangan = JSON.stringify({
+          ...(r.rawMeta || {}),
           keteranganAsli: r.keteranganAsli || '',
           additionalEntities: r.additionalEntities || []
         });
@@ -237,13 +241,9 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
 
       const updated = { ...row };
 
-      if (!isCustom) {
-        if (fieldKey === 'title') updated.title = value;
-        else if (fieldKey === 'code') updated.code = value;
-        else if (fieldKey === 'unitLocation') updated.unitLocation = value;
-        else if (fieldKey === 'status') updated.status = value;
-        else if (fieldKey === 'keterangan') updated.keteranganAsli = value;
-      } else {
+      if (fieldKey === 'user') {
+        updated.rawMeta = { ...updated.rawMeta, penanggungJawab: value };
+      } else if (fieldKey === 'jenisPeralatan' || isCustom) {
         const col = columns.find(c => c.fieldKey === fieldKey);
         const colLabel = col ? col.label : fieldKey;
 
@@ -255,6 +255,12 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
           entities.push({ key: colLabel, value, type: col?.type || 'text' });
         }
         updated.additionalEntities = entities;
+      } else {
+        if (fieldKey === 'title') updated.title = value;
+        else if (fieldKey === 'code') updated.code = value;
+        else if (fieldKey === 'unitLocation') updated.unitLocation = value;
+        else if (fieldKey === 'status') updated.status = value;
+        else if (fieldKey === 'keterangan') updated.keteranganAsli = value;
       }
 
       return updated;
@@ -271,8 +277,8 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       status: 'Aktif',
       keteranganAsli: '',
       additionalEntities: columns
-        .filter(c => c.isCustom)
-        .map(c => ({ key: c.label, value: '', type: c.type })),
+        .filter(c => c.isCustom || c.fieldKey === 'jenisPeralatan')
+        .map(c => ({ key: c.label, value: '', type: c.type || 'text' })),
       position: rows.length,
       categoryKey
     };
@@ -580,27 +586,42 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                               );
                             }
 
-                            if (!col.isCustom) {
-                              const val = col.fieldKey === 'title' ? (row.title || '') :
-                                          col.fieldKey === 'code' ? (row.code || '') :
-                                          col.fieldKey === 'unitLocation' ? (row.unitLocation || '') :
-                                          (row.keteranganAsli || '');
-                              return (
-                                <td key={col.fieldKey} className="p-1 min-w-[150px]">
-                                  <input
-                                    type="text"
-                                    value={val}
-                                    onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
-                                    placeholder="Ketik..."
-                                    className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
-                                  />
-                                </td>
-                              );
-                            }
+                            if (col.fieldKey === 'user') {
+                               const val = row.rawMeta?.penanggungJawab || '';
+                               return (
+                                 <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                   <input
+                                     type="text"
+                                     value={val}
+                                     onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                     placeholder="Ketik..."
+                                     className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                                   />
+                                 </td>
+                               );
+                             }
 
-                            // Custom Column Cells
-                            const ent = row.additionalEntities?.find(e => e.key === col.label);
-                            const val = ent ? ent.value : '';
+                             if (!col.isCustom && col.fieldKey !== 'jenisPeralatan') {
+                               const val = col.fieldKey === 'title' ? (row.title || '') :
+                                           col.fieldKey === 'code' ? (row.code || '') :
+                                           col.fieldKey === 'unitLocation' ? (row.unitLocation || '') :
+                                           (row.keteranganAsli || '');
+                               return (
+                                 <td key={col.fieldKey} className="p-1 min-w-[150px]">
+                                   <input
+                                     type="text"
+                                     value={val}
+                                     onChange={(e) => handleCellChange(row.id, col.fieldKey, col.isCustom, e.target.value)}
+                                     placeholder="Ketik..."
+                                     className="bg-transparent hover:bg-slate-50 focus:bg-white border border-transparent hover:border-slate-200 focus:border-blue-500 rounded px-2 py-1.5 outline-none text-xs w-full transition-colors font-semibold"
+                                   />
+                                 </td>
+                               );
+                             }
+
+                             // Custom Column Cells (or jenisPeralatan which is stored in additionalEntities)
+                             const ent = row.additionalEntities?.find(e => e.key === col.label);
+                             const val = ent ? ent.value : '';
 
                             if (col.type === 'date') {
                               return (
