@@ -621,7 +621,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
 
                              // Custom Column Cells (or jenisPeralatan which is stored in additionalEntities)
                              const ent = row.additionalEntities?.find(e => e.key === col.label);
-                             const val = ent ? ent.value : '';
+                             const val = ent ? ent.value : (col.fieldKey === 'jenisPeralatan' ? (row.title || '') : '');
 
                             if (col.type === 'date') {
                               return (
