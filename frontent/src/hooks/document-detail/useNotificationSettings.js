@@ -69,10 +69,9 @@ export function useNotificationSettings({ item, targetCert, onRefreshRequired })
           triggerDate: nextType === 'DATE' ? nextDate : null,
           certificateId: targetCert?.id || null
         });
-        // JANGAN panggil onRefreshRequired di sini!
-        // Ini akan trigger loadData() → setDocuments() → item berubah
-        // → useEffect di useLinkedCertificates berjalan → linkedCerts di-reset
-        // → tab aktif berpindah ke kartu pertama
+        if (onRefreshRequired) {
+          onRefreshRequired();
+        }
       }
     } catch (err) {
       console.error('Failed to save reminder setting:', err);
