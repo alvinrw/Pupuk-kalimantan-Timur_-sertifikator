@@ -221,6 +221,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
   const [allColumns, setAllColumns] = useState([]);
   const [visibleColumnKeys, setVisibleColumnKeys] = useState([]);
+  const [childColumns, setChildColumns] = useState([]);
 
   const isProyek = categoryName?.toLowerCase().includes('proyek');
   const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
