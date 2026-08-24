@@ -159,8 +159,21 @@ export class ColumnConfigsService {
 
     return result;
   }
-
   private getDefaultConfigs(categoryKey: string) {
+    if (categoryKey.endsWith('-child')) {
+      return [
+        { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'masterTitle', label: 'ITEM INDUK', type: 'text', position: 1, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'namaSertifikat', label: 'NAMA SERTIFIKAT', type: 'text', position: 2, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'noSertifikat', label: 'NOMOR SERTIFIKAT', type: 'text', position: 3, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'instansi', label: 'INSTANSI PENERBIT', type: 'text', position: 4, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'terbit', label: 'TANGGAL TERBIT', type: 'date', position: 5, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'expired', label: 'TANGGAL EXPIRED', type: 'date', position: 6, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'status', label: 'STATUS', type: 'text', position: 7, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'keterangan', label: 'KETERANGAN / CATATAN', type: 'text', position: 8, isVisible: true, isCustom: false },
+      ];
+    }
+
     if (categoryKey === 'peralatan-pabrik') {
       return [
         { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },

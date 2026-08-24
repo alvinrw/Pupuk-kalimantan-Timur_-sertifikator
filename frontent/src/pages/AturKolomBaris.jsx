@@ -68,7 +68,8 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
       setColumns(filteredCols);
 
       // 2. Load Master Items (Rows)
-      const rowRes = await api.get(`/master-items?categoryKey=${categoryKey}`);
+      const baseCategoryKey = categoryKey.replace('-child', '');
+      const rowRes = await api.get(`/master-items?categoryKey=${baseCategoryKey}`);
       const rawRows = rowRes.data || [];
       const nonStagingRows = rawRows.filter(row => row.documentStatus !== 'PENDING_DOC');
       const parsedRows = nonStagingRows.map(row => {
@@ -464,6 +465,37 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
         </div>
       </div>
 
+      {propCategoryKey !== 'peralatan-pabrik' && (
+        <div className="flex gap-2 p-1 bg-slate-100 rounded-xl max-w-xs">
+          <button
+            onClick={() => {
+              setCategoryKey(propCategoryKey);
+              setBarisMode('master');
+            }}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              !categoryKey.endsWith('-child')
+                ? 'bg-white text-slate-800 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Data Master
+          </button>
+          <button
+            onClick={() => {
+              setCategoryKey(`${propCategoryKey}-child`);
+              setBarisMode('child');
+            }}
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              categoryKey.endsWith('-child')
+                ? 'bg-white text-slate-800 shadow-2xs'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Data Child (Sertifikat)
+          </button>
+        </div>
+      )}
+
       {/* Tabs Menu */}
       <div className="flex border-b border-slate-200 gap-6">
         <button
@@ -648,30 +680,6 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
                 </div>
               </div>
 
-              {categoryKey !== 'peralatan-pabrik' && (
-                <div className="flex gap-2 p-1 bg-slate-100 rounded-xl max-w-xs mb-4">
-                  <button
-                    onClick={() => setBarisMode('master')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      barisMode === 'master'
-                        ? 'bg-white text-slate-800 shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    Data Master
-                  </button>
-                  <button
-                    onClick={() => setBarisMode('child')}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      barisMode === 'child'
-                        ? 'bg-white text-slate-800 shadow-2xs'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    Data Child (Sertifikat)
-                  </button>
-                </div>
-              )}
 
               <p className="text-[11px] text-slate-500 leading-relaxed mb-4">
                 {barisMode === 'master' ? (
