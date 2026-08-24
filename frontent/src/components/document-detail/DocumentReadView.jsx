@@ -49,6 +49,7 @@ export default function DocumentReadView({ hook, item }) {
 
   const {
     formData, isHaki, isEquipment, effectiveCategoryKey, isSingleCertScope, isMultiCertItem,
+    targetCert,
     localDocumentStatus, historyList, isLoadingHistory,
     openUploadModal, setEditingHistoryRow, setSelectedHistoryToDelete,
     setIsRenewExemptModalOpen, setRenewExemptDate, setIsEditing,
