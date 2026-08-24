@@ -704,7 +704,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     documents, setDocuments,
     isLoading, setIsLoading,
     isAsetCategory, currentCategoryKey,
-    loadData, allColumns, pendingCount,
+    loadData, allColumns, childColumns, pendingCount,
     handleBulkExempt, toggleSelectStaging,
     visibleColumnKeys, toggleColumn, selectAllColumns, isVisible,
     uniqueJenis, uniqueLokasi, uniqueStatus,

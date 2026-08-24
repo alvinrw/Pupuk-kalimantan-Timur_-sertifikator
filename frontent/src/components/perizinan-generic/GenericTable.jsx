@@ -42,6 +42,7 @@ export default function GenericTable({
   setResolveTargetItem,
   visibleColumnKeys,
   allColumns = [],
+  childColumns = [],
   setViewingCert,
   setAddCertTargetMaster,
   setActiveCertId,
@@ -475,32 +476,69 @@ export default function GenericTable({
                                   <table className="w-full text-center border-collapse font-mono-data text-xs">
                                     <thead>
                                       <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
-                                        <th className="py-2.5 px-3 w-10 text-center">NO</th>
-                                        <th className="py-2.5 px-4 text-left">NAMA SERTIFIKAT</th>
-                                        <th className="py-2.5 px-4 text-center">NOMOR SERTIFIKAT</th>
-                                        <th className="py-2.5 px-4 text-center">INSTANSI / PENERBIT</th>
-                                         <th 
-                                           onClick={() => toggleSort('terbit')}
-                                           className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
-                                         >
-                                           <div className="flex items-center justify-center gap-1">
-                                             <span>TANGGAL TERBIT</span>
-                                             <span className="text-[9px] text-slate-400">
-                                               {sortKey === 'terbit' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
-                                             </span>
-                                           </div>
-                                         </th>
-                                         <th 
-                                           onClick={() => toggleSort('berakhir')}
-                                           className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
-                                         >
-                                           <div className="flex items-center justify-center gap-1">
-                                             <span>MASA BERLAKU (EXPIRED)</span>
-                                             <span className="text-[9px] text-slate-400">
-                                               {sortKey === 'berakhir' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
-                                             </span>
-                                           </div>
-                                         </th>
+                                        {childColumns.map(col => {
+                                          if (col.key === 'masterTitle' || col.key === 'title' || col.label.toLowerCase() === 'item induk') return null;
+
+                                          if (col.key === 'no') {
+                                            return <th key="no" className="py-2.5 px-3 w-10 text-center">NO</th>;
+                                          }
+
+                                          if (col.key === 'namaSertifikat') {
+                                            return <th key="namaSertifikat" className="py-2.5 px-4 text-left">{col.label}</th>;
+                                          }
+
+                                          if (col.key === 'noSertifikat') {
+                                            return <th key="noSertifikat" className="py-2.5 px-4 text-center">{col.label}</th>;
+                                          }
+
+                                          if (col.key === 'instansi') {
+                                            return <th key="instansi" className="py-2.5 px-4 text-center">{col.label}</th>;
+                                          }
+
+                                          if (col.key === 'terbit') {
+                                            return (
+                                              <th 
+                                                key="terbit"
+                                                onClick={() => toggleSort('terbit')}
+                                                className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                                              >
+                                                <div className="flex items-center justify-center gap-1">
+                                                  <span>{col.label}</span>
+                                                  <span className="text-[9px] text-slate-400">
+                                                    {sortKey === 'terbit' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                            );
+                                          }
+
+                                          if (col.key === 'expired') {
+                                            return (
+                                              <th 
+                                                key="expired"
+                                                onClick={() => toggleSort('berakhir')}
+                                                className="py-2.5 px-4 text-center cursor-pointer hover:bg-slate-100 transition-colors select-none"
+                                              >
+                                                <div className="flex items-center justify-center gap-1">
+                                                  <span>{col.label}</span>
+                                                  <span className="text-[9px] text-slate-400">
+                                                    {sortKey === 'berakhir' ? (sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                                                  </span>
+                                                </div>
+                                              </th>
+                                            );
+                                          }
+
+                                          if (col.key === 'status') {
+                                            return <th key="status" className="py-2.5 px-4 text-center">{col.label}</th>;
+                                          }
+
+                                          if (col.key === 'keterangan') {
+                                            return <th key="keterangan" className="py-2.5 px-4 text-center">{col.label}</th>;
+                                          }
+
+                                          return <th key={col.key} className="py-2.5 px-4 text-center">{col.label}</th>;
+                                        })}
                                         <th className="py-2.5 px-4 text-center">AKSI</th>
                                       </tr>
                                     </thead>
@@ -529,29 +567,124 @@ export default function GenericTable({
 
                                         return (
                                           <tr key={cert.id || certIdx} className={`transition-colors ${childRowClass}`}>
-                                            <td className={`py-2.5 px-3 font-bold text-center ${isCertAfkir ? 'text-slate-400' : 'text-slate-500'}`}>{certIdx + 1}</td>
-                                            <td 
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                e.preventDefault();
-                                                if (activeMainTab === 'staging') return;
-                                                const raw = cert.certObj || cert || {};
-                                                const targetId = raw.id || cert.id;
-                                                if (setActiveCertId) setActiveCertId(targetId);
-                                                setDetailModalItem(row.parentDoc || row);
-                                              }}
-                                              className={`py-2.5 px-4 text-left font-bold ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : (isCertAfkir ? 'cursor-pointer hover:underline text-white hover:text-blue-300' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')}`}
-                                              title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : 'Klik untuk Lihat Detail Halaman Penuh Sertifikat'}
-                                            >
-                                              {cert.namaSertifikat}
-                                            </td>
-                                            <td className={`py-2.5 px-4 text-center font-bold ${isCertAfkir ? 'text-blue-300' : 'text-[#005ea4]'}`}>{cert.noSertifikat}</td>
-                                            <td className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>{cert.instansi || '-'}</td>
-                                            <td className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>{cert.terbit}</td>
-                                            <td className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : (isCertAfkir ? 'text-slate-200' : 'text-slate-800')}`}>
-                                              {cert.expired}
-                                            </td>
+                                            {childColumns.map(col => {
+                                              if (col.key === 'masterTitle' || col.key === 'title' || col.label.toLowerCase() === 'item induk') return null;
 
+                                              if (col.key === 'no') {
+                                                return (
+                                                  <td key="no" className={`py-2.5 px-3 font-bold text-center ${isCertAfkir ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                    {certIdx + 1}
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'namaSertifikat') {
+                                                return (
+                                                  <td 
+                                                    key="namaSertifikat"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      e.preventDefault();
+                                                      if (activeMainTab === 'staging') return;
+                                                      const raw = cert.certObj || cert || {};
+                                                      const targetId = raw.id || cert.id;
+                                                      if (setActiveCertId) setActiveCertId(targetId);
+                                                      setDetailModalItem(row.parentDoc || row);
+                                                    }}
+                                                    className={`py-2.5 px-4 text-left font-bold ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : (isCertAfkir ? 'cursor-pointer hover:underline text-white hover:text-blue-300' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')}`}
+                                                    title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : 'Klik untuk Lihat Detail Halaman Penuh Sertifikat'}
+                                                  >
+                                                    {cert.namaSertifikat || '-'}
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'noSertifikat') {
+                                                return (
+                                                  <td key="noSertifikat" className={`py-2.5 px-4 text-center font-bold ${isCertAfkir ? 'text-blue-300' : 'text-[#005ea4]'}`}>
+                                                    {cert.noSertifikat || '-'}
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'instansi') {
+                                                return (
+                                                  <td key="instansi" className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                    {cert.instansi || '-'}
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'terbit') {
+                                                return (
+                                                  <td key="terbit" className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                    {cert.terbit || '-'}
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'expired') {
+                                                return (
+                                                  <td key="expired" className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : (isCertAfkir ? 'text-slate-200' : 'text-slate-800')}`}>
+                                                    {cert.expired || '-'}
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'status') {
+                                                const rawStatus = (cert.status || '').toLowerCase();
+                                                const isStatusExpired = rawStatus === 'expired' || isCertExpiredReal || isMissingBothDates;
+                                                const isStatusAfkir = rawStatus === 'afkir' || rawStatus === 'decommissioned' || rawStatus === 'dicabut';
+                                                const isStatusPerpanjang = rawStatus === 'perpanjang' || rawStatus === 'perpanjangan' || rawStatus === 'in progress' || rawStatus === 'proses';
+                                                return (
+                                                  <td key="status" className="py-2.5 px-4 text-center whitespace-nowrap">
+                                                    <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full border ${
+                                                      isStatusAfkir
+                                                        ? 'bg-slate-800 text-white border-slate-600'
+                                                        : isStatusExpired
+                                                        ? 'bg-rose-100 text-rose-900 border-rose-300'
+                                                        : isStatusPerpanjang
+                                                        ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                                        : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                                    }`}>
+                                                      {cert.status || 'Aktif'}
+                                                    </span>
+                                                  </td>
+                                                );
+                                              }
+
+                                              if (col.key === 'keterangan') {
+                                                return (
+                                                  <td key="keterangan" className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                    {cert.keterangan || '-'}
+                                                  </td>
+                                                );
+                                              }
+
+                                              const customEnt = cert.additionalEntities?.find(e => e.key === col.label);
+                                              let displayVal = customEnt ? customEnt.value : '-';
+                                              if (displayVal && col.type === 'nominal') {
+                                                const num = Number(String(displayVal).replace(/\D/g, ''));
+                                                if (!isNaN(num)) displayVal = num.toLocaleString('id-ID');
+                                              }
+                                              if (displayVal && col.type === 'date') {
+                                                try {
+                                                  const dObj = new Date(displayVal);
+                                                  if (!isNaN(dObj.getTime())) {
+                                                    const dd = String(dObj.getDate()).padStart(2, '0');
+                                                    const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+                                                    const yyyy = dObj.getFullYear();
+                                                    displayVal = `${dd}/${mm}/${yyyy}`;
+                                                  }
+                                                } catch (_) {}
+                                              }
+
+                                              return (
+                                                <td key={col.key} className="py-2.5 px-4 text-center align-middle font-bold text-slate-800 font-mono-data">
+                                                  {displayVal || '-'}
+                                                </td>
+                                              );
+                                            })}
 
                                             <td className="py-2.5 px-4 text-center whitespace-nowrap font-mono-data">
                                               <div className="flex items-center justify-center gap-1.5">
