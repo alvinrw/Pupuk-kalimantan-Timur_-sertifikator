@@ -9,6 +9,7 @@ import {
   updateMasterItem
 } from '../services/masterItemsService';
 import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const { user } = useAuth();
@@ -171,6 +172,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           merekItem: doc.title,
           code: doc.code || "-",
           no: index + 1,
+          additionalEntities: meta.additionalEntities || [],
+          rawMeta: meta,
           hasSertifikat: certs.length > 0 ? "Ada" : "Tidak Ada",
           hasPdf: !!primaryCert?.fileUrl,
           fileUrl: primaryCert?.fileUrl || null,
@@ -216,27 +219,24 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [categoryName]);
+  const [allColumns, setAllColumns] = useState([]);
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState([]);
 
   const isProyek = categoryName?.toLowerCase().includes('proyek');
   const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
 
-  const defaultColumns = [
+  const defaultColumns = useMemo(() => [
     { key: "no", label: "NO." },
     { key: "namaItem", label: isProyek ? "NAMA PROYEK" : isProduk ? "NAMA PRODUK" : "NAMA ITEM" },
     { key: "code", label: isProyek ? "KODE PROYEK" : isProduk ? "KODE PRODUK" : "KODE REGISTRASI" },
     { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
-    // Kolom Lokasi hanya ada untuk Aset & Proyek, bukan Produk (sesuai template Excel)
     ...(!isProduk ? [{ key: "unit", label: isProyek ? "LOKASI PROYEK" : "LOKASI" }] : []),
     { key: "user", label: "PENANGGUNG JAWAB" },
     { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
-    // Kolom Status hanya ada untuk Aset & Proyek, bukan Produk (sesuai template Excel)
     ...(!isProduk ? [{ key: "status", label: "STATUS" }] : []),
-  ];
+  ], [isProyek, isProduk]);
 
-  const asetColumns = [
+  const asetColumns = useMemo(() => [
     { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
     { key: "code", label: "NOMOR SERI ASSET" },
@@ -245,13 +245,41 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "user", label: "PENANGGUNG JAWAB" },
     { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
     { key: "status", label: "STATUS" }
-  ];
+  ], []);
 
-  const baseColumns = isAsetCategory ? asetColumns : defaultColumns;
+  const fallbackColumns = isAsetCategory ? asetColumns : defaultColumns;
 
-  const allColumns = useMemo(() => {
-    return baseColumns;
-  }, [baseColumns]);
+  const loadColumns = async () => {
+    if (!currentCategoryKey) return;
+    try {
+      const res = await api.get(`/column-configs/${currentCategoryKey}`);
+      const fetchedCols = res.data || [];
+      const cols = fetchedCols.map(c => ({
+        key: c.fieldKey === 'title' ? 'namaItem' :
+             c.fieldKey === 'unitLocation' ? 'unit' :
+             c.fieldKey,
+        label: c.label,
+        isCustom: c.isCustom,
+        type: c.type
+      }));
+      setAllColumns(cols);
+      const visible = fetchedCols.filter(c => c.isVisible).map(c => 
+        c.fieldKey === 'title' ? 'namaItem' :
+        c.fieldKey === 'unitLocation' ? 'unit' :
+        c.fieldKey
+      );
+      setVisibleColumnKeys(visible);
+    } catch (err) {
+      console.error("Failed to load columns config in usePerizinanGeneric:", err);
+      setAllColumns(fallbackColumns);
+      setVisibleColumnKeys(fallbackColumns.map(c => c.key));
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    loadColumns();
+  }, [categoryName, currentCategoryKey]);
 
   const pendingCount = useMemo(() => {
     return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
@@ -334,8 +362,6 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
-
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
 
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>

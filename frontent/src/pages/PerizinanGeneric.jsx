@@ -79,6 +79,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         setBulkExemptModalOpen={data.setBulkExemptModalOpen}
         isSubmittingBulkExempt={data.isSubmittingBulkExempt}
         toggleSelectAllStaging={data.toggleSelectAllStaging}
+        allColumns={data.allColumns}
         masterRows={data.masterRows}
         expandedMasterIds={data.expandedMasterIds}
         toggleExpandMaster={data.toggleExpandMaster}

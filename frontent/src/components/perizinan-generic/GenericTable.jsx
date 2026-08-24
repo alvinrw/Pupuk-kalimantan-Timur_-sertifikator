@@ -41,6 +41,7 @@ export default function GenericTable({
   setDetailModalItem,
   setResolveTargetItem,
   visibleColumnKeys,
+  allColumns = [],
   setViewingCert,
   setAddCertTargetMaster,
   setActiveCertId,
@@ -87,89 +88,103 @@ export default function GenericTable({
                 )}
                 <th className="py-3.5 px-2 w-10 text-center align-middle"></th>
 
-                {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>}
+                {allColumns.map(col => {
+                  if (!isVisible(col.key)) return null;
 
-                {isVisible("namaItem") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900 text-center align-middle">
-                    {isAsetCategory
-                      ? 'NAMA ASET'
-                      : categoryName?.toLowerCase().includes('proyek')
-                      ? 'NAMA PROYEK'
-                      : 'NAMA PRODUK'}
-                  </th>
-                )}
+                  if (col.key === 'no') {
+                    return <th key="no" className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>;
+                  }
 
-                {isVisible("code") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">
-                    {isAsetCategory ? "NOMOR SERI ASSET" : categoryName?.toLowerCase().includes('proyek') ? "KODE PROYEK" : "KODE PERIZINAN"}
-                  </th>
-                )}
+                  if (col.key === 'namaItem') {
+                    return (
+                      <th key="namaItem" className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900 text-center align-middle">
+                        {col.label}
+                      </th>
+                    );
+                  }
 
-                {isVisible("jenisItem") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                    <div className="flex items-center gap-1.5 justify-center">
-                      <span>
-                        {isAsetCategory
-                          ? "JENIS ASET"
-                          : categoryName?.toLowerCase().includes('proyek')
-                          ? "KATEGORI PROYEK"
-                          : "JENIS PRODUK"}
-                      </span>
-                      <select
-                        value={filterJenis}
-                        onChange={(e) => setFilterJenis(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
-                      >
-                        <option value="All">Semua</option>
-                        {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
-                          <option key={idx} value={j}>{j}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </th>
-                )}
+                  if (col.key === 'code') {
+                    return (
+                      <th key="code" className="py-3.5 px-4 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">
+                        {col.label}
+                      </th>
+                    );
+                  }
 
-                {isVisible("unit") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>LOKASI</span>
-                      <select
-                        value={filterLokasi}
-                        onChange={(e) => setFilterLokasi(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
-                      >
-                        <option value="All">Semua</option>
-                        {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
-                          <option key={idx} value={l}>{l}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </th>
-                )}
+                  if (col.key === 'jenisItem') {
+                    return (
+                      <th key="jenisItem" className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                        <div className="flex items-center gap-1.5 justify-center">
+                          <span>{col.label}</span>
+                          <select
+                            value={filterJenis}
+                            onChange={(e) => setFilterJenis(e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
+                          >
+                            <option value="All">Semua</option>
+                            {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
+                              <option key={idx} value={j}>{j}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </th>
+                    );
+                  }
 
-                {isVisible("user") && <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">PENANGGUNG JAWAB</th>}
-                
-                {isVisible("certCount") && (
-                  <th className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">SERTIFIKAT TERHUBUNG</th>
-                )}
+                  if (col.key === 'unit') {
+                    return (
+                      <th key="unit" className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span>{col.label}</span>
+                          <select
+                            value={filterLokasi}
+                            onChange={(e) => setFilterLokasi(e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
+                          >
+                            <option value="All">Semua</option>
+                            {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
+                              <option key={idx} value={l}>{l}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </th>
+                    );
+                  }
 
-                {isVisible("status") && (
-                  <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
-                    <div className="flex items-center justify-center gap-1.5">
-                      <span>STATUS</span>
-                      <select
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                        className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
-                      >
-                        <option value="All">Semua</option>
-                        {uniqueStatus.filter(s => s !== 'All').map((s, idx) => (
-                          <option key={idx} value={s}>{s}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </th>
-                )}
+                  if (col.key === 'user') {
+                    return <th key="user" className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">{col.label}</th>;
+                  }
+
+                  if (col.key === 'certCount') {
+                    return <th key="certCount" className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">{col.label}</th>;
+                  }
+
+                  if (col.key === 'status') {
+                    return (
+                      <th key="status" className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <span>{col.label}</span>
+                          <select
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
+                          >
+                            <option value="All">Semua</option>
+                            {uniqueStatus.filter(s => s !== 'All').map((s, idx) => (
+                              <option key={idx} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </th>
+                    );
+                  }
+
+                  return (
+                    <th key={col.key} className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">
+                      {col.label}
+                    </th>
+                  );
+                })}
                 <th className="py-3.5 px-4 font-bold text-center align-middle">AKSI</th>
               </tr>
             </thead>
@@ -226,96 +241,143 @@ export default function GenericTable({
                           )}
                         </td>
 
-                        {isVisible("no") && (
-                          <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
-                            {index + 1}
-                          </td>
-                        )}
+                        {allColumns.map(col => {
+                          if (!isVisible(col.key)) return null;
 
-                        {isVisible("namaItem") && (
-                          <td
-                            onClick={() => activeMainTab !== 'staging' && setDetailModalItem(doc)}
-                            className={`py-3.5 px-4 font-bold font-sans text-center align-middle ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]'}`}
-                            title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : `Klik untuk Lihat Detail - ${namaItemLabel}`}
-                          >
-                            <div className="flex items-center justify-center gap-2">
-                              <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? 'text-emerald-600' : 'text-slate-400'}`} />
-                              <span className="max-w-[240px] truncate block">{row.docNamaItem}</span>
-                            </div>
-                          </td>
-                        )}
+                          if (col.key === 'no') {
+                            return (
+                              <td key="no" className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
+                                {index + 1}
+                              </td>
+                            );
+                          }
 
-                        {isVisible("code") && (
-                          <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle text-[#005ea4]`}>
-                            {row.docCode}
-                          </td>
-                        )}
-
-                        {isVisible("jenisItem") && (
-                          <td className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle text-slate-800`}>
-                            {row.docJenis}
-                          </td>
-                        )}
-
-                        {isVisible("unit") && (
-                          <td className="py-3.5 px-4 whitespace-nowrap font-semibold text-center align-middle">
-                            {row.docUnit}
-                          </td>
-                        )}
-
-                        {isVisible("user") && (
-                          <td className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
-                            {row.docUser}
-                          </td>
-                        )}
-
-                        {isVisible("certCount") && (
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
-                            {row.documentStatus === 'PENDING_DOC' ? (
-                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                                <FileWarning className="w-3.5 h-3.5" />
-                                Menunggu Dokumen
-                              </span>
-                            ) : row.certs.length > 0 ? (
-                              <button
-                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
-                                className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 shadow-2xs cursor-pointer transition-colors"
+                          if (col.key === 'namaItem') {
+                            return (
+                              <td
+                                key="namaItem"
+                                onClick={() => activeMainTab !== 'staging' && setDetailModalItem(doc)}
+                                className={`py-3.5 px-4 font-bold font-sans text-center align-middle ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]'}`}
+                                title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : `Klik untuk Lihat Detail - ${namaItemLabel}`}
                               >
-                                <FileCheck className="w-3.5 h-3.5" />
-                                <span>{row.certs.length} Sertifikat</span>
-                                {isExpanded ? <ChevronDown className="w-3 h-3 ml-0.5" /> : <ChevronRight className="w-3 h-3 ml-0.5" />}
-                              </button>
-                            ) : row.documentStatus === 'EXEMPT' ? (
-                              <button
-                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
-                                className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer"
-                              >
-                                <XCircle className="w-3.5 h-3.5" />
-                                Tanpa Sertifikat (Pengecualian)
-                              </button>
-                            ) : (
-                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
-                                Belum Ada
-                              </span>
-                            )}
-                          </td>
-                        )}
+                                <div className="flex items-center justify-center gap-2">
+                                  <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? 'text-emerald-600' : 'text-slate-400'}`} />
+                                  <span className="max-w-[240px] truncate block">{row.docNamaItem}</span>
+                                </div>
+                              </td>
+                            );
+                          }
 
-                        {isVisible("status") && (
-                          <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                            <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
-                              isAfkir
-                                ? 'bg-slate-800 text-white border-slate-600'
-                                : isExpired
-                                ? 'bg-rose-100 text-rose-900 border-rose-300'
-                                : isPerpanjang
-                                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                            }`}>
-                              {row.status}
-                            </span>
-                          </td>
-                        )}
+                          if (col.key === 'code') {
+                            return (
+                              <td key="code" className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle text-[#005ea4]`}>
+                                {row.docCode}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'jenisItem') {
+                            return (
+                              <td key="jenisItem" className={`py-3.5 px-4 font-semibold whitespace-nowrap text-center align-middle text-slate-800`}>
+                                {row.docJenis}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'unit') {
+                            return (
+                              <td key="unit" className="py-3.5 px-4 whitespace-nowrap font-semibold text-center align-middle">
+                                {row.docUnit}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'user') {
+                            return (
+                              <td key="user" className="py-3.5 px-4 whitespace-nowrap text-slate-700 text-center align-middle">
+                                {row.docUser}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'certCount') {
+                            return (
+                              <td key="certCount" className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
+                                {row.documentStatus === 'PENDING_DOC' ? (
+                                  <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <FileWarning className="w-3.5 h-3.5" />
+                                    Menunggu Dokumen
+                                  </span>
+                                ) : row.certs.length > 0 ? (
+                                  <button
+                                    onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 shadow-2xs cursor-pointer transition-colors"
+                                  >
+                                    <FileCheck className="w-3.5 h-3.5" />
+                                    <span>{row.certs.length} Sertifikat</span>
+                                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 ml-0.5" /> : <ChevronRight className="w-3.5 h-3.5 ml-0.5" />}
+                                  </button>
+                                ) : row.documentStatus === 'EXEMPT' ? (
+                                  <button
+                                    onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                    className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer"
+                                  >
+                                    <XCircle className="w-3.5 h-3.5" />
+                                    Tanpa Sertifikat (Pengecualian)
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                                    Belum Ada
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'status') {
+                            return (
+                              <td key="status" className="py-3.5 px-4 text-center whitespace-nowrap">
+                                <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
+                                  isAfkir
+                                    ? 'bg-slate-800 text-white border-slate-600'
+                                    : isExpired
+                                    ? 'bg-rose-100 text-rose-900 border-rose-300'
+                                    : isPerpanjang
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                    : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                }`}>
+                                  {row.status}
+                                </span>
+                              </td>
+                            );
+                          }
+
+                          // Custom dynamic columns rendering
+                          const customEnt = row.parentDoc?.additionalEntities?.find(e => e.key === col.label) || 
+                                           row.additionalEntities?.find(e => e.key === col.label);
+                          let displayVal = customEnt ? customEnt.value : '-';
+                          if (displayVal && col.type === 'nominal') {
+                            const num = Number(String(displayVal).replace(/\D/g, ''));
+                            if (!isNaN(num)) displayVal = num.toLocaleString('id-ID');
+                          }
+                          if (displayVal && col.type === 'date') {
+                            try {
+                              const dObj = new Date(displayVal);
+                              if (!isNaN(dObj.getTime())) {
+                                const dd = String(dObj.getDate()).padStart(2, '0');
+                                const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+                                const yyyy = dObj.getFullYear();
+                                displayVal = `${dd}/${mm}/${yyyy}`;
+                              }
+                            } catch (_) {}
+                          }
+
+                          return (
+                            <td key={col.key} className="py-3.5 px-4 text-center align-middle font-bold text-slate-800 font-mono-data">
+                              {displayVal || '-'}
+                            </td>
+                          );
+                        })}
                         
                         <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
                           {activeMainTab === 'staging' ? (
