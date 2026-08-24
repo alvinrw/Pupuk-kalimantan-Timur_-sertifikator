@@ -13,6 +13,7 @@ export default function DocumentFormFields({ hook, item }) {
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
     saveSettings,
+    columnConfigs = [],
   } = hook;
 
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
@@ -286,70 +287,77 @@ export default function DocumentFormFields({ hook, item }) {
                 <Plus className="w-3 h-3" /> Tambah Field
               </button>
             </div>
-            <div className="space-y-2">
-              {(formData.additionalEntities || []).map((ent, idx) => (
-                <div key={idx} className="flex gap-2 items-center flex-wrap sm:flex-nowrap bg-slate-50/50 p-2 rounded-xl border border-slate-200">
-                  <input type="text" placeholder="Nama Field (cth: Kapasitas)" value={ent.key}
-                    onChange={(e) => {
-                      const newEnts = [...formData.additionalEntities];
-                      newEnts[idx].key = e.target.value;
-                      setFormData({ ...formData, additionalEntities: newEnts });
-                    }}
-                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold bg-white"
-                  />
-                  <select value={ent.type || 'text'}
-                    onChange={(e) => {
-                      const newEnts = [...formData.additionalEntities];
-                      newEnts[idx].type = e.target.value;
-                      newEnts[idx].value = ''; // Reset value on type change to avoid format conflicts
-                      setFormData({ ...formData, additionalEntities: newEnts });
-                    }}
-                    className="px-2 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold bg-white"
-                  >
-                    <option value="text">Teks</option>
-                    <option value="nominal">Nominal / Angka</option>
-                    <option value="date">Tanggal</option>
-                  </select>
-                  {ent.type === 'date' ? (
-                    <input type="date" value={ent.value}
-                      onChange={(e) => {
-                        const newEnts = [...formData.additionalEntities];
-                        newEnts[idx].value = e.target.value;
-                        setFormData({ ...formData, additionalEntities: newEnts });
-                      }}
-                      onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
-                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white cursor-pointer"
-                    />
-                  ) : ent.type === 'nominal' ? (
-                    <input type="text" placeholder="Nilai (cth: 5.000.000)" value={formatNumberString(ent.value)}
-                      onChange={(e) => {
-                        const clean = e.target.value.replace(/\D/g, '');
-                        const newEnts = [...formData.additionalEntities];
-                        newEnts[idx].value = clean;
-                        setFormData({ ...formData, additionalEntities: newEnts });
-                      }}
-                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"
-                    />
-                  ) : (
-                    <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
-                      onChange={(e) => {
-                        const newEnts = [...formData.additionalEntities];
-                        newEnts[idx].value = e.target.value;
-                        setFormData({ ...formData, additionalEntities: newEnts });
-                      }}
-                      className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs bg-white"
-                    />
-                  )}
-                  <button type="button" onClick={() => {
-                      const newEnts = [...formData.additionalEntities];
-                      newEnts.splice(idx, 1);
-                      setFormData({ ...formData, additionalEntities: newEnts });
-                    }}
-                    className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors bg-white">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+             <div className="space-y-2">
+               {(formData.additionalEntities || []).map((ent, idx) => {
+                 const isGlobalCol = columnConfigs.some(c => c.label.toLowerCase() === ent.key.toLowerCase());
+                 return (
+                   <div key={idx} className="flex gap-2 items-center flex-wrap sm:flex-nowrap bg-slate-50/50 p-2 rounded-xl border border-slate-200">
+                     <input type="text" placeholder="Nama Field (cth: Kapasitas)" value={ent.key}
+                       disabled={isGlobalCol}
+                       onChange={(e) => {
+                         const newEnts = [...formData.additionalEntities];
+                         newEnts[idx].key = e.target.value;
+                         setFormData({ ...formData, additionalEntities: newEnts });
+                       }}
+                       className={`flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
+                     />
+                     <select value={ent.type || 'text'}
+                       disabled={isGlobalCol}
+                       onChange={(e) => {
+                         const newEnts = [...formData.additionalEntities];
+                         newEnts[idx].type = e.target.value;
+                         newEnts[idx].value = ''; // Reset value on type change to avoid format conflicts
+                         setFormData({ ...formData, additionalEntities: newEnts });
+                       }}
+                       className={`px-2 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
+                     >
+                       <option value="text">Teks</option>
+                       <option value="nominal">Nominal / Angka</option>
+                       <option value="date">Tanggal</option>
+                     </select>
+                     {ent.type === 'date' ? (
+                       <input type="date" value={ent.value}
+                         onChange={(e) => {
+                           const newEnts = [...formData.additionalEntities];
+                           newEnts[idx].value = e.target.value;
+                           setFormData({ ...formData, additionalEntities: newEnts });
+                         }}
+                         onClick={(e) => { try { e.target.showPicker(); } catch(_) {} }}
+                         className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white cursor-pointer"
+                       />
+                     ) : ent.type === 'nominal' ? (
+                       <input type="text" placeholder="Nilai (cth: 5.000.000)" value={formatNumberString(ent.value)}
+                         onChange={(e) => {
+                           const clean = e.target.value.replace(/\D/g, '');
+                           const newEnts = [...formData.additionalEntities];
+                           newEnts[idx].value = clean;
+                           setFormData({ ...formData, additionalEntities: newEnts });
+                         }}
+                         className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"
+                       />
+                     ) : (
+                       <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
+                         onChange={(e) => {
+                           const newEnts = [...formData.additionalEntities];
+                           newEnts[idx].value = e.target.value;
+                           setFormData({ ...formData, additionalEntities: newEnts });
+                         }}
+                         className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs bg-white"
+                       />
+                     )}
+                     {!isGlobalCol && (
+                       <button type="button" onClick={() => {
+                           const newEnts = [...formData.additionalEntities];
+                           newEnts.splice(idx, 1);
+                           setFormData({ ...formData, additionalEntities: newEnts });
+                         }}
+                         className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors bg-white">
+                         <Trash2 className="w-4 h-4" />
+                       </button>
+                     )}
+                   </div>
+                 );
+               })}
               {(!formData.additionalEntities || formData.additionalEntities.length === 0) && (
                 <p className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada field spesifikasi tambahan. Klik "Tambah Field" untuk memasukkan data custom.</p>
               )}
