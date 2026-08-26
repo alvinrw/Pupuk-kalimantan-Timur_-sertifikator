@@ -16,7 +16,7 @@ export default function InformasiWebsite() {
               Kenali lebih dekat platform Sertifikator dan unduh panduan penggunaannya.
             </p>
           </div>
-          <button 
+          <button
             disabled
             className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-400 font-bold shadow-xs cursor-not-allowed transition-all"
             title="Sedang dalam penyusunan"
@@ -30,7 +30,7 @@ export default function InformasiWebsite() {
       {/* Konten Utama */}
       <div className="flex-1 overflow-y-auto p-8">
         <div className="max-w-5xl mx-auto space-y-8">
-          
+
           {/* Hero Section */}
           <div className="bg-gradient-to-br from-[#005ea4] to-[#004881] rounded-3xl p-10 text-white shadow-xl relative overflow-hidden">
             <div className="relative z-10 max-w-2xl">
@@ -38,7 +38,7 @@ export default function InformasiWebsite() {
                 Sistem Terpadu <span className="text-blue-200">Sertifikator</span>
               </h2>
               <p className="text-blue-50 text-base leading-relaxed font-medium mb-6">
-                Sertifikator adalah platform digital komprehensif yang dirancang untuk mendigitalkan, memantau, dan mengelola seluruh siklus hidup dokumen perizinan, sertifikasi peralatan pabrik, aset bangunan, proyek konstruksi, hingga produk dan HAKI.
+                Sertifikator adalah platform digital komprehensif yang dirancang untuk mendigitalkan, memantau, dan mengelola seluruh siklus hidup dokumen perizinan.
               </p>
               <div className="flex gap-4">
                 <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20">
@@ -51,7 +51,7 @@ export default function InformasiWebsite() {
                 </div>
               </div>
             </div>
-            
+
             {/* Dekorasi Visual */}
             <div className="absolute right-0 top-0 bottom-0 w-1/3 bg-white/5 skew-x-12 translate-x-16 rounded-3xl blur-xl" />
             <BookOpen className="absolute -right-8 -bottom-8 w-64 h-64 text-white/10 rotate-12" />
@@ -99,7 +99,7 @@ export default function InformasiWebsite() {
                   Buku panduan lengkap (PDF) akan segera tersedia untuk memandu setiap divisi dalam memanfaatkan platform Sertifikator secara maksimal, mulai dari tahap input data hingga ekspor laporan.
                 </p>
               </div>
-              
+
               {/* Badge Segera Hadir */}
               <div className="absolute top-6 right-6 bg-orange-100 text-orange-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
                 Coming Soon
@@ -112,7 +112,7 @@ export default function InformasiWebsite() {
               Sertifikator v2.0.0 &copy; 2026. Dikembangkan untuk sentralisasi tata kelola perizinan perusahaan.
             </p>
           </div>
-          
+
         </div>
       </div>
     </div>

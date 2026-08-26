@@ -142,6 +142,7 @@ export default function useIuranKeanggotaan() {
       delete payload.tanggalSelesai;
 
       if (modalMode === 'add') {
+        delete payload.id;
         await createIuranKeanggotaan(payload);
       } else {
         await updateIuranKeanggotaan(selectedItem.id, payload);
