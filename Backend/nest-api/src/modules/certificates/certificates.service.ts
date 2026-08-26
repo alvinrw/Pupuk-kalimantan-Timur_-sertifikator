@@ -43,7 +43,7 @@ export class CertificatesService {
           data: { 
             lastEditSource: 'MANUAL',
             exemptionNote: null,
-            ...(masterItem?.categoryKey === 'peralatan-pabrik' || masterItem?.categoryKey === 'administrasi-lainnya' ? { documentStatus: 'COMPLETED' } : {})
+            documentStatus: 'COMPLETED'
           },
         }).catch(() => {});
 
@@ -76,7 +76,7 @@ export class CertificatesService {
           isManuallyEdited: true,
           lastEditSource: 'MANUAL',
           exemptionNote: null,
-          ...(masterItem?.categoryKey === 'peralatan-pabrik' || masterItem?.categoryKey === 'administrasi-lainnya' ? { documentStatus: 'COMPLETED' } : {})
+          documentStatus: 'COMPLETED'
         },
       }).catch(() => {});
     }
@@ -134,7 +134,7 @@ export class CertificatesService {
           lastEditSource: 'MANUAL',
           ...(updateCertificateDto.terbit !== undefined ? { issueDate: updateCertificateDto.terbit } : {}),
           ...(updateCertificateDto.expired !== undefined ? { expiryDate: updateCertificateDto.expired } : {}),
-          ...(masterItem?.categoryKey === 'peralatan-pabrik' || masterItem?.categoryKey === 'administrasi-lainnya' ? { documentStatus: 'COMPLETED' } : {})
+            documentStatus: 'COMPLETED'
         }
       }).catch(() => {});
     }
