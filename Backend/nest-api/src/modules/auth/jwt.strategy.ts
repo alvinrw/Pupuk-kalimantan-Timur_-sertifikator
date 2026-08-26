@@ -1,17 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor() {
+  constructor(private configService: ConfigService) {
     super({
+      // [FIX H-01] Ekstrak token dari Authorization header, dan fallback ke URL query 'token' (diperlukan untuk view PDF di tab baru)
       jwtFromRequest: ExtractJwt.fromExtractors([
         ExtractJwt.fromAuthHeaderAsBearerToken(),
-        ExtractJwt.fromUrlQueryParameter('token')
+        ExtractJwt.fromUrlQueryParameter('token'),
       ]),
       ignoreExpiration: false,
-      secretOrKey: 'SECRET_KEY_SEMENTARA_SANGAT_RAHASIA',
+      // [FIX C-01] Baca secret dari environment variable, bukan hardcoded
+      secretOrKey: configService.get<string>('JWT_SECRET'),
     });
   }
 

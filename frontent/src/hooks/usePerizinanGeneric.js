@@ -253,8 +253,12 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const loadColumns = async () => {
     if (!currentCategoryKey) return;
     try {
-      const res = await api.get(`/column-configs/${currentCategoryKey}`);
-      const fetchedCols = res.data || [];
+      const [masterRes, childRes] = await Promise.all([
+        api.get(`/column-configs/${currentCategoryKey}`),
+        api.get(`/column-configs/${currentCategoryKey}-child`).catch(() => ({ data: [] }))
+      ]);
+      
+      const fetchedCols = masterRes.data || [];
       const cols = fetchedCols.map(c => ({
         key: c.fieldKey === 'title' ? 'namaItem' :
              c.fieldKey === 'unitLocation' ? 'unit' :
@@ -264,16 +268,56 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         type: c.type
       }));
       setAllColumns(cols);
+      
       const visible = fetchedCols.filter(c => c.isVisible).map(c => 
         c.fieldKey === 'title' ? 'namaItem' :
         c.fieldKey === 'unitLocation' ? 'unit' :
         c.fieldKey
       );
       setVisibleColumnKeys(visible);
+
+      // Child columns
+      const fetchedChildCols = childRes.data || [];
+      if (fetchedChildCols.length > 0 && fetchedChildCols.filter(c => c.isVisible).length > 0) {
+        const cCols = fetchedChildCols
+          .filter(c => c.isVisible)
+          .sort((a, b) => a.position - b.position) // STRICT SORT BY POSITION
+          .map(c => ({
+            key: c.fieldKey === 'title' ? 'namaSertifikat' :
+                 c.fieldKey === 'unitLocation' ? 'instansi' :
+                 c.fieldKey,
+            label: c.label,
+            isCustom: c.isCustom,
+            type: c.type
+          }));
+        setChildColumns(cCols);
+      } else {
+        // Fallback if no child columns config exists
+        setChildColumns([
+          { key: "no", label: "NO." },
+          { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
+          { key: "noSertifikat", label: "NOMOR SERTIFIKAT" },
+          { key: "instansi", label: "INSTANSI PENERBIT" },
+          { key: "terbit", label: "TANGGAL TERBIT" },
+          { key: "expired", label: "TANGGAL EXPIRED" },
+          { key: "status", label: "STATUS" },
+          { key: "keterangan", label: "KETERANGAN / CATATAN" }
+        ]);
+      }
     } catch (err) {
       console.error("Failed to load columns config in usePerizinanGeneric:", err);
       setAllColumns(fallbackColumns);
       setVisibleColumnKeys(fallbackColumns.map(c => c.key));
+      setChildColumns([
+        { key: "no", label: "NO." },
+        { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
+        { key: "noSertifikat", label: "NOMOR SERTIFIKAT" },
+        { key: "instansi", label: "INSTANSI PENERBIT" },
+        { key: "terbit", label: "TANGGAL TERBIT" },
+        { key: "expired", label: "TANGGAL EXPIRED" },
+        { key: "status", label: "STATUS" },
+        { key: "keterangan", label: "KETERANGAN / CATATAN" }
+      ]);
     }
   };
 

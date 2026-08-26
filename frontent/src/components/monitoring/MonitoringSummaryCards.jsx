@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, Clock, CheckCircle2, Ban, FileX, FileCheck, Database } from 'lucide-react';
+import { ShieldAlert, Clock, CheckCircle2, Ban, FileX, FileCheck, Database, Activity } from 'lucide-react';
 
 /**
  * MonitoringSummaryCards — 7 kartu statistik di bagian atas MonitoringSertifikasi dengan gaya minimalis bersih.
@@ -12,7 +12,7 @@ export default function MonitoringSummaryCards({
   setCustomUrgentDays
 }) {
   const {
-    countExpired, countUrgent, countValid, countDecommissioned,
+    countExpired, countUrgent, countValid, countInProgress, countDecommissioned,
     countTanpaSertifikat, countAdaSertifikat, countTotal
   } = counts;
 
@@ -21,7 +21,7 @@ export default function MonitoringSummaryCards({
   const inactiveCard = 'border-slate-200 hover:border-slate-300';
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
 
       {/* Card 1: Tanpa Sertifikat */}
       <div
@@ -92,6 +92,21 @@ export default function MonitoringSummaryCards({
         </div>
         <div className="flex items-end gap-1">
           <span className="text-2xl font-extrabold text-slate-800">{countUrgent}</span>
+          <span className="text-[10px] text-slate-400 font-mono-data mb-0.5">item</span>
+        </div>
+      </div>
+
+      {/* Card 5.5: Diperpanjang */}
+      <div
+        onClick={() => setExpiryTab(expiryTab === 'in_progress' ? 'all' : 'in_progress')}
+        className={`${cardBase} ${expiryTab === 'in_progress' ? activeRing : inactiveCard}`}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Diperpanjang</span>
+          <Activity className="w-4 h-4 text-slate-400 shrink-0" />
+        </div>
+        <div className="flex items-end gap-1">
+          <span className="text-2xl font-extrabold text-slate-800">{countInProgress}</span>
           <span className="text-[10px] text-slate-400 font-mono-data mb-0.5">item</span>
         </div>
       </div>

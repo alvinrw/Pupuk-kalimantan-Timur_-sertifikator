@@ -14,7 +14,8 @@ import {
   Wallet,
   FileX,
   Ban,
-  Database
+  Database,
+  Users
 } from 'lucide-react';
 import {
   BarChart,
@@ -34,6 +35,7 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';
 export default function Dashboard() {
   const [filterKategori, setFilterKategori] = useState('All');
   const [customUrgentDays, setCustomUrgentDays] = useState(30);
+  const [activeMainTab, setActiveMainTab] = useState('perizinan');
 
   // States untuk filter Tanggal Terbit di bagian bawah
   const [dateRangeStart, setDateRangeStart] = useState('');
@@ -351,44 +353,65 @@ export default function Dashboard() {
   return (
     <div className="p-6 md:p-8 space-y-8 font-sans-clean max-w-[1400px] mx-auto bg-slate-50/50 min-h-screen">
       {/* HEADER */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 pb-6 border-b border-slate-200">
+      <div className="flex flex-col space-y-4 pb-6">
         <div className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
             Dashboard Overview
           </h1>
           <p className="text-slate-500 font-mono-data text-xs md:text-sm max-w-2xl leading-relaxed">
-
+            Ringkasan status legalitas dan operasional seluruh aset, peralatan pabrik, proyek, dan dokumen HAKI.
           </p>
         </div>
-
-        {/* Inline Filter Kategori */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
-            <select
-              value={filterKategori}
-              onChange={(e) => setFilterKategori(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
-            >
-              {getCategoryOptions().map(cat => (
-                <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>
-              ))}
-            </select>
-          </div>
-
-          {filterKategori !== 'All' && (
-            <button
-              onClick={() => setFilterKategori('All')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Reset
-            </button>
-          )}
+        
+        <div className="flex border border-slate-200 rounded-xl p-1 bg-white mb-6 w-max shadow-xs">
+          <button 
+            onClick={() => setActiveMainTab('perizinan')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeMainTab === 'perizinan' ? 'bg-[#005ea4] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            <FileCheck2 className="w-4 h-4" />
+            Overview Perizinan & Sertifikat
+          </button>
+          <button 
+            onClick={() => setActiveMainTab('administrasi')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeMainTab === 'administrasi' ? 'bg-[#005ea4] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            <Users className="w-4 h-4" />
+            Administrasi & Keanggotaan
+          </button>
         </div>
       </div>
 
-      {/* SUMMARY CARDS — 4 cards */}
+      {activeMainTab === 'perizinan' ? (
+        <>
+          <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 pb-6 border-b border-slate-200">
+            {/* Inline Filter Kategori */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
+                <select
+                  value={filterKategori}
+                  onChange={(e) => setFilterKategori(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
+                >
+                  {getCategoryOptions().map(cat => (
+                    <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {filterKategori !== 'All' && (
+                <button
+                  onClick={() => setFilterKategori('All')}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* SUMMARY CARDS — 4 cards */}
       <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {/* Card 1: Sertifikat Aktif */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
@@ -512,18 +535,6 @@ export default function Dashboard() {
             </ResponsiveContainer>
           </div>
         </div>
-      </div>
-
-      {/* MONITORING ANGGARAN */}
-      <div className="pt-8 mt-8 border-t border-slate-200">
-        <div className="mb-6">
-          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
-            <Wallet className="w-6 h-6 text-[#005ea4]" />
-            Anggaran Iuran Keanggotaan
-          </h2>
-          <p className="text-sm text-slate-500 font-medium ml-8">Ringkasan serapan dan rincian iuran keanggotaan.</p>
-        </div>
-        <MonitoringAnggaran />
       </div>
 
       {/* SECTION: Sertifikat Terbit — Filter + Tabel */}
@@ -706,6 +717,10 @@ export default function Dashboard() {
           </tbody>
         </table>
       </div>
+      </>
+      ) : (
+        <MonitoringAnggaran />
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { PlusCircle, ChevronDown, Building2, FileWarning, Loader2, ShieldAlert }
 import CsvImportModal from '../components/CsvImportModal';
 import HistoryModal from '../components/HistoryModal';
 import SingleEntryModal from '../components/SingleEntryModal';
-import ResolveDocumentModal from '../components/ResolveDocumentModal';
+import ResolveDocumentModal from '../components/ResolveDocumentModal'; 
 import DocumentDetailPage from './DocumentDetailPage';
 import { useAuth } from '../contexts/AuthContext';
 

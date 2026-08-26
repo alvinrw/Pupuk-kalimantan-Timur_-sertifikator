@@ -80,17 +80,9 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
         },
         { id: "tugas-terdekat", label: "Agenda & Perpanjangan", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
         {
-          id: "informasi-dropdown",
-          label: "Informasi Lainnya",
+          id: "informasi-website",
+          label: "Informasi Website",
           icon: HelpCircle,
-          isDropdown: true,
-          subItems: [
-            { id: "informasi-modul", label: "Modul Aplikasi" },
-            { id: "informasi-status", label: "Warna Status Dokumen" },
-            { id: "informasi-alur-kerja", label: "Alur Kerja" },
-            { id: "informasi-panduan", label: "Panduan Tambah Item" },
-            { id: "informasi-kolom-csv", label: "Struktur Kolom & CSV" },
-          ]
         },
         { id: "histori-pencatatan", label: "Histori Pencatatan", icon: History, roleGuard: ['Super Admin', 'Admin'] },
         { id: "manajemen-pengguna", label: "Manajemen Pengguna", icon: Users, roleGuard: ['Super Admin', 'Admin'] },

@@ -457,18 +457,7 @@ export default function PdfCanvasOcrViewer({
           </div>
         )}
 
-        {/* Scan mode instruction overlay hint */}
-        {scanMode && !isOcrRunning && pdfUrl && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 pointer-events-none">
-            <div
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl shadow-lg text-white text-xs font-bold font-mono-data"
-              style={{ backgroundColor: activeScanColor + 'ee' }}
-            >
-              <Crosshair className="w-4 h-4" />
-              <span>Drag untuk pilih area <strong>{activeScanLabel}</strong></span>
-            </div>
-          </div>
-        )}
+        {/* Floating overlay removed to prevent blocking PDF text. Instruction is already in header. */}
       </div>
     </div>
   );

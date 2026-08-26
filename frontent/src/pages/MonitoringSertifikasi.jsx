@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Activity, Filter, Loader2, Search, RotateCcw, Calendar, X } from 'lucide-react';
+import { Activity, Filter, Loader2, Search, RotateCcw, Calendar, X, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import DocumentDetailPage from './DocumentDetailPage';
 import { useAuth } from '../contexts/AuthContext';
 import { useMonitoring } from '../hooks/useMonitoring';
@@ -18,9 +19,34 @@ export default function MonitoringSertifikasi() {
   const [dateRangeEnd, setDateRangeEnd] = useState('');
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
 
-  // Sync kategori filter ke hook sekaligus local state
   const handleKategoriChange = (val) => {
     m.setFilterKategori(val);
+  };
+
+  const handleDownloadExcel = () => {
+    const headers = ['No', 'Kategori Dokumen', 'Jenis Perizinan / Alat', 'Unit Pabrik', 'Merek / Nama Item', 'No Seri / Tag', 'No Sertifikat', 'Tanggal Terbit', 'Tanggal Expired', 'Sisa Hari', 'Status Sistem'];
+    
+    const rows = displayedCertificates.map((doc, idx) => [
+      idx + 1,
+      doc.kategoriDokumen || doc.kategori || '-',
+      doc.jenisItem || doc.jenisPeralatan || doc.jenisSertifikat || '-',
+      doc.unitPabrik || doc.lokasi || '-',
+      doc.merekItem || doc.title || '-',
+      doc.nomorSeriTipe || doc.nomorSeri || doc.code || '-',
+      doc.nomorSertifikat || '-',
+      doc.tglTerbit !== '-' ? doc.tglTerbit : '-',
+      doc.tglExpired !== '-' ? doc.tglExpired : '-',
+      doc.sisaHari !== null ? doc.sisaHari : '-',
+      doc.workflowStatus === 'in_progress' ? 'Diperpanjang' : 
+      doc.workflowStatus === 'decommissioned' ? 'Non-Aktif' :
+      doc.workflowStatus === 'exempt' ? 'Tanpa Sertifikat' : 'Aktif',
+    ]);
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Monitoring");
+    
+    XLSX.writeFile(workbook, "Monitoring_Sertifikasi.xlsx");
   };
 
   const handleApplyDateFilter = () => {
@@ -185,7 +211,14 @@ export default function MonitoringSertifikasi() {
                   className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
                 />
               </div>
-              {/* Export buttons removed */}
+              <button
+                onClick={handleDownloadExcel}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00a368] hover:bg-[#008f5a] text-white font-bold text-xs rounded-lg transition-colors shadow-2xs"
+                title="Download Excel"
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Excel</span>
+              </button>
             </div>
           </div>
 

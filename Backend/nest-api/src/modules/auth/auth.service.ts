@@ -30,13 +30,14 @@ export class AuthService {
       include: { role: true },
     });
     
+    // [FIX L-01] Pesan error generik untuk mencegah user enumeration
     if (!user) {
-      throw new UnauthorizedException('User tidak ditemukan');
+      throw new UnauthorizedException('Username atau password tidak valid.');
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Password salah');
+      throw new UnauthorizedException('Username atau password tidak valid.');
     }
 
     const payload = {

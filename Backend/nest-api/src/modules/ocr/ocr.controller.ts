@@ -4,11 +4,18 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { OcrService, OcrScanResult } from './ocr.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
+// [FIX C-02] Lindungi endpoint OCR agar hanya user terautentikasi yang bisa mengaksesnya
 @Controller('ocr')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('Super Admin', 'Admin', 'User')
 export class OcrController {
   constructor(private readonly ocrService: OcrService) {}
 

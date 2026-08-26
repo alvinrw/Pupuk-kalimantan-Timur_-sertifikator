@@ -12,7 +12,7 @@ import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import PerizinanAset from './pages/PerizinanAset';
 import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
-import InformasiLainnya from './pages/InformasiLainnya';
+import InformasiWebsite from './pages/InformasiWebsite';
 import IuranKeanggotaan from './pages/IuranKeanggotaan';
 import TugasTerdekat from './pages/TugasTerdekat';
 import HistoriPencatatan from './pages/HistoriPencatatan';
@@ -123,16 +123,8 @@ export default function App() {
         );
       case 'riwayat-perpanjangan':
         return <RiwayatPerpanjangan />;
-      case 'informasi-modul':
-        return <InformasiLainnya activeSection="overview" />;
-      case 'informasi-status':
-        return <InformasiLainnya activeSection="status" />;
-      case 'informasi-alur-kerja':
-        return <InformasiLainnya activeSection="workflow" />;
-      case 'informasi-panduan':
-        return <InformasiLainnya activeSection="multicert" />;
-      case 'informasi-kolom-csv':
-        return <InformasiLainnya activeSection="columns" />;
+      case 'informasi-website':
+        return <InformasiWebsite />;
       case 'iuran-keanggotaan':
         return <IuranKeanggotaan />;
       case 'tugas-terdekat':
