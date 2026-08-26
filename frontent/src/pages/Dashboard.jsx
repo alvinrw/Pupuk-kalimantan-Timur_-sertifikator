@@ -27,8 +27,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
 } from 'recharts';
+import * as xlsx from 'xlsx';
 import { getMasterItems } from '../services/masterItemsService';
 import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';
 
@@ -105,47 +105,47 @@ export default function Dashboard() {
       };
 
       if (item.categoryKey === 'peralatan-pabrik') {
-        const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
-
-        let primaryCert = null;
-        if (activeCerts.length > 0) {
-          primaryCert = activeCerts.slice().sort((a, b) => {
-            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-            if (dA !== dB) return dB - dA;
-            const hasPdfA = !!a.fileUrl;
-            const hasPdfB = !!b.fileUrl;
-            if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
-            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-          })[0];
-        } else if (certs.length > 0) {
-          primaryCert = certs[0];
+        if (certs.length === 0) {
+          const rawExp = item.expiryDate || '-';
+          const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+          const hari = calcDiff(dateVal);
+          const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
+          flattened.push({
+            id: item.id,
+            kategori: item.categoryKey || 'Peralatan Pabrik',
+            jenis: item.title || 'Unknown',
+            unit: item.unitLocation || 'Umum',
+            opStatus: item.status || 'Aktif',
+            sisaHari: hari,
+            workflowStatus: wfStatus,
+            merekItem: item.keterangan ? ((() => { try { return JSON.parse(item.keterangan).merek; } catch(e) { return null; } })() || item.title) : item.title,
+            nomorSeriTipe: item.code || '-',
+            nomorSertifikat: item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-',
+            tglExpired: formatToDDMMYYYY(dateVal),
+            tglTerbit: formatToDDMMYYYY(item.issueDate || '-')
+          });
+        } else {
+          certs.forEach(cert => {
+            const rawExp = cert.expired || '-';
+            const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+            const rawIssue = cert.terbit || item.issueDate || '-';
+            
+            flattened.push({
+              id: cert.id || item.id,
+              kategori: item.categoryKey || 'Peralatan Pabrik',
+              jenis: item.title || 'Unknown',
+              unit: item.unitLocation || 'Umum',
+              opStatus: cert.status || item.status || 'Aktif',
+              sisaHari: calcDiff(dateVal),
+              workflowStatus: getWfStatus(cert.status || item.status, cert.status === 'EXEMPT' ? 'EXEMPT' : item.documentStatus || 'EXEMPT'),
+              merekItem: item.keterangan ? ((() => { try { return JSON.parse(item.keterangan).merek; } catch(e) { return null; } })() || item.title) : item.title,
+              nomorSeriTipe: item.code || '-',
+              nomorSertifikat: cert.noSertifikat || cert.noIzin || '-',
+              tglExpired: formatToDDMMYYYY(dateVal),
+              tglTerbit: formatToDDMMYYYY(rawIssue)
+            });
+          });
         }
-
-        const rawExp = primaryCert?.expired || item.expiryDate;
-        const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
-        const hari = calcDiff(dateVal);
-        const tglExpiredFormatted = formatToDDMMYYYY(dateVal);
-
-        const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
-
-        const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
-        const tglTerbitFormatted = formatToDDMMYYYY(rawTerbit);
-
-        flattened.push({
-          id: item.id,
-          kategori: item.categoryKey || 'Lainnya',
-          jenis: item.title || 'Unknown',
-          unit: item.unitLocation || 'Umum',
-          opStatus: item.status || 'Aktif',
-          sisaHari: hari,
-          workflowStatus: wfStatus,
-          merekItem: item.title || '-',
-          nomorSeriTipe: item.code || '-',
-          nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
-          tglExpired: tglExpiredFormatted,
-          tglTerbit: tglTerbitFormatted
-        });
       } else {
         if (certs.length === 0) {
           const dateVal = (item.expiryDate && item.expiryDate !== '2030-01-01' && item.expiryDate !== '-') ? item.expiryDate : '-';
@@ -249,7 +249,13 @@ export default function Dashboard() {
       // 2. Filter by Date Range Terbit
       if (isDateFilterActive) {
         if (!item.tglTerbit || item.tglTerbit === '-') return false;
-        const pubDate = new Date(item.tglTerbit);
+        let pubDate;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(item.tglTerbit)) {
+          const parts = item.tglTerbit.split('/');
+          pubDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          pubDate = new Date(item.tglTerbit);
+        }
         if (isNaN(pubDate.getTime())) return false;
 
         if (dateRangeStart) {
@@ -293,39 +299,24 @@ export default function Dashboard() {
     setIsDateFilterActive(false);
   };
 
-  // Export handlers
-  const handleExportCSV = () => {
-    const headers = ['No', 'Kategori', 'Jenis', 'Merek/Nama', 'No Seri', 'No Sertifikat', 'Tgl Terbit', 'Tgl Expired', 'Status'];
-    const rows = displayedIssuedCertificates.map((doc, idx) => [
-      idx + 1,
-      doc.kategori || '-',
-      doc.jenis || '-',
-      doc.merekItem || '-',
-      doc.nomorSeriTipe || '-',
-      doc.nomorSertifikat || '-',
-      doc.tglTerbit !== '-' ? doc.tglTerbit : '-',
-      doc.tglExpired !== '-' ? doc.tglExpired : '-',
-      doc.workflowStatus || '-'
-    ]);
-    const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setShowExportMenu(false);
-  };
-
-  const handleExportJSON = () => {
-    const blob = new Blob([JSON.stringify(displayedIssuedCertificates, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExportExcel = () => {
+    const dataToExport = displayedIssuedCertificates.map((doc, idx) => ({
+      'No': idx + 1,
+      'Kategori': doc.kategori || '-',
+      'Jenis': doc.jenis || '-',
+      'Merek/Nama': doc.merekItem || '-',
+      'No Seri': doc.nomorSeriTipe || '-',
+      'No Sertifikat': doc.nomorSertifikat || '-',
+      'Tgl Terbit': doc.tglTerbit !== '-' ? doc.tglTerbit : '-',
+      'Tgl Expired': doc.tglExpired !== '-' ? doc.tglExpired : '-',
+      'Status': doc.workflowStatus || '-'
+    }));
+    
+    const worksheet = xlsx.utils.json_to_sheet(dataToExport);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Data Sertifikat');
+    
+    xlsx.writeFile(workbook, `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.xlsx`);
     setShowExportMenu(false);
   };
 
@@ -554,16 +545,10 @@ export default function Dashboard() {
           {/* Export Buttons */}
           <div className="flex items-center gap-2 ml-7 xl:ml-0">
             <button
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors shadow-xs font-mono-data"
             >
-              Export CSV
-            </button>
-            <button
-              onClick={handleExportJSON}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-colors shadow-xs font-mono-data"
-            >
-              Export JSON
+              Export Excel
             </button>
           </div>
         </div>
