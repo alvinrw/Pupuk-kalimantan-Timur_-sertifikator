@@ -27,6 +27,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend
 } from 'recharts';
 import * as xlsx from 'xlsx';
 import { getMasterItems } from '../services/masterItemsService';
