@@ -6,6 +6,7 @@
 import React from 'react';
 import { Link2, PlusCircle, Eye, Trash2, FileText } from 'lucide-react';
 import { getFullFileUrl } from '../../config/api';
+import RoleGuard from '../RoleGuard';
 
 export default function CertificateNavCards({
   linkedCerts,
@@ -39,13 +40,15 @@ export default function CertificateNavCards({
             <option value="desc">Expired Paling Lama</option>
             <option value="asc">Expired Terdekat</option>
           </select>
-          <button
-            onClick={onAddCert}
-            className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Tambah Sertifikat Terhubung</span>
-          </button>
+          <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+            <button
+              onClick={onAddCert}
+              className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Tambah Sertifikat Terhubung</span>
+            </button>
+          </RoleGuard>
         </div>
       </div>
 
@@ -98,13 +101,15 @@ export default function CertificateNavCards({
                 )}
 
                 {/* Delete button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDeleteCert(cert.id); }}
-                  className="absolute top-3 right-3 p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                  title="Hapus Sertifikat Terhubung Ini"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDeleteCert(cert.id); }}
+                    className="absolute top-3 right-3 p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                    title="Hapus Sertifikat Terhubung Ini"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </RoleGuard>
 
                 <div className="pr-6">
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Nama Sertifikat</span>
@@ -159,7 +164,7 @@ export default function CertificateNavCards({
                       }`}
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>{isActive ? 'Sedang Dilihat (Buka Edit)' : 'Kelola & Edit Sertifikat Ini →'}</span>
+                    <span>{isActive ? 'Sedang Dilihat' : 'Lihat Detail Sertifikat Ini →'}</span>
                   </button>
 
                   <button

@@ -10,6 +10,7 @@ import {
   Columns,
   ChevronDown
 } from 'lucide-react';
+import RoleGuard from '../components/RoleGuard';
 import useIuranKeanggotaan from '../hooks/useIuranKeanggotaan';
 import { deleteIuranKeanggotaan } from '../services/iuranService';
 import IuranFormModal from '../components/IuranFormModal';
@@ -131,13 +132,15 @@ export default function IuranKeanggotaan() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>+ Input Data Iuran</span>
-        </button>
+        <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+          <button
+            onClick={handleOpenAddModal}
+            className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span>+ Input Data Iuran</span>
+          </button>
+        </RoleGuard>
       </div>
 
       {/* Filter Bar */}
@@ -277,7 +280,9 @@ export default function IuranKeanggotaan() {
                 {isVisible('nama') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">NAMA</th>}
                 {isVisible('npk') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">NPK</th>}
                 {isVisible('keterangan') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">KETERANGAN</th>}
-                <th rowSpan={2} className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">AKSI</th>
+                <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                  <th rowSpan={2} className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">AKSI</th>
+                </RoleGuard>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -342,20 +347,22 @@ export default function IuranKeanggotaan() {
                     {isVisible('nama') && <td className="py-3.5 px-4 font-medium whitespace-nowrap text-center align-middle">{item.nama || '-'}</td>}
                     {isVisible('npk') && <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-center align-middle">{item.npk || '-'}</td>}
                     {isVisible('keterangan') && <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-center align-middle">{item.keterangan || '-'}</td>}
-                    <td className="py-3 px-4 text-center whitespace-nowrap align-middle">
-                      <div className="flex flex-col items-center justify-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpenEditModal(item);
-                          }}
-                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-[#005ea4] text-[#005ea4] rounded-lg shadow-sm font-bold text-[10px] hover:bg-blue-50 transition-colors mt-1 w-full max-w-[100px] cursor-pointer"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span>Lihat Detail</span>
-                        </button>
-                      </div>
-                    </td>
+                    <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                      <td className="py-3 px-4 text-center whitespace-nowrap align-middle">
+                        <div className="flex flex-col items-center justify-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditModal(item);
+                            }}
+                            className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-[#005ea4] text-[#005ea4] rounded-lg shadow-sm font-bold text-[10px] hover:bg-blue-50 transition-colors mt-1 w-full max-w-[100px] cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span>Lihat Detail</span>
+                          </button>
+                        </div>
+                      </td>
+                    </RoleGuard>
                   </tr>
                 ))
               )}

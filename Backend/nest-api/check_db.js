@@ -2,15 +2,15 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function check() {
-  const master = await prisma.masterItem.findFirst({
-    where: { code: 'CR-001' },
-    include: { certificates: true }
+  const items = await prisma.masterItem.findMany({
+    select: { id: true, categoryKey: true, documentStatus: true }
   });
-  console.log(JSON.stringify(master, null, 2));
+  console.log('Total items:', items.length);
+  
+  const statusCounts = {};
+  items.forEach(i => {
+    statusCounts[i.documentStatus] = (statusCounts[i.documentStatus] || 0) + 1;
+  });
+  console.log('documentStatus counts:', statusCounts);
 }
-
-check()
-  .catch(e => console.error(e))
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+check().finally(() => prisma.());

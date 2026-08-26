@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCcw, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 /**
@@ -7,20 +7,15 @@ import { useAuth } from '../../contexts/AuthContext';
  */
 export default function MonitoringTable({
   filteredCertificates,
-  totalCount,
   searchTerm, setSearchTerm,
   activeFilterCount,
   resetFilters,
-  customUrgentDays,
   onOpenDetail,
   onCompleteModal,
   onCancelAction,
   onCancelAfkir,
   onQuickRenew,
   onQuickDecommission,
-  sortKey,
-  sortOrder,
-  onSort,
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
@@ -68,18 +63,8 @@ export default function MonitoringTable({
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">MEREK / NAMA ITEM</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NOMOR SERI / TAG</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>
-              <th 
-                onClick={() => onSort('tglExpired')}
-                className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle cursor-pointer hover:bg-slate-200/80 transition-colors select-none"
-              >
-                <div className="flex items-center justify-center gap-1.5">
-                  <span>TGL EXPIRATION</span>
-                  {sortKey === 'tglExpired' ? (
-                    sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#005ea4]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#005ea4]" />
-                  ) : (
-                    <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-                  )}
-                </div>
+              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">
+                TGL EXPIRATION
               </th>
               {!isViewer && (
               <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">AKSI WORKFLOW</th>

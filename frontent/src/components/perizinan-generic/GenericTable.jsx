@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronRight, FileText, Plus } from 'lucide-react';
 import { getFullFileUrl } from '../../config/api';
+import RoleGuard from '../RoleGuard';
 
 const getTimestamp = (dateStr) => {
   if (!dateStr || dateStr === '-') return 0;
@@ -448,21 +449,23 @@ export default function GenericTable({
                                   <span className="text-[11px] text-slate-500 font-mono-data">
                                     Master: <strong className="text-slate-800">{row.docNamaItem}</strong> ({row.docCode})
                                   </span>
-                                  {setAddCertTargetMaster && (
-                                    <button
-                                      onClick={() => activeMainTab !== 'staging' && setAddCertTargetMaster(row.parentDoc || row)}
-                                      disabled={activeMainTab === 'staging'}
-                                      className={`px-2.5 py-1 text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1 transition-colors ${
-                                        activeMainTab === 'staging'
-                                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'
-                                          : 'bg-[#005ea4] hover:bg-[#004881] text-white cursor-pointer'
-                                      }`}
-                                      title={activeMainTab === 'staging' ? 'Tidak dapat menambah sertifikat di mode Staging' : 'Tambah Sertifikat'}
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>+ Tambah Sertifikat</span>
-                                    </button>
-                                  )}
+                                  <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                                    {setAddCertTargetMaster && (
+                                      <button
+                                        onClick={() => activeMainTab !== 'staging' && setAddCertTargetMaster(row.parentDoc || row)}
+                                        disabled={activeMainTab === 'staging'}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1 transition-colors ${
+                                          activeMainTab === 'staging'
+                                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-70'
+                                            : 'bg-[#005ea4] hover:bg-[#004881] text-white cursor-pointer'
+                                        }`}
+                                        title={activeMainTab === 'staging' ? 'Tidak dapat menambah sertifikat di mode Staging' : 'Tambah Sertifikat'}
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>+ Tambah Sertifikat</span>
+                                      </button>
+                                    )}
+                                  </RoleGuard>
                                 </div>
                               </div>
 
@@ -777,16 +780,17 @@ export default function GenericTable({
                                 </div>
                               ) : (
                                 <div className="p-6 text-center text-slate-400 italic text-xs flex flex-col items-center justify-center gap-2">
-                                  <span>Belum ada sertifikat terhubung ke Master ini.</span>
-                                  {setAddCertTargetMaster && (
-                                    <button
-                                      onClick={() => setAddCertTargetMaster(row.parentDoc || row)}
-                                      className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors not-italic"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                      <span>+ Tambah Sertifikat Sekarang</span>
-                                    </button>
-                                  )}
+                                  <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                                    {setAddCertTargetMaster && (
+                                      <button
+                                        onClick={() => setAddCertTargetMaster(row.parentDoc || row)}
+                                        className="px-3 py-1.5 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors not-italic"
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        <span>+ Tambah Sertifikat Sekarang</span>
+                                      </button>
+                                    )}
+                                  </RoleGuard>
                                 </div>
                               )}
                             </div>
