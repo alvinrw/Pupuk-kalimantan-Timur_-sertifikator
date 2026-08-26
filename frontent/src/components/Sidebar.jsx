@@ -70,7 +70,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
           label: "Atur Kolom & Baris", 
           icon: Settings,
           isDropdown: true,
-          roleGuard: ['Super Admin', 'Admin'],
+          roleGuard: ['Super Admin', 'Admin', 'Viewer', 'User'],
           subItems: [
             { id: "atur-kolom-baris-peralatan", label: "Peralatan Pabrik" },
             { id: "atur-kolom-baris-aset", label: "Perizinan Aset" },
