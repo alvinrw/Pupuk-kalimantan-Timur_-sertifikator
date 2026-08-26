@@ -70,7 +70,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
           label: "Atur Kolom & Baris", 
           icon: Settings,
           isDropdown: true,
-          roleGuard: ['Super Admin', 'Admin', 'Viewer', 'User'],
+          roleGuard: ['Super Admin', 'Admin'],
           subItems: [
             { id: "atur-kolom-baris-peralatan", label: "Peralatan Pabrik" },
             { id: "atur-kolom-baris-aset", label: "Perizinan Aset" },
@@ -121,7 +121,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
                   const isOpen = openDropdowns[item.id];
                   const hasActiveChild = item.subItems.some(sub => sub.id === activeTab);
                   
-                  return (
+                  const dropdownElement = (
                     <div key={item.id} className="space-y-1">
                       <button
                         onClick={() => {
@@ -172,6 +172,15 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
                       </div>
                     </div>
                   );
+                  
+                  if (item.roleGuard) {
+                    return (
+                      <RoleGuard key={item.id} allowedRoles={item.roleGuard}>
+                        {dropdownElement}
+                      </RoleGuard>
+                    );
+                  }
+                  return dropdownElement;
                 }
 
                 const isActive = activeTab === item.id;
