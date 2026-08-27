@@ -626,7 +626,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
           {formData.reminderEnabled && (
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Tipe Pemicu</label>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Tipe Reminder</label>
                 <select
                   value={formData.reminderType}
                   onChange={(e) => setFormData({ ...formData, reminderType: e.target.value })}

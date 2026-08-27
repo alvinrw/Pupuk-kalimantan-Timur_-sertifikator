@@ -9,17 +9,17 @@ export function AuthProvider({ children }) {
     const savedUser = sessionStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [token, setToken] = useState(() => sessionStorage.getItem('token') || null);
 
+  // Karena token sudah diamankan di HttpOnly Cookie, socket.io akan otomatis
+  // mengirimkan cookie-nya jika dikonfigurasi dengan withCredentials: true (dilihat di socket.js)
   useEffect(() => {
-    if (token) {
-      socket.auth = { token };
+    if (user) {
       socket.connect();
     }
     return () => {
       socket.disconnect();
     };
-  }, [token]);
+  }, [user]);
 
   const login = async (username, password) => {
     try {
@@ -27,6 +27,7 @@ export function AuthProvider({ children }) {
       const response = await fetch(`${baseUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Penting untuk mengirim/menerima Cookie
         body: JSON.stringify({ username, password })
       });
       
@@ -37,13 +38,12 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      // Simpan data
-      setToken(data.access_token);
+      // Simpan data user SAJA, token disimpan rahasia oleh browser via Cookie
       setUser(data.user);
-      sessionStorage.setItem('token', data.access_token);
       sessionStorage.setItem('user', JSON.stringify(data.user));
 
-      // Koneksi socket (dihapus karena sudah ditangani oleh useEffect di atas saat state token berubah)
+      // Koneksi socket akan tertrigger oleh useEffect
+
       console.log("Login sukses dari backend!", data.user);
     } catch (error) {
       console.error("Error during login", error);
@@ -54,22 +54,18 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try {
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3005/api/v1';
-      if (token) {
-        await fetch(`${baseUrl}/auth/logout`, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          }
-        });
-      }
+      await fetch(`${baseUrl}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // Otomatis mengirimkan cookies saat logout
+        headers: { 
+          'Content-Type': 'application/json'
+        }
+      });
     } catch (error) {
       console.error("Error during logout", error);
     } finally {
       socket.disconnect();
       setUser(null);
-      setToken(null);
-      sessionStorage.removeItem('token');
       sessionStorage.removeItem('user');
     }
   };

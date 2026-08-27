@@ -59,6 +59,7 @@ export default function PdfCanvasOcrViewer({
 
         const loadingTask = pdfjsLib.getDocument({
           url: pdfUrl,
+          withCredentials: true,
           cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
           cMapPacked: true,
         });

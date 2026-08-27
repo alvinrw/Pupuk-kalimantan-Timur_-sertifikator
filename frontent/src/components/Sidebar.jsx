@@ -48,6 +48,8 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
       items: [
         { id: "peralatan-pabrik", label: "Perizinan Peralatan Pabrik", icon: Factory },
         { id: "perizinan-aset", label: "Perizinan Aset", icon: Building2 },
+        { id: "perizinan-proyek", label: "Perizinan Proyek", icon: FolderKanban },
+        { id: "perizinan-produk", label: "Perizinan Produk", icon: PackageCheck },
         { 
           id: "administrasi-dropdown", 
           label: "Administrasi Lainnya", 
@@ -57,8 +59,6 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
             { id: "iuran-keanggotaan", label: "Data Keanggotaan" }
           ]
         },
-        { id: "perizinan-proyek", label: "Perizinan Proyek", icon: FolderKanban },
-        { id: "perizinan-produk", label: "Perizinan Produk", icon: PackageCheck },
       ]
     },
     {

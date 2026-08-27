@@ -1,24 +1,42 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private prisma: PrismaService,
+  ) {
     super({
-      // [FIX H-01] Ekstrak token dari Authorization header, dan fallback ke URL query 'token' (diperlukan untuk view PDF di tab baru)
       jwtFromRequest: ExtractJwt.fromExtractors([
+        (request: any) => {
+          return request?.cookies?.access_token;
+        },
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         ExtractJwt.fromUrlQueryParameter('token'),
       ]),
       ignoreExpiration: false,
-      // [FIX C-01] Baca secret dari environment variable, bukan hardcoded
       secretOrKey: configService.get<string>('JWT_SECRET'),
+      passReqToCallback: true,
     });
   }
 
-  async validate(payload: any) {
+  async validate(req: any, payload: any) {
+    // Check blacklist
+    const token = req.cookies?.access_token || ExtractJwt.fromAuthHeaderAsBearerToken()(req) || ExtractJwt.fromUrlQueryParameter('token')(req);
+    
+    if (token) {
+      const isBlacklisted = await this.prisma.tokenBlacklist.findUnique({
+        where: { token }
+      });
+      if (isBlacklisted) {
+        throw new UnauthorizedException('Token has been revoked.');
+      }
+    }
+
     return {
       id: payload.sub,
       username: payload.username,

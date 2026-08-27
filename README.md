@@ -172,21 +172,32 @@ Jika komputer atau server baru saja di-restart, terkadang database PostgreSQL di
 
 Lakukan langkah-langkah pemulihan berikut di terminal baru pada direktori `backend/nest-api`:
 
-1. **Pastikan Database Sudah Tersinkronisasi**
+1. **Pastikan Konfigurasi .env Terisi (Untuk Akun Awal)**
+   Agar aman untuk *Enterprise*, aplikasi ini akan membaca konfigurasi akun awal admin dari file `backend/nest-api/.env` sebelum melakukan *seeding*. 
+   Pastikan Anda telah mengecek/mengisi variabel ini:
+   ```env
+   SUPER_ADMIN_NAME=AdminSuper
+   SUPER_ADMIN_USERNAME=admin_sakti
+   SUPER_ADMIN_NPK=PKT99999
+   SUPER_ADMIN_PASSWORD=RahasiaPerusahaan123!
+   ```
+   *(Jika Anda di mode `development` dan mengosongkan variabel tersebut, data akan otomatis di-fallback ke pengaturan default: muhfi_admin / admin123).*
+
+2. **Pastikan Database Sudah Tersinkronisasi**
    ```bash
    npx prisma db push
    ```
 
-2. **Buat Ulang Data Awal (Seeding)**
+3. **Buat Ulang Data Awal (Seeding)**
    ```bash
    npx prisma db seed
    ```
-   *(Perintah ini akan secara otomatis membuatkan role dan akun Super Admin bawaan).*
+   *(Perintah ini akan membaca `.env` Anda dan secara otomatis membuatkan role serta akun Super Admin tersebut).*
 
-3. **Login Menggunakan Akun Default**
+4. **Login Menggunakan Akun Tersebut**
    Gunakan kredensial berikut untuk masuk kembali ke sistem:
-   - **Username / NPK:** `muhfi_admin`
-   - **Password:** `admin123`
+   - **Username / NPK:** (Sesuai isi variabel `SUPER_ADMIN_USERNAME` atau `SUPER_ADMIN_NPK`)
+   - **Password:** (Sesuai isi variabel `SUPER_ADMIN_PASSWORD`)
 
 ---
 

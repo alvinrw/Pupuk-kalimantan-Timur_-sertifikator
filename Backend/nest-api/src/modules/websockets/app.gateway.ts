@@ -12,7 +12,8 @@ import { JwtService } from '@nestjs/jwt';
 
 @WebSocketGateway({
   cors: {
-    origin: '*',
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
   },
 })
 export class AppGateway implements OnGatewayConnection, OnGatewayDisconnect {

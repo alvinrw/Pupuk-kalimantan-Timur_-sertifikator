@@ -99,12 +99,11 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
     if (sertifikatMode === 'dengan') {
       if (tempUrl) {
         try {
-          const token = sessionStorage.getItem('token');
           const moveRes = await fetch(`${API_BASE}/document-history/move-temp`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 
-              'Content-Type': 'application/json',
-              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              'Content-Type': 'application/json'
             },
             body: JSON.stringify({ tempUrl })
           });
@@ -119,11 +118,10 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
         try {
           const fd = new FormData();
           fd.append('file', selectedFile);
-          const token = sessionStorage.getItem('token');
           const uploadRes = await fetch(`${API_BASE}/document-history/upload`, {
             method: 'POST',
-            body: fd,
-            headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+            credentials: 'include',
+            body: fd
           });
           if (uploadRes.ok) {
             const json = await uploadRes.json();
@@ -296,11 +294,10 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                         setIsUploadingTemp(true);
                         const fdTemp = new FormData();
                         fdTemp.append('file', file);
-                        const token = sessionStorage.getItem('token');
                         const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
                           method: 'POST',
-                          body: fdTemp,
-                          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                          credentials: 'include',
+                          body: fdTemp
                         });
                         if (uploadRes.ok) {
                           const json = await uploadRes.json();
@@ -534,10 +531,10 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
             </div>
           )}
 
-      {/* SECTION NOTIFIKASI & DEADLINE */}
+      {/* SECTION AGENDA & PERPANJANGAN */}
       <div className="space-y-4 pt-4 border-t border-slate-200">
         <h4 className="font-bold text-slate-900 text-xs border-b border-slate-200 pb-2 uppercase tracking-wider font-mono-data">
-          Pengaturan Notifikasi & Deadline
+          Agenda & Perpanjangan Dokumen
         </h4>
         <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3 font-mono-data">
           <div className="flex items-center gap-2">
@@ -549,7 +546,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
               className="rounded border-slate-300 accent-[#005ea4] h-4 w-4 cursor-pointer"
             />
             <label htmlFor="resolveReminderEnabled" className="text-xs text-slate-700 font-bold select-none cursor-pointer">
-              Aktifkan Pengingat / Notifikasi Reminder
+              Aktifkan di Agenda Perpanjangan (Reminder)
             </label>
           </div>
 

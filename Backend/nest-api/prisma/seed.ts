@@ -27,17 +27,29 @@ async function main() {
   }
 
   // 3. Buat Akun Super Admin
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  const defaultPassword = process.env.SUPER_ADMIN_PASSWORD;
+  const adminName = process.env.SUPER_ADMIN_NAME || 'Muhfi';
+  const adminUsername = process.env.SUPER_ADMIN_USERNAME || 'muhfi_admin';
+  const adminNpk = process.env.SUPER_ADMIN_NPK || 'PKT12345';
+  
+  if (!defaultPassword && process.env.NODE_ENV === 'production') {
+    throw new Error('❌ Batal Seeding: SUPER_ADMIN_PASSWORD wajib diset di file .env untuk lingkungan production!');
+  }
+
+  const finalPassword = defaultPassword || 'admin123';
+  const hashedPassword = await bcrypt.hash(finalPassword, 10);
 
   const superAdmin = await prisma.user.upsert({
-    where: { username: 'muhfi_admin' },
+    where: { username: adminUsername },
     update: {
-      password: hashedPassword, // Reset password jika dijalankan ulang
+      password: hashedPassword, // Update password saat seeding ulang
+      nama: adminName,
+      npk: adminNpk,
     },
     create: {
-      nama: 'Muhfi',
-      npk: 'PKT12345',
-      username: 'muhfi_admin',
+      nama: adminName,
+      npk: adminNpk,
+      username: adminUsername,
       password: hashedPassword,
       roleId: admin1Role.id,
     },

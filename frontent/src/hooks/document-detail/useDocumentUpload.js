@@ -34,11 +34,10 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
         const fd = new FormData();
         fd.append('file', selectedUploadFile);
 
-        const token = sessionStorage.getItem('token');
         const res = await fetch(UPLOAD_ENDPOINT, { 
           method: 'POST', 
-          body: fd,
-          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+          credentials: 'include',
+          body: fd
         });
         if (!res.ok) throw new Error('Gagal upload file ke server');
 

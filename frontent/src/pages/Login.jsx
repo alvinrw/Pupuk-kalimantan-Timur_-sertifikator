@@ -6,10 +6,10 @@ export default function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const handleLogin = (e) => {
     e.preventDefault();
-    if(username.trim()) {
+    if (username.trim()) {
       login(username, password);
     }
   };
@@ -17,17 +17,14 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-100 font-sans-clean">
       <div className="w-full max-w-md p-8 bg-white rounded-2xl shadow-xl border border-slate-200 flex flex-col items-center">
-        
+
         {/* LOGO AREA */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 bg-[#005ea4]/10 rounded-full flex items-center justify-center mb-3">
-            <Shield className="w-8 h-8 text-[#005ea4]" />
-          </div>
           <h1 className="font-logo-sutasoma text-3xl font-bold tracking-tight text-[#005ea4] select-none text-center">
             SERTIFIKATOR
           </h1>
           <p className="text-sm text-slate-500 mt-2 text-center">
-            Sistem Manajemen Dokumen & Perizinan Terpadu
+
           </p>
         </div>
 
@@ -74,7 +71,7 @@ export default function Login() {
             Masuk ke Sistem
           </button>
         </form>
-        
+
         <div className="mt-8 pt-6 border-t border-slate-100 w-full text-center">
           <p className="text-xs text-slate-400">
             © 2026 PT Pupuk Kalimantan Timur

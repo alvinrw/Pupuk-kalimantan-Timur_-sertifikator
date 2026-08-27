@@ -211,3 +211,11 @@ model ColumnConfig {
   @@map("column_configs")
 }
 
+model TokenBlacklist {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now())
+
+  @@map("token_blacklist")
+}

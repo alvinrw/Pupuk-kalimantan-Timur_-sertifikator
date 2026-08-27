@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { History, FileText, Search, User, SlidersHorizontal, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 
 export default function HistoriPencatatan() {
   const [logs, setLogs] = useState([]);
@@ -11,6 +12,15 @@ export default function HistoriPencatatan() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedAction, setSelectedAction] = useState('');
+  
+  // Modals & Notifications
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: '' }
+
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     fetchLogs();
@@ -38,17 +48,20 @@ export default function HistoriPencatatan() {
     }
   };
 
-  const handleClearHistory = async () => {
-    const confirmClear = window.confirm("Apakah Anda yakin ingin menghapus seluruh histori pencatatan? Tindakan ini tidak dapat dibatalkan.");
-    if (!confirmClear) return;
+  const confirmClearHistory = () => {
+    setIsClearModalOpen(true);
+  };
+
+  const executeClearHistory = async () => {
+    setIsClearModalOpen(false);
     try {
       setIsLoading(true);
       await api.delete('/activity-logs');
       setLogs([]);
-      alert("Berhasil menghapus seluruh histori pencatatan.");
+      showNotification('success', 'Berhasil menghapus seluruh histori pencatatan.');
     } catch (error) {
       console.error('Error clearing logs:', error);
-      alert("Gagal menghapus histori pencatatan: " + (error.response?.data?.message || error.message));
+      showNotification('error', 'Gagal menghapus histori pencatatan: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }
@@ -131,7 +144,7 @@ export default function HistoriPencatatan() {
           </div>
           
           <button
-            onClick={handleClearHistory}
+            onClick={confirmClearHistory}
             className="w-full sm:w-auto px-4.5 py-2 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs font-mono-data"
           >
             <Trash2 className="w-4 h-4" />
@@ -188,6 +201,17 @@ export default function HistoriPencatatan() {
         )}
       </div>
 
+      {/* Notification Banner */}
+      {notification && (
+        <div className={`px-4 py-3 rounded-lg border flex items-center gap-3 text-sm font-bold shadow-sm ${
+          notification.type === 'success' 
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+            : 'bg-rose-50 text-rose-700 border-rose-200'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
@@ -243,6 +267,13 @@ export default function HistoriPencatatan() {
           </table>
         </div>
       </div>
+      
+      <DeleteConfirmModal 
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onConfirm={executeClearHistory}
+        itemName="Seluruh Histori Pencatatan"
+      />
     </div>
   );
 }

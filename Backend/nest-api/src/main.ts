@@ -21,6 +21,9 @@ async function bootstrap() {
   });
 
   const bodyParser = require('body-parser');
+  const cookieParser = require('cookie-parser');
+  
+  app.use(cookieParser());
   // [FIX M-03] Turunkan limit body request dari 50MB ke 5MB untuk mencegah DoS
   app.use(bodyParser.json({ limit: '5mb' }));
   app.use(bodyParser.urlencoded({ limit: '5mb', extended: true }));
