@@ -108,7 +108,7 @@ export const mockActivityLogs = [
   },
   {
     id: "ACT-8811",
-    user: "Sistem Otomatis AI Sertifikator",
+    user: "Sistem Otomatis AI PERISAI",
     avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=100",
     action: "Deteksi Expiry Otomatis",
     details: "Mengubah status sertifikat B-201-P2 menjadi 'Akan Expired' (< 30 Hari)",

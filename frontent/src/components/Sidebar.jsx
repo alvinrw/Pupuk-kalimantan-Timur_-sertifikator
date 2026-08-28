@@ -13,16 +13,14 @@ import {
   Settings,
   Users,
   ChevronDown,
+  ChevronRight,
   LogOut,
-  User,
-  PanelLeftClose,
-  PanelLeftOpen,
-  ShieldCheck
+  X
 } from 'lucide-react';
 import RoleGuard from './RoleGuard';
 import { useAuth } from '../contexts/AuthContext';
 
-export default function Sidebar({ activeTab, setActiveTab }) {
+export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobileClose }) {
   const { user, logout } = useAuth();
   const [openDropdowns, setOpenDropdowns] = useState({ 'admin-dropdown': false, 'informasi-dropdown': false });
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -51,6 +49,11 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     }
   };
 
+  const handleNavClick = (tabId) => {
+    setActiveTab(tabId);
+    if (onMobileClose) onMobileClose(); // tutup drawer di mobile setelah navigasi
+  };
+
   const menuGroups = [
     {
       group: "UTAMA",
@@ -67,23 +70,36 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         { id: "perizinan-produk", label: "Perizinan Produk", icon: PackageCheck },
         { 
           id: "administrasi-dropdown", 
-          label: "Perizinan Administrasi Lainnya", 
-          icon: FileSpreadsheet, 
+          label: "Administrasi Lainnya", 
+          icon: FileSpreadsheet,
           isDropdown: true,
-          roleGuard: ['Super Admin', 'Admin'],
-          subItems: []
+          subItems: [
+            { id: "iuran-keanggotaan", label: "Data Keanggotaan" }
+          ]
         },
-        { id: "iuran-keanggotaan", label: "Keanggotaan", icon: Users, roleGuard: ['Super Admin', 'Admin'] },
       ]
     },
     {
       group: "MONITORING & SISTEM",
       items: [
         { id: "monitoring", label: "Monitoring & Evaluasi", icon: Activity },
-        { id: "tugas-terdekat", label: "Tugas Terdekat", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
+        { 
+          id: "atur-kolom-baris-dropdown", 
+          label: "Atur Kolom & Baris", 
+          icon: Settings,
+          isDropdown: true,
+          roleGuard: ['Super Admin', 'Admin'],
+          subItems: [
+            { id: "atur-kolom-baris-peralatan", label: "Peralatan Pabrik" },
+            { id: "atur-kolom-baris-aset", label: "Perizinan Aset" },
+            { id: "atur-kolom-baris-proyek", label: "Perizinan Proyek" },
+            { id: "atur-kolom-baris-produk", label: "Perizinan Produk" },
+          ]
+        },
+        { id: "tugas-terdekat", label: "Agenda & Perpanjangan", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
         {
-          id: "panduan-sop",
-          label: "Panduan Pengguna",
+          id: "informasi-website",
+          label: "Informasi Website",
           icon: HelpCircle,
         },
         { id: "histori-pencatatan", label: "Histori Pencatatan", icon: History, roleGuard: ['Super Admin', 'Admin'] },
@@ -92,32 +108,24 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     }
   ];
 
-  return (
-    <aside 
-      className={`bg-white text-slate-800 flex flex-col shrink-0 h-screen sticky top-0 z-30 font-sans-clean border-r border-slate-200 shadow-xs transition-all duration-300 ease-in-out ${
-        isCollapsed ? 'w-[72px]' : 'w-72'
-      }`}
-    >
-      
+  const sidebarContent = (
+    <aside className="w-64 bg-white text-slate-800 flex flex-col h-full font-sans-clean border-r border-slate-200 shadow-xs">
       {/* Brand Header */}
-      <div className="h-16 flex items-center border-b border-slate-200 bg-slate-50/50 px-3 relative overflow-hidden">
-        <div className={`flex items-center gap-2.5 whitespace-nowrap transition-all duration-300 ease-in-out overflow-hidden ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[250px] opacity-100'}`}>
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#005ea4] to-[#003d6d] flex items-center justify-center shrink-0 shadow-sm">
-            <ShieldCheck className="w-5 h-5 text-white" />
-          </div>
-          <h1 className="font-logo-sutasoma text-xl font-bold tracking-tight text-[#005ea4] select-none pr-2">
-            SINTESIS
+      <div className="h-20 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50 shrink-0">
+        <div className="flex flex-col justify-center">
+          <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none leading-none">
+            PERISAI
           </h1>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 select-none leading-tight">
+            Pengelolaan Riwayat<br/>Sertifikasi & Izin
+          </span>
         </div>
-        
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={`p-1.5 rounded-lg text-slate-400 hover:text-[#005ea4] hover:bg-[#005ea4]/10 transition-all duration-300 shrink-0 absolute ${
-            isCollapsed ? 'left-1/2 -translate-x-1/2' : 'right-3'
-          }`}
-          title={isCollapsed ? "Buka Sidebar" : "Tutup Sidebar"}
+        {/* Tombol close untuk mobile drawer */}
+        <button
+          onClick={onMobileClose}
+          className="lg:hidden p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
         >
-          {isCollapsed ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+          <X className="w-5 h-5" />
         </button>
       </div>
 
@@ -156,8 +164,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                       <button
                         onClick={() => {
                           toggleDropdown(item.id);
-                          if (!isOpen && !isCollapsed && item.subItems?.length > 0) {
-                            setActiveTab(item.subItems[0].id);
+                          if (!isOpen) {
+                            handleNavClick(item.subItems[0].id);
                           }
                         }}
                         title={isCollapsed ? item.label : ""}
@@ -192,33 +200,30 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                         />
                       </button>
                       
-                      {/* Sub-items (hanya dirender jika tidak sedang ditutup) */}
-                      {!isCollapsed && (
-                        <div 
-                          className={`grid transition-all duration-300 ease-in-out ${
-                            isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                          }`}
-                        >
-                          <div className="overflow-hidden">
-                            <div className="pl-[38px] pr-2 space-y-1 mt-1 pb-1">
-                              {item.subItems.map(subItem => {
-                                const isSubActive = activeTab === subItem.id;
-                                return (
-                                  <button
-                                    key={subItem.id}
-                                    onClick={() => setActiveTab(subItem.id)}
-                                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors duration-150 ${
-                                      isSubActive
-                                        ? "bg-[#005ea4] text-white shadow-xs"
-                                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
-                                    }`}
-                                  >
-                                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isSubActive ? 'bg-white' : 'bg-slate-300'}`}></span>
-                                    <span className="truncate whitespace-nowrap text-left">{subItem.label}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                      <div 
+                        className={`grid transition-all duration-200 ease-in-out ${
+                          isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                        }`}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="pl-9 pr-3 space-y-1 mt-1">
+                            {item.subItems.map(subItem => {
+                              const isSubActive = activeTab === subItem.id;
+                              return (
+                                <button
+                                  key={subItem.id}
+                                  onClick={() => handleNavClick(subItem.id)}
+                                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-semibold transition-colors duration-150 ${
+                                    isSubActive
+                                      ? "bg-[#005ea4] text-white shadow-xs"
+                                      : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                                  }`}
+                                >
+                                  <span className={`w-1.5 h-1.5 rounded-full ${isSubActive ? 'bg-white' : 'bg-slate-300'}`}></span>
+                                  {subItem.label}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -240,9 +245,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
                 const buttonElement = (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
-                    title={isCollapsed ? item.label : ""}
-                    className={`w-full flex items-center p-2.5 rounded-xl text-xs font-semibold transition-all duration-200 overflow-hidden ${
+                    onClick={() => handleNavClick(item.id)}
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors duration-150 ${
                       isActive
                         ? "bg-[#005ea4] text-white shadow-md shadow-[#005ea4]/20"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
@@ -276,13 +280,34 @@ export default function Sidebar({ activeTab, setActiveTab }) {
       </div>
 
       {/* User Profile Widget */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50/50" ref={profileRef}>
-        <div className="relative flex justify-center">
-          {/* Dropdown Menu Popup (muncul ke arah kanan jika sidebar ditutup) */}
-          <div 
-            className={`absolute bottom-[calc(100%+0.5rem)] bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden transition-all duration-200 origin-bottom-left w-48 ${
-              isProfileOpen ? "opacity-100 scale-100 visible" : "opacity-0 scale-95 invisible"
-            } ${isCollapsed ? 'left-10' : 'left-0'}`}
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 shrink-0">
+        <div className="flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 bg-white shadow-xs">
+          <img 
+            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nama || 'User')}&background=eff6ff&color=005ea4`} 
+            alt="User Avatar" 
+            className="w-10 h-10 rounded-full ring-2 ring-slate-100 object-cover shrink-0" 
+          />
+          <div className="flex flex-col overflow-hidden flex-1">
+            <span 
+              className="text-sm font-bold text-slate-900 truncate tracking-tight"
+              title={user?.nama || 'Pengguna'}
+            >
+              {(() => {
+                const fullName = user?.nama;
+                if (!fullName) return 'Pengguna';
+                const parts = fullName.trim().split(/\s+/);
+                if (parts.length <= 2) return fullName;
+                const firstTwo = parts.slice(0, 2).join(' ');
+                const abbreviated = parts.slice(2).map(p => p[0].toUpperCase() + '.').join(' ');
+                return `${firstTwo} ${abbreviated}`;
+              })()}
+            </span>
+            <span className="text-[11px] font-medium text-slate-500 truncate mt-0.5">{user?.role?.replace(/Admin \d+/, 'Admin') || 'Sistem RBAC'}</span>
+          </div>
+          <button 
+            onClick={logout}
+            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Keluar"
           >
             <div className="p-3 border-b border-slate-100 bg-slate-50/50">
               <p className="text-xs font-bold text-slate-900 truncate">{user?.nama || 'Pengguna'}</p>
@@ -354,5 +379,32 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         </div>
       </div>
     </aside>
+  );
+
+  return (
+    <>
+      {/* ── Desktop: sticky sidebar (lg dan ke atas) ── */}
+      <div className="hidden lg:flex h-screen sticky top-0 z-30 shrink-0">
+        {sidebarContent}
+      </div>
+
+      {/* ── Mobile: drawer + overlay ── */}
+      {/* Overlay backdrop */}
+      <div
+        className={`lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${
+          isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onMobileClose}
+      />
+
+      {/* Drawer slide-in dari kiri */}
+      <div
+        className={`lg:hidden fixed top-0 left-0 z-50 h-full w-64 transform transition-transform duration-300 ease-in-out ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        {sidebarContent}
+      </div>
+    </>
   );
 }

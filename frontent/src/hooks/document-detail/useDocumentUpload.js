@@ -3,78 +3,111 @@ import { updateCertificate, updateMasterItem, createCertificate } from '../../se
 import { UPLOAD_ENDPOINT } from '../../config/api';
 import toast from 'react-hot-toast';
 
-export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshRequired }) {
+const getTimestamp = (dateStr) => {
+  if (!dateStr || dateStr === '-') return 0;
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    const parts = dateStr.split('/');
+    return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+  }
+  const t = new Date(dateStr).getTime();
+  return isNaN(t) ? 0 : t;
+};
+
+export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate, onRefreshRequired, setActiveCertId }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [uploadData, setUploadData] = useState(null);
   const [selectedUploadFile, setSelectedUploadFile] = useState(null);
   const manualFileInputRef = useRef(null);
 
-  const openUploadModal = (type) => {
-    setUploadData({ type, noSertifikat: '', instansi: '', terbit: '', expired: '' });
+  const openUploadModal = (type, rowId = null) => {
+    setUploadData({ type, rowId, namaSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '' });
     setSelectedUploadFile(null);
     setIsUploadModalOpen(true);
   };
 
   const handleUploadSubmit = async (e) => {
     if (e) e.preventDefault();
-    if (!selectedUploadFile) {
-      toast.error('Silakan pilih file PDF terlebih dahulu.');
-      return;
-    }
 
     try {
-      const fd = new FormData();
-      fd.append('file', selectedUploadFile);
+      let newFileUrl = null;
 
-      const token = sessionStorage.getItem('token');
-      const res = await fetch(UPLOAD_ENDPOINT, { 
-        method: 'POST', 
-        body: fd,
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-      if (!res.ok) throw new Error('Gagal upload file ke server');
+      if (selectedUploadFile) {
+        const fd = new FormData();
+        fd.append('file', selectedUploadFile);
 
-      const json = await res.json();
-      const newFileUrl = json?.data?.url || json?.data?.fileUrl;
+        const res = await fetch(UPLOAD_ENDPOINT, { 
+          method: 'POST', 
+          credentials: 'include',
+          body: fd
+        });
+        if (!res.ok) throw new Error('Gagal upload file ke server');
 
-      if (!newFileUrl) throw new Error('Tidak mendapatkan URL file dari server');
+        const json = await res.json();
+        newFileUrl = json?.data?.url || json?.data?.fileUrl;
+
+        if (!newFileUrl) throw new Error('Tidak mendapatkan URL file dari server');
+      }
 
       const masterItemId = item?.MasterId || item?.id;
+
+      const currentExpiredTime = getTimestamp(targetCert?.expired || item?.currentCert?.expired || item?.berakhir);
+      const newExpiredTime = getTimestamp(uploadData.expired);
+
+      // Only treat the new certificate as active if its expiration date is later than the current one
+      const isNewer = newExpiredTime > currentExpiredTime;
 
       const certPayload = {
         itemId: masterItemId,
         noSertifikat: uploadData.noSertifikat || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`,
-        instansi: uploadData.instansi || null,
+        namaSertifikat: uploadData.namaSertifikat || (targetCert ? targetCert.namaSertifikat : 'Sertifikat Utama'),
+        jenisSertifikat: (targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || 'Sertifikat Utama',
+        instansi: uploadData.instansi || targetCert?.instansi || null,
         terbit: uploadData.terbit || undefined,
         expired: uploadData.expired || undefined,
-        status: 'Aktif',
+        status: isNewer ? 'Aktif' : 'Diarsipkan',
         fileUrl: newFileUrl,
-        jenisSertifikat: 'Sertifikat Utama'
+        keterangan: targetCert?.keterangan || null,
       };
 
       if (uploadData.type === 'current') {
-        if (item.currentCert && item.currentCert.id) {
-          await updateCertificate(item.currentCert.id, { 
+        const certIdToUpdate = targetCert?.id || item?.currentCert?.id;
+        if (certIdToUpdate) {
+          const updatePayload = {
+            namaSertifikat: uploadData.namaSertifikat || undefined,
+            jenisSertifikat: (targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || undefined,
             noSertifikat: uploadData.noSertifikat || undefined,
             instansi: uploadData.instansi || undefined,
             terbit: uploadData.terbit || undefined,
             expired: uploadData.expired || undefined,
-            fileUrl: newFileUrl 
-          });
-        } else {
-          await createCertificate(certPayload);
+            status: 'Aktif',
+          };
+          if (newFileUrl) updatePayload.fileUrl = newFileUrl;
+          await updateCertificate(certIdToUpdate, updatePayload);
         }
       } else if (uploadData.type === 'archive') {
-        if (uploadData.rowId) {
-          await updateCertificate(uploadData.rowId, { 
-            noSertifikat: uploadData.noSertifikat || undefined,
-            instansi: uploadData.instansi || undefined,
-            terbit: uploadData.terbit || undefined,
-            expired: uploadData.expired || undefined,
-            fileUrl: newFileUrl 
-          });
-        } else {
-          await createCertificate(certPayload);
+        // Create a new certificate
+        const saved = await createCertificate(certPayload);
+
+        // Archive the old certificate only if the new one is newer
+        if (isNewer) {
+          if (uploadData.rowId && uploadData.rowId !== masterItemId) {
+            await updateCertificate(uploadData.rowId, { status: 'Diarsipkan' });
+          }
+
+          // Update active cert focus
+          if (setActiveCertId && saved?.id) {
+            setActiveCertId(saved.id);
+          }
+
+          // Update the Master Item's status and dates to match the new certificate
+          if (masterItemId) {
+            await updateMasterItem(masterItemId, {
+              status: 'Aktif',
+              issueDate: uploadData.terbit || undefined,
+              expiryDate: uploadData.expired || undefined,
+              documentStatus: 'COMPLETED'
+            });
+          }
         }
       }
 
@@ -86,22 +119,17 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
       // Inform the user
       toast.success('Berhasil mengunggah berkas baru!');
       setIsUploadModalOpen(false);
-      
-      const newLog = {
-        id: 'temp-add-' + Date.now(),
-        action: 'ADDED_CERTIFICATE',
-        description: `Sertifikat / lampiran "${certPayload.noSertifikat}" berhasil ditambahkan.`,
-        changedBy: 'System / User',
-        createdAt: new Date().toISOString(),
-        type: 'audit_log',
-        sortDate: Date.now()
-      };
-      
-      if (fetchHistory && typeof fetchHistory === 'function') {
-        // optimistically push the log if possible, but fetchHistory will replace it anyway
-        await fetchHistory();
-      }
+      setSelectedUploadFile(null);
+      await fetchHistory();
 
+      const updatedFields = { fileUrl: newFileUrl };
+      if (uploadData.type === 'archive' && isNewer) {
+        updatedFields.status = 'Aktif';
+        if (uploadData.terbit) updatedFields.issueDate = uploadData.terbit;
+        if (uploadData.expired) updatedFields.expiryDate = uploadData.expired;
+        updatedFields.documentStatus = 'COMPLETED';
+      }
+      if (onSaveUpdate) onSaveUpdate({ ...item, ...updatedFields });
       if (onRefreshRequired) onRefreshRequired();
       // Optional callback
       if (onSaveUpdate) onSaveUpdate({ ...item, fileUrl: newFileUrl });

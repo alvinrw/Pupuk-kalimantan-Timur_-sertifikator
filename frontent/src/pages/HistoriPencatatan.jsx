@@ -1,14 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { History, FileText, Search, Eye, X } from 'lucide-react';
+import { History, FileText, Search, User, SlidersHorizontal, Trash2 } from 'lucide-react';
 import api from '../services/api';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
 
 export default function HistoriPencatatan() {
   const [logs, setLogs] = useState([]);
+  const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedLog, setSelectedLog] = useState(null);
+  
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedAction, setSelectedAction] = useState('');
+  
+  // Modals & Notifications
+  const [isClearModalOpen, setIsClearModalOpen] = useState(false);
+  const [notification, setNotification] = useState(null); // { type: 'success' | 'error', message: '' }
+
+  const showNotification = (type, message) => {
+    setNotification({ type, message });
+    setTimeout(() => setNotification(null), 3000);
+  };
 
   useEffect(() => {
     fetchLogs();
+    fetchUsers();
   }, []);
 
   const fetchLogs = async () => {
@@ -18,6 +34,34 @@ export default function HistoriPencatatan() {
       setLogs(response.data);
     } catch (error) {
       console.error('Error fetching logs:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
+
+  const confirmClearHistory = () => {
+    setIsClearModalOpen(true);
+  };
+
+  const executeClearHistory = async () => {
+    setIsClearModalOpen(false);
+    try {
+      setIsLoading(true);
+      await api.delete('/activity-logs');
+      setLogs([]);
+      showNotification('success', 'Berhasil menghapus seluruh histori pencatatan.');
+    } catch (error) {
+      console.error('Error clearing logs:', error);
+      showNotification('error', 'Gagal menghapus histori pencatatan: ' + (error.response?.data?.message || error.message));
     } finally {
       setIsLoading(false);
     }
@@ -33,24 +77,50 @@ export default function HistoriPencatatan() {
     }
   };
 
-  const parseTargetName = (log) => {
+  const renderDetails = (detailsStr) => {
+    if (!detailsStr) return '-';
     try {
-      if (log.details) {
-        const parsed = JSON.parse(log.details);
-        if (parsed.body) {
-          const body = parsed.body;
-          if (body.title) return body.title;
-          if (body.merekItem) return body.merekItem;
-          if (body.namaSertifikat) return body.namaSertifikat;
+      const parsed = JSON.parse(detailsStr);
+      if (parsed.message) {
+        let msg = parsed.message;
+        if (parsed.changes) {
+          const changedFields = [];
+          const before = parsed.changes.before || {};
+          const after = parsed.changes.after || {};
+          Object.keys(after).forEach(k => {
+            if (before[k] !== after[k]) {
+              changedFields.push(`${k}: "${before[k] || '-'}" → "${after[k]}"`);
+            }
+          });
+          if (changedFields.length > 0) {
+            msg += ` (${changedFields.join(', ')})`;
+          }
         }
+        return msg;
       }
-    } catch(e) {}
-    return log.target;
+      return detailsStr;
+    } catch (e) {
+      return detailsStr;
+    }
   };
+
+  // Filter logic
+  const filteredLogs = logs.filter(log => {
+    const matchesSearch = 
+      (log.user || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (log.target || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (log.details || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (log.module || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+    const matchesUser = selectedUser === '' || log.user === selectedUser;
+    const matchesAction = selectedAction === '' || log.action === selectedAction;
+
+    return matchesSearch && matchesUser && matchesAction;
+  });
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <History className="w-6 h-6 text-[#005ea4]" />
@@ -61,91 +131,134 @@ export default function HistoriPencatatan() {
           </p>
         </div>
         
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Cari histori..." 
-            className="pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]/30"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Cari histori..." 
+              className="pl-9 pr-4 py-2 w-full text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]/30"
+            />
+          </div>
+          
+          <button
+            onClick={confirmClearHistory}
+            className="w-full sm:w-auto px-4.5 py-2 text-xs font-bold text-rose-600 hover:text-white bg-rose-50 hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-lg transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs font-mono-data"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Clear Histori</span>
+          </button>
         </div>
       </div>
 
+      {/* FILTER BAR */}
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-wrap gap-4 items-center">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+          <SlidersHorizontal className="w-4 h-4 text-slate-500" />
+          <span>Filter Data:</span>
+        </div>
+        
+        {/* User filter */}
+        <div className="flex items-center gap-2 text-xs">
+          <label className="font-bold text-slate-600">Pengguna:</label>
+          <select 
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4]/20 cursor-pointer"
+          >
+            <option value="">Semua Pengguna</option>
+            {users.map(u => (
+              <option key={u.id} value={u.nama}>{u.nama} ({u.npk || '-'})</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Action filter */}
+        <div className="flex items-center gap-2 text-xs">
+          <label className="font-bold text-slate-600">Aksi:</label>
+          <select 
+            value={selectedAction}
+            onChange={(e) => setSelectedAction(e.target.value)}
+            className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4]/20 cursor-pointer"
+          >
+            <option value="">Semua Aksi</option>
+            <option value="INSERT">INSERT (Tambah)</option>
+            <option value="UPDATE">UPDATE (Edit)</option>
+            <option value="DELETE">DELETE (Hapus)</option>
+            <option value="LOGIN">LOGIN (Masuk)</option>
+          </select>
+        </div>
+
+        {(selectedUser !== '' || selectedAction !== '' || searchQuery !== '') && (
+          <button 
+            onClick={() => { setSelectedUser(''); setSelectedAction(''); setSearchQuery(''); }}
+            className="text-xs font-bold text-rose-600 hover:text-rose-800 transition-colors ml-auto cursor-pointer"
+          >
+            Reset Filter
+          </button>
+        )}
+      </div>
+
+      {/* Notification Banner */}
+      {notification && (
+        <div className={`px-4 py-3 rounded-lg border flex items-center gap-3 text-sm font-bold shadow-sm ${
+          notification.type === 'success' 
+            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+            : 'bg-rose-50 text-rose-700 border-rose-200'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
               <tr>
-                <th className="px-6 py-4 font-semibold">Waktu & Tanggal</th>
-                <th className="px-6 py-4 font-semibold">Nama Pengguna</th>
-                <th className="px-6 py-4 font-semibold">Role</th>
-                <th className="px-6 py-4 font-semibold">Aksi</th>
-                <th className="px-6 py-4 font-semibold">Modul Target</th>
-                <th className="px-6 py-4 font-semibold">Detail Objek</th>
+                <th className="px-6 py-4 font-semibold w-48">Waktu & Tanggal</th>
+                <th className="px-6 py-4 font-semibold w-48">Nama Pengguna</th>
+                <th className="px-6 py-4 font-semibold w-32">Role</th>
+                <th className="px-6 py-4 font-semibold w-24">Aksi</th>
+                <th className="px-6 py-4 font-semibold w-40">Modul Target</th>
+                <th className="px-6 py-4 font-semibold">Detail & Rincian Perubahan</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-100 font-mono-data text-xs">
               {isLoading ? (
-                // 1. LOADING SKELETON STATE
-                [...Array(5)].map((_, index) => (
-                  <tr key={`skeleton-${index}`} className="animate-pulse">
-                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-28"></div></td>
-                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-32"></div></td>
-                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-20"></div></td>
-                    <td className="px-6 py-4"><div className="h-5 bg-slate-200 rounded-full w-16"></div></td>
-                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-24"></div></td>
-                    <td className="px-6 py-4 flex justify-between"><div className="h-4 bg-slate-200 rounded w-32"></div><div className="h-6 bg-slate-200 rounded w-16"></div></td>
-                  </tr>
-                ))
-              ) : logs.length === 0 ? (
-                // 2. EMPTY STATE
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center">
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
-                        <History className="w-6 h-6 text-slate-400" />
-                      </div>
-                      <div className="text-slate-500 font-medium">Belum ada histori pencatatan</div>
-                      <p className="text-sm text-slate-400">Data aktivitas pengguna dan sistem akan muncul di sini.</p>
-                    </div>
-                  </td>
+                  <td colSpan="6" className="text-center py-10 text-slate-500 font-sans italic">Memuat log aktivitas...</td>
+                </tr>
+              ) : filteredLogs.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-10 text-slate-500 font-sans italic">Tidak ada histori aktivitas yang sesuai.</td>
                 </tr>
               ) : (
-                // 3. DATA STATE
-                logs.map((log) => (
+                filteredLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="px-6 py-4 text-slate-500">
                       {new Date(log.timestamp).toLocaleString('id-ID', {
                         year: 'numeric', month: 'short', day: 'numeric',
-                        hour: '2-digit', minute: '2-digit'
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
                       })}
                     </td>
                     <td className="px-6 py-4 font-medium text-slate-900">{log.user}</td>
                     <td className="px-6 py-4 text-slate-500">{log.role}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${getBadgeColor(log.action)}`}>
+                      <span className={`px-2.5 py-1 text-[10px] font-bold rounded-full border ${getBadgeColor(log.action)}`}>
                         {log.action}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-slate-700">
+                      <div className="flex items-center gap-1.5 text-slate-700 capitalize">
                         <FileText className="w-3.5 h-3.5 text-slate-400" />
-                        {log.module}
+                        {(log.module || '').replace(/-/g, ' ')}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="truncate max-w-[150px] inline-block font-mono-data text-xs" title={log.target}>
-                          {parseTargetName(log)}
-                        </span>
-                        <button 
-                          onClick={() => setSelectedLog(log)}
-                          className="text-[#005ea4] hover:text-[#004881] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          Detail
-                        </button>
-                      </div>
+                    <td className="px-6 py-4 text-slate-600 font-sans text-xs">
+                      <div className="font-bold text-slate-800 font-mono-data mb-0.5">{log.target}</div>
+                      <div>{renderDetails(log.details)}</div>
                     </td>
                   </tr>
                 ))
@@ -154,66 +267,13 @@ export default function HistoriPencatatan() {
           </table>
         </div>
       </div>
-
-      {/* Detail Modal */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
-              <div>
-                <h3 className="font-bold text-slate-900 text-lg">Detail Perubahan Data</h3>
-                <p className="text-xs text-slate-500 font-mono-data">Target ID: {selectedLog.target}</p>
-              </div>
-              <button onClick={() => setSelectedLog(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-6 overflow-y-auto space-y-4">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="block text-slate-500 mb-1">Aksi:</span>
-                  <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${getBadgeColor(selectedLog.action)} inline-block`}>
-                    {selectedLog.action}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-slate-500 mb-1">Modul:</span>
-                  <span className="font-semibold text-slate-700">{selectedLog.module}</span>
-                </div>
-                <div>
-                  <span className="block text-slate-500 mb-1">Waktu:</span>
-                  <span className="font-semibold text-slate-700">
-                    {new Date(selectedLog.timestamp).toLocaleString('id-ID')}
-                  </span>
-                </div>
-                <div>
-                  <span className="block text-slate-500 mb-1">Pengguna:</span>
-                  <span className="font-semibold text-slate-700">{selectedLog.user} ({selectedLog.role})</span>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <span className="block text-slate-500 mb-2 text-sm font-semibold">Payload Data (Detail Perubahan):</span>
-                <div className="bg-slate-800 text-slate-300 p-4 rounded-xl font-mono-data text-xs overflow-x-auto">
-                  <pre>
-                    {selectedLog.details ? JSON.stringify(JSON.parse(selectedLog.details), null, 2) : 'Tidak ada payload data'}
-                  </pre>
-                </div>
-              </div>
-            </div>
-            
-            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
-              <button 
-                onClick={() => setSelectedLog(null)}
-                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-bold rounded-lg transition-colors cursor-pointer"
-              >
-                Tutup Modal
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      
+      <DeleteConfirmModal 
+        isOpen={isClearModalOpen}
+        onClose={() => setIsClearModalOpen(false)}
+        onConfirm={executeClearHistory}
+        itemName="Seluruh Histori Pencatatan"
+      />
     </div>
   );
 }

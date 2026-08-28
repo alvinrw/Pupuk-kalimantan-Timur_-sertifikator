@@ -36,7 +36,7 @@ export class DocumentHistoryController {
     },
   })
   @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 5 * 1024 * 1024 }, // Batas ukuran 5 MB
+    limits: { fileSize: 20 * 1024 * 1024 }, // Batas ukuran 20 MB
     fileFilter: (req, file, cb) => {
       // Hanya izinkan PDF dan Gambar
       if (!file.mimetype.match(/\/(pdf|jpg|jpeg|png)$/)) {
@@ -62,7 +62,7 @@ export class DocumentHistoryController {
   @Roles('Super Admin', 'Admin', 'User')
   @Post('upload-temp')
   @UseInterceptors(FileInterceptor('file', {
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 20 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
       if (!file.mimetype.match(/\/(pdf|jpg|jpeg|png)$/)) {
         return cb(new BadRequestException('Format file tidak didukung!'), false);

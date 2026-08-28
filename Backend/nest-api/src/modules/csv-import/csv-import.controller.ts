@@ -31,6 +31,7 @@ export class CsvImportController {
     return this.csvImportService.processCsv(file, type, categoryKey);
   }
 
+  @Roles('Super Admin', 'Admin', 'User')
   @Post('bulk-nested')
   async bulkNested(
     @Body('data') data: any[],

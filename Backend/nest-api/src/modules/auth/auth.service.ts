@@ -30,13 +30,14 @@ export class AuthService {
       include: { role: true },
     });
     
+    // [FIX L-01] Pesan error generik untuk mencegah user enumeration
     if (!user) {
-      throw new UnauthorizedException('User tidak ditemukan');
+      throw new UnauthorizedException('Username atau password tidak valid.');
     }
 
     const isMatch = await bcrypt.compare(pass, user.password);
     if (!isMatch) {
-      throw new UnauthorizedException('Password salah');
+      throw new UnauthorizedException('Username atau password tidak valid.');
     }
 
     const payload = {
@@ -58,8 +59,12 @@ export class AuthService {
       },
     });
 
+    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+    const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
+
     return {
-      access_token: await this.jwtService.signAsync(payload),
+      access_token: accessToken,
+      refresh_token: refreshToken,
       user: {
         id: user.id,
         nama: user.nama,
@@ -68,6 +73,24 @@ export class AuthService {
         npk: user.npk,
       }
     };
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(refreshToken);
+      const isBlacklisted = await this.prisma.tokenBlacklist.findUnique({
+        where: { token: refreshToken }
+      });
+      if (isBlacklisted) {
+        throw new UnauthorizedException('Token is blacklisted.');
+      }
+      
+      const newPayload = { sub: payload.sub, username: payload.username, role: payload.role, npk: payload.npk };
+      const newAccessToken = await this.jwtService.signAsync(newPayload, { expiresIn: '15m' });
+      return { access_token: newAccessToken };
+    } catch (e) {
+      throw new UnauthorizedException('Invalid refresh token.');
+    }
   }
 
   async logout(userId: string) {
@@ -89,5 +112,22 @@ export class AuthService {
     });
 
     return { status: 'ok', message: 'Logged out successfully' };
+  }
+
+  async blacklistTokens(tokens: string[]) {
+    for (const token of tokens) {
+      if (!token) continue;
+      try {
+        const decoded = this.jwtService.decode(token) as any;
+        if (decoded && decoded.exp) {
+          const expiresAt = new Date(decoded.exp * 1000);
+          await this.prisma.tokenBlacklist.create({
+            data: { token, expiresAt }
+          }).catch(() => {}); // ignore duplicates
+        }
+      } catch (e) {
+        // invalid token format
+      }
+    }
   }
 }

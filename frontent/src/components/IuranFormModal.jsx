@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { PlusCircle, X, Save, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { PlusCircle, X, Save } from 'lucide-react';
+import RoleGuard from './RoleGuard';
 
 export default function IuranFormModal({
   isOpen,
@@ -9,6 +10,7 @@ export default function IuranFormModal({
   handleCloseModal,
   handleInputChange,
   handleSubmit,
+  onDelete,
 }) {
   const [isKompartemenOpen, setIsKompartemenOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -308,29 +310,49 @@ export default function IuranFormModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-white rounded-b-2xl flex justify-end gap-4">
-          <button
-            type="button"
-            onClick={handleCloseModal}
-            className="px-6 py-2.5 text-sm font-bold text-slate-600 bg-white hover:text-slate-900 transition-colors cursor-pointer"
-          >
-            Batal
-          </button>
-          <button
-            type="submit"
-            form="iuranForm"
-            disabled={isSubmitting}
-            className="px-6 py-2.5 text-sm font-bold text-white bg-[#005ea4] hover:bg-[#004780] rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
-          >
-            {isSubmitting ? (
-              'Menyimpan...'
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                <span>Simpan Data</span>
-              </>
+        <div className="px-6 py-4 border-t border-slate-100 bg-white rounded-b-2xl flex items-center justify-between">
+          <div>
+            {modalMode === 'edit' && onDelete && (
+              <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseModal();
+                    onDelete();
+                  }}
+                  className="px-4 py-2.5 text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer flex items-center gap-2"
+                >
+                  Hapus Data
+                </button>
+              </RoleGuard>
             )}
-          </button>
+          </div>
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={handleCloseModal}
+              className="px-6 py-2.5 text-sm font-bold text-slate-600 bg-white hover:text-slate-900 transition-colors cursor-pointer"
+            >
+              Batal
+            </button>
+            <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+              <button
+                type="submit"
+                form="iuranForm"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 text-sm font-bold text-white bg-[#005ea4] hover:bg-[#004780] rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {isSubmitting ? (
+                  'Menyimpan...'
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Data</span>
+                  </>
+                )}
+              </button>
+            </RoleGuard>
+          </div>
         </div>
       </div>
     </div>

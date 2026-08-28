@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { CreateMasterItemDto } from './dto/create-master-item.dto';
 import { UpdateMasterItemDto } from './dto/update-master-item.dto';
 import { PrismaService } from '../../database/prisma.service';
+import { recalculateStagingStatuses } from '../csv-import/staging-validation.helper';
 
 @Injectable()
 export class MasterItemsService implements OnModuleInit {
@@ -20,6 +21,43 @@ export class MasterItemsService implements OnModuleInit {
     });
   }
 
+  async checkDuplicate(data: { title: string, code: string, unitLocation: string, nomorSeri: string, excludeId?: string }) {
+    const { title, code, unitLocation, nomorSeri, excludeId } = data;
+    
+    const items = await this.prisma.masterItem.findMany({
+      where: {
+        title: { equals: title, mode: 'insensitive' },
+        code: { equals: code, mode: 'insensitive' },
+        unitLocation: { equals: unitLocation, mode: 'insensitive' },
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      }
+    });
+
+    for (const item of items) {
+      let dbNomorSeri = '';
+      try {
+        if (item.keterangan && item.keterangan.startsWith('{')) {
+          const meta = JSON.parse(item.keterangan);
+          dbNomorSeri = meta.nomorSeri || '';
+        }
+      } catch (e) {}
+
+      if ((dbNomorSeri || '').trim().toLowerCase() === (nomorSeri || '').trim().toLowerCase()) {
+        return {
+          isDuplicate: true,
+          isInStaging: item.documentStatus === 'PENDING_DOC',
+          matchedItem: item
+        };
+      }
+    }
+
+    return {
+      isDuplicate: false,
+      isInStaging: false,
+      matchedItem: null
+    };
+  }
+
   async findAll(categoryKey?: string, search?: string) {
     const where: any = {};
     
@@ -36,10 +74,15 @@ export class MasterItemsService implements OnModuleInit {
 
     return this.prisma.masterItem.findMany({
       where,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [
+        { position: 'asc' },
+        { createdAt: 'desc' }
+      ],
       include: {
         certificates: {
-          where: { isDeleted: false }
+          include: {
+            notificationSetting: true
+          }
         },
         permits: true,
         documentHistories: {
@@ -58,7 +101,9 @@ export class MasterItemsService implements OnModuleInit {
       where: { id },
       include: {
         certificates: {
-          where: { isDeleted: false }
+          include: {
+            notificationSetting: true
+          }
         },
         permits: true,
         documentHistories: {
@@ -76,8 +121,8 @@ export class MasterItemsService implements OnModuleInit {
     return item;
   }
 
-  async update(id: string, updateMasterItemDto: UpdateMasterItemDto, currentUser?: string) {
-    const oldItem = await this.findOne(id); // Check if exists
+  async update(id: string, updateMasterItemDto: UpdateMasterItemDto) {
+    const item = await this.findOne(id); // Check if exists
 
     // Resolve any active notifications on manual update/renewal
     await this.prisma.reminderNotification.updateMany({
@@ -85,46 +130,82 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    const updatedItem = await this.prisma.masterItem.update({
+    const updated = await this.prisma.masterItem.update({
       where: { id },
-      data: updateMasterItemDto,
-    });
-
-    const changes = [];
-    if (updateMasterItemDto.title && updateMasterItemDto.title !== oldItem.title) {
-      changes.push(`Nama Item diubah dari '${oldItem.title || '-'}' menjadi '${updateMasterItemDto.title}'`);
-    }
-    if (updateMasterItemDto.unitLocation && updateMasterItemDto.unitLocation !== oldItem.unitLocation) {
-      changes.push(`Lokasi diubah dari '${oldItem.unitLocation || '-'}' menjadi '${updateMasterItemDto.unitLocation}'`);
-    }
-    
-    let descriptionText = `Informasi aset / dokumen "${updatedItem.title}" telah diperbarui.`;
-    if (changes.length > 0) {
-      descriptionText = `Perubahan data pada "${updatedItem.title}": ` + changes.join(', ') + '.';
-    }
-
-    // Log the update event
-    await this.prisma.documentHistory.create({
       data: {
-        itemId: id,
-        action: 'UPDATED_ITEM',
-        description: descriptionText,
-        changedBy: currentUser || 'System / User',
-      }
+        ...updateMasterItemDto,
+        isManuallyEdited: true,
+        lastEditSource: 'MANUAL',
+      },
     });
 
-    return updatedItem;
+    await recalculateStagingStatuses(this.prisma, updated.categoryKey);
+    return updated;
+  }
+
+  async reorder(items: { id: string; position: number }[]) {
+    await this.prisma.$transaction(
+      items.map(item =>
+        this.prisma.masterItem.update({
+          where: { id: item.id },
+          data: { position: item.position },
+        })
+      )
+    );
+    return { success: true };
+  }
+
+  async bulkUpdate(items: any[]) {
+    await this.prisma.$transaction(
+      items.map(item => {
+        const isTemp = String(item.id).startsWith('temp-');
+        if (isTemp) {
+          return this.prisma.masterItem.create({
+            data: {
+              title: item.title,
+              code: item.code,
+              unitLocation: item.unitLocation,
+              status: item.status,
+              keterangan: item.keterangan,
+              position: item.position || 0,
+              categoryKey: item.categoryKey,
+            },
+          });
+        }
+        return this.prisma.masterItem.update({
+          where: { id: item.id },
+          data: {
+            title: item.title,
+            code: item.code,
+            unitLocation: item.unitLocation,
+            status: item.status,
+            keterangan: item.keterangan,
+            position: item.position,
+            isManuallyEdited: true,
+            lastEditSource: 'MANUAL',
+          },
+        });
+      })
+    );
+    
+    const categories = Array.from(new Set(items.map(item => item.categoryKey).filter(Boolean))) as string[];
+    for (const catKey of categories) {
+      await recalculateStagingStatuses(this.prisma, catKey);
+    }
+    return { success: true };
   }
 
   async remove(id: string) {
-    await this.findOne(id); // Check if exists
-    return this.prisma.masterItem.delete({
+    const item = await this.findOne(id); // Check if exists
+    const deleted = await this.prisma.masterItem.delete({
       where: { id },
     });
+    await recalculateStagingStatuses(this.prisma, item.categoryKey);
+    return deleted;
   }
 
   async resolveExemption(id: string, note: string) {
-    await this.findOne(id);
+    const item = await this.findOne(id);
 
     // Resolve active reminders
     await this.prisma.reminderNotification.updateMany({
@@ -132,35 +213,64 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    return this.prisma.masterItem.update({
+    const updated = await this.prisma.masterItem.update({
       where: { id },
       data: {
-        documentStatus: 'EXEMPT',
         exemptionNote: note || 'Tidak memerlukan sertifikat',
+        documentStatus: 'EXEMPT',
+        isManuallyEdited: true,
+        lastEditSource: 'MANUAL',
       },
     });
+
+    await recalculateStagingStatuses(this.prisma, item.categoryKey);
+    return updated;
   }
 
   // === NOTIFICATION SETTINGS & REMINDERS ===
 
-  async updateNotificationSetting(itemId: string, data: { isEnabled: boolean; triggerType: string; triggerDays: number; triggerDate?: string | null }) {
+  async updateNotificationSetting(itemId: string, data: { isEnabled: boolean; triggerType: string; triggerDays: number; triggerDate?: string | null; certificateId?: string | null }) {
     await this.findOne(itemId); // Ensure item exists
-    return this.prisma.notificationSetting.upsert({
-      where: { itemId },
-      create: {
-        itemId,
-        isEnabled: data.isEnabled,
-        triggerType: data.triggerType || 'DAYS',
-        triggerDays: data.triggerDays,
-        triggerDate: data.triggerDate ? new Date(data.triggerDate) : null,
-      },
-      update: {
-        isEnabled: data.isEnabled,
-        triggerType: data.triggerType || 'DAYS',
-        triggerDays: data.triggerDays,
-        triggerDate: data.triggerDate ? new Date(data.triggerDate) : null,
-      },
-    });
+
+    let result;
+
+    if (data.certificateId) {
+      result = await this.prisma.notificationSetting.upsert({
+        where: { certificateId: data.certificateId },
+        create: {
+          certificateId: data.certificateId,
+          isEnabled: data.isEnabled,
+          triggerType: data.triggerType || 'DAYS',
+          triggerDays: data.triggerDays,
+          triggerDate: data.triggerDate ? new Date(data.triggerDate) : null,
+        },
+        update: {
+          isEnabled: data.isEnabled,
+          triggerType: data.triggerType || 'DAYS',
+          triggerDays: data.triggerDays,
+          triggerDate: data.triggerDate ? new Date(data.triggerDate) : null,
+        },
+      });
+    } else {
+      result = await this.prisma.notificationSetting.upsert({
+        where: { itemId },
+        create: {
+          itemId,
+          isEnabled: data.isEnabled,
+          triggerType: data.triggerType || 'DAYS',
+          triggerDays: data.triggerDays,
+          triggerDate: data.triggerDate ? new Date(data.triggerDate) : null,
+        },
+        update: {
+          isEnabled: data.isEnabled,
+          triggerType: data.triggerType || 'DAYS',
+          triggerDays: data.triggerDays,
+          triggerDate: data.triggerDate ? new Date(data.triggerDate) : null,
+        },
+      });
+    }
+
+    return result;
   }
 
   async findActiveReminders() {
@@ -219,7 +329,29 @@ export class MasterItemsService implements OnModuleInit {
 
     for (const item of items) {
       const certs = item.certificates || [];
-      const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+      const activeCertsRaw = certs.filter(c => {
+        const s = (c.status || '').toLowerCase();
+        return s === 'aktif' || s === 'active' || s.includes('perpanjang') || s.includes('proses') || !c.status;
+      });
+
+      // Evaluate all active certificates instead of grouping by jenisSertifikat
+      // so each child certificate can have its own notification setting and trigger.
+      let activeCerts = activeCertsRaw;
+
+      if (item.categoryKey === 'peralatan-pabrik') {
+        // For peralatan-pabrik, there are no separate "child" certificates (like IMB, Amdal).
+        // Any multiple certificates are just renewal history. We only evaluate the most recent active one.
+        if (activeCerts.length > 1) {
+          activeCerts.sort((a, b) => {
+            const dA = a.expired && a.expired !== '-' ? new Date(a.expired).getTime() : 0;
+            const dB = b.expired && b.expired !== '-' ? new Date(b.expired).getTime() : 0;
+            if (dA !== dB && !isNaN(dA) && !isNaN(dB)) return dB - dA;
+            
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+          activeCerts = [activeCerts[0]];
+        }
+      }
 
       // Parse metadata for penanggung jawab
       let meta: any = {};
@@ -233,7 +365,11 @@ export class MasterItemsService implements OnModuleInit {
       const evaluateTarget = (expiryStr: string | null, targetSetting: any, displayName: string, displayNo: string, certId?: string) => {
         if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') return;
 
-        const expiry = new Date(expiryStr);
+        let expiry = new Date(expiryStr);
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(expiryStr)) {
+          const parts = expiryStr.split('/');
+          expiry = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        }
         if (isNaN(expiry.getTime())) return;
         expiry.setHours(0, 0, 0, 0);
 
@@ -284,8 +420,8 @@ export class MasterItemsService implements OnModuleInit {
           }
         }
 
-        const isMingguIni = activeDate >= startOfWeek && activeDate <= endOfWeek;
-        const isBulanIni = activeDate >= startOfMonth && activeDate <= endOfMonth;
+        const isMingguIni = !isExpired && expiry >= startOfWeek && expiry <= endOfWeek;
+        const isBulanIni = !isExpired && expiry >= startOfMonth && expiry <= endOfMonth;
 
         // Fill stats
         if (isEnabled) stats.aktif++;
@@ -295,7 +431,8 @@ export class MasterItemsService implements OnModuleInit {
         if (isBulanIni) stats.bulanIni++;
 
         allTasks.push({
-          id: item.id,
+          id: certId ? `${item.id}-${certId}` : item.id,
+          itemId: item.id,
           certificateId: certId || null,
           prioritas: priority,
           namaPeralatan: item.title,
@@ -319,23 +456,15 @@ export class MasterItemsService implements OnModuleInit {
       };
 
       if (activeCerts.length > 0) {
-        const primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          if (dA !== dB) return dB - dA;
-          const hasPdfA = !!a.fileUrl;
-          const hasPdfB = !!b.fileUrl;
-          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        })[0];
-
-        evaluateTarget(
-          primaryCert.expired,
-          primaryCert.notificationSetting,
-          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || '-',
-          primaryCert.noSertifikat || '-',
-          primaryCert.id
-        );
+        for (const cert of activeCerts) {
+          evaluateTarget(
+            cert.expired && cert.expired !== '-' ? cert.expired : item.expiryDate,
+            cert.notificationSetting,
+            cert.namaSertifikat || cert.jenisSertifikat || item.title || '-',
+            cert.noSertifikat || item.code || '-',
+            cert.id
+          );
+        }
       } else {
         evaluateTarget(
           item.expiryDate,
@@ -380,12 +509,29 @@ export class MasterItemsService implements OnModuleInit {
         }
       }
     });
-
     let triggeredCount = 0;
 
     for (const item of items) {
-      const certs = item.certificates || [];
-      const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
+      let certificatesToEvaluate = item.certificates.filter(c => c.status !== 'EXEMPT' && c.status !== 'Diarsipkan');
+
+      if (item.categoryKey === 'peralatan-pabrik') {
+        // For peralatan-pabrik, there are no separate "child" certificates (like IMB, Amdal).
+        // Any multiple certificates are just renewal history. We only evaluate the most recent active one.
+        if (certificatesToEvaluate.length > 1) {
+          certificatesToEvaluate.sort((a, b) => {
+            const dA = a.expired && a.expired !== '-' ? new Date(a.expired).getTime() : 0;
+            const dB = b.expired && b.expired !== '-' ? new Date(b.expired).getTime() : 0;
+            if (dA !== dB && !isNaN(dA) && !isNaN(dB)) return dB - dA;
+
+            const aActive = a.status?.toLowerCase() === 'aktif' || a.status?.toLowerCase() === 'active';
+            const bActive = b.status?.toLowerCase() === 'aktif' || b.status?.toLowerCase() === 'active';
+            if (aActive !== bActive) return aActive ? -1 : 1;
+            
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          });
+          certificatesToEvaluate = [certificatesToEvaluate[0]];
+        }
+      }
 
       const evaluateAndSave = async (expiryStr: string | null, targetSetting: any, displayName: string, displayNo: string, certId?: string) => {
         if (!expiryStr || expiryStr === '-' || expiryStr.trim() === '') return;
@@ -449,24 +595,16 @@ export class MasterItemsService implements OnModuleInit {
         }
       };
 
-      if (activeCerts.length > 0) {
-        const primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          if (dA !== dB) return dB - dA;
-          const hasPdfA = !!a.fileUrl;
-          const hasPdfB = !!b.fileUrl;
-          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        })[0];
-
-        await evaluateAndSave(
-          primaryCert.expired,
-          primaryCert.notificationSetting,
-          primaryCert.namaSertifikat || primaryCert.jenisSertifikat || '-',
-          primaryCert.noSertifikat || '-',
-          primaryCert.id
-        );
+      if (certificatesToEvaluate.length > 0) {
+        for (const cert of certificatesToEvaluate) {
+          await evaluateAndSave(
+            cert.expired && cert.expired !== '-' ? cert.expired : item.expiryDate,
+            cert.notificationSetting,
+            cert.namaSertifikat || cert.jenisSertifikat || '-',
+            cert.noSertifikat || '-',
+            cert.id
+          );
+        }
       } else {
         await evaluateAndSave(
           item.expiryDate,

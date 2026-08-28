@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, RotateCcw } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 /**
@@ -7,11 +7,9 @@ import { useAuth } from '../../contexts/AuthContext';
  */
 export default function MonitoringTable({
   filteredCertificates,
-  totalCount,
   searchTerm, setSearchTerm,
   activeFilterCount,
   resetFilters,
-  customUrgentDays,
   onOpenDetail,
   onCompleteModal,
   onCancelAction,
@@ -65,8 +63,9 @@ export default function MonitoringTable({
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">MEREK / NAMA ITEM</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NOMOR SERI / TAG</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>
-              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL EXPIRATION</th>
-              <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">STATUS PERIZINAN</th>
+              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">
+                TGL EXPIRATION
+              </th>
               {!isViewer && (
               <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">AKSI WORKFLOW</th>
               )}
@@ -79,13 +78,17 @@ export default function MonitoringTable({
                 const isDecommissioned = doc.workflowStatus === 'decommissioned';
                 const isExempt = doc.workflowStatus === 'exempt';
 
+                const expVal = (doc.tglExpired && doc.tglExpired !== '2030-01-01') ? doc.tglExpired : ((doc.expiryDate && doc.expiryDate !== '2030-01-01') ? doc.expiryDate : '-');
+                const issueVal = (doc.tglTerbit || doc.issueDate || '-');
+                const missingDate = expVal === '-' || issueVal === '-';
+
                 let rowStyleClass = "hover:bg-slate-50/80 transition-colors";
                 if (isDecommissioned) {
                   rowStyleClass = "bg-[#0f172a] text-slate-100 transition-colors hover:bg-slate-800";
                 } else if (isInProgress) {
                   rowStyleClass = "bg-amber-50/70 hover:bg-amber-100/70 text-slate-900 transition-colors";
-                } else if (doc.sisaHari !== null && doc.sisaHari <= 0) {
-                  rowStyleClass = "bg-rose-50/70 hover:bg-rose-100/70 text-slate-900 transition-colors";
+                } else if ((doc.sisaHari !== null && doc.sisaHari <= 0) || missingDate) {
+                  rowStyleClass = "bg-rose-50 hover:bg-rose-100 text-slate-900 transition-colors";
                 }
 
                 return (
@@ -121,25 +124,17 @@ export default function MonitoringTable({
                         doc.certificateNo || doc.noSertifikat || '-'
                       )}
                     </td>
-                    <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap text-center align-middle ${isDecommissioned ? 'text-slate-300' : 'text-slate-900'}`}>
-                      {doc.tglExpired && doc.tglExpired !== '2030-01-01' ? doc.tglExpired : (doc.expiryDate && doc.expiryDate !== '2030-01-01' ? doc.expiryDate : '-')}
-                      {doc.sisaHari !== null && doc.sisaHari !== undefined && doc.tglExpired !== '-' && (
+                    <td className={`py-3 px-3 font-mono-data font-bold whitespace-nowrap text-center align-middle ${
+                      isDecommissioned ? 'text-slate-300' : missingDate ? 'text-rose-600' : 'text-slate-900'
+                    }`}>
+                      {expVal}
+                      {doc.sisaHari !== null && doc.sisaHari !== undefined && expVal !== '-' && (
                         <span className={`text-[10px] block font-normal font-mono-data ${isDecommissioned ? 'text-slate-400' : doc.sisaHari <= 0 ? 'text-rose-600 font-bold' : 'text-slate-500'}`}>
-                          ({isDecommissioned ? 'Nonaktif' : doc.sisaHari <= 0 ? 'Expired' : `${doc.sisaHari} hr lagi`})
+                          ({isDecommissioned ? 'Nonaktif' : doc.sisaHari < 0 ? `Expired ${Math.abs(doc.sisaHari)} hr lalu` : doc.sisaHari === 0 ? 'Expired hari ini' : `${doc.sisaHari} hr lagi`})
                         </span>
                       )}
-                    </td>
-                    <td className="py-3 px-3 text-center whitespace-nowrap font-mono-data font-bold align-middle">
-                      {isDecommissioned ? (
-                        <span className="text-slate-400">Non-Aktif</span>
-                      ) : isExempt ? (
-                        <span className="text-indigo-600">Catatan Khusus</span>
-                      ) : doc.sisaHari <= 0 ? (
-                        <span className="text-rose-600">Expired</span>
-                      ) : doc.sisaHari <= (parseInt(customUrgentDays) || 30) ? (
-                        <span className="text-amber-600">&lt; {customUrgentDays || 30} Hari</span>
-                      ) : (
-                        <span className="text-emerald-600">Aktif</span>
+                      {missingDate && expVal === '-' && (
+                        <span className="text-[10px] block font-normal text-rose-400">Belum diisi</span>
                       )}
                     </td>
                     {!isViewer && (

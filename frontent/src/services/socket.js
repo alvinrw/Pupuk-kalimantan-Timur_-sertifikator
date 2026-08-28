@@ -6,4 +6,5 @@ const socketUrl = baseUrl.split('/api')[0];
 
 export const socket = io(socketUrl, {
   autoConnect: false,
+  withCredentials: true,
 });

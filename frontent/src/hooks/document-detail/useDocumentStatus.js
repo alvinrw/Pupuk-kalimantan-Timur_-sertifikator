@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { updateMasterItem, deleteMasterItem } from '../../services/masterItemsService';
+import { updateMasterItem, deleteMasterItem, updateCertificate } from '../../services/masterItemsService';
 
-export function useDocumentStatus({ item, formData, setFormData, onSaveUpdate, onDeleteSuccess }) {
+export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired, isSingleCertScope, isMultiCertItem }) {
   const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
   const [isAfkiring, setIsAfkiring] = useState(false);
 
@@ -25,10 +25,23 @@ export function useDocumentStatus({ item, formData, setFormData, onSaveUpdate, o
   const confirmAfkir = async () => {
     setIsAfkiring(true);
     try {
-      const targetId = item?.MasterId || item?.id;
-      await updateMasterItem(targetId, { status: 'Afkir' });
-      setFormData(prev => ({ ...prev, status: 'Afkir' }));
-      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir', id: targetId });
+      if (targetCert?.id) {
+        await updateCertificate(targetCert.id, { status: 'Afkir' });
+        const targetId = item?.MasterId || item?.id;
+        if (!isMultiCertItem && targetId) {
+          await updateMasterItem(targetId, { status: 'Afkir' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Afkir' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir' });
+      } else {
+        const targetId = item?.MasterId || item?.id;
+        if (targetId) {
+          await updateMasterItem(targetId, { status: 'Afkir' });
+          setFormData(prev => ({ ...prev, status: 'Afkir' }));
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir', id: targetId });
+        }
+      }
+      if (onRefreshRequired) onRefreshRequired();
       setIsAfkirModalOpen(false);
     } catch (err) {
       alert('Gagal Afkir: ' + (err.message || 'Error'));
@@ -39,10 +52,23 @@ export function useDocumentStatus({ item, formData, setFormData, onSaveUpdate, o
   const confirmAktifkan = async () => {
     setIsAktifkaning(true);
     try {
-      const targetId = item?.MasterId || item?.id;
-      await updateMasterItem(targetId, { status: 'Aktif' });
-      setFormData(prev => ({ ...prev, status: 'Aktif' }));
-      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
+      if (targetCert?.id) {
+        await updateCertificate(targetCert.id, { status: 'Aktif' });
+        const targetId = item?.MasterId || item?.id;
+        if (!isMultiCertItem && targetId) {
+          await updateMasterItem(targetId, { status: 'Aktif' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Aktif' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
+      } else {
+        const targetId = item?.MasterId || item?.id;
+        if (targetId) {
+          await updateMasterItem(targetId, { status: 'Aktif' });
+          setFormData(prev => ({ ...prev, status: 'Aktif' }));
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
+        }
+      }
+      if (onRefreshRequired) onRefreshRequired();
       setIsAktifkanModalOpen(false);
     } catch (err) {
       alert('Gagal Aktifkan: ' + (err.message || 'Error'));
@@ -52,10 +78,23 @@ export function useDocumentStatus({ item, formData, setFormData, onSaveUpdate, o
   const confirmRenewHeader = async () => {
     setIsRenewingHeader(true);
     try {
-      const targetId = item?.MasterId || item?.id;
-      await updateMasterItem(targetId, { status: 'Perpanjang' });
-      setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
-      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang', id: targetId });
+      if (targetCert?.id) {
+        await updateCertificate(targetCert.id, { status: 'Perpanjang' });
+        const targetId = item?.MasterId || item?.id;
+        if (!isMultiCertItem && targetId) {
+          await updateMasterItem(targetId, { status: 'Perpanjang' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang' });
+      } else {
+        const targetId = item?.MasterId || item?.id;
+        if (targetId) {
+          await updateMasterItem(targetId, { status: 'Perpanjang' });
+          setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang', id: targetId });
+        }
+      }
+      if (onRefreshRequired) onRefreshRequired();
       setIsConfirmRenewHeaderModalOpen(false);
     } catch (err) {
       alert('Gagal: ' + (err.message || 'Error'));
@@ -65,10 +104,23 @@ export function useDocumentStatus({ item, formData, setFormData, onSaveUpdate, o
   const confirmCancelHeader = async () => {
     setIsCancelingHeader(true);
     try {
-      const targetId = item?.MasterId || item?.id;
-      await updateMasterItem(targetId, { status: 'Aktif' });
-      setFormData(prev => ({ ...prev, status: 'Aktif' }));
-      if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
+      if (targetCert?.id) {
+        await updateCertificate(targetCert.id, { status: 'Aktif' });
+        const targetId = item?.MasterId || item?.id;
+        if (!isMultiCertItem && targetId) {
+          await updateMasterItem(targetId, { status: 'Aktif' });
+        }
+        setFormData(prev => ({ ...prev, status: 'Aktif' }));
+        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
+      } else {
+        const targetId = item?.MasterId || item?.id;
+        if (targetId) {
+          await updateMasterItem(targetId, { status: 'Aktif' });
+          setFormData(prev => ({ ...prev, status: 'Aktif' }));
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif', id: targetId });
+        }
+      }
+      if (onRefreshRequired) onRefreshRequired();
       setIsConfirmCancelHeaderModalOpen(false);
     } catch (err) {
       alert('Gagal: ' + (err.message || 'Error'));
@@ -83,6 +135,7 @@ export function useDocumentStatus({ item, formData, setFormData, onSaveUpdate, o
       await updateMasterItem(targetId, { expiryDate: renewExemptDate, status: 'Aktif' });
       setFormData(prev => ({ ...prev, berakhir: renewExemptDate, status: 'Aktif' }));
       if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, berakhir: renewExemptDate, status: 'Aktif', id: targetId });
+      if (onRefreshRequired) onRefreshRequired();
       setIsRenewExemptModalOpen(false);
     } catch (err) {
       alert('Gagal: ' + (err.message || 'Error'));

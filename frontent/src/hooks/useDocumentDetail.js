@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { updateMasterItem } from '../services/masterItemsService';
+import { useState, useEffect, useRef } from 'react';
+import { updateMasterItem, updateCertificate } from '../services/masterItemsService';
+import api from '../services/api';
 
 // Sub-hooks
 import { useDocumentHistory } from './document-detail/useDocumentHistory';
@@ -9,22 +10,46 @@ import { useLinkedCertificates } from './document-detail/useLinkedCertificates';
 import { useNotificationSettings } from './document-detail/useNotificationSettings';
 
 export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired, initialCertId }) {
-  const item = rawItem?.parentDoc || rawItem;
+  const item = rawItem?.parentDoc 
+    ? { ...rawItem.parentDoc, _scrollToHistory: rawItem._scrollToHistory }
+    : rawItem;
   const parentDoc = item;
   const effectiveCategoryKey = item?.categoryKey || '';
 
   const [activeCertId, setActiveCertId] = useState(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
+  const prevInitialCertIdRef = useRef(initialCertId);
 
+  // Only reset activeCertId if initialCertId explicitly changes (e.g. user clicked a different cert
+  // from the parent list). Do NOT reset on item data refresh - that causes tab jumping after upload.
   useEffect(() => {
-    setActiveCertId(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
-  }, [item, initialCertId]);
+    if (prevInitialCertIdRef.current !== initialCertId) {
+      prevInitialCertIdRef.current = initialCertId;
+      setActiveCertId(initialCertId || item?.currentCert?.id || item?.cert?.id || null);
+    }
+  }, [initialCertId]);
+
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
 
   const allItemCerts = item?.certificates || [];
-  const activeItemCert = allItemCerts.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status).sort((a,b) => new Date(b.expired || 0) - new Date(a.expired || 0))[0];
+  const validItemCerts = allItemCerts.filter(c => {
+    const s = (c.status || '').toLowerCase();
+    return s !== 'diarsipkan';
+  });
+  const activeItemCert = validItemCerts.length > 0
+    ? validItemCerts.slice().sort((a, b) => getTimestamp(b.expired || b.expiryDate) - getTimestamp(a.expired || a.expiryDate))[0]
+    : (allItemCerts.length > 0 ? allItemCerts.slice().sort((a, b) => getTimestamp(b.expired || b.expiryDate) - getTimestamp(a.expired || a.expiryDate))[0] : null);
 
   const rawTargetCert = item?.currentCert || item?.cert || activeItemCert || null;
-  const targetCert = activeCertId && item.linkedCertificates
-    ? (item.linkedCertificates.find(c => c.id === activeCertId) || rawTargetCert)
+  const targetCert = activeCertId && (item.linkedCertificates || item.certificates)
+    ? ((item.linkedCertificates || item.certificates).find(c => c.id === activeCertId) || rawTargetCert)
     : rawTargetCert;
 
   const isSingleCertScope = Boolean(
@@ -56,23 +81,40 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     return { text: ket || '', additionalEntities: [] };
   };
 
-  const initialKetRaw = targetCert?.keterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo');
+  const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
   const parsedKet = parseKeterangan(initialKetRaw);
+  const initialEntities = parsedKet.additionalEntities || [];
+  const initialJenisPeralatanEnt = initialEntities.find(e => e.key === 'JENIS PERALATAN PABRIK');
+  const initialJenisPeralatan = initialJenisPeralatanEnt ? initialJenisPeralatanEnt.value : (parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset');
+
+  const [columnConfigs, setColumnConfigs] = useState([]);
+  
+  useEffect(() => {
+    if (effectiveCategoryKey) {
+      api.get(`/column-configs/${effectiveCategoryKey}`)
+        .then(res => {
+          const fetchedCols = res.data || [];
+          setColumnConfigs(fetchedCols);
+        })
+        .catch(err => console.error(err));
+    }
+  }, [effectiveCategoryKey]);
 
   const localDocumentStatus = item.documentStatus || 'PENDING_DOC';
   const [isEditing, setIsEditing] = useState(false);
   
   const buildFormData = () => ({
     merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
-    jenisPeralatan: parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset',
+    jenisPeralatan: initialJenisPeralatan,
     tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
     nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
     kapasitas: item.kapasitas || '',
     lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
-    user: targetCert?.instansi || item.user || item.issuer || 'Umum',
+    user: isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'),
     status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
       ? item.status
       : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
+    instansi: isSingleCertScope ? (targetCert?.instansi || '') : '',
     noSertifikat: isSingleCertScope ? (targetCert?.noSertifikat || '') : (item.noSertifikat || item.certNo || item.certificateNo || ''),
     tanggalInspeksi: isSingleCertScope ? (targetCert?.terbit || parentDoc.createdAt || '') : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
     tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
@@ -82,22 +124,87 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     keterangan: parsedKet.text,
     additionalEntities: parsedKet.additionalEntities,
     fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
-    namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || ''
+    namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
+    imageUrl: item.imageUrl || ''
   });
 
-  const [formData, setFormData] = useState(buildFormData());
-
   useEffect(() => {
-    if (!isEditing) {
-      setFormData(buildFormData());
+    const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
+    const parsedKet = parseKeterangan(initialKetRaw);
+    const parsedEntities = parsedKet.additionalEntities || [];
+
+    let finalEntities = parsedEntities;
+    if (columnConfigs.length > 0) {
+      const customCols = columnConfigs.filter(c => c.isCustom);
+      const mergedEntities = customCols.map(col => {
+        const existing = parsedEntities.find(e => e.key === col.label);
+        return {
+          key: col.label,
+          value: existing ? existing.value : '',
+          type: col.type || 'text'
+        };
+      });
+      const otherEntities = parsedEntities.filter(e => !customCols.some(c => c.label === e.key));
+      finalEntities = [...mergedEntities, ...otherEntities];
     }
-  }, [item, targetCert]);
+
+    const targetJenisPeralatanEnt = parsedEntities.find(e => e.key === 'JENIS PERALATAN PABRIK');
+    const targetJenisPeralatan = targetJenisPeralatanEnt ? targetJenisPeralatanEnt.value : (parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset');
+
+    setFormData({
+      merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
+      jenisPeralatan: targetJenisPeralatan,
+      tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
+      nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
+      kapasitas: item.kapasitas || '',
+      lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
+      user: isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'),
+      status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
+        ? item.status
+        : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
+      instansi: isSingleCertScope ? (targetCert?.instansi || '') : '',
+      noSertifikat: isSingleCertScope ? (targetCert?.noSertifikat || '') : (item.noSertifikat || item.certNo || item.certificateNo || ''),
+      tanggalInspeksi: isSingleCertScope ? (targetCert?.terbit || parentDoc.createdAt || '') : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
+      tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
+      masaBerlaku: item.masaBerlaku || '5 Tahun',
+      terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
+      berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
+      keterangan: parsedKet.text,
+      additionalEntities: finalEntities,
+      fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
+      namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
+      imageUrl: item.imageUrl || ''
+    });
+  }, [activeCertId, item, columnConfigs]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      let updatedTitle = formData.merekItem;
-      let updatedCode = formData.nomorSeri || formData.tipe; // Prioritize nomorSeri for doc.code in Generic
+      let origMeta = {};
+      try {
+        if (initialKetRaw && initialKetRaw.startsWith('{')) {
+          origMeta = JSON.parse(initialKetRaw);
+        }
+      } catch (_) {}
+
+      const payloadData = { ...formData };
+      if (formData.additionalEntities) {
+        const finalEntities = [...formData.additionalEntities];
+        const jenisIdx = finalEntities.findIndex(e => e.key === 'JENIS PERALATAN PABRIK');
+        if (jenisIdx > -1) {
+          finalEntities[jenisIdx] = { ...finalEntities[jenisIdx], value: formData.jenisPeralatan };
+        } else {
+          finalEntities.push({ key: 'JENIS PERALATAN PABRIK', value: formData.jenisPeralatan, type: 'text' });
+        }
+        payloadData.keterangan = JSON.stringify({
+          ...origMeta,
+          keteranganAsli: formData.keterangan || '',
+          additionalEntities: finalEntities,
+          penanggungJawab: formData.user || origMeta.penanggungJawab || 'Umum',
+          tipe: formData.tipe || origMeta.tipe || '',
+          nomorSeri: formData.nomorSeri || origMeta.nomorSeri || ''
+        });
+      }
       
       const metaObject = {
         keteranganAsli: formData.keterangan || '-',
@@ -129,7 +236,51 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
       const targetId = item?.MasterId || item?.id;
       if (targetId) {
-        await updateMasterItem(targetId, payloadData);
+        let finalStatus = formData.status;
+        const expTime = getTimestamp(formData.berakhir || formData.expired);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (expTime > 0) {
+          if (finalStatus === 'Expired' && expTime >= today.getTime()) {
+            finalStatus = 'Aktif';
+            payloadData.status = 'Aktif';
+          } else if (finalStatus === 'Aktif' && expTime < today.getTime()) {
+            finalStatus = 'Expired';
+            payloadData.status = 'Expired';
+          }
+        }
+
+        if (isMultiCertItem) {
+          if (isSingleCertScope && targetCert?.id) {
+            // Multi-cert & Single Scope: Only update the specific child certificate
+            await updateCertificate(targetCert.id, {
+              namaSertifikat: formData.namaSertifikat,
+              noSertifikat: formData.noSertifikat,
+              instansi: formData.instansi,
+              terbit: formData.terbit,
+              expired: formData.berakhir || formData.expired,
+              keterangan: payloadData.keterangan,
+              status: finalStatus
+            });
+          } else {
+            // Multi-cert & Master Scope: Only update the master item
+            await updateMasterItem(targetId, payloadData);
+          }
+        } else {
+          // Single-cert (Peralatan Pabrik): Update both MasterItem and Certificate to keep them in sync
+          await updateMasterItem(targetId, payloadData);
+          if (targetCert?.id) {
+            await updateCertificate(targetCert.id, {
+              namaSertifikat: formData.namaSertifikat,
+              noSertifikat: formData.noSertifikat,
+              instansi: formData.instansi,
+              terbit: formData.terbit,
+              expired: formData.berakhir || formData.expired,
+              keterangan: payloadData.keterangan,
+              status: finalStatus
+            });
+          }
+        }
       }
 
       if (targetCert?.id && formData.noSertifikat !== undefined) {
@@ -154,10 +305,10 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   };
 
   const historyHook = useDocumentHistory({ item, targetCert, onRefreshRequired });
-  const uploadHook = useDocumentUpload({ item, fetchHistory: historyHook.fetchHistory, onSaveUpdate, onRefreshRequired });
-  const statusHook = useDocumentStatus({ item, formData, setFormData, onSaveUpdate, onDeleteSuccess });
+  const uploadHook = useDocumentUpload({ item, targetCert, fetchHistory: historyHook.fetchHistory, onSaveUpdate, onRefreshRequired, setActiveCertId });
+  const statusHook = useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired, isSingleCertScope, isMultiCertItem });
   const linkedCertsHook = useLinkedCertificates({ item, targetCert, fetchHistory: historyHook.fetchHistory, onRefreshRequired });
-  const notificationHook = useNotificationSettings({ item, targetCert });
+  const notificationHook = useNotificationSettings({ item, targetCert, onRefreshRequired });
 
   const currentStatus = formData.status || item.status || 'Aktif';
   const lowerStatus = currentStatus.toLowerCase();
@@ -169,6 +320,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
     isEditing, setIsEditing, formData, setFormData, handleSave, localDocumentStatus,
     activeCertId, setActiveCertId,
+    columnConfigs,
     
     ...historyHook,
     ...uploadHook,

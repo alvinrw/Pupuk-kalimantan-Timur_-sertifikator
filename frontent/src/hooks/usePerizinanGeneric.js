@@ -8,8 +8,11 @@ import {
   deleteCertificate,
   updateMasterItem
 } from '../services/masterItemsService';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
 
 export function usePerizinanGeneric({ title, subtitle, categoryName }) {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeMainTab, setActiveMainTab] = useState('main'); // 'main' | 'staging'
   const [selectedStagingIds, setSelectedStagingIds] = useState([]);
@@ -38,6 +41,19 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const [documents, setDocuments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [sortDateOrder, setSortDateOrder] = useState('desc'); // 'desc' = terbaru, 'asc' = terlama
+  const [sortKey, setSortKey] = useState(null); // 'terbit' | 'berakhir'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc' | 'desc'
+
+  const toggleSort = (key) => {
+    if (sortKey === key) {
+      setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortKey(key);
+      setSortOrder('asc');
+    }
+  };
+
   const isAsetCategory = useMemo(() => {
     return categoryName?.toLowerCase().includes('aset');
   }, [categoryName]);
@@ -59,26 +75,59 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     return rawStatus || 'Aktif';
   };
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
+  const calculateCertStatus = (cert) => {
+    const raw = formatStatus(cert.status || 'Aktif');
+    const expTime = getTimestamp(cert.expired || cert.expiryDate || cert.berakhir);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (raw.toLowerCase() === 'aktif' || raw.toLowerCase() === 'active') {
+      if (expTime > 0 && expTime < today.getTime()) {
+        return 'Expired';
+      }
+    } else if (raw.toLowerCase() === 'expired') {
+      if (expTime >= today.getTime()) {
+        return 'Aktif';
+      }
+    }
+    return raw;
+  };
+
   const loadData = async () => {
     try {
       setIsLoading(true);
       const data = await getMasterItems(currentCategoryKey);
       
       const mapped = data.map((doc, index) => {
-        const certs = doc.certificates || [];
+        const rawCerts = doc.certificates || [];
+        const certs = rawCerts.map(c => ({
+          ...c,
+          status: calculateCertStatus(c)
+        }));
         const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
 
         let primaryCert = null;
         if (activeCerts.length > 0) {
           primaryCert = activeCerts.slice().sort((a, b) => {
-            const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-            const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+            const dA = getTimestamp(a.expired);
+            const dB = getTimestamp(b.expired);
             if (dA !== dB) return dB - dA;
             const hasPdfA = !!a.fileUrl;
             const hasPdfB = !!b.fileUrl;
             if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
             return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
           })[0];
+          primaryCert = activeCerts[0];
         } else if (certs.length > 0) {
           primaryCert = certs[0];
         }
@@ -125,9 +174,12 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           tipe: meta.tipe || (categoryName?.toLowerCase().includes('aset') ? '' : doc.code),
           nomorSeri: meta.nomorSeri || (categoryName?.toLowerCase().includes('aset') ? doc.code : ''),
           no: index + 1,
+          additionalEntities: meta.additionalEntities || [],
+          rawMeta: meta,
           hasSertifikat: certs.length > 0 ? "Ada" : "Tidak Ada",
           hasPdf: !!primaryCert?.fileUrl,
           fileUrl: primaryCert?.fileUrl || null,
+          imageUrl: doc.imageUrl || null,
           certificateNo: primaryCert?.noSertifikat || meta.noSertifikat || (doc.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-'),
           unitLocation: doc.unitLocation || '-',
           unit: doc.unitLocation || '-',
@@ -139,24 +191,29 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           kondisi: doc.status || "Baik",
           description: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
           keterangan: primaryCert?.keterangan || meta.keteranganAsli || doc.keterangan || "-",
+          rawKeterangan: doc.keterangan || null,
           namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
           status: formatStatus(doc.status),
           user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
-          documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
+          documentStatus: doc.documentStatus || doc.document_status || 'PENDING_DOC',
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs,
           documentHistories: doc.documentHistories || [],
           notificationSetting: doc.notificationSetting || null,
-          reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true
+          reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true,
+          validationStatus: doc.validationStatus || 'NEW',
+          validationErrors: doc.validationErrors || null,
+          imageUrl: doc.imageUrl || null,
+          createdAt: doc.createdAt || null
         };
       });
       setDocuments(mapped);
-      
-      // Update the detail modal item if it is currently open so DocumentDetailPage re-renders
+
+      // Auto-update detailModalItem to reflect changes (e.g. deleted linked certificates)
       setDetailModalItem(prev => {
-        if (!prev) return prev;
-        const updatedItem = mapped.find(i => i.id === prev.id);
-        return updatedItem || prev;
+        if (!prev) return null;
+        const updated = mapped.find(m => m.id === prev.id || m.MasterId === prev.MasterId);
+        return updated ? updated : prev;
       });
     } catch (error) {
       console.error("Failed to load generic permissions", error);
@@ -165,24 +222,26 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [categoryName]);
+  const [allColumns, setAllColumns] = useState([]);
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState([]);
+  const [childColumns, setChildColumns] = useState([]);
 
   const isProyek = categoryName?.toLowerCase().includes('proyek');
   const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
 
-  const defaultColumns = [
+  const defaultColumns = useMemo(() => [
+    { key: "no", label: "NO." },
     { key: "namaItem", label: isProyek ? "NAMA PROYEK" : isProduk ? "NAMA PRODUK" : "NAMA ITEM" },
     { key: "code", label: isProyek ? "KODE PROYEK" : isProduk ? "KODE PRODUK" : "KODE REGISTRASI" },
     { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
-    { key: "unit", label: isProyek ? "LOKASI PROYEK" : isProduk ? "UNIT PENGELOLA" : "LOKASI" },
+    ...(!isProduk ? [{ key: "unit", label: isProyek ? "LOKASI PROYEK" : "LOKASI" }] : []),
     { key: "user", label: "PENANGGUNG JAWAB" },
     { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
-    { key: "status", label: "STATUS" }
-  ];
+    ...(!isProduk ? [{ key: "status", label: "STATUS" }] : []),
+  ], [isProyek, isProduk]);
 
-  const asetColumns = [
+  const asetColumns = useMemo(() => [
+    { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
     { key: "code", label: "NOMOR SERI ASSET" },
     { key: "jenisItem", label: "JENIS ASET" },
@@ -190,13 +249,85 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "user", label: "PENANGGUNG JAWAB" },
     { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
     { key: "status", label: "STATUS" }
-  ];
+  ], []);
 
-  const baseColumns = isAsetCategory ? asetColumns : defaultColumns;
+  const fallbackColumns = isAsetCategory ? asetColumns : defaultColumns;
 
-  const allColumns = useMemo(() => {
-    return baseColumns;
-  }, [baseColumns]);
+  const loadColumns = async () => {
+    if (!currentCategoryKey) return;
+    try {
+      const [masterRes, childRes] = await Promise.all([
+        api.get(`/column-configs/${currentCategoryKey}`),
+        api.get(`/column-configs/${currentCategoryKey}-child`).catch(() => ({ data: [] }))
+      ]);
+      
+      const fetchedCols = masterRes.data || [];
+      const cols = fetchedCols.map(c => ({
+        key: c.fieldKey === 'title' ? 'namaItem' :
+             c.fieldKey === 'unitLocation' ? 'unit' :
+             c.fieldKey,
+        label: c.label,
+        isCustom: c.isCustom,
+        type: c.type
+      }));
+      setAllColumns(cols);
+      
+      const visible = fetchedCols.filter(c => c.isVisible).map(c => 
+        c.fieldKey === 'title' ? 'namaItem' :
+        c.fieldKey === 'unitLocation' ? 'unit' :
+        c.fieldKey
+      );
+      setVisibleColumnKeys(visible);
+
+      // Child columns
+      const fetchedChildCols = childRes.data || [];
+      if (fetchedChildCols.length > 0 && fetchedChildCols.filter(c => c.isVisible).length > 0) {
+        const cCols = fetchedChildCols
+          .filter(c => c.isVisible)
+          .sort((a, b) => a.position - b.position) // STRICT SORT BY POSITION
+          .map(c => ({
+            key: c.fieldKey === 'title' ? 'namaSertifikat' :
+                 c.fieldKey === 'unitLocation' ? 'instansi' :
+                 c.fieldKey,
+            label: c.label,
+            isCustom: c.isCustom,
+            type: c.type
+          }));
+        setChildColumns(cCols);
+      } else {
+        // Fallback if no child columns config exists
+        setChildColumns([
+          { key: "no", label: "NO." },
+          { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
+          { key: "noSertifikat", label: "NOMOR SERTIFIKAT" },
+          { key: "instansi", label: "INSTANSI PENERBIT" },
+          { key: "terbit", label: "TANGGAL TERBIT" },
+          { key: "expired", label: "TANGGAL EXPIRED" },
+          { key: "status", label: "STATUS" },
+          { key: "keterangan", label: "KETERANGAN / CATATAN" }
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to load columns config in usePerizinanGeneric:", err);
+      setAllColumns(fallbackColumns);
+      setVisibleColumnKeys(fallbackColumns.map(c => c.key));
+      setChildColumns([
+        { key: "no", label: "NO." },
+        { key: "namaSertifikat", label: "NAMA SERTIFIKAT" },
+        { key: "noSertifikat", label: "NOMOR SERTIFIKAT" },
+        { key: "instansi", label: "INSTANSI PENERBIT" },
+        { key: "terbit", label: "TANGGAL TERBIT" },
+        { key: "expired", label: "TANGGAL EXPIRED" },
+        { key: "status", label: "STATUS" },
+        { key: "keterangan", label: "KETERANGAN / CATATAN" }
+      ]);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    loadColumns();
+  }, [categoryName, currentCategoryKey]);
 
   const pendingCount = useMemo(() => {
     return documents.filter(doc => doc.documentStatus === 'PENDING_DOC').length;
@@ -208,6 +339,38 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       setIsSubmittingBulkExempt(true);
       for (const id of selectedStagingIds) {
         await resolveMasterItemExemption(id, bulkExemptNote.trim());
+        
+        // Find the document to check if it already has certificates
+        const doc = documents.find(d => d.id === id || d.MasterId === id);
+        const hasExistingCerts = doc && doc.linkedCertificates && doc.linkedCertificates.length > 0;
+        
+        if (!hasExistingCerts) {
+          // Create dummy certificate only if no existing certificates
+          await createCertificateForMasterItem({
+            itemId: id,
+            jenisSertifikat: 'Sertifikat Pengecualian',
+            namaSertifikat: 'Tanpa Sertifikat',
+            noSertifikat: 'Tanpa Sertifikat',
+            status: 'EXEMPT',
+            terbit: undefined,
+            expired: undefined,
+            fileUrl: null,
+            uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Bulk Action',
+          }).catch(err => console.error("Gagal buat dummy cert bulk:", err));
+        } else {
+          // Update only placeholder certificates to EXEMPT, keep real ones as 'Aktif'
+          const uploaderName = user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Bulk Action';
+          await Promise.all(
+            doc.linkedCertificates.map(cert => {
+              const no = cert.noSertifikat || '';
+              const hasRealNo = no && no !== 'Tanpa Sertifikat' && no !== '-' && no !== 'BELUM_ADA_SERTIFIKAT';
+              return updateCertificate(cert.id, {
+                status: hasRealNo ? 'Aktif' : 'EXEMPT',
+                uploadedBy: uploaderName
+              }).catch(err => console.error("Gagal update existing cert during bulk exempt:", err));
+            })
+          );
+        }
       }
       setSelectedStagingIds([]);
       setBulkExemptModalOpen(false);
@@ -248,12 +411,6 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     );
   };
 
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
-
-  useEffect(() => {
-    setVisibleColumnKeys(allColumns.map(c => c.key));
-  }, [allColumns]);
-
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>
       prev.includes(key)
@@ -274,7 +431,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const uniqueStatus = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.status || 'Aktif'))], [categoryFilteredDocs]);
 
   const filteredDocs = useMemo(() => {
-    return categoryFilteredDocs.filter(doc => {
+    let result = categoryFilteredDocs.filter(doc => {
       const matchesTab = activeMainTab === 'staging'
         ? doc.documentStatus === 'PENDING_DOC'
         : doc.documentStatus !== 'PENDING_DOC';
@@ -307,13 +464,22 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
       return matchesTab && matchesSearch && matchesJenis && matchesLokasi && matchesStatus && matchesHasSertifikat;
     });
-  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, filterHasSertifikat, activeMainTab]);
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.createdAt || 0).getTime();
+      const timeB = new Date(b.createdAt || 0).getTime();
+      return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+
+    return result;
+  }, [categoryFilteredDocs, searchTerm, filterJenis, filterLokasi, filterStatus, filterHasSertifikat, activeMainTab, sortDateOrder]);
 
   const toggleExpandMaster = (id) => {
     setExpandedMasterIds(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
+
 
   const masterRows = useMemo(() => {
     return filteredDocs.map((doc, index) => {
@@ -370,6 +536,22 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             certObj: cert
           });
         });
+
+        if (sortKey) {
+          processedCerts.sort((a, b) => {
+            const valA = sortKey === 'terbit' ? a.terbit : a.expired;
+            const valB = sortKey === 'terbit' ? b.terbit : b.expired;
+            
+            const tA = getTimestamp(valA);
+            const tB = getTimestamp(valB);
+            
+            if (tA === 0 && tB === 0) return 0;
+            if (tA === 0) return 1;
+            if (tB === 0) return -1;
+            
+            return sortOrder === 'asc' ? tA - tB : tB - tA;
+          });
+        }
       }
 
       return {
@@ -387,7 +569,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         certs: processedCerts
       };
     });
-  }, [filteredDocs, categoryName]);
+  }, [filteredDocs, categoryName, sortKey, sortOrder]);
 
   const toggleSelectAllStaging = (rows) => {
     const targetRows = rows || masterRows;
@@ -443,16 +625,20 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
       const targetItemId = createdItem?.id || createdItem?.MasterId || createdItem?.['id'];
 
       if (targetItemId) {
-        await createCertificateForMasterItem({
-          itemId: targetItemId,
-          jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
-          namaSertifikat: newItem.namaSertifikat || undefined,
-          noSertifikat: newItem.noSertifikat || 'BELUM_ADA_SERTIFIKAT',
-          status: 'Aktif',
-          terbit: newItem.terbit || undefined,
-          expired: newItem.expired || undefined,
-          fileUrl: newItem.fileUrl || null,
-        });
+        const hasCertDetails = !!(newItem.noSertifikat && newItem.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' && newItem.noSertifikat !== 'Tanpa Sertifikat');
+        if (hasCertDetails) {
+          await createCertificateForMasterItem({
+            itemId: targetItemId,
+            jenisSertifikat: newItem.tipe || 'Sertifikat Utama',
+            namaSertifikat: newItem.namaSertifikat || undefined,
+            noSertifikat: newItem.noSertifikat,
+            status: newItem.documentStatus === 'EXEMPT' ? 'EXEMPT' : 'Aktif',
+            terbit: newItem.terbit || undefined,
+            expired: newItem.expired || undefined,
+            fileUrl: newItem.fileUrl || null,
+            uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Single Entry',
+          });
+        }
 
         if (newItem.documentStatus === 'EXEMPT') {
           await resolveMasterItemExemption(targetItemId, newItem.keterangan || 'Tidak memerlukan sertifikat');
@@ -470,7 +656,10 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
   const handleSaveCertEdit = async (certId, updatedData) => {
     try {
-      await updateCertificate(certId, updatedData);
+      await updateCertificate(certId, {
+        ...updatedData,
+        uploadedBy: updatedData.uploadedBy || (user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Update')
+      });
       setViewingCert(null);
       await loadData();
     } catch (err) {
@@ -506,8 +695,15 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         terbit: certPayload.terbit || undefined,
         expired: certPayload.expired || undefined,
         status: certPayload.status || 'Aktif',
-        fileUrl: finalFileUrl
+        keterangan: certPayload.keterangan || undefined,
+        fileUrl: finalFileUrl,
+        uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Tambah Terhubung'
       });
+
+      // Jangan otomatis ubah documentStatus jadi COMPLETED di sini.
+      // Jika master memiliki banyak child cert, mengunggah 1 PDF tidak berarti semuanya selesai.
+      // User harus menggunakan tombol "Pindah ke Utama" yang sudah ada logic-nya di tabel 
+      // (hanya aktif jika semua child cert sudah punya PDF).
 
       setAddCertTargetMaster(null);
       await loadData();
@@ -556,7 +752,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     documents, setDocuments,
     isLoading, setIsLoading,
     isAsetCategory, currentCategoryKey,
-    loadData, allColumns, pendingCount,
+    loadData, allColumns, childColumns, pendingCount,
     handleBulkExempt, toggleSelectStaging,
     visibleColumnKeys, toggleColumn, selectAllColumns, isVisible,
     uniqueJenis, uniqueLokasi, uniqueStatus,
@@ -564,6 +760,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     expandedMasterIds, setExpandedMasterIds, toggleExpandMaster,
     toggleSelectAllStaging,
     resetFilters, handleCsvImported, handleSingleAdded,
-    getRowStatusStyle
+    getRowStatusStyle,
+    sortDateOrder, setSortDateOrder,
+    sortKey, sortOrder, toggleSort
   };
 }

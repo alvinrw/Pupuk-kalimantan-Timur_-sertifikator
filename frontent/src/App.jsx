@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Profile from './components/Profile';
@@ -12,11 +13,12 @@ import PerizinanGeneric from './pages/PerizinanGeneric';
 import AdministrasiLainnya from './pages/AdministrasiLainnya';
 import PerizinanAset from './pages/PerizinanAset';
 import RiwayatPerpanjangan from './pages/RiwayatPerpanjangan';
-import InformasiLainnya from './pages/InformasiLainnya';
+import InformasiWebsite from './pages/InformasiWebsite';
 import IuranKeanggotaan from './pages/IuranKeanggotaan';
 import TugasTerdekat from './pages/TugasTerdekat';
 import HistoriPencatatan from './pages/HistoriPencatatan';
 import ManajemenPengguna from './pages/ManajemenPengguna';
+import AturKolomBaris from './pages/AturKolomBaris';
 
 import {
   mockStats,
@@ -29,10 +31,11 @@ import useHeartbeat from './hooks/useHeartbeat';
 
 export default function App() {
   const { user } = useAuth();
-  
+
   // Call heartbeat hook to keep online status active
   useHeartbeat(60000); // 1 minute interval
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -98,8 +101,8 @@ export default function App() {
         return (
           <PerizinanGeneric
             key="perizinan-aset"
-            title="Perizinan Aset & Bangunan Pabrik"
-            subtitle="Izin lokasi, sertifikat HGB, kelayakan bangunan, dan AMDAL kawasan pabrik"
+            title="Perizinan Aset"
+            subtitle=""
             categoryName="Aset & Bangunan"
             onAddRenewalBatch={handleAddRenewalBatch}
           />
@@ -109,8 +112,8 @@ export default function App() {
         return (
           <PerizinanGeneric
             key="perizinan-proyek"
-            title="Perizinan Proyek & Konstruksi Fabrikasi"
-            subtitle="PBG/IMB konstruksi, sertifikat laik fungsi proyek ekspansi pabrik baru"
+            title="Perizinan Proyek"
+            subtitle=""
             categoryName="Proyek & Konstruksi"
             onAddRenewalBatch={handleAddRenewalBatch}
           />
@@ -119,16 +122,16 @@ export default function App() {
         return (
           <PerizinanGeneric
             key="perizinan-produk"
-            title="Perizinan & Sertifikasi Produk Fertilizer"
-            subtitle="Sertifikasi SNI Urea, NPK, sertifikat Halal, dan registrasi edar Kementerian Pertanian"
+            title="Perizinan & Sertifikasi Produk "
+            subtitle=""
             categoryName="Sertifikasi Produk"
             onAddRenewalBatch={handleAddRenewalBatch}
           />
         );
       case 'riwayat-perpanjangan':
         return <RiwayatPerpanjangan />;
-      case 'panduan-sop':
-        return <InformasiLainnya />;
+      case 'informasi-website':
+        return <InformasiWebsite />;
       case 'iuran-keanggotaan':
         return <IuranKeanggotaan />;
       case 'tugas-terdekat':
@@ -137,8 +140,14 @@ export default function App() {
         return <HistoriPencatatan />;
       case 'manajemen-pengguna':
         return <ManajemenPengguna />;
-      case 'profil':
-        return <Profile />;
+      case 'atur-kolom-baris-peralatan':
+        return <AturKolomBaris categoryKey="peralatan-pabrik" onBack={() => setActiveTab('peralatan-pabrik')} />;
+      case 'atur-kolom-baris-aset':
+        return <AturKolomBaris categoryKey="perizinan-aset" onBack={() => setActiveTab('perizinan-aset')} />;
+      case 'atur-kolom-baris-proyek':
+        return <AturKolomBaris categoryKey="perizinan-proyek" onBack={() => setActiveTab('perizinan-proyek')} />;
+      case 'atur-kolom-baris-produk':
+        return <AturKolomBaris categoryKey="perizinan-produk" onBack={() => setActiveTab('perizinan-produk')} />;
       default:
         return (
           <Dashboard
@@ -157,17 +166,30 @@ export default function App() {
 
   return (
     <div className="flex h-screen bg-[#f7f9fb] font-sans-clean overflow-hidden">
-      {/* Sidebar */}
+      {/* Sidebar — desktop sticky, mobile drawer */}
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        isMobileOpen={sidebarOpen}
+        onMobileClose={() => setSidebarOpen(false)}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        <Header
-          activeTab={activeTab}
-        />
+
+        {/* ── Mobile Topbar (hamburger + brand) ── */}
+        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 h-14 bg-white border-b border-slate-200 shadow-sm shrink-0">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+            aria-label="Buka menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          <span className="font-logo-sutasoma text-xl font-bold text-[#005ea4] tracking-tight select-none">
+            PERISAI
+          </span>
+        </div>
 
         <main className="flex-1 pb-12">
           {renderContent()}

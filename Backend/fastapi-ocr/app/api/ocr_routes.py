@@ -22,7 +22,35 @@ async def ocr_crop(file: UploadFile = File(...)):
     try:
         # Eksekusi AI OCR (PaddleOCR)
         res, _ = ocr_engine(temp_img)
-        lines = [item[1].strip() for item in res] if res else []
+        
+        # Filter Watermark
+        watermark_keywords = [
+            "universitas brawijaya",
+            "pt pertamina patra niaga",
+            "universitas",
+            "brawijaya",
+            "pertamina",
+            "patra niaga",
+            "patraniaga",
+            "dikunjungi oleh",
+            "diunduh oleh",
+            "pada tanggal",
+            "wita",
+            "pkt123"
+        ]
+        
+        lines = []
+        if res:
+            for item in res:
+                txt = item[1].strip()
+                # Jika teks hanya berisi keyword watermark (atau sangat mirip), buang
+                is_watermark = any(kw in txt.lower() for kw in watermark_keywords)
+                # Namun jangan buang jika teksnya panjang dan kebetulan mengandung kata itu (meski jarang)
+                # Untuk aman, kita buang jika teks tersebut murni didominasi watermark
+                if is_watermark and len(txt) < 40:
+                    continue
+                lines.append(txt)
+                
         full_text = "\n".join(lines)
         
         # Tambahkan Log ke Terminal supaya kelihatan apa yang dibaca AI
@@ -49,7 +77,7 @@ async def ocr_crop(file: UploadFile = File(...)):
 async def process_pdf(file: UploadFile = File(...)):
     """
     Endpoint menerima file PDF:
-    Saat ini mengarahkan semua file ke Extractor Fire Alarm.
+    Menggunakan General Extractor yang bisa menganalisa semua jenis dokumen (Tanggal & Nomor).
     """
     if not file.filename.endswith('.pdf'):
         raise HTTPException(status_code=400, detail="File harus berformat PDF")
@@ -60,12 +88,13 @@ async def process_pdf(file: UploadFile = File(...)):
         shutil.copyfileobj(file.file, buffer)
     
     try:
-        # Eksekusi AI OCR
-        result = extract_fire_alarm_cert(temp_filename, file.filename)
+        # Eksekusi AI OCR menggunakan General Extractor
+        from app.extractors.general_extractor import extract_general_cert
+        result = extract_general_cert(temp_filename, file.filename)
         
         return {
             "statusCode": 200,
-            "message": "Berhasil memproses PDF dengan AI (Fire Alarm Extractor)",
+            "message": "Berhasil memproses PDF dengan AI General Extractor",
             "data": result
         }
     except Exception as e:
@@ -103,7 +132,8 @@ async def process_zip(file: UploadFile = File(...)):
                     pdf_path = os.path.join(root, filename)
                     try:
                         # Process each PDF using AI OCR
-                        res = extract_fire_alarm_cert(pdf_path, filename)
+                        from app.extractors.general_extractor import extract_general_cert
+                        res = extract_general_cert(pdf_path, filename)
                         results.append({
                             "pdfName": filename,
                             "data": res

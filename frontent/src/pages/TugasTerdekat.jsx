@@ -12,7 +12,7 @@ import {
   Bell,
   ArrowUpDown
 } from 'lucide-react';
-import { API_BASE } from '../config/api';
+import api from '../services/api';
 import DocumentDetailPage from './DocumentDetailPage';
 
 export default function TugasTerdekat() {
@@ -40,6 +40,14 @@ export default function TugasTerdekat() {
   const [selectedDetailDoc, setSelectedDetailDoc] = useState(null);
   const [selectedCertId, setSelectedCertId] = useState(null);
 
+  const getDisplayName = (task) => {
+    const isChildCategory = ['perizinan-aset', 'perizinan-proyek', 'perizinan-produk'].includes(task.categoryKey);
+    if (isChildCategory && task.certificateId && task.namaSertifikat && task.namaSertifikat !== 'Tanpa Sertifikat') {
+      return `${task.namaSertifikat} (${task.namaPeralatan || '-'})`;
+    }
+    return task.namaPeralatan || '-';
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -47,11 +55,10 @@ export default function TugasTerdekat() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      const res = await fetch(`${API_BASE}/master-items/reminders/tasks`);
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
+      console.log("Fetching tasks from backend...");
+      const res = await api.get('/master-items/reminders/tasks');
+      console.log("Successfully fetched tasks:", res.data);
+      setData(res.data);
     } catch (err) {
       console.error("Gagal mengambil data Tugas Terdekat", err);
     } finally {
@@ -128,20 +135,25 @@ export default function TugasTerdekat() {
       if (a.prioritas !== b.prioritas) return a.prioritas - b.prioritas;
       return a.sisaHari - b.sisaHari;
     }
-    if (sortBy === 'terdekat_terjauh' || sortBy === 'terdekat') {
-      return a.sisaHariReminder - b.sisaHariReminder;
-    }
-    if (sortBy === 'terjauh_terdekat') {
-      return b.sisaHariReminder - a.sisaHariReminder;
-    }
-    if (sortBy === 'expired') {
-      return b.sisaHari - a.sisaHari;
-    }
+    if (sortBy === 'expired_asc') return a.sisaHari - b.sisaHari;
+    if (sortBy === 'expired_desc') return b.sisaHari - a.sisaHari;
+    if (sortBy === 'deadline_asc') return a.sisaHariReminder - b.sisaHariReminder;
+    if (sortBy === 'deadline_desc') return b.sisaHariReminder - a.sisaHariReminder;
     if (sortBy === 'nama') {
       return (a.namaPeralatan || '').localeCompare(b.namaPeralatan || '');
     }
     return 0;
   });
+
+  const handleSortExpired = () => {
+    if (sortBy === 'expired_asc') setSortBy('expired_desc');
+    else setSortBy('expired_asc');
+  };
+
+  const handleSortDeadline = () => {
+    if (sortBy === 'deadline_asc') setSortBy('deadline_desc');
+    else setSortBy('deadline_asc');
+  };
 
   // Drag to scroll logic for banner
   const scrollRef = React.useRef(null);
@@ -197,7 +209,7 @@ export default function TugasTerdekat() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <ClipboardList className="w-7 h-7 text-[#005ea4]" />
-            Tugas Terdekat
+            Agenda & Perpanjangan Dokumen
           </h1>
           <p className="text-sm text-slate-500 mt-1">
             Pusat aktivitas dan pengingat (Reminder) untuk perpanjangan sertifikat & perizinan.
@@ -260,7 +272,7 @@ export default function TugasTerdekat() {
                   <div className={`text-[10px] font-bold px-2 py-0.5 rounded inline-block mb-3 border ${getBadgeStyle(t.statusReminder)}`}>
                     {t.statusReminder}
                   </div>
-                  <div className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug mb-1" title={t.namaPeralatan}>{t.namaPeralatan}</div>
+                  <div className="font-bold text-slate-800 text-sm line-clamp-2 leading-snug mb-1" title={getDisplayName(t)}>{getDisplayName(t)}</div>
                   <div className="text-xs text-slate-500 font-mono-data truncate" title={t.nomorSertifikat}>{t.nomorSertifikat}</div>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -288,7 +300,7 @@ export default function TugasTerdekat() {
         {/* Toolbar */}
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex flex-col sm:flex-row justify-between gap-4">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
-            {['Semua', 'Reminder Aktif', 'Hari Ini', 'Minggu Ini', 'Bulan Ini', 'Belum Aktif', 'Expired'].map(f => (
+            {['Semua', 'Reminder Aktif', 'Hari Ini', 'Minggu Ini', 'Bulan Ini', 'Expired'].map(f => (
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
@@ -344,31 +356,22 @@ export default function TugasTerdekat() {
                 <th className="p-3 font-bold">Sertifikat</th>
                 <th className="p-3 font-bold">Tgl Mulai Reminder</th>
                 <th className="p-3 font-bold">Tgl Expired</th>
-                <th className="p-3 font-bold">
+                <th 
+                  className="p-3 font-bold cursor-pointer hover:bg-slate-200 transition-colors"
+                  onClick={handleSortExpired}
+                >
                   <div className="flex items-center justify-between gap-2 min-w-[140px]">
                     <span>Sisa Expired</span>
-                    <select
-                      value={sortBy === 'expired' || sortBy === 'prioritas' || sortBy === 'nama' ? sortBy : 'prioritas'}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-24 text-slate-700 normal-case"
-                    >
-                      <option value="prioritas">Prioritas</option>
-                      <option value="expired">Expired Date</option>
-                      <option value="nama">Nama Aset</option>
-                    </select>
+                    <ArrowUpDown className={`w-4 h-4 ${sortBy.startsWith('expired') ? 'text-[#005ea4]' : 'text-slate-400'}`} />
                   </div>
                 </th>
-                <th className="p-3 font-bold">
+                <th 
+                  className="p-3 font-bold cursor-pointer hover:bg-slate-200 transition-colors"
+                  onClick={handleSortDeadline}
+                >
                   <div className="flex items-center justify-between gap-2 min-w-[140px]">
                     <span>Sisa Deadline</span>
-                    <select
-                      value={sortBy === 'terdekat_terjauh' || sortBy === 'terjauh_terdekat' ? sortBy : 'terdekat_terjauh'}
-                      onChange={(e) => setSortBy(e.target.value)}
-                      className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-20 text-slate-700 normal-case"
-                    >
-                      <option value="terdekat_terjauh">Terdekat</option>
-                      <option value="terjauh_terdekat">Terjauh</option>
-                    </select>
+                    <ArrowUpDown className={`w-4 h-4 ${sortBy.startsWith('deadline') ? 'text-[#005ea4]' : 'text-slate-400'}`} />
                   </div>
                 </th>
                 <th className="p-3 font-bold">Status</th>
@@ -397,7 +400,7 @@ export default function TugasTerdekat() {
                       </div>
                     </td>
                     <td className="p-3">
-                      <div className="font-bold text-slate-800 text-xs">{task.namaPeralatan}</div>
+                      <div className="font-bold text-slate-800 text-xs">{getDisplayName(task)}</div>
                     </td>
                     <td className="p-3">
                       <span className="px-2.5 py-1 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-lg border border-slate-200 whitespace-nowrap">

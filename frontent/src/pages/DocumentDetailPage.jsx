@@ -28,33 +28,19 @@ export default function DocumentDetailPage({
   hideLinkedCertificates,
   initialCertId,
 }) {
-  if (!item) return null;
+  // PENTING: hook HARUS dipanggil tanpa kondisi apapun sebelumnya (Rules of Hooks)
+  // `if (!item) return null` dipindah ke SETELAH semua hooks dipanggil
+  const hook = useDocumentDetail({
+    item: item || {},
+    onBack,
+    onSaveUpdate,
+    onDeleteSuccess,
+    onRefreshRequired,
+    initialCertId,
+  });
 
-  let hook = {};
-  let hookVars = {};
-  try {
-    hook = useDocumentDetail({
-      item,
-      onBack,
-      onSaveUpdate,
-      onDeleteSuccess,
-      onRefreshRequired,
-      initialCertId,
-    });
-    
-    hookVars = {
-      isEditing: hook.isEditing,
-      isMultiCertItem: hook.isMultiCertItem,
-      linkedCerts: hook.linkedCerts,
-      activeCertId: hook.activeCertId,
-      setActiveCertId: hook.setActiveCertId,
-      setIsAddCertModalOpen: hook.setIsAddCertModalOpen,
-      setDeletingLinkedCertId: hook.setDeletingLinkedCertId,
-    };
-  } catch (err) {
-    alert("Crash in useDocumentDetail: " + err.message + "\n\n" + err.stack);
-    return <div className="p-10 text-red-500 font-bold">Error Loading Page! {err.message}</div>;
-  }
+  // Null-guard setelah hooks
+  if (!item) return null;
 
   const {
     isEditing,
@@ -63,7 +49,8 @@ export default function DocumentDetailPage({
     activeCertId, setActiveCertId,
     setIsAddCertModalOpen,
     setDeletingLinkedCertId,
-  } = hookVars;
+    sortDateOrder, setSortDateOrder
+  } = hook;
 
   return (
     <ErrorBoundary>
@@ -71,9 +58,6 @@ export default function DocumentDetailPage({
 
         {/* TOP NAVIGATION + AKSI DROPDOWN */}
         <DocumentHeader hook={hook} item={item} onBack={onBack} />
-
-        {/* STATUS BAR */}
-        <DocumentStatusBar hook={hook} item={item} />
 
         {/* FORM EDIT (mode editing) */}
         <DocumentFormFields hook={hook} item={item} />
@@ -89,6 +73,8 @@ export default function DocumentDetailPage({
             onSelectCert={setActiveCertId}
             onAddCert={() => setIsAddCertModalOpen(true)}
             onDeleteCert={(id) => setDeletingLinkedCertId(id)}
+            sortDateOrder={sortDateOrder}
+            setSortDateOrder={setSortDateOrder}
           />
         )}
 

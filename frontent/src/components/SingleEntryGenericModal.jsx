@@ -178,17 +178,32 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">{labels.locationLabel}</label>
-                <input
-                  type="text"
-                  value={formData.unitLocation}
-                  onChange={(e) => setFormData({ ...formData, unitLocation: e.target.value })}
-                  placeholder={labels.locationPlaceholder}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                />
+            {/* Lokasi hanya untuk Aset & Proyek, bukan Produk */}
+            {!isProduk ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">{labels.locationLabel}</label>
+                  <input
+                    type="text"
+                    value={formData.unitLocation}
+                    onChange={(e) => setFormData({ ...formData, unitLocation: e.target.value })}
+                    placeholder={labels.locationPlaceholder}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">{labels.userLabel}</label>
+                  <input
+                    type="text"
+                    value={formData.penanggungJawab}
+                    onChange={(e) => setFormData({ ...formData, penanggungJawab: e.target.value })}
+                    placeholder={labels.userPlaceholder}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
+                  />
+                </div>
               </div>
+            ) : (
+              // Produk: hanya tampilkan Penanggung Jawab, full width
               <div>
                 <label className="font-bold text-slate-700 block mb-1">{labels.userLabel}</label>
                 <input
@@ -199,29 +214,32 @@ export default function SingleEntryGenericModal({ isOpen, onClose, onAddSuccess,
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
                 />
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">{labels.statusLabel}</label>
-              <select
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold cursor-pointer"
-              >
-                <option value="Aktif">Aktif / Beroperasi</option>
-                {isProyek ? (
-                  <>
-                    <option value="Selesai">Selesai</option>
-                    <option value="Ditunda">Ditunda</option>
-                  </>
-                ) : (
-                  <>
-                    <option value="Spare">Spare / Cadangan</option>
-                    <option value="Rusak">Rusak / Tidak Aktif</option>
-                  </>
-                )}
-              </select>
-            </div>
+            {/* Status hanya untuk Aset & Proyek, bukan Produk */}
+            {!isProduk && (
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">{labels.statusLabel}</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold cursor-pointer"
+                >
+                  <option value="Aktif">Aktif / Beroperasi</option>
+                  {isProyek ? (
+                    <>
+                      <option value="Selesai">Selesai</option>
+                      <option value="Ditunda">Ditunda</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Spare">Spare / Cadangan</option>
+                      <option value="Rusak">Rusak / Tidak Aktif</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            )}
             
             <div>
               <label className="font-bold text-slate-700 block mb-1">Catatan / Keterangan</label>

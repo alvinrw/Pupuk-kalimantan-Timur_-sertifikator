@@ -1,228 +1,101 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Users, CheckCircle2, Loader2, Info, Building2, BarChart2, Wallet, Search, ChevronUp, ChevronDown, ChevronsUpDown, PieChart as PieChartIcon, Check } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { Users, Building2, ChevronDown, Loader2 } from 'lucide-react';
 import useIuranKeanggotaan from '../../hooks/useIuranKeanggotaan';
 
 const KOMPARTEMEN_COLORS = {
-  'Manajemen Keuangan': '#065f46',       // Emerald-800 (Dark Green)
-  'Satuan Pengawasan Intern': '#f59e0b', // Amber
-  'Sekretaris Perusahaan': '#1d4ed8',    // Dark Blue
-  'HSE dan Teknologi': '#ef4444',        // Red
-  'Sumber Daya Manusia': '#8b5cf6',      // Purple
-  'Tidak Diketahui': '#64748b'           // Slate
+  'Manajemen Keuangan': 'bg-emerald-500',
+  'Satuan Pengawasan Intern': 'bg-amber-500',
+  'Sekretaris Perusahaan': 'bg-blue-600',
+  'HSE dan Teknologi': 'bg-rose-500',
+  'Sumber Daya Manusia': 'bg-purple-500',
+  'Tidak Diketahui': 'bg-slate-400'
 };
 
-export default function MonitoringAnggaran({ hideDetails = false }) {
+const KOMPARTEMEN_BG_COLORS = {
+  'Manajemen Keuangan': 'bg-emerald-50 text-emerald-600',
+  'Satuan Pengawasan Intern': 'bg-amber-50 text-amber-600',
+  'Sekretaris Perusahaan': 'bg-blue-50 text-blue-600',
+  'HSE dan Teknologi': 'bg-rose-50 text-rose-600',
+  'Sumber Daya Manusia': 'bg-purple-50 text-purple-600',
+  'Tidak Diketahui': 'bg-slate-50 text-slate-600'
+};
+
+export default function MonitoringAnggaran() {
   const { data, loading, error } = useIuranKeanggotaan();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'jumlahOrang', direction: 'desc' });
-  const [expandedKompartemen, setExpandedKompartemen] = useState(null);
-  const [filterAsosiasi, setFilterAsosiasi] = useState('All');
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef(null);
+  const [filterAsosiasi, setFilterAsosiasi] = useState('Semua Asosiasi');
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
+  const {
+    totalAnggota,
+    totalAsosiasi,
+    kompartemenData,
+    maxAnggota,
+    uniqueAsosiasiList
+  } = useMemo(() => {
+    const kompartemenMap = {};
+    const totalAsosiasiSet = new Set();
+    
+    let filteredData = data;
+    if (filterAsosiasi !== 'Semua Asosiasi') {
+      filteredData = data.filter(d => d.asosiasi === filterAsosiasi);
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
 
-  const { chartData, asosiasiOptions } = useMemo(() => {
-    const kompMap = {}; 
-    const allAsosiasi = new Set();
-
-    const normalizeAsosiasiName = (name) => {
-      const original = (name || 'Asosiasi Tidak Bernama').trim();
-      let cleaned = original;
-      const lower = original.toLowerCase();
-
-      // Kasus khusus yang sering typo atau beda penulisan
-      if (lower.includes('certified management accountants') && !lower.includes('isaca')) {
-        return 'Iuran Keanggotaan Certified Management Accountants';
-      }
-      if (lower.includes('konsultan pajak indonesia')) {
-        return 'Iuran Keanggotaan Ikatan Konsultan Pajak Indonesia';
+    filteredData.forEach(item => {
+      const komp = item.kompartemen || 'Tidak Diketahui';
+      const assoc = item.asosiasi || 'Unknown';
+      
+      if (!kompartemenMap[komp]) {
+        kompartemenMap[komp] = { asosiasiSet: new Set(), anggotaCount: 0 };
       }
       
-      // IAI (Tangani typo seperti "Keanggotaaan")
-      if (/^(iuran|pendaftaran).*?iai$/i.test(lower) || lower === 'iai') {
-        return 'Iuran Keanggotaan IAI';
-      }
-      // IIA
-      if (/^(iuran|pendaftaran).*?iia$/i.test(lower) || lower === 'iia') {
-        return 'Iuran Keanggotaan IIA';
-      }
-      // PII
-      if (/^(iuran|pendaftaran).*?pii$/i.test(lower) || lower === 'pii') {
-        return 'Iuran Keanggotaan PII';
-      }
-
-      // Standarisasi prefix yang bervariasi menjadi satu bentuk baku ("Iuran Keanggotaan")
-      const prefixRegex = /^(Pendaftaran Keanggotaan|Pendaftaran \& Keanggotaan|Pendaftaran dan Keanggotaan|Iuran keanggotaa?a?n|Pendaftaran)\s+/i;
-      if (prefixRegex.test(cleaned)) {
-          cleaned = cleaned.replace(prefixRegex, 'Iuran Keanggotaan ');
-      }
+      kompartemenMap[komp].asosiasiSet.add(assoc);
+      kompartemenMap[komp].anggotaCount += 1;
       
-      // Bersihkan spasi ganda jika ada
-      return cleaned.replace(/\s+/g, ' ').trim();
-    };
-
-    data.forEach(item => {
-      const komp = (item.kompartemen || 'Tidak Diketahui').trim();
-      const rawAsosiasi = (item.asosiasi || 'Asosiasi Tidak Bernama').trim();
-      const asosiasi = normalizeAsosiasiName(rawAsosiasi);
-      const personName = (item.nama || 'Tidak Diketahui').trim();
-      const personUnit = (item.unitKerja || '').trim();
-      const nominal = Number(item.nominal) || 0;
-
-      allAsosiasi.add(asosiasi);
-
-      if (!kompMap[komp]) kompMap[komp] = {};
-      if (!kompMap[komp][asosiasi]) kompMap[komp][asosiasi] = { people: new Set(), totalBiaya: 0 };
-      
-      const personData = JSON.stringify({ name: personName, unit: personUnit });
-      kompMap[komp][asosiasi].people.add(personData);
-      kompMap[komp][asosiasi].totalBiaya += nominal;
+      if (filterAsosiasi === 'Semua Asosiasi' || filterAsosiasi === assoc) {
+         totalAsosiasiSet.add(assoc);
+      }
     });
 
-    const cData = Object.keys(kompMap).map(k => {
-      const asosiasiKeys = Object.keys(kompMap[k]);
-      let totalAnggotaKomp = 0;
-      
-      const asosiasiDetails = asosiasiKeys.map(a => {
-        const pSize = kompMap[k][a].people.size;
-        totalAnggotaKomp += pSize;
-        return {
-          name: a,
-          kompartemen: k,
-          jumlahOrang: pSize,
-          totalBiaya: kompMap[k][a].totalBiaya,
-          orangList: Array.from(kompMap[k][a].people).map(p => JSON.parse(p)).sort((a,b) => a.name.localeCompare(b.name))
-        };
-      }).sort((a,b) => a.name.localeCompare(b.name));
+    const kompData = Object.keys(kompartemenMap).map(k => ({
+      name: k,
+      asosiasiCount: kompartemenMap[k].asosiasiSet.size,
+      anggotaCount: kompartemenMap[k].anggotaCount,
+      color: KOMPARTEMEN_COLORS[k] || 'bg-slate-500',
+      bgColor: KOMPARTEMEN_BG_COLORS[k] || 'bg-slate-50 text-slate-600'
+    })).sort((a, b) => b.anggotaCount - a.anggotaCount);
 
-      return {
-        name: k,
-        jumlah: asosiasiKeys.length,
-        jumlahAnggota: totalAnggotaKomp,
-        asosiasiDetails: asosiasiDetails
-      };
-    }).sort((a, b) => b.jumlah - a.jumlah);
+    const maxA = Math.max(...kompData.map(k => k.anggotaCount), 1);
 
-    const asosiasiListUnique = Array.from(allAsosiasi).sort((a,b) => a.localeCompare(b));
+    // Dapatkan list asosiasi untuk dropdown
+    const allAssoc = new Set();
+    data.forEach(item => {
+      if (item.asosiasi) allAssoc.add(item.asosiasi);
+    });
 
-    return { chartData: cData, asosiasiOptions: asosiasiListUnique };
-  }, [data]);
-
-  const finalChartData = useMemo(() => {
-    if (filterAsosiasi === 'All') return chartData;
-    return chartData.map(c => ({
-      ...c,
-      asosiasiDetails: c.asosiasiDetails.filter(a => a.name === filterAsosiasi)
-    })).filter(c => c.asosiasiDetails.length > 0);
-  }, [chartData, filterAsosiasi]);
-
-  const requestSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const totalAsosiasi = asosiasiOptions.length;
-  const totalPeserta = chartData.reduce((sum, c) => sum + c.jumlahAnggota, 0);
-  const totalAnggaran = data.reduce((sum, d) => sum + (Number(d.nominal) || 0), 0);
+    return {
+      totalAnggota: filteredData.length,
+      totalAsosiasi: totalAsosiasiSet.size,
+      kompartemenData: kompData,
+      maxAnggota: maxA,
+      uniqueAsosiasiList: ['Semua Asosiasi', ...Array.from(allAssoc).sort()]
+    };
+  }, [data, filterAsosiasi]);
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[40vh] space-y-4">
         <Loader2 className="w-10 h-10 animate-spin text-[#005ea4]" />
-        <p className="text-slate-500 font-bold font-mono-data">Memuat Data Pemetaan...</p>
+        <p className="text-slate-500 font-bold font-mono-data">Memuat Data Keanggotaan...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8 text-center bg-rose-50 border border-rose-200 rounded-2xl text-rose-600 font-bold flex flex-col items-center justify-center gap-2">
-        <Info className="w-6 h-6" />
-        <span>Gagal memuat data: {error}</span>
+      <div className="p-8 text-center bg-rose-50 border border-rose-200 rounded-2xl text-rose-600 font-bold">
+        Gagal memuat data: {error}
       </div>
     );
   }
-
-  if (chartData.length === 0) {
-    return (
-      <div className="p-12 text-center bg-slate-50 border border-slate-200 rounded-2xl flex flex-col items-center justify-center gap-3">
-        <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center">
-          <Users className="w-8 h-8 text-slate-400" />
-        </div>
-        <h3 className="font-bold text-slate-700 text-lg">Belum Ada Data Asosiasi</h3>
-        <p className="text-slate-500 text-sm">Tidak ditemukan relasi kompartemen dan asosiasi yang terdaftar.</p>
-      </div>
-    );
-  }
-
-  const formatRupiah = (angka) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(angka);
-  };
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-mono-data">
-          <p className="font-bold text-slate-800 mb-2 border-b border-slate-100 pb-1">{data.name}</p>
-          <div className="flex flex-col gap-1">
-            <p className="text-[#005ea4] font-bold flex justify-between gap-4">
-              <span>Asosiasi:</span> 
-              <span>{data.jumlah}</span>
-            </p>
-            <p className="text-emerald-600 font-bold flex justify-between gap-4">
-              <span>Anggota:</span> 
-              <span>{data.jumlahAnggota}</span>
-            </p>
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const DonutTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-3 border border-slate-200 shadow-xl rounded-lg text-xs font-mono-data">
-          <p className="font-bold text-slate-800 mb-1">{payload[0].name}</p>
-          <p className="text-[#005ea4] font-bold">{formatRupiah(payload[0].value)}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
-  const CustomXAxisTick = ({ x, y, payload }) => {
-    // Pecah teks yang kepanjangan jadi 2 baris agar tetap lurus & rapi
-    const words = payload.value.split(' ');
-    let line1 = payload.value;
-    let line2 = '';
-    
-    if (words.length > 2 || (words.length === 2 && payload.value.length > 15)) {
-      const mid = Math.ceil(words.length / 2);
-      line1 = words.slice(0, mid).join(' ');
-      line2 = words.slice(mid).join(' ');
-    }
 
     return (
       <g transform={`translate(${x},${y})`}>
@@ -242,178 +115,123 @@ export default function MonitoringAnggaran({ hideDetails = false }) {
   return (
     <div className="space-y-6 font-sans-clean animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Top Section: Overview Tabel Distribusi Asosiasi */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col">
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h3 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-              <BarChart2 className="w-5 h-5 text-[#005ea4]" />
-              Ringkasan Distribusi Asosiasi
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              Pemetaan sebaran jumlah asosiasi dan total anggota di setiap kompartemen
-            </p>
+      {/* HEADER SECTION */}
+      <div className="mb-6">
+        <h2 className="text-xl md:text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
+          <Users className="w-6 h-6 text-[#005ea4]" />
+          Data Keanggotaan & Administrasi Lainnya
+        </h2>
+        <p className="text-sm text-slate-500 font-medium mt-1 ml-8">
+          Overview sebaran kapasitas anggota dan asosiasi per kompartemen.
+        </p>
+      </div>
+
+      {/* MAIN CARD: RINGKASAN DISTRIBUSI ASOSIASI */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        {/* Card Header */}
+        <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100">
+              <div className="w-4 h-4 bg-slate-300 rounded-sm"></div>
+            </div>
+            <div>
+              <h3 className="font-extrabold text-slate-800 text-lg tracking-tight">Ringkasan Distribusi Asosiasi</h3>
+              <p className="text-xs text-slate-500 font-medium">Pemetaan sebaran jumlah asosiasi dan total anggota di setiap kompartemen</p>
+            </div>
           </div>
-          
-          <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 relative" ref={dropdownRef}>
-            <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center justify-between w-full sm:w-[320px] text-[13px] font-bold bg-white border border-slate-300 text-slate-700 rounded-lg px-4 py-2 hover:border-[#005ea4] hover:bg-slate-50 transition-all focus:outline-none focus:ring-2 focus:ring-[#005ea4]/20 shadow-xs"
+          <div className="flex items-center gap-2 relative">
+            <select
+              value={filterAsosiasi}
+              onChange={(e) => setFilterAsosiasi(e.target.value)}
+              className="appearance-none bg-white border border-slate-200 rounded-lg pl-4 pr-10 py-2 text-xs font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-2xs font-mono-data"
             >
-              <span className="truncate pr-2 text-left">
-                {filterAsosiasi === 'All' ? 'Filter: Semua Asosiasi' : filterAsosiasi}
-              </span>
-              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 shrink-0 ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            
-            <div 
-              className={`absolute top-full mt-2 right-0 w-full sm:w-[400px] bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden transition-all duration-300 ease-out origin-top-right ${
-                isDropdownOpen ? 'opacity-100 scale-100 translate-y-0 visible pointer-events-auto' : 'opacity-0 scale-95 -translate-y-2 invisible pointer-events-none'
-              }`}
-            >
-              <div className="max-h-[320px] overflow-y-auto overscroll-contain py-2 custom-scrollbar">
-                  <div
-                    onClick={() => {
-                      setFilterAsosiasi('All');
-                      setIsDropdownOpen(false);
-                    }}
-                    className={`flex items-center justify-between px-4 py-3 text-xs font-bold cursor-pointer transition-colors ${
-                      filterAsosiasi === 'All' ? 'bg-blue-50 text-[#005ea4]' : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <span>Semua Asosiasi</span>
-                    {filterAsosiasi === 'All' && <Check className="w-4 h-4 text-[#005ea4]" />}
-                  </div>
-                  
-                  <div className="h-px bg-slate-100 my-1 mx-4"></div>
-                  
-                  {asosiasiOptions.map(opt => (
-                    <div
-                      key={opt}
-                      onClick={() => {
-                        setFilterAsosiasi(opt);
-                        setIsDropdownOpen(false);
-                      }}
-                      className={`flex items-start justify-between px-4 py-3 text-xs cursor-pointer transition-colors ${
-                        filterAsosiasi === opt ? 'bg-blue-50 text-[#005ea4] font-bold' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 font-medium'
-                      }`}
-                    >
-                      <span className="leading-relaxed pr-4 text-left">{opt}</span>
-                      {filterAsosiasi === opt && <Check className="w-4 h-4 text-[#005ea4] shrink-0 mt-0.5" />}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {uniqueAsosiasiList.map(assoc => (
+                <option key={assoc} value={assoc}>
+                  {assoc === 'Semua Asosiasi' ? 'Filter: Semua Asosiasi' : assoc}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 pointer-events-none" />
           </div>
         </div>
-        
-        <div className="flex-1 w-full min-h-0 mt-2 space-y-3">
-          {finalChartData.map((row, idx) => {
-              const baseColor = KOMPARTEMEN_COLORS[row.name] || '#94a3b8';
-            const maxAnggota = Math.max(...finalChartData.map(d => d.jumlahAnggota), 1);
-            const percentage = Math.max(2, (row.jumlahAnggota / maxAnggota) * 100);
 
-            const isExpanded = filterAsosiasi !== 'All' ? true : expandedKompartemen === row.name;
-            const kompartemenAsosiasi = row.asosiasiDetails;
-
+        {/* Card Body - List of Kompartemen */}
+        <div className="p-6 space-y-8">
+          {kompartemenData.map((komp, idx) => {
+            const progressPercent = Math.min(100, Math.max(2, (komp.anggotaCount / maxAnggota) * 100));
             return (
-              <div key={idx} className="bg-white border border-slate-100 rounded-2xl hover:border-slate-300 hover:shadow-md transition-all overflow-hidden flex flex-col">
-                <div 
-                  onClick={() => setExpandedKompartemen(isExpanded ? null : row.name)}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 cursor-pointer gap-4 group"
-                >
-                  {/* Left: Info */}
-                  <div className="flex items-center gap-4 w-full sm:w-1/3">
-                    <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105" 
-                      style={{ backgroundColor: `${baseColor}15`, color: baseColor }}
-                    >
-                      <Building2 className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-800 text-sm leading-tight">{row.name}</h4>
-                      <p className="text-xs font-semibold text-slate-500 mt-1">{row.jumlah} Asosiasi Terdaftar</p>
-                    </div>
+              <div key={idx} className="flex flex-col lg:flex-row lg:items-center gap-6">
+                
+                {/* Info Left */}
+                <div className="flex items-center gap-4 w-full lg:w-64 shrink-0">
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${komp.bgColor}`}>
+                    <Building2 className="w-6 h-6" />
                   </div>
-                  
-                  {/* Center: Visual Progress Bar */}
-                  <div className="flex-1 w-full sm:pl-8 sm:pr-4">
-                    <div className="flex justify-between text-xs mb-2">
-                      <span className="font-semibold text-slate-400 uppercase tracking-wider text-[10px]">Kapasitas Anggota</span>
-                      <span className="font-bold text-slate-700">{row.jumlahAnggota} Anggota</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner">
-                      <div 
-                        className="h-full rounded-full transition-all duration-1000 ease-out relative overflow-hidden" 
-                        style={{ 
-                          width: `${percentage}%`,
-                          backgroundColor: baseColor
-                        }}
-                      >
-                        <div className="absolute inset-0 bg-white/20 w-full h-full transform -skew-x-12 animate-[pulse_2s_ease-in-out_infinite]"></div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Chevron */}
-                  <div className="hidden sm:flex items-center justify-center pr-2">
-                    <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm">{komp.name}</h4>
+                    <p className="text-xs text-slate-500 font-mono-data mt-0.5">{komp.asosiasiCount} Asosiasi Terdaftar</p>
                   </div>
                 </div>
 
-                {/* Expanded Detail */}
-                <div 
-                  className={`grid transition-all duration-300 ease-in-out ${
-                    isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-                  }`}
-                >
-                  <div className="overflow-hidden">
-                    <div className="bg-slate-50/50 border-t border-slate-100 p-5">
-                      <h5 className="font-bold text-slate-700 text-sm mb-4 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-[#005ea4]" />
-                        Detail Asosiasi & Peserta
-                      </h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {kompartemenAsosiasi.map((aso, asoIdx) => (
-                          <div key={asoIdx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs flex flex-col h-full hover:border-[#005ea4]/30 transition-colors">
-                            <div className="flex justify-between items-start mb-3 gap-2">
-                              <h6 className="font-bold text-[13px] text-slate-800 leading-snug line-clamp-2">{aso.name}</h6>
-                              <span className="bg-blue-50 text-[#005ea4] text-[10px] font-bold px-2 py-1 rounded-md whitespace-nowrap shrink-0">
-                                {aso.jumlahOrang} Org
-                              </span>
-                            </div>
-                            
-                            <div className="flex-1">
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Daftar Anggota:</p>
-                              <ul className="space-y-1.5 mb-1">
-                                {aso.orangList.map((orang, oIdx) => (
-                                  <li key={oIdx} className="flex flex-col items-start gap-1 p-2 rounded-lg border border-transparent hover:bg-slate-50 hover:border-slate-100 transition-colors">
-                                    <div className="flex items-center gap-2">
-                                      <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0 mt-0.5"></span>
-                                      <span className="text-xs font-semibold text-slate-700 leading-tight">{orang.name}</span>
-                                    </div>
-                                    {orang.unit && (
-                                      <span className="text-[10px] text-slate-500 font-medium ml-3.5 bg-slate-100/80 px-1.5 py-0.5 rounded border border-slate-200 uppercase tracking-wider">{orang.unit}</span>
-                                    )}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                {/* Progress Bar Center */}
+                <div className="flex-1 space-y-2">
+                  <div className="flex justify-between items-end">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Kapasitas Anggota</span>
+                    <div className="flex items-center gap-2 lg:hidden">
+                      <span className="font-bold text-slate-800 text-sm">{komp.anggotaCount}</span>
+                      <span className="text-[10px] font-mono-data text-slate-500">Anggota</span>
                     </div>
                   </div>
+                  <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full rounded-full transition-all duration-1000 ease-out ${komp.color}`}
+                      style={{ width: `${progressPercent}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Info Right (Desktop) */}
+                <div className="hidden lg:flex items-center justify-end gap-4 w-32 shrink-0">
+                  <div className="flex items-baseline gap-1.5 text-right">
+                    <span className="font-extrabold text-slate-800 text-sm">{komp.anggotaCount}</span>
+                    <span className="text-[10px] font-mono-data font-bold text-slate-500">Anggota</span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-slate-300" />
                 </div>
               </div>
             );
           })}
 
-          {finalChartData.length === 0 && (
-            <div className="py-12 text-center text-slate-500 font-medium bg-slate-50/50 rounded-xl border border-slate-100">
-              Belum ada data distribusi asosiasi.
+          {kompartemenData.length === 0 && (
+            <div className="py-12 text-center">
+              <p className="text-sm text-slate-500 font-mono-data">Tidak ada data untuk filter tersebut.</p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* BOTTOM SUMMARY CARDS */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* TOTAL ASOSIASI */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 flex flex-col justify-between">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 block">Total Asosiasi</span>
+            <span className="text-4xl font-extrabold text-slate-800">{totalAsosiasi}</span>
+          </div>
+        </div>
+
+        {/* TOTAL KEANGGOTAAN */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 flex flex-col justify-between">
+          <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+            <Users className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-1 block">Total Keanggotaan</span>
+            <span className="text-4xl font-extrabold text-slate-800">{totalAnggota}</span>
+          </div>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { X, UploadCloud, Save, Upload, Loader2, AlertTriangle, FileText, CheckCircle, Crosshair } from 'lucide-react';
-import { scanPdfDocument } from '../../services/ocrService';
-import { API_BASE } from '../../config/api';
+
+import { API_BASE, getFullFileUrl } from '../../config/api';
 import PdfCanvasOcrViewer from '../common/PdfCanvasOcrViewer';
 import BaseSplitScreenUploadModal from '../common/BaseSplitScreenUploadModal';
 export default function ModalUploadCert({
@@ -15,11 +15,12 @@ export default function ModalUploadCert({
   onSubmit,
   isSingleCertScope,
 }) {
-  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
   const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const [ocrSuccess, setOcrSuccess] = useState(false);
   const [scanMode, setScanMode] = useState(null);
+  const [localPreviewUrl, setLocalPreviewUrl] = useState(null);
 
   // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
   const handleOcrResult = async (fieldKey, rawText) => {
@@ -29,6 +30,8 @@ export default function ModalUploadCert({
       if (fieldKey === 'noSertifikat') {
         const certNo = parseCertificateNumber(rawText);
         setUploadData(prev => ({ ...prev, noSertifikat: certNo || rawText.replace(/\n+/g, ' ').trim() }));
+      } else if (fieldKey === 'namaSertifikat') {
+        setUploadData(prev => ({ ...prev, namaSertifikat: rawText.replace(/\n+/g, ' ').trim() }));
       } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
         const parsed = parseDate(rawText);
         if (parsed) {
@@ -49,11 +52,14 @@ export default function ModalUploadCert({
 
   useEffect(() => {
     if (!isOpen) {
-      setIsScanningOcr(false);
       setIsUploadingTemp(false);
       setOcrErrorMsg('');
       setOcrSuccess(false);
       setScanMode(null);
+      setLocalPreviewUrl(prev => {
+        if (prev) URL.revokeObjectURL(prev);
+        return null;
+      });
     }
   }, [isOpen]);
 
@@ -63,19 +69,19 @@ export default function ModalUploadCert({
     <BaseSplitScreenUploadModal
       isOpen={isOpen}
       onClose={onClose}
-      title={uploadData.target === 'current' ? 'Koreksi Sertifikat Aktif (Human Verification)' : 'Unggah Arsip Berkas PDF (Human Verification)'}
+      title={uploadData.type === 'current' ? 'Koreksi Sertifikat Aktif (Human Verification)' : 'Unggah Arsip Berkas PDF (Human Verification)'}
       subtitle="Silakan verifikasi hasil pembacaan AI dengan dokumen PDF asli di sebelah kanan."
       headerIcon={UploadCloud}
       formId="uploadCertForm"
       onSubmit={onSubmit}
-      submitDisabled={isUploadingTemp || isScanningOcr}
+      submitDisabled={isUploadingTemp }
       submitText="Simpan Final (Submit)"
       submitIcon={Save}
       tempUrl={uploadData.tempUrl}
       rightPanelContent={
-        uploadData.tempUrl ? (
+        (localPreviewUrl || uploadData.tempUrl) ? (
           <PdfCanvasOcrViewer
-            pdfUrl={uploadData.tempUrl}
+            pdfUrl={uploadData.tempUrl ? getFullFileUrl(uploadData.tempUrl) : localPreviewUrl}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}
@@ -86,7 +92,7 @@ export default function ModalUploadCert({
       <div className="space-y-4">
               {isSingleCertScope && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-800 text-xs mb-2">
-                  <strong>Mode:</strong> {uploadData.target === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
+                  <strong>Mode:</strong> {uploadData.type === 'current' ? 'Koreksi (buat versi baru, versi lama → Direvisi)' : 'Arsip (tambah ke histori)'}
                 </div>
               )}
 
@@ -94,11 +100,11 @@ export default function ModalUploadCert({
                 <label className="font-bold text-slate-800 block mb-1">Berkas PDF Sertifikat</label>
                 <div
                   onClick={() => {
-                    if (isUploadingTemp || isScanningOcr) return;
+                    if (isUploadingTemp ) return;
                     manualFileInputRef.current?.click();
                   }}
                   className={`border-2 border-dashed rounded-xl p-4 text-center transition-colors ${
-                    (isUploadingTemp || isScanningOcr) 
+                    (isUploadingTemp ) 
                       ? 'border-slate-200 bg-slate-100 cursor-not-allowed opacity-70' 
                       : 'border-slate-300 hover:border-[#005ea4] bg-slate-50 hover:bg-blue-50/50 cursor-pointer'
                   }`}
@@ -111,6 +117,11 @@ export default function ModalUploadCert({
                       const file = e.target.files[0];
                       if (file) {
                         setSelectedUploadFile(file);
+                        // Set blob URL immediately for instant preview
+                        setLocalPreviewUrl(prev => {
+                          if (prev) URL.revokeObjectURL(prev);
+                          return URL.createObjectURL(file);
+                        });
                         setUploadData(prev => ({ ...prev, fileName: file.name, tempUrl: null }));
                         setOcrSuccess(false);
 
@@ -143,7 +154,7 @@ export default function ModalUploadCert({
                       }
                     }}
                     className="hidden"
-                    disabled={isUploadingTemp || isScanningOcr}
+                    disabled={isUploadingTemp }
                   />
                   <Upload className="w-6 h-6 text-slate-400 mx-auto mb-1" />
                   <span className="text-xs font-bold text-[#005ea4] block">
@@ -152,7 +163,7 @@ export default function ModalUploadCert({
                   <span className="text-[10px] text-slate-400 mt-0.5 block">Hanya menerima format PDF (Maks. 5 MB)</span>
                 </div>
 
-                {(isUploadingTemp || isScanningOcr) && (
+                {(isUploadingTemp ) && (
                   <div className="flex flex-col gap-2 mt-3">
                     {isUploadingTemp && (
                       <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
@@ -160,12 +171,7 @@ export default function ModalUploadCert({
                         <span>Menyiapkan preview dokumen...</span>
                       </div>
                     )}
-                    {isScanningOcr && (
-                      <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                        <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                        <span>AI sedang memindai & mengekstrak data dari dokumen...</span>
-                      </div>
-                    )}
+
                   </div>
                 )}
                 
@@ -177,6 +183,33 @@ export default function ModalUploadCert({
                     <span>{ocrErrorMsg}</span>
                   </div>
                 )}
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">
+                  Nama Sertifikat
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={uploadData.namaSertifikat || ''}
+                    onChange={(e) => setUploadData({ ...uploadData, namaSertifikat: e.target.value })}
+                    placeholder="Contoh: SLO Crane, Sertifikat K3"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'namaSertifikat' ? null : 'namaSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      scanMode === 'namaSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select Nama Sertifikat"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               <div>

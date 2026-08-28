@@ -15,8 +15,7 @@ import {
   FileX,
   Ban,
   Database,
-  Users,
-  ChevronDown
+  Users
 } from 'lucide-react';
 
 const AnimatedDropdown = ({ value, options, onChange, variant = 'light' }) => {
@@ -93,12 +92,14 @@ import {
   Cell,
   Legend
 } from 'recharts';
+import * as xlsx from 'xlsx';
 import { getMasterItems } from '../services/masterItemsService';
 import { getIuranKeanggotaan } from '../services/iuranService';
 import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('perizinan'); // 'perizinan' | 'administrasi'
   const [filterKategori, setFilterKategori] = useState('All');
   const [customUrgentDays, setCustomUrgentDays] = useState(30);
+  const [activeMainTab, setActiveMainTab] = useState('perizinan');
 
   // States untuk filter Tanggal Terbit di bagian bawah
   const [dateRangeStart, setDateRangeStart] = useState('');
@@ -169,22 +170,6 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
       if (item.documentStatus === 'PENDING_DOC') return;
 
       const certs = item.certificates || [];
-      const activeCerts = certs.filter(c => c.status === 'Aktif' || c.status === 'Active' || !c.status);
-
-      let primaryCert = null;
-      if (activeCerts.length > 0) {
-        primaryCert = activeCerts.slice().sort((a, b) => {
-          const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-          const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
-          if (dA !== dB) return dB - dA;
-          const hasPdfA = !!a.fileUrl;
-          const hasPdfB = !!b.fileUrl;
-          if (hasPdfA !== hasPdfB) return hasPdfB ? 1 : -1;
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        })[0];
-      } else if (certs.length > 0) {
-        primaryCert = certs[0];
-      }
 
       const formatCategoryName = (key) => {
         if (!key) return 'Lainnya';
@@ -212,30 +197,86 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
         return rawDateStr;
       };
 
-      const rawExp = primaryCert?.expired || item.expiryDate;
-      const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
-      const hari = calcDiff(dateVal);
-      const tglExpiredFormatted = formatToDDMMYYYY(dateVal);
-
-      const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
-
-      const rawTerbit = primaryCert?.terbit || item.issueDate || '-';
-      const tglTerbitFormatted = formatToDDMMYYYY(rawTerbit);
-
-      flattened.push({
-        id: item.id,
-        kategori: formatCategoryName(item.categoryKey),
-        jenis: item.title || 'Unknown',
-        unit: item.unitLocation || 'Umum',
-        opStatus: item.status || 'Aktif',
-        sisaHari: hari,
-        workflowStatus: wfStatus,
-        merekItem: item.title || '-',
-        nomorSeriTipe: item.code || '-',
-        nomorSertifikat: primaryCert?.noSertifikat || primaryCert?.noIzin || (item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-'),
-        tglExpired: tglExpiredFormatted,
-        tglTerbit: tglTerbitFormatted
-      });
+      if (item.categoryKey === 'peralatan-pabrik') {
+        if (certs.length === 0) {
+          const rawExp = item.expiryDate || '-';
+          const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+          const hari = calcDiff(dateVal);
+          const wfStatus = getWfStatus(item.status, item.documentStatus || 'EXEMPT');
+          flattened.push({
+            id: item.id,
+            kategori: item.categoryKey || 'Peralatan Pabrik',
+            jenis: item.title || 'Unknown',
+            unit: item.unitLocation || 'Umum',
+            opStatus: item.status || 'Aktif',
+            sisaHari: hari,
+            workflowStatus: wfStatus,
+            merekItem: item.keterangan ? ((() => { try { return JSON.parse(item.keterangan).merek; } catch(e) { return null; } })() || item.title) : item.title,
+            nomorSeriTipe: item.code || '-',
+            nomorSertifikat: item.documentStatus === 'EXEMPT' || item.documentStatus === 'PENDING_DOC' ? 'Tanpa Sertifikat' : '-',
+            tglExpired: formatToDDMMYYYY(dateVal),
+            tglTerbit: formatToDDMMYYYY(item.issueDate || '-')
+          });
+        } else {
+          certs.forEach(cert => {
+            const rawExp = cert.expired || '-';
+            const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+            const rawIssue = cert.terbit || item.issueDate || '-';
+            
+            flattened.push({
+              id: cert.id || item.id,
+              kategori: item.categoryKey || 'Peralatan Pabrik',
+              jenis: item.title || 'Unknown',
+              unit: item.unitLocation || 'Umum',
+              opStatus: cert.status || item.status || 'Aktif',
+              sisaHari: calcDiff(dateVal),
+              workflowStatus: getWfStatus(cert.status || item.status, cert.status === 'EXEMPT' ? 'EXEMPT' : item.documentStatus || 'EXEMPT'),
+              merekItem: item.keterangan ? ((() => { try { return JSON.parse(item.keterangan).merek; } catch(e) { return null; } })() || item.title) : item.title,
+              nomorSeriTipe: item.code || '-',
+              nomorSertifikat: cert.noSertifikat || cert.noIzin || '-',
+              tglExpired: formatToDDMMYYYY(dateVal),
+              tglTerbit: formatToDDMMYYYY(rawIssue)
+            });
+          });
+        }
+      } else {
+        if (certs.length === 0) {
+          const dateVal = (item.expiryDate && item.expiryDate !== '2030-01-01' && item.expiryDate !== '-') ? item.expiryDate : '-';
+          flattened.push({
+            id: item.id,
+            kategori: item.categoryKey || 'Lainnya',
+            jenis: item.title || 'Unknown',
+            unit: item.unitLocation || 'Umum',
+            opStatus: item.status || 'Aktif',
+            sisaHari: calcDiff(dateVal),
+            workflowStatus: getWfStatus(item.status, item.documentStatus || 'EXEMPT'),
+            merekItem: item.title || '-',
+            nomorSeriTipe: item.code || '-',
+            nomorSertifikat: item.documentStatus === 'EXEMPT' ? 'Tanpa Sertifikat' : '-',
+            tglExpired: formatToDDMMYYYY(dateVal),
+            tglTerbit: formatToDDMMYYYY(item.issueDate || '-')
+          });
+        } else {
+          certs.forEach(cert => {
+            const rawExp = cert.expired || '-';
+            const dateVal = (rawExp && rawExp !== '2030-01-01' && rawExp !== '-') ? rawExp : '-';
+            flattened.push({
+              id: cert.id || item.id,
+              kategori: item.categoryKey || 'Lainnya',
+              jenis: item.title || 'Unknown',
+              unit: item.unitLocation || 'Umum',
+              opStatus: cert.status || item.status || 'Aktif',
+              sisaHari: calcDiff(dateVal),
+              workflowStatus: getWfStatus(cert.status || item.status, cert.status === 'EXEMPT' ? 'EXEMPT' : item.documentStatus || 'EXEMPT'),
+              merekItem: item.title || '-',
+              nomorSeriTipe: item.code || '-',
+              nomorSertifikat: cert.noSertifikat || cert.noIzin || '-',
+              tglExpired: formatToDDMMYYYY(dateVal),
+              tglTerbit: formatToDDMMYYYY(cert.terbit || '-')
+            });
+          });
+        }
+      }
     });
     return flattened;
   }, [rawItems]);
@@ -267,8 +308,6 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
 
   const statusPieData = [
     { name: 'Sertifikat Valid', value: stats.valid, color: '#10B981' },
-    { name: 'Tanpa Sertifikat (Exempt)', value: stats.exempt, color: '#94A3B8' },
-    { name: `Urgent (≤ ${stats.threshold} Hari)`, value: stats.urgent, color: '#F59E0B' },
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
   ];
 
@@ -280,11 +319,10 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
       const catItems = filteredItems.filter(i => i.kategori === cat);
       return {
         name: cat,
-        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length,
-        Urgent: catItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length,
+        Valid: catItems.filter(c => (c.sisaHari === null || c.sisaHari > threshold) && c.workflowStatus !== 'decommissioned' && c.workflowStatus !== 'exempt').length + catItems.filter(c => c.sisaHari !== null && c.sisaHari > 0 && c.sisaHari <= threshold && c.workflowStatus !== 'decommissioned').length,
         Expired: catItems.filter(c => c.sisaHari !== null && c.sisaHari <= 0 && c.workflowStatus !== 'decommissioned').length,
       };
-    }).filter(u => u.Valid > 0 || u.Urgent > 0 || u.Expired > 0 || filterKategori === u.name);
+    }).filter(u => u.Valid > 0 || u.Expired > 0 || filterKategori === u.name);
   }, [filteredItems, allDashboardItems, filterKategori, customUrgentDays]);
 
   // Filtering untuk list tabel Terbit di bagian bawah
@@ -304,7 +342,13 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
       // 2. Filter by Date Range Terbit
       if (isDateFilterActive) {
         if (!item.tglTerbit || item.tglTerbit === '-') return false;
-        const pubDate = new Date(item.tglTerbit);
+        let pubDate;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(item.tglTerbit)) {
+          const parts = item.tglTerbit.split('/');
+          pubDate = new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+        } else {
+          pubDate = new Date(item.tglTerbit);
+        }
         if (isNaN(pubDate.getTime())) return false;
 
         if (dateRangeStart) {
@@ -348,39 +392,24 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
     setIsDateFilterActive(false);
   };
 
-  // Export handlers
-  const handleExportCSV = () => {
-    const headers = ['No', 'Kategori', 'Jenis', 'Merek/Nama', 'No Seri', 'No Sertifikat', 'Tgl Terbit', 'Tgl Expired', 'Status'];
-    const rows = displayedIssuedCertificates.map((doc, idx) => [
-      idx + 1,
-      doc.kategori || '-',
-      doc.jenis || '-',
-      doc.merekItem || '-',
-      doc.nomorSeriTipe || '-',
-      doc.nomorSertifikat || '-',
-      doc.tglTerbit !== '-' ? doc.tglTerbit : '-',
-      doc.tglExpired !== '-' ? doc.tglExpired : '-',
-      doc.workflowStatus || '-'
-    ]);
-    const csvContent = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setShowExportMenu(false);
-  };
-
-  const handleExportJSON = () => {
-    const blob = new Blob([JSON.stringify(displayedIssuedCertificates, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const handleExportExcel = () => {
+    const dataToExport = displayedIssuedCertificates.map((doc, idx) => ({
+      'No': idx + 1,
+      'Kategori': doc.kategori || '-',
+      'Jenis': doc.jenis || '-',
+      'Merek/Nama': doc.merekItem || '-',
+      'No Seri': doc.nomorSeriTipe || '-',
+      'No Sertifikat': doc.nomorSertifikat || '-',
+      'Tgl Terbit': doc.tglTerbit !== '-' ? doc.tglTerbit : '-',
+      'Tgl Expired': doc.tglExpired !== '-' ? doc.tglExpired : '-',
+      'Status': doc.workflowStatus || '-'
+    }));
+    
+    const worksheet = xlsx.utils.json_to_sheet(dataToExport);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Data Sertifikat');
+    
+    xlsx.writeFile(workbook, `data_terbit_sertifikasi_${new Date().toISOString().slice(0, 10)}.xlsx`);
     setShowExportMenu(false);
   };
 
@@ -415,7 +444,7 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
   return (
     <div className="p-6 md:p-8 space-y-8 font-sans-clean max-w-[1400px] mx-auto bg-slate-50/50 min-h-screen">
       {/* HEADER */}
-      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 pb-6 border-b border-slate-200">
+      <div className="flex flex-col space-y-4 pb-6">
         <div className="space-y-2">
           <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
             Dashboard Overview
@@ -424,111 +453,71 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
             Ringkasan status legalitas dan operasional seluruh aset, peralatan pabrik, proyek, dan dokumen HAKI.
           </p>
         </div>
-
-        {/* Inline Filter Kategori */}
-        {activeTab === 'perizinan' && (
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-slate-500" />
-              <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
-              <AnimatedDropdown
-                variant="light"
-                value={filterKategori}
-                onChange={setFilterKategori}
-                options={getCategoryOptions().map(cat => ({
-                  value: cat,
-                  label: cat === 'All' ? 'Semua Jenis Perizinan' : cat
-                }))}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* TABS */}
-      <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-xl shadow-xs border border-slate-200">
-        <button
-          onClick={() => setActiveTab('perizinan')}
-          className={`flex-1 sm:flex-none px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
-            activeTab === 'perizinan'
-              ? 'bg-[#005ea4] text-white shadow-md'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-        >
-          <FileCheck2 className="w-4 h-4" />
-          Overview Perizinan & Sertifikat
-        </button>
-        <button
-          onClick={() => setActiveTab('administrasi')}
-          className={`flex-1 sm:flex-none px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
-            activeTab === 'administrasi'
-              ? 'bg-[#005ea4] text-white shadow-md'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Administrasi & Keanggotaan
-        </button>
-      </div>
-
-      {activeTab === 'perizinan' && (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* SUMMARY CARDS — 6 cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
-        {/* Card 1: Urgent */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-col space-y-2">
-            <div className="flex items-center gap-1 text-slate-500">
-              <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span className="font-mono-data text-[10px] font-bold uppercase tracking-tight flex items-center gap-1">
-                Urgent ≤
-                <input
-                  type="text"
-                  pattern="[0-9]*"
-                  inputMode="numeric"
-                  value={customUrgentDays}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, '');
-                    setCustomUrgentDays(val === '' ? '' : Math.max(1, parseInt(val) || 1));
-                  }}
-                  className="w-7 px-0 py-0.5 text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
-                />
-              </span>
-            </div>
-            <div className="flex items-end gap-1">
-              <span className="text-3xl font-extrabold text-slate-800">{stats.urgent}</span>
-              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
-            </div>
-          </div>
+        
+        <div className="flex border border-slate-200 rounded-xl p-1 bg-white mb-6 w-max shadow-xs">
+          <button 
+            onClick={() => setActiveMainTab('perizinan')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeMainTab === 'perizinan' ? 'bg-[#005ea4] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            <FileCheck2 className="w-4 h-4" />
+            Overview Perizinan & Sertifikat
+          </button>
+          <button 
+            onClick={() => setActiveMainTab('administrasi')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeMainTab === 'administrasi' ? 'bg-[#005ea4] text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            <Users className="w-4 h-4" />
+            Administrasi & Keanggotaan
+          </button>
         </div>
+      </div>
 
-        {/* Card 2: Sertifikat Aktif */}
+      {activeMainTab === 'perizinan' ? (
+        <>
+          <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 pb-6 border-b border-slate-200">
+            {/* Inline Filter Kategori */}
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-500" />
+                <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
+                <select
+                  value={filterKategori}
+                  onChange={(e) => setFilterKategori(e.target.value)}
+                  className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
+                >
+                  {getCategoryOptions().map(cat => (
+                    <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {filterKategori !== 'All' && (
+                <button
+                  onClick={() => setFilterKategori('All')}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* SUMMARY CARDS — 4 cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {/* Card 1: Sertifikat Aktif */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5" /> Sertifikat Aktif
             </span>
             <div className="flex items-end gap-1">
-              <span className="text-3xl font-extrabold text-slate-800">{stats.valid}</span>
+              <span className="text-3xl font-extrabold text-slate-800">{stats.valid + stats.urgent}</span>
               <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
             </div>
           </div>
         </div>
 
-        {/* Card 3: Non-Sertifikat */}
-        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
-          <div className="flex flex-col space-y-2">
-            <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
-              <FileX className="w-3.5 h-3.5" /> Non-Sertifikat
-            </span>
-            <div className="flex items-end gap-1">
-              <span className="text-3xl font-extrabold text-slate-800">{stats.exempt}</span>
-              <span className="text-[11px] text-slate-500 font-mono-data mb-0.5">item</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Expired */}
+        {/* Card 2: Expired */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
@@ -541,7 +530,7 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
           </div>
         </div>
 
-        {/* Card 5: Non-Aktif / Afkir */}
+        {/* Card 3: Non-Aktif / Afkir */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
@@ -554,7 +543,7 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
           </div>
         </div>
 
-        {/* Card 6: Total Keseluruhan */}
+        {/* Card 4: Total Keseluruhan */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <span className="text-slate-500 font-mono-data text-[10px] font-bold uppercase flex items-center gap-1.5">
@@ -630,14 +619,12 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '20px' }} />
                 <Bar dataKey="Valid" stackId="a" fill="#10B981" name="Valid / Aman" radius={[0, 0, 4, 4]} />
-                <Bar dataKey="Urgent" stackId="a" fill="#F59E0B" name={`Urgent (≤ ${stats.threshold} Hr)`} />
                 <Bar dataKey="Expired" stackId="a" fill="#EF4444" name="Expired" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
-
 
       {/* SECTION: Sertifikat Terbit — Filter + Tabel */}
       <div className="pt-8 mt-8 border-t border-slate-200">
@@ -656,16 +643,10 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
           {/* Export Buttons */}
           <div className="flex items-center gap-2 ml-7 xl:ml-0">
             <button
-              onClick={handleExportCSV}
+              onClick={handleExportExcel}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors shadow-xs font-mono-data"
             >
-              Export CSV
-            </button>
-            <button
-              onClick={handleExportJSON}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-lg transition-colors shadow-xs font-mono-data"
-            >
-              Export JSON
+              Export Excel
             </button>
           </div>
         </div>
@@ -813,22 +794,9 @@ import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';exp
           </tbody>
         </table>
       </div>
-      </div>
-      )}
-
-      {activeTab === 'administrasi' && (
-        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="mb-6 flex flex-col xl:flex-row xl:items-end justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
-                <Users className="w-5 h-5 text-[#005ea4]" />
-                Data Keanggotaan & Administrasi Lainnya
-              </h2>
-              <p className="text-sm text-slate-500 font-medium ml-7">Overview sebaran kapasitas anggota dan asosiasi per kompartemen.</p>
-            </div>
-          </div>
-          <MonitoringAnggaran />
-        </div>
+      </>
+      ) : (
+        <MonitoringAnggaran />
       )}
     </div>
   );

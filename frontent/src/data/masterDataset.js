@@ -1,4 +1,4 @@
-// MASTER UNIFIED & INTERCONNECTED DATASET FOR PUPUK KALTIM SERTIFIKATOR
+// MASTER UNIFIED & INTERCONNECTED DATASET FOR PUPUK KALTIM PERISAI
 // All 5 modules (Monitoring, Peralatan Pabrik, Generic Perizinan, Administrasi/HAKI, & Riwayat Perpanjangan) read from this connected dataset.
 
 export const masterCertificatesData = [
@@ -849,8 +849,8 @@ export const masterCertificatesData = [
     no: 23,
     categoryKey: "administrasi-lainnya",
     kategoriDokumen: "Administrasi Lainnya",
-    judulCiptaan: "Sistem Informasi Sertifikator Inventory AI PKT",
-    merekItem: "Sistem Informasi Sertifikator Inventory AI PKT",
+    judulCiptaan: "Sistem Informasi PERISAI Inventory AI PKT",
+    merekItem: "Sistem Informasi PERISAI Inventory AI PKT",
     jenisCiptaan: "Program Komputer (Software)",
     jenisPeralatan: "Program Komputer (Software)",
     tanggalCiptaan: "2024-03-10",

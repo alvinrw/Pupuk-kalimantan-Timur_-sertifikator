@@ -1,6 +1,7 @@
-import React from 'react';
-import { Edit3, Save, Trash2, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Edit3, Save, Trash2, Plus, UploadCloud } from 'lucide-react';
 import { updateNotificationSetting } from '../../services/masterItemsService';
+import { API_BASE, getFullFileUrl } from '../../config/api';
 
 export default function DocumentFormFields({ hook, item }) {
   const {
@@ -11,9 +12,47 @@ export default function DocumentFormFields({ hook, item }) {
     triggerType, setTriggerType,
     reminderDays, setReminderDays,
     triggerDate, setTriggerDate,
+    saveSettings,
+    columnConfigs = [],
   } = hook;
 
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
   if (!isEditing) return null;
+
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr || dateStr === '-') return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    const slashParts = dateStr.split('/');
+    if (slashParts.length === 3) {
+      let day = slashParts[0].padStart(2, '0');
+      let month = slashParts[1].padStart(2, '0');
+      let year = slashParts[2];
+      if (year.length === 2) {
+        year = '20' + year;
+      }
+      return `${year}-${month}-${day}`;
+    }
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    } catch (_) { }
+    return '';
+  };
+
+  const formatNumberString = (str) => {
+    if (!str) return '';
+    const clean = String(str).replace(/\D/g, '');
+    if (clean === '') return '';
+    return Number(clean).toLocaleString('id-ID');
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 font-mono-data">
@@ -86,6 +125,70 @@ export default function DocumentFormFields({ hook, item }) {
                       )}
                     </select>
                   </div>
+
+                  {showMasterFields && (
+                    <div>
+                      <label className="font-bold text-slate-800 block mb-1.5">Foto Dokumentasi (Master)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          id="equipment-photo-upload"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const uploaderData = new FormData();
+                            uploaderData.append('file', file);
+                            try {
+                              setIsUploadingPhoto(true);
+                              const token = sessionStorage.getItem('token');
+                              const response = await fetch(`${API_BASE}/document-history/upload`, {
+                                method: 'POST',
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                body: uploaderData,
+                              });
+                              const resJson = await response.json();
+                              if (response.ok && resJson.data) {
+                                const url = resJson.data.url || resJson.data.fileUrl || (typeof resJson.data === 'string' ? resJson.data : '');
+                                setFormData({ ...formData, imageUrl: url });
+                              } else {
+                                alert('Gagal unggah foto: ' + (resJson.message || 'Error'));
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert('Gagal unggah foto');
+                            } finally {
+                              setIsUploadingPhoto(false);
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="equipment-photo-upload"
+                          className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-slate-700 inline-flex items-center gap-1.5"
+                        >
+                          <UploadCloud className="w-4 h-4 text-slate-500" />
+                          <span>{isUploadingPhoto ? 'Mengunggah...' : 'Unggah Foto'}</span>
+                        </label>
+                        {formData.imageUrl && (
+                          <div className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden">
+                            <img
+                              src={getFullFileUrl(formData.imageUrl)}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                              className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-0.5 w-4 h-4 flex items-center justify-center text-[8px]"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -105,7 +208,7 @@ export default function DocumentFormFields({ hook, item }) {
                 <>
                   <div>
                     <label className="font-bold text-slate-800 block mb-1.5">Tanggal Ciptaan / Deklarasi</label>
-                    <input type="date" value={formData.tanggalCiptaan || ''}
+                    <input type="date" value={formatDateForInput(formData.tanggalCiptaan)}
                       onChange={(e) => setFormData({ ...formData, tanggalCiptaan: e.target.value, terbit: e.target.value })}
                       className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
                     />
@@ -132,8 +235,19 @@ export default function DocumentFormFields({ hook, item }) {
 
                   {!isHaki && (
                     <div>
+                      <label className="font-bold text-slate-800 block mb-1.5">Instansi Penerbit</label>
+                      <input type="text" value={formData.instansi || ''}
+                        onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                        placeholder="Contoh: DPMPTSP, BPN"
+                      />
+                    </div>
+                  )}
+
+                  {!isHaki && (
+                    <div>
                       <label className="font-bold text-slate-800 block mb-1.5">Tanggal Terbit / Berlaku</label>
-                      <input type="date" value={formData.terbit || ''}
+                      <input type="date" value={formatDateForInput(formData.terbit)}
                         onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
                         className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data"
                       />
@@ -162,46 +276,90 @@ export default function DocumentFormFields({ hook, item }) {
         })()}
 
         {/* Spesifikasi Tambahan */}
-        {(!hook.isMultiCertItem || !hook.isSingleCertScope) && (
+        {true && (
           <div className="mt-4 pt-4 border-t border-slate-200">
             <div className="flex items-center justify-between mb-3">
               <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider font-mono-data flex items-center gap-1.5">
                 <Plus className="w-4 h-4 text-[#005ea4]" /> Entitas Spesifikasi Tambahan
               </label>
-              <button type="button" onClick={() => setFormData({ ...formData, additionalEntities: [...(formData.additionalEntities || []), { key: '', value: '' }] })}
-                className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-800 px-2 py-1 rounded-lg border border-slate-300 flex items-center gap-1 font-bold transition-colors">
+              <button type="button" onClick={() => setFormData({ ...formData, additionalEntities: [...(formData.additionalEntities || []), { key: '', value: '', type: 'text' }] })}
+                disabled={true}
+                title="Penambahan entitas dinonaktifkan"
+                className="text-[11px] bg-slate-100 text-slate-400 px-2 py-1 rounded-lg border border-slate-200 flex items-center gap-1 font-bold cursor-not-allowed opacity-60">
                 <Plus className="w-3 h-3" /> Tambah Field
               </button>
             </div>
             <div className="space-y-2">
-              {(formData.additionalEntities || []).map((ent, idx) => (
-                <div key={idx} className="flex gap-2 items-center">
-                  <input type="text" placeholder="Nama Field (cth: Kapasitas Angkat)" value={ent.key}
-                    onChange={(e) => {
-                      const newEnts = [...formData.additionalEntities];
-                      newEnts[idx].key = e.target.value;
-                      setFormData({ ...formData, additionalEntities: newEnts });
-                    }}
-                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold"
-                  />
-                  <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
-                    onChange={(e) => {
-                      const newEnts = [...formData.additionalEntities];
-                      newEnts[idx].value = e.target.value;
-                      setFormData({ ...formData, additionalEntities: newEnts });
-                    }}
-                    className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
-                  />
-                  <button type="button" onClick={() => {
-                      const newEnts = [...formData.additionalEntities];
-                      newEnts.splice(idx, 1);
-                      setFormData({ ...formData, additionalEntities: newEnts });
-                    }}
-                    className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+              {(formData.additionalEntities || []).map((ent, idx) => {
+                const isGlobalCol = columnConfigs.some(c => c.label.toLowerCase() === ent.key.toLowerCase());
+                return (
+                  <div key={idx} className="flex gap-2 items-center flex-wrap sm:flex-nowrap bg-slate-50/50 p-2 rounded-xl border border-slate-200">
+                    <input type="text" placeholder="Nama Field (cth: Kapasitas)" value={ent.key}
+                      disabled={isGlobalCol}
+                      onChange={(e) => {
+                        const newEnts = [...formData.additionalEntities];
+                        newEnts[idx].key = e.target.value;
+                        setFormData({ ...formData, additionalEntities: newEnts });
+                      }}
+                      className={`flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
+                    />
+                    <select value={ent.type || 'text'}
+                      disabled={isGlobalCol}
+                      onChange={(e) => {
+                        const newEnts = [...formData.additionalEntities];
+                        newEnts[idx].type = e.target.value;
+                        newEnts[idx].value = ''; // Reset value on type change to avoid format conflicts
+                        setFormData({ ...formData, additionalEntities: newEnts });
+                      }}
+                      className={`px-2 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
+                    >
+                      <option value="text">Teks</option>
+                      <option value="nominal">Nominal / Angka</option>
+                      <option value="date">Tanggal</option>
+                    </select>
+                    {ent.type === 'date' ? (
+                      <input type="date" value={ent.value}
+                        onChange={(e) => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = e.target.value;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        onClick={(e) => { try { e.target.showPicker(); } catch (_) { } }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white cursor-pointer"
+                      />
+                    ) : ent.type === 'nominal' ? (
+                      <input type="text" placeholder="Nilai (cth: 5.000.000)" value={formatNumberString(ent.value)}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/\D/g, '');
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = clean;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"
+                      />
+                    ) : (
+                      <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
+                        onChange={(e) => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = e.target.value;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs bg-white"
+                      />
+                    )}
+                    {!isGlobalCol && (
+                      <button type="button" onClick={() => {
+                        const newEnts = [...formData.additionalEntities];
+                        newEnts.splice(idx, 1);
+                        setFormData({ ...formData, additionalEntities: newEnts });
+                      }}
+                        className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors bg-white">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
               {(!formData.additionalEntities || formData.additionalEntities.length === 0) && (
                 <p className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada field spesifikasi tambahan. Klik "Tambah Field" untuk memasukkan data custom.</p>
               )}
@@ -209,8 +367,8 @@ export default function DocumentFormFields({ hook, item }) {
           </div>
         )}
 
-        {/* Pengaturan Notifikasi (Edit Mode) - ONLY FOR SINGLE CERT SCOPE */}
-        {hook.isSingleCertScope && (
+        {/* Pengaturan Notifikasi (Edit Mode) */}
+        {true && (
           <div className="mt-4 pt-4 border-t border-slate-200">
             <label className="font-bold text-slate-800 block mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider font-mono-data">
               Pengaturan Pengingat & Notifikasi
@@ -225,14 +383,8 @@ export default function DocumentFormFields({ hook, item }) {
                     const isChecked = e.target.checked;
                     setReminderEnabled(isChecked);
                     try {
-                      const tId = item?.MasterId || item?.id;
-                      await updateNotificationSetting(tId, {
-                        isEnabled: isChecked,
-                        triggerType,
-                        triggerDays: parseInt(reminderDays) || 30,
-                        triggerDate: triggerType === 'DATE' ? triggerDate : null
-                      });
-                    } catch(err) {
+                      await saveSettings({ reminderEnabled: isChecked });
+                    } catch (err) {
                       console.error('Auto-save failed:', err);
                     }
                   }}
@@ -245,10 +397,16 @@ export default function DocumentFormFields({ hook, item }) {
               {reminderEnabled && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tipe Pemicu</label>
+                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Tipe Reminder</label>
                     <select
                       value={triggerType}
-                      onChange={(e) => setTriggerType(e.target.value)}
+                      onChange={async (e) => {
+                        const nextVal = e.target.value;
+                        setTriggerType(nextVal);
+                        try {
+                          await saveSettings({ triggerType: nextVal });
+                        } catch (err) { }
+                      }}
                       className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
                     >
                       <option value="DAYS">Berdasarkan Sisa Hari (H-)</option>
@@ -260,7 +418,13 @@ export default function DocumentFormFields({ hook, item }) {
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
                       <input
                         type="number" min="1" value={reminderDays}
-                        onChange={(e) => setReminderDays(e.target.value === '' ? '' : parseInt(e.target.value))}
+                        onChange={async (e) => {
+                          const nextVal = e.target.value === '' ? '' : parseInt(e.target.value);
+                          setReminderDays(nextVal);
+                          try {
+                            await saveSettings({ reminderDays: nextVal });
+                          } catch (err) { }
+                        }}
                         className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
                       />
                     </div>
@@ -269,7 +433,13 @@ export default function DocumentFormFields({ hook, item }) {
                       <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tanggal Pemicu</label>
                       <input
                         type="date" value={triggerDate}
-                        onChange={(e) => setTriggerDate(e.target.value)}
+                        onChange={async (e) => {
+                          const nextVal = e.target.value;
+                          setTriggerDate(nextVal);
+                          try {
+                            await saveSettings({ triggerDate: nextVal });
+                          } catch (err) { }
+                        }}
                         className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
                       />
                     </div>

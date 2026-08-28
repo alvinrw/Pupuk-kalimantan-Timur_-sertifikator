@@ -54,7 +54,7 @@ export const workflowSteps = [
     step: 2,
     title: "Pemantauan Tenggat Otomatis",
     icon: Activity,
-    desc: "Sistem SERTIFIKATOR menghitung sisa hari secara real-time dan mengelompokkan dokumen ke dalam 5 Summary Cards di menu Monitoring & Evaluasi."
+    desc: "Sistem PERISAI menghitung sisa hari secara real-time dan mengelompokkan dokumen ke dalam 5 Summary Cards di menu Monitoring & Evaluasi."
   },
   {
     step: 3,
@@ -83,12 +83,12 @@ export const modulesGuide = [
     items: "Mengelola dan memantau status sertifikasi K3 untuk seluruh peralatan operasional pabrik seperti Bejana Tekan, Crane, dan Instalasi Listrik."
   },
   {
-    title: "Perizinan Aset & Bangunan",
+    title: "Perizinan Aset ",
     icon: Building2,
     items: "Mengurus legalitas kepemilikan dan kelayakan fungsi dari aset tetap perusahaan, termasuk Gedung, Lahan, dan Fasilitas Lingkungan."
   },
   {
-    title: "Perizinan Proyek & Konstruksi",
+    title: "Perizinan Proyek ",
     icon: FolderKanban,
     items: "Memantau kelengkapan izin konstruksi, sertifikat laik fungsi, dan dokumen legal lainnya untuk proyek ekspansi atau pembangunan baru."
   },
@@ -98,7 +98,7 @@ export const modulesGuide = [
     items: "Mengelola administrasi pengesahan standar mutu produk (SNI, Halal, Industri Hijau) agar selalu valid dan memenuhi regulasi."
   },
   {
-    title: "Administrasi Lainnya / HAKI",
+    title: "Administrasi Lainnya ",
     icon: FileSpreadsheet,
     items: "Menyimpan dan mengawasi masa berlaku perlindungan hak cipta (HAKI) untuk program komputer, buku panduan, dan karya intelektual lainnya."
   },
@@ -183,7 +183,7 @@ export const categoryColumnsDetail = {
     columns: [
       { key: "no", name: "NO.", desc: "Nomor urut registrasi HAKI." },
       { key: "code", name: "KODE HAKI / EC", desc: "Nomor pendaftaran Ditjen KI (contoh: EC00202400192, EC00201999120)." },
-      { key: "merekItem", name: "JUDUL CIPTAAN / KARYA", desc: "Judul karya cipta (Sistem Sertifikator AI, Buku Panduan K3 Kilang, Layout Control Room)." },
+      { key: "merekItem", name: "JUDUL CIPTAAN / KARYA", desc: "Judul karya cipta (Sistem PERISAI AI, Buku Panduan K3 Kilang, Layout Control Room)." },
       { key: "jenisItem", name: "JENIS CIPTAAN", desc: "Kategori HAKI (Program Komputer / Software, Buku Karya Tulis, Desain Layout)." },
       { key: "unitPabrik", name: "UNIT OWNER", desc: "Unit/Departemen pencipta karya (Dept. IT Central, Dept. K3, Dept. Enjiniring)." },
       { key: "user", name: "PENCIPTA / PENERBIT", desc: "Pencipta ciptaan / Kementerian Hukum & HAM RI." },
@@ -237,7 +237,7 @@ export const categoryTemplates = {
     title: "Templat CSV Administrasi HAKI & Hak Cipta",
     rows: [
       "code,title,jenisCiptaan,unitPabrik,user,certificateNo,issueDate,expiryDate,status",
-      "EC00202400192,Sistem Informasi Sertifikator Inventory AI PKT,Program Komputer (Software),IT Central,Dirjen Kekayaan Intelektual,EC00202400192,2024-03-10,2029-03-10,Aktif",
+      "EC00202400192,Sistem Informasi PERISAI Inventory AI PKT,Program Komputer (Software),IT Central,Dirjen Kekayaan Intelektual,EC00202400192,2024-03-10,2029-03-10,Aktif",
       "EC00201999120,Buku Panduan Keselamatan Operasi Kilang Amonia-4,Buku / Karya Tulis,Pabrik 4,Dirjen KI Kemenkumham RI,EC00201999120,2019-08-15,2024-01-15,Expired"
     ]
   }

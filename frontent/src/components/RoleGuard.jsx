@@ -4,7 +4,10 @@ import { useAuth } from '../contexts/AuthContext';
 export default function RoleGuard({ allowedRoles, children }) {
   const { user } = useAuth();
 
-  if (!user || !allowedRoles.includes(user.role)) {
+  if (!user) return null;
+  
+  const effectiveRole = user.role.replace(/Admin \d+/, 'Admin');
+  if (!allowedRoles.includes(effectiveRole)) {
     return null;
   }
 

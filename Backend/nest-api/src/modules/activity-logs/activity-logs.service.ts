@@ -24,7 +24,11 @@ export class ActivityLogsService {
       action: log.action,
       module: log.targetTable,
       target: log.targetId || '-',
-      details: log.details || null
+      details: log.details || ''
     }));
+  }
+
+  async clearAll() {
+    return this.prisma.activityLog.deleteMany({});
   }
 }

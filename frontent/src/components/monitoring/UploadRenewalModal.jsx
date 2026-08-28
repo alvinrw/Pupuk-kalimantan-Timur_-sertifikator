@@ -94,9 +94,13 @@ export default function UploadRenewalModal({
           if (uploadRes.ok) {
             const json = await uploadRes.json();
             setTempUrl(json.data.url);
+          } else {
+            const errJson = await uploadRes.json().catch(() => ({}));
+            alert(`Gagal memuat preview dokumen (Error ${uploadRes.status}): ${errJson.message || uploadRes.statusText}`);
           }
         } catch (err) {
           console.error('Upload temp error:', err);
+          alert('Terjadi kesalahan jaringan saat memuat preview dokumen: ' + err.message);
         } finally {
           setIsUploadingTemp(false);
         }
@@ -147,7 +151,7 @@ export default function UploadRenewalModal({
               
               <div>
                 <label className="font-bold text-slate-900 block mb-1.5">
-                  1. Upload File Sertifikat Baru (Wajib) <span className="text-rose-500">*</span>
+                  1. Upload File Sertifikat Baru (Opsional)
                 </label>
                 <div
                   onDragEnter={handleDragOver}
@@ -306,7 +310,7 @@ export default function UploadRenewalModal({
               <button
                 type="submit"
                 form="uploadRenewalForm"
-                disabled={!uploadedFile || isUploadingTemp || isOcrScanning}
+                disabled={isUploadingTemp || isOcrScanning}
                 className="px-5 py-2 bg-[#00a368] hover:bg-[#008f5a] disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl flex items-center gap-1.5 cursor-pointer text-xs shadow-xs"
               >
                 <FileText className="w-4 h-4" />

@@ -23,11 +23,21 @@ function mapItemToRow(item, idx) {
     (c) => c.status === 'Aktif' || c.status === 'Active' || !c.status
   );
 
+  const getTimestamp = (dateStr) => {
+    if (!dateStr || dateStr === '-') return 0;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const parts = dateStr.split('/');
+      return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+    }
+    const t = new Date(dateStr).getTime();
+    return isNaN(t) ? 0 : t;
+  };
+
   let primaryCert = null;
   if (activeCerts.length > 0) {
     primaryCert = activeCerts.slice().sort((a, b) => {
-      const dA = new Date(a.expired && a.expired !== '-' ? a.expired : '1970-01-01').getTime();
-      const dB = new Date(b.expired && b.expired !== '-' ? b.expired : '1970-01-01').getTime();
+      const dA = getTimestamp(a.expired);
+      const dB = getTimestamp(b.expired);
       return dB - dA;
     })[0];
   } else if (certs.length > 0) {
@@ -125,12 +135,12 @@ export default function useAdministrasiLainnya() {
       const data = await getMasterItems(CATEGORY_KEY);
       const mapped = data.map(mapItemToRow);
       setCiptaanList(mapped);
-      
-      // Update the detail modal item if it is currently open so DocumentDetailPage re-renders
+
+      // Auto-update detailModalItem to reflect changes (e.g. deleted linked certificates)
       setDetailModalItem(prev => {
-        if (!prev) return prev;
-        const updatedItem = mapped.find(i => i.id === prev.id);
-        return updatedItem || prev;
+        if (!prev) return null;
+        const updated = mapped.find(m => m.id === prev.id || m.MasterId === prev.MasterId);
+        return updated ? updated : prev;
       });
     } catch (error) {
       console.error('Failed to load AdministrasiLainnya', error);
@@ -159,8 +169,10 @@ export default function useAdministrasiLainnya() {
     [ciptaanList]
   );
 
+  const [sortDateOrder, setSortDateOrder] = useState('desc');
+
   const filteredData = useMemo(() => {
-    return ciptaanList.filter((item) => {
+    let result = ciptaanList.filter((item) => {
       const matchesTab =
         activeMainTab === 'staging'
           ? item.documentStatus === 'PENDING_DOC'
@@ -183,7 +195,15 @@ export default function useAdministrasiLainnya() {
 
       return matchesTab && matchesSearch && matchesJenis && matchesMasa && matchesHasSertifikat;
     });
-  }, [ciptaanList, searchTerm, filterJenis, filterMasa, filterHasSertifikat, activeMainTab]);
+
+    result.sort((a, b) => {
+      const timeA = new Date(a.tanggalCiptaan || a.createdAt || 0).getTime();
+      const timeB = new Date(b.tanggalCiptaan || b.createdAt || 0).getTime();
+      return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
+    });
+
+    return result;
+  }, [ciptaanList, searchTerm, filterJenis, filterMasa, filterHasSertifikat, activeMainTab, sortDateOrder]);
 
   const filteredTargetList = useMemo(
     () =>
@@ -437,7 +457,10 @@ export default function useAdministrasiLainnya() {
     // Handlers
     loadData,
     handleCsvImported,
+    handleZipMatched,
     handleSingleAdded,
+    sortDateOrder,
+    setSortDateOrder,
     getRowStatusStyle,
   };
 }

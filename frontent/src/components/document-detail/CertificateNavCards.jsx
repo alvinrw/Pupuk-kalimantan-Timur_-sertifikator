@@ -6,6 +6,7 @@
 import React from 'react';
 import { Link2, PlusCircle, Eye, Trash2, FileText } from 'lucide-react';
 import { getFullFileUrl } from '../../config/api';
+import RoleGuard from '../RoleGuard';
 
 export default function CertificateNavCards({
   linkedCerts,
@@ -13,6 +14,8 @@ export default function CertificateNavCards({
   onSelectCert,
   onAddCert,
   onDeleteCert,
+  sortDateOrder,
+  setSortDateOrder
 }) {
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-5">
@@ -27,13 +30,26 @@ export default function CertificateNavCards({
             Klik kartu untuk berpindah detail sertifikat yang aktif dilihat
           </p>
         </div>
-        <button
-          onClick={onAddCert}
-          className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data shrink-0"
-        >
-          <PlusCircle className="w-4 h-4" />
-          <span>+ Tambah Sertifikat Terhubung</span>
-        </button>
+        <div className="flex items-center gap-2 mt-3 sm:mt-0 shrink-0">
+          {/* Sort Dropdown */}
+          <select
+            value={sortDateOrder}
+            onChange={(e) => setSortDateOrder(e.target.value)}
+            className="text-xs bg-white border border-slate-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs font-mono-data"
+          >
+            <option value="desc">Expired Paling Lama</option>
+            <option value="asc">Expired Terdekat</option>
+          </select>
+          <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+            <button
+              onClick={onAddCert}
+              className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Tambah Sertifikat Terhubung</span>
+            </button>
+          </RoleGuard>
+        </div>
       </div>
 
       {/* Cards Grid */}
@@ -70,11 +86,10 @@ export default function CertificateNavCards({
               <div
                 key={cert.id}
                 onClick={() => onSelectCert(cert.id)}
-                className={`rounded-xl p-4 space-y-3 font-mono-data text-xs relative group transition-all cursor-pointer ${
-                  isActive
+                className={`rounded-xl p-4 space-y-3 font-mono-data text-xs relative group transition-all cursor-pointer ${isActive
                     ? 'bg-blue-50/50 border-2 border-[#005ea4] shadow-md'
                     : 'bg-slate-50 border border-slate-200 hover:border-[#005ea4]/50 hover:bg-slate-100'
-                }`}
+                  }`}
               >
                 {/* Active badge */}
                 {isActive && (
@@ -86,13 +101,15 @@ export default function CertificateNavCards({
                 )}
 
                 {/* Delete button */}
-                <button
-                  onClick={(e) => { e.stopPropagation(); onDeleteCert(cert.id); }}
-                  className="absolute top-3 right-3 p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                  title="Hapus Sertifikat Terhubung Ini"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDeleteCert(cert.id); }}
+                    className="absolute top-3 right-3 p-1 rounded-lg text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                    title="Hapus Sertifikat Terhubung Ini"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </RoleGuard>
 
                 <div className="pr-6">
                   <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold block">Nama Sertifikat</span>
@@ -141,14 +158,13 @@ export default function CertificateNavCards({
                       e.stopPropagation();
                       onSelectCert(cert.id);
                     }}
-                    className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                      isActive
+                    className={`w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${isActive
                         ? 'bg-[#005ea4] text-white shadow-2xs hover:bg-blue-700'
                         : 'bg-blue-50 text-[#005ea4] border border-blue-200 hover:bg-blue-100'
-                    }`}
+                      }`}
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    <span>{isActive ? 'Sedang Dilihat (Buka Edit)' : 'Kelola & Edit Sertifikat Ini →'}</span>
+                    <span>{isActive ? 'Sedang Dilihat' : 'Lihat Detail Sertifikat Ini →'}</span>
                   </button>
 
                   <button
@@ -162,11 +178,10 @@ export default function CertificateNavCards({
                         alert(`Berkas PDF ${cert.pdfName || ''} belum tersedia di storage.`);
                       }
                     }}
-                    className={`w-full flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${
-                      cert.hasPdf || cert.fileUrl
+                    className={`w-full flex items-center justify-center gap-1.5 py-1 rounded-lg text-[10px] font-semibold transition-colors cursor-pointer ${cert.hasPdf || cert.fileUrl
                         ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
                         : 'bg-slate-50 text-slate-400 border border-slate-200 cursor-not-allowed'
-                    }`}
+                      }`}
                     disabled={!cert.hasPdf && !cert.fileUrl}
                   >
                     <FileText className="w-3 h-3 text-slate-500" />

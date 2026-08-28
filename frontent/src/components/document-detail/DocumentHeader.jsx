@@ -10,7 +10,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
   const isViewer = user?.role === 'Viewer';
 
   const {
-    formData, targetCert, parentDoc, isSingleCertScope,
+    formData, targetCert, parentDoc, isSingleCertScope, effectiveCategoryKey,
     isEditing, setIsEditing,
     isPerpanjangStatus, isAfkirStatus,
     openUploadModal, handleAfkir, handleAktifkan,
@@ -19,8 +19,8 @@ export default function DocumentHeader({ hook, item, onBack }) {
     setIsDeleteDialogOpen,
     setSelectedHistoryToDelete,
     historyList,
+    isMultiCertItem,
   } = hook;
-
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const actionMenuRef = useRef(null);
@@ -35,10 +35,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const activeCerts = historyList.filter(c => (c.status || '').toLowerCase() === 'aktif' || (c.status || '').toLowerCase() === 'active');
-  const primaryCert = activeCerts.length > 0
-    ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
-    : (historyList.length > 0 ? historyList[0] : null);
+  const primaryCert = historyList.find(c => c.isCurrent) || (historyList.length > 0 ? historyList[0] : null);
 
   const getHeaderLabel = () => {
     if (hook.isHaki) return 'HAKI / CIPTAAN';
@@ -62,10 +59,33 @@ export default function DocumentHeader({ hook, item, onBack }) {
           <ArrowLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
         </button>
         <div>
+          {(() => {
+            const getThemeName = (key) => {
+              const mapping = {
+                'peralatan-pabrik': 'Perizinan Peralatan Pabrik',
+                'perizinan-aset': 'Perizinan Aset',
+                'administrasi-lainnya': 'Administrasi Lainnya',
+                'bangunan-generic': 'Bangunan & Konstruksi',
+                'lingkungan-generic': 'Lingkungan Hidup',
+                'kesehatan-generic': 'Kesehatan & Keselamatan',
+                'proteksi-kebakaran': 'Proteksi Kebakaran',
+                'pesawat-angkat-angkut': 'Pesawat Angkat & Angkut',
+                'pesawat-tenaga-produksi': 'Pesawat Tenaga & Produksi',
+                'instalasi-penyalur-petir': 'Instalasi Penyalur Petir',
+                'esdm-generic': 'ESDM & Energi',
+                'komunikasi-generic': 'Komunikasi & Telekomunikasi',
+                'disnaker-generic': 'Ketenagakerjaan',
+                'haki-generic': 'HAKI / Hak Kekayaan Intelektual'
+              };
+              return mapping[key] || 'Dokumen / Proyek';
+            };
+            return (
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                {getThemeName(effectiveCategoryKey)}
+              </div>
+            );
+          })()}
           <div className="flex items-center gap-2">
-            <span className="px-2.5 py-1 bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm">
-              {getHeaderLabel()}
-            </span>
             <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
               {formData.merekItem || formData.title || targetCert?.jenisSertifikat || formData.jenisPeralatan || 'Detail Dokumen'}
             </h2>
@@ -74,9 +94,6 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 {targetCert?.noSertifikat || formData.noSertifikat || 'Sertifikat'}
               </span>
             )}
-            <span className="px-2.5 py-0.5 bg-blue-50 text-[#005ea4] border border-blue-200 rounded-lg text-xs font-bold font-mono-data">
-              {isSingleCertScope ? `Entity: ${parentDoc?.id || item?.id}` : `ID: ${item?.id}`}
-            </span>
           </div>
           <p className="text-xs text-slate-500 font-mono-data mt-0.5">
             {isSingleCertScope
@@ -101,21 +118,15 @@ export default function DocumentHeader({ hook, item, onBack }) {
         <div className={`absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col transition-all duration-200 origin-top-right ${isActionMenuOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 pointer-events-none invisible -translate-y-2'}`}>
             {/* Edit Toggle */}
             {!isEditing ? (
-              <button
-                onClick={() => { 
-                  if(isAfkirStatus) return;
-                  setIsEditing(true); setIsActionMenuOpen(false); 
-                }}
-                className={`w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-2.5 transition-colors ${
-                  isAfkirStatus 
-                    ? 'text-slate-400 bg-slate-50 cursor-not-allowed opacity-60' 
-                    : 'text-slate-700 hover:bg-slate-50 cursor-pointer'
-                }`}
-                title={isAfkirStatus ? "Item Afkir/Non-aktif tidak dapat diedit" : ""}
-              >
-                <Edit3 className="w-4 h-4 text-slate-400" />
-                <span>Edit Data Dokumen</span>
-              </button>
+              !isAfkirStatus && (
+                <button
+                  onClick={() => { setIsEditing(true); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <Edit3 className="w-4 h-4 text-slate-400" />
+                  <span>Edit Data Dokumen</span>
+                </button>
+              )
             ) : (
               <button
                 onClick={() => { setIsEditing(false); setIsActionMenuOpen(false); }}
@@ -127,10 +138,11 @@ export default function DocumentHeader({ hook, item, onBack }) {
             )}
 
             {/* Perpanjang / Upload */}
-            {isPerpanjangStatus ? (
+            {(!isMultiCertItem || isSingleCertScope) && !isAfkirStatus && (
+              isPerpanjangStatus ? (
               <>
                 <button
-                  onClick={() => { openUploadModal('archive'); setIsActionMenuOpen(false); }}
+                  onClick={() => { openUploadModal('archive', primaryCert?.id); setIsActionMenuOpen(false); }}
                   className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
                 >
                   <UploadCloud className="w-4 h-4 text-slate-400" />
@@ -152,16 +164,17 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 <RotateCcw className="w-4 h-4 text-slate-400" />
                 <span>Perpanjang Dokumen</span>
               </button>
-            )}
+            ))}
 
             {/* Afkir / Aktifkan */}
-            {isAfkirStatus ? (
+            {(!isMultiCertItem || isSingleCertScope) && (
+              isAfkirStatus ? (
               <button
                 onClick={() => { handleAktifkan(); setIsActionMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
               >
                 <RotateCcw className="w-4 h-4 text-slate-400" />
-                <span>Batal Afkir / Aktifkan</span>
+                <span>Batal Non Aktif / Aktifkan</span>
               </button>
             ) : (
               <button
@@ -169,14 +182,15 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
               >
                 <Ban className="w-4 h-4 text-slate-400" />
-                <span>Tandai Sebagai Afkir</span>
+                <span>Tandai Sebagai Non Aktif</span>
               </button>
-            )}
+            ))}
 
             <div className="h-px bg-slate-100 my-1 mx-2" />
 
             {/* Hapus Sertifikat */}
-            {primaryCert ? (
+            {(!isMultiCertItem || isSingleCertScope) && (
+              primaryCert && !isAfkirStatus ? (
               <button
                 onClick={() => { 
                   if(isAfkirStatus) return;
@@ -201,7 +215,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
                 <Trash2 className="w-4 h-4 text-slate-300" />
                 <span>Hapus Data Item (Sertifikat)</span>
               </button>
-            )}
+            ))}
 
             <div className="h-px bg-slate-100 my-1 mx-2" />
 

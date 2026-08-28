@@ -6,6 +6,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const [historyList, setHistoryList] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
+  const [isDeletingHistory, setIsDeletingHistory] = useState(false);
   const [editingHistoryRow, setEditingHistoryRow] = useState(null);
   const [selectedHistoryFile, setSelectedHistoryFile] = useState(null);
   const editHistoryFileInputRef = useRef(null);
@@ -19,31 +20,83 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
       
       // Jika ini adalah multi-cert item (punya linkedCertificates) dan kita sedang melihat detail 
       // sertifikat spesifik (targetCert), maka filter histori HANYA untuk sertifikat dengan nama yang sama.
-      if (targetCert && targetCert.id && item.linkedCertificates) {
+      if (targetCert && targetCert.id && (item.linkedCertificates || item.certificates)) {
+        const targetJenis = targetCert.jenisSertifikat;
         const targetName = targetCert.namaSertifikat || targetCert.jenisSertifikat;
-        if (targetName) {
+        if (targetJenis) {
+          listToProcess = masterCertList.filter(c => c.jenisSertifikat === targetJenis);
+        } else if (targetName) {
           listToProcess = masterCertList.filter(c => (c.namaSertifikat || c.jenisSertifikat) === targetName);
         } else {
           listToProcess = masterCertList.filter(c => c.id === targetCert.id);
         }
       }
 
-      const parentList = listToProcess.map(m => {
-        let isCurrent = false;
-        if (targetCert && targetCert.id === m.id) {
-          isCurrent = true;
-        } else if (!targetCert && item.currentCert && item.currentCert.id === m.id) {
-          isCurrent = true;
-        } else if (!targetCert && !item.currentCert && (m.status === 'Aktif' || m.status === 'Active' || !m.status)) {
-          isCurrent = true;
+      const formatToDDMMYYYY = (rawDateStr) => {
+        if (!rawDateStr || rawDateStr === '-') return '-';
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
+        try {
+          const dObj = new Date(rawDateStr);
+          if (!isNaN(dObj.getTime())) {
+            const dd = String(dObj.getDate()).padStart(2, '0');
+            const mm = String(dObj.getMonth() + 1).padStart(2, '0');
+            const yyyy = dObj.getFullYear();
+            return `${dd}/${mm}/${yyyy}`;
+          }
+        } catch (_) {}
+        return rawDateStr;
+      };
+
+      const getYearFromStr = (dateStr) => {
+        if (!dateStr || dateStr === '-') return '2024';
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+          return dateStr.split('/')[2];
         }
+        try {
+          const dObj = new Date(dateStr);
+          if (!isNaN(dObj.getTime())) {
+            return String(dObj.getFullYear());
+          }
+        } catch (_) {}
+        const match = dateStr.match(/\b\d{4}\b/);
+        return match ? match[0] : '2024';
+      };
+
+      const getTimestampLocal = (dateStr) => {
+        if (!dateStr || dateStr === '-') return 0;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+          const parts = dateStr.split('/');
+          return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+        }
+        const t = new Date(dateStr).getTime();
+        return isNaN(t) ? 0 : t;
+      };
+
+      let activeCertId = null;
+      if (targetCert && targetCert.id) {
+        activeCertId = targetCert.id;
+      } else {
+        const validForActive = listToProcess.filter(c => {
+          const s = (c.status || '').toLowerCase();
+          return s !== 'diarsipkan';
+        });
+        if (validForActive.length > 0) {
+          const sorted = validForActive.slice().sort((a, b) => getTimestampLocal(b.expired || b.expiryDate) - getTimestampLocal(a.expired || a.expiryDate));
+          activeCertId = sorted[0].id;
+        } else if (listToProcess.length > 0) {
+          const sorted = listToProcess.slice().sort((a, b) => getTimestampLocal(b.expired || b.expiryDate) - getTimestampLocal(a.expired || a.expiryDate));
+          activeCertId = sorted[0].id;
+        }
+      }
+
+      const parentList = listToProcess.map(m => {
+        let isCurrent = m.id === activeCertId;
         return {
           ...m,
-          type: 'certificate',
-          periode: m.periode || `${new Date(m.terbit || m.issueDate || '2024').getFullYear()} - ${new Date(m.expired || m.expiryDate || '2024').getFullYear()}`,
+          periode: m.periode || `${getYearFromStr(m.terbit || m.issueDate)} - ${getYearFromStr(m.expired || m.expiryDate)}`,
           noSertifikat: m.noSertifikat || m.certNo || m.certificateNo || '-',
-          terbit: m.terbit || m.issueDate || '-',
-          expired: m.expired || m.expiryDate || '-',
+          terbit: formatToDDMMYYYY(m.terbit || m.issueDate || '-'),
+          expired: formatToDDMMYYYY(m.expired || m.expiryDate || '-'),
           status: m.status || 'Aktif',
           instansi: m.instansi || m.issuer || '-',
           fileUrl: m.fileUrl || m.pdfUrl || null,
@@ -80,25 +133,24 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const handleDeleteHistoryRow = async () => {
     try {
       if (!selectedHistoryToDelete?.id) return;
-      const deletedId = selectedHistoryToDelete.id;
-      // Optimistic update: langsung hapus dari tampilan UI dan tambah log audit
-      const newLog = {
-        id: 'temp-del-' + Date.now(),
-        action: 'DELETED_CERTIFICATE',
-        description: `Sertifikat / lampiran "${selectedHistoryToDelete.namaSertifikat || selectedHistoryToDelete.jenisSertifikat || 'Sertifikat'}" telah dihapus secara permanen.`,
-        changedBy: 'System / User',
-        createdAt: new Date().toISOString(),
-        type: 'audit_log',
-        sortDate: Date.now()
-      };
-      
-      setHistoryList(prev => {
-        const filtered = prev.filter(h => h.id !== deletedId);
-        return [newLog, ...filtered].sort((a, b) => b.sortDate - a.sortDate);
-      });
-      
-      await deleteCertificate(deletedId);
-      // await fetchHistory(); // Tidak perlu fetch ulang langsung karena membaca dari prop lama
+      setIsDeletingHistory(true);
+
+      if (historyList.length === 1 && selectedHistoryToDelete.isCurrent) {
+        // Ini adalah baris satu-satunya (child). Jangan hapus agar "slot" tidak hilang,
+        // melainkan reset isinya ke kosong (Belum Ada)
+        await updateCertificate(selectedHistoryToDelete.id, {
+          noSertifikat: 'Tanpa Sertifikat',
+          terbit: null,
+          expired: null,
+          fileUrl: null,
+          status: 'EXEMPT',
+          instansi: 'Dihapus dari histori'
+        });
+      } else {
+        await deleteCertificate(selectedHistoryToDelete.id);
+      }
+
+      await fetchHistory();
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       console.error('Failed to delete history row:', err);
@@ -106,6 +158,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
       fetchHistory();
       alert('Gagal menghapus baris histori: ' + (err.message || 'Error'));
     } finally {
+      setIsDeletingHistory(false);
       setSelectedHistoryToDelete(null);
     }
   };
@@ -146,6 +199,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         const res = await fetch(UPLOAD_ENDPOINT, { 
           method: 'POST', 
           body: fd,
+          credentials: 'include',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (!res.ok) throw new Error('Gagal upload file ke server');
@@ -214,6 +268,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
     historyList, setHistoryList,
     isLoadingHistory, fetchHistory,
     selectedHistoryToDelete, setSelectedHistoryToDelete,
+    isDeletingHistory,
     editingHistoryRow, setEditingHistoryRow,
     selectedHistoryFile, setSelectedHistoryFile,
     editHistoryFileInputRef,

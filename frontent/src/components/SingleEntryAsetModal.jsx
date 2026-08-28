@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
 import { Building2, Save, Upload, FileCheck, Loader2, AlertTriangle, CheckCircle, X, Crosshair } from 'lucide-react';
-import { scanPdfDocument } from '../services/ocrService';
 import { API_BASE, getFullFileUrl } from '../config/api';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
@@ -23,39 +22,11 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
   const [selectedFile, setSelectedFile] = useState(null);
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
   
-  // OCR & Temp Upload States
-  const [isScanningOcr, setIsScanningOcr] = useState(false);
+  // Temp Upload States
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
-  const [ocrErrorMsg, setOcrErrorMsg] = useState('');
-  const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
-  const [scanMode, setScanMode] = useState(null);
 
   const fileInputRef = useRef(null);
-
-  // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
-  const handleOcrResult = async (fieldKey, rawText) => {
-    try {
-      const { parseDate, parseCertificateNumber } = await import('../utils/ocrTextParser');
-      
-      if (fieldKey === 'noSertifikat') {
-        const certNo = parseCertificateNumber(rawText);
-        setFormData(prev => ({ ...prev, noSertifikat: certNo || rawText.replace(/\n+/g, ' ').trim() }));
-      } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
-        const parsed = parseDate(rawText);
-        if (parsed) {
-          setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
-        } else {
-          setOcrErrorMsg(`Gagal mendeteksi tanggal untuk ${fieldKey}.`);
-        }
-      }
-      
-      setOcrSuccess(true);
-      setScanMode(null);
-    } catch (err) {
-      console.error("Gagal memproses hasil OCR:", err);
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -137,8 +108,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
     });
     setSelectedFile(null);
     setTempUrl(null);
-    setScanMode(null);
-    setOcrSuccess(false);
+    setIsUploadingTemp(false);
     onClose();
   };
 
@@ -325,7 +295,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                     }
                   }}
                   className="hidden"
-                  disabled={isUploadingTemp || isScanningOcr}
+                  disabled={isUploadingTemp}
                 />
                 <Upload className="w-6 h-6 text-[#005ea4] mx-auto mb-1" />
                 <div className="flex flex-col items-center">
@@ -336,34 +306,12 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                 </div>
               </div>
 
-              {(isUploadingTemp || isScanningOcr) && (
+              {isUploadingTemp && (
                 <div className="flex flex-col gap-2 mt-3">
-                  {isUploadingTemp && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                      <span>Menyiapkan preview dokumen...</span>
-                    </div>
-                  )}
-                  {isScanningOcr && (
-                    <div className="flex items-center gap-2 text-xs font-bold text-[#005ea4] bg-blue-50 p-2.5 rounded-lg border border-blue-200 animate-pulse">
-                      <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
-                      <span>AI sedang mengekstrak data...</span>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-              {ocrSuccess && !isScanningOcr && (
-                <div className="flex items-start gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 p-2.5 rounded-lg border border-emerald-200 mt-2">
-                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>AI berhasil mengisi form! Verifikasi kembali dengan preview PDF.</span>
-                </div>
-              )}
-
-              {ocrErrorMsg && (
-                <div className="flex items-start gap-2 text-xs font-bold text-amber-700 bg-amber-50 p-2.5 rounded-lg border border-amber-200 mt-2">
-                  <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{ocrErrorMsg}</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 p-2.5 rounded-lg border border-slate-200 animate-pulse">
+                    <Loader2 className="w-4 h-4 animate-spin text-[#005ea4]" />
+                    <span>Menyiapkan preview dokumen...</span>
+                  </div>
                 </div>
               )}
             </div>

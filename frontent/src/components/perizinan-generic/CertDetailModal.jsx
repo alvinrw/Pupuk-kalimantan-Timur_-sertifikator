@@ -36,7 +36,7 @@ export default function CertDetailModal({
       if (!isNaN(d.getTime())) {
         return d.toISOString().split('T')[0];
       }
-    } catch (_) {}
+    } catch (_) { }
     return str;
   };
 
@@ -181,10 +181,13 @@ export default function CertDetailModal({
     ? [activeCert, ...activeCert.history]
     : [activeCert];
 
+  const masterStatusLower = (masterItem?.status || masterItem?.docStatus || '').toLowerCase();
+  const isMasterAfkir = masterStatusLower === 'afkir' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut' || masterStatusLower === 'non-aktif';
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 bg-[#0f172a] text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -205,7 +208,7 @@ export default function CertDetailModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {!isEditing ? (
+            {!isEditing && !isMasterAfkir ? (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
@@ -213,7 +216,7 @@ export default function CertDetailModal({
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit Sertifikat
               </button>
-            ) : (
+            ) : (!isEditing && isMasterAfkir) ? null : (
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
@@ -327,6 +330,19 @@ export default function CertDetailModal({
                     value={formData.expired}
                     onChange={handleInputChange}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Catatan / Keterangan Tambahan
+                  </label>
+                  <textarea
+                    name="keterangan"
+                    value={formData.keterangan || ''}
+                    onChange={handleInputChange}
+                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none min-h-[60px] resize-none"
+                    placeholder="misal: Sertifikat sedang dalam proses pengurusan di kementerian..."
                   />
                 </div>
               </div>
@@ -487,6 +503,11 @@ export default function CertDetailModal({
                     <span className="text-slate-400 block mb-0.5 font-medium">Tanggal Expired</span>
                     <span className="font-bold text-rose-600">{formData.expired || '-'}</span>
                   </div>
+
+                  <div className="col-span-2 md:col-span-4 mt-2">
+                    <span className="text-slate-400 block mb-0.5 font-medium">Catatan / Keterangan Tambahan</span>
+                    <strong className="text-slate-900 whitespace-pre-wrap">{formData.keterangan || cert.keterangan || '-'}</strong>
+                  </div>
                 </div>
               </div>
 
@@ -519,6 +540,119 @@ export default function CertDetailModal({
                   >
                     {reminderEnabled ? 'Non-aktifkan Pengingat' : 'Ubah Pengaturan'}
                   </button>
+                </div>
+              </div>
+
+              {/* SECTION 4: Histori & Riwayat Dokumen Sertifikat Fisik / Digital (Moved to Top) */}
+              <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div>
+                    <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wide flex items-center gap-2">
+                      <History className="w-4 h-4 text-[#005ea4]" />
+                      Histori & Riwayat Dokumen Sertifikat Fisik / Digital
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Daftar seluruh berkas SK, hasil inspeksi, dan koreksi upload manual
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="px-3.5 py-2 bg-[#005ea4] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>+ Unggah / Koreksi Berkas PDF Manual</span>
+                  </button>
+                </div>
+
+                {/* Table of History */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-center border-collapse font-mono-data text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
+                        <th className="py-2.5 px-3">PERIODE SK</th>
+                        <th className="py-2.5 px-4 text-left">NO. SERTIFIKAT / SK</th>
+                        <th className="py-2.5 px-4">TGL TERBIT</th>
+                        <th className="py-2.5 px-4">TGL EXPIRED</th>
+                        <th className="py-2.5 px-4">AKSI</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {historyList.map((hItem, hIdx) => {
+                        const hFileUrl = getFullFileUrl(hItem.fileUrl);
+                        const hStatusStr = (hItem.status || 'Aktif').toLowerCase();
+                        const isExpiredH = hStatusStr === 'expired';
+
+                        return (
+                          <tr key={hItem.id || hIdx} className="hover:bg-slate-50 transition-colors">
+                            <td className="py-3 px-3 font-semibold text-slate-600">
+                              {hItem.terbit ? hItem.terbit.substring(0, 5) : '08/1'} – {hItem.expired ? hItem.expired.substring(0, 5) : '07/1'}
+                            </td>
+                            <td className="py-3 px-4 text-left font-bold text-[#005ea4]">
+                              {hItem.noSertifikat || formData.noSertifikat || '-'}
+                            </td>
+                            <td className="py-3 px-4 text-slate-600">{hItem.terbit || formData.terbit || '-'}</td>
+                            <td className={`py-3 px-4 font-bold ${isExpiredH ? 'text-rose-600' : 'text-rose-700'}`}>
+                              {hItem.expired || formData.expired || '-'}
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center justify-center gap-1.5">
+                                {hFileUrl ? (
+                                  <a
+                                    href={hFileUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#005ea4] text-[11px] font-bold rounded-md border border-blue-200 inline-flex items-center gap-1 transition-colors"
+                                  >
+                                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                    <span>Lihat PDF</span>
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-400 text-[11px] italic bg-slate-100 px-2 py-0.5 rounded">Belum Ada</span>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => setIsEditing(true)}
+                                  className="p-1 text-slate-600 hover:text-[#005ea4] hover:bg-slate-100 rounded cursor-pointer"
+                                  title="Edit Entry ini"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Garis Waktu Audit & Kronologi Resertifikasi */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <h5 className="font-bold text-xs text-slate-700 flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-[#005ea4]" />
+                    Garis Waktu
+                  </h5>
+
+                  <div className="relative pl-6 space-y-3 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+                    <div className="relative bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
+                      <span className="absolute -left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"></span>
+                      <div>
+                        <strong className="text-slate-800 font-mono-data">
+                          No. SK: {formData.noSertifikat || 'CERT-8039/DISNAKER-KT/2024'}
+                        </strong>
+                        <p className="text-[11px] text-slate-500 mt-0.5">
+                          Penerbit/Penguji: <span className="font-medium text-slate-700">{formData.instansi || 'Disnaker / Kemenperin'}</span>
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          Masa Berlaku: <span className="font-bold text-slate-700">{formData.terbit || '-'} s.d <strong className="text-rose-600">{formData.expired || '-'}</strong></span>
+                        </p>
+                      </div>
+                      <div>{getStatusBadge(formData.status)}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -607,124 +741,7 @@ export default function CertDetailModal({
                 </div>
               </div>
 
-              {/* SECTION 4: Histori & Riwayat Dokumen Sertifikat Fisik / Digital */}
-              <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden p-5 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div>
-                    <h4 className="font-bold text-xs text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                      <History className="w-4 h-4 text-[#005ea4]" />
-                      Histori & Riwayat Dokumen Sertifikat Fisik / Digital
-                    </h4>
-                    <p className="text-[11px] text-slate-500">
-                      Daftar seluruh berkas SK, hasil inspeksi, dan koreksi upload manual
-                    </p>
-                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="px-3.5 py-2 bg-[#005ea4] hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-2xs flex items-center gap-1.5 cursor-pointer transition-colors shrink-0"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>+ Unggah / Koreksi Berkas PDF Manual</span>
-                  </button>
-                </div>
-
-                {/* Table of History */}
-                <div className="overflow-x-auto">
-                  <table className="w-full text-center border-collapse font-mono-data text-xs">
-                    <thead>
-                      <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase tracking-wider border-b border-slate-200">
-                        <th className="py-2.5 px-3">PERIODE SK</th>
-                        <th className="py-2.5 px-4 text-left">NO. SERTIFIKAT / SK</th>
-                        <th className="py-2.5 px-4">TGL TERBIT</th>
-                        <th className="py-2.5 px-4">TGL EXPIRED</th>
-                        <th className="py-2.5 px-4">STATUS SERTIFIKAT</th>
-                        <th className="py-2.5 px-4">AKSI</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {historyList.map((hItem, hIdx) => {
-                        const hFileUrl = getFullFileUrl(hItem.fileUrl);
-                        const hStatusStr = (hItem.status || 'Aktif').toLowerCase();
-                        const isExpiredH = hStatusStr === 'expired';
-
-                        return (
-                          <tr key={hItem.id || hIdx} className="hover:bg-slate-50 transition-colors">
-                            <td className="py-3 px-3 font-semibold text-slate-600">
-                              {hItem.terbit ? hItem.terbit.substring(0, 5) : '08/1'} – {hItem.expired ? hItem.expired.substring(0, 5) : '07/1'}
-                            </td>
-                            <td className="py-3 px-4 text-left font-bold text-[#005ea4]">
-                              {hItem.noSertifikat || formData.noSertifikat || '-'}
-                            </td>
-                            <td className="py-3 px-4 text-slate-600">{hItem.terbit || formData.terbit || '-'}</td>
-                            <td className={`py-3 px-4 font-bold ${isExpiredH ? 'text-rose-600' : 'text-rose-700'}`}>
-                              {hItem.expired || formData.expired || '-'}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="inline-block px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                {hItem.status || 'Aktif'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center justify-center gap-1.5">
-                                {hFileUrl ? (
-                                  <a
-                                    href={hFileUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#005ea4] text-[11px] font-bold rounded-md border border-blue-200 inline-flex items-center gap-1 transition-colors"
-                                  >
-                                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                    <span>Lihat PDF</span>
-                                  </a>
-                                ) : (
-                                  <span className="text-slate-400 text-[11px] italic bg-slate-100 px-2 py-0.5 rounded">Belum Ada</span>
-                                )}
-
-                                <button
-                                  type="button"
-                                  onClick={() => setIsEditing(true)}
-                                  className="p-1 text-slate-600 hover:text-[#005ea4] hover:bg-slate-100 rounded cursor-pointer"
-                                  title="Edit Entry ini"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Garis Waktu Audit & Kronologi Resertifikasi */}
-                <div className="pt-4 border-t border-slate-100 space-y-3">
-                  <h5 className="font-bold text-xs text-slate-700 flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-[#005ea4]" />
-                    Garis Waktu Audit & Kronologi Resertifikasi:
-                  </h5>
-
-                  <div className="relative pl-6 space-y-3 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-                    <div className="relative bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center justify-between text-xs">
-                      <span className="absolute -left-6 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white"></span>
-                      <div>
-                        <strong className="text-slate-800 font-mono-data">
-                          No. SK: {formData.noSertifikat || 'CERT-8039/DISNAKER-KT/2024'}
-                        </strong>
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          Penerbit/Penguji: <span className="font-medium text-slate-700">{formData.instansi || 'Disnaker / Kemenperin'}</span>
-                        </p>
-                        <p className="text-[11px] text-slate-500">
-                          Masa Berlaku: <span className="font-bold text-slate-700">{formData.terbit || '-'} s.d <strong className="text-rose-600">{formData.expired || '-'}</strong></span>
-                        </p>
-                      </div>
-                      <div>{getStatusBadge(formData.status)}</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
