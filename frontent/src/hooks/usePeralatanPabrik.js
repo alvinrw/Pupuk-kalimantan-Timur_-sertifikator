@@ -509,7 +509,10 @@ export function usePeralatanPabrik() {
         penanggungJawab: newItem.penanggungJawab || 'Dept. Operasi Pabrik 1A',
         noSertifikat: newItem.noSertifikat || '',
         namaSertifikat: newItem.namaSertifikat || '',
-        keteranganAsli: ''
+        keteranganAsli: '',
+        additionalEntities: [
+          { key: 'JENIS PERALATAN PABRIK', value: newItem.tipe || '' }
+        ]
       };
       
       let locationStr = newItem.unitPabrik || 'Umum';

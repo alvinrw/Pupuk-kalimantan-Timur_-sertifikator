@@ -180,7 +180,7 @@ export default function App() {
             <Menu className="w-5 h-5" />
           </button>
           <span className="font-logo-sutasoma text-xl font-bold text-[#005ea4] tracking-tight select-none">
-            SERTIFIKATOR
+            PERISAI
           </span>
         </div>
 

@@ -109,13 +109,15 @@ export default function DocumentHeader({ hook, item, onBack }) {
           <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
             {/* Edit Toggle */}
             {!isEditing ? (
-              <button
-                onClick={() => { setIsEditing(true); setIsActionMenuOpen(false); }}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
-              >
-                <Edit3 className="w-4 h-4 text-slate-400" />
-                <span>Edit Data Dokumen</span>
-              </button>
+              !isAfkirStatus && (
+                <button
+                  onClick={() => { setIsEditing(true); setIsActionMenuOpen(false); }}
+                  className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                >
+                  <Edit3 className="w-4 h-4 text-slate-400" />
+                  <span>Edit Data Dokumen</span>
+                </button>
+              )
             ) : (
               <button
                 onClick={() => { setIsEditing(false); setIsActionMenuOpen(false); }}
@@ -179,7 +181,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
 
             {/* Hapus Sertifikat */}
             {(!isMultiCertItem || isSingleCertScope) && (
-              primaryCert ? (
+              primaryCert && !isAfkirStatus ? (
               <button
                 onClick={() => { setSelectedHistoryToDelete(primaryCert); setIsActionMenuOpen(false); }}
                 className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"

@@ -157,6 +157,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         const res = await fetch(UPLOAD_ENDPOINT, { 
           method: 'POST', 
           body: fd,
+          credentials: 'include',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (!res.ok) throw new Error('Gagal upload file ke server');

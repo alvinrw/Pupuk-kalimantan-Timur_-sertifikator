@@ -421,7 +421,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
 
         {/* Modal Footer */}
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between shrink-0 font-mono-data">
-          <span className="text-slate-500 text-xs">Aplikasi Sertifikator ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢ PT Pupuk Kaltim</span>
+          <span className="text-slate-500 text-xs">Aplikasi PERISAI &bull; PT Pupuk Kaltim</span>
           <button
             onClick={onClose}
             className="px-5 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"

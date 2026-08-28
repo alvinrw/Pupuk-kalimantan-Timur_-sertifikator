@@ -216,6 +216,7 @@ export default function PeralatanTable({
                       }
 
                       if (col.key === 'title') {
+                        const certsCount = item.certificates ? item.certificates.length : 0;
                         return (
                           <td
                             key="title"
@@ -229,7 +230,24 @@ export default function PeralatanTable({
                             }`}
                             title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : "Klik untuk Lihat Detail"}
                           >
-                            {item.title || row.jenisPeralatan || '-'}
+                            <div className="flex items-center justify-center gap-2">
+                              <span>{item.title || row.jenisPeralatan || '-'}</span>
+                              {!row.isLinked && certsCount > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (activeMainTab !== 'staging') {
+                                      setDetailModalItem({ ...item, _scrollToHistory: true });
+                                    }
+                                  }}
+                                  className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black bg-[#005ea4] text-white border border-[#005ea4] hover:bg-[#004881] hover:border-[#004881] transition-all shadow-sm cursor-pointer shrink-0"
+                                  title={`${certsCount} sertifikat terbit. Klik untuk langsung ke histori dokumen.`}
+                                >
+                                  {certsCount}
+                                </button>
+                              )}
+                            </div>
                           </td>
                         );
                       }

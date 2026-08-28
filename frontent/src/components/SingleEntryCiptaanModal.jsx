@@ -158,7 +158,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
             type="text" required
             value={formData.judulCiptaan}
             onChange={(e) => setFormData({ ...formData, judulCiptaan: e.target.value })}
-            placeholder="Contoh: Hak Cipta Software Sertifikator Monitoring K3"
+            placeholder="Contoh: Hak Cipta Software PERISAI Monitoring K3"
             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
           />
         </div>

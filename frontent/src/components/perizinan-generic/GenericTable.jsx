@@ -255,6 +255,7 @@ export default function GenericTable({
                           }
 
                           if (col.key === 'namaItem') {
+                            const certsCount = row.certs.length;
                             return (
                               <td
                                 key="namaItem"
@@ -264,7 +265,22 @@ export default function GenericTable({
                               >
                                 <div className="flex items-center justify-center gap-2">
                                   <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? 'text-emerald-600' : 'text-slate-400'}`} />
-                                  <span className="max-w-[240px] truncate block">{row.docNamaItem}</span>
+                                  <span className="max-w-[200px] truncate block">{row.docNamaItem}</span>
+                                  {certsCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (activeMainTab !== 'staging') {
+                                          setDetailModalItem({ ...doc, _scrollToHistory: true });
+                                        }
+                                      }}
+                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black bg-[#005ea4] text-white border border-[#005ea4] hover:bg-[#004881] hover:border-[#004881] transition-all shadow-sm cursor-pointer shrink-0"
+                                      title={`${certsCount} sertifikat terbit. Klik untuk langsung ke histori dokumen.`}
+                                    >
+                                      {certsCount}
+                                    </button>
+                                  )}
                                 </div>
                               </td>
                             );
@@ -312,12 +328,18 @@ export default function GenericTable({
                                   </span>
                                 ) : row.certs.length > 0 ? (
                                   <button
-                                    onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (activeMainTab !== 'staging') {
+                                        setDetailModalItem({ ...doc, _scrollToHistory: true });
+                                      }
+                                    }}
                                     className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 shadow-2xs cursor-pointer transition-colors"
+                                    title="Klik untuk langsung melihat detail dan histori dokumen"
                                   >
-                                    <FileCheck className="w-3.5 h-3.5" />
+                                    <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
                                     <span>{row.certs.length} Sertifikat</span>
-                                    {isExpanded ? <ChevronDown className="w-3.5 h-3.5 ml-0.5" /> : <ChevronRight className="w-3.5 h-3.5 ml-0.5" />}
                                   </button>
                                 ) : row.documentStatus === 'EXEMPT' ? (
                                   <button

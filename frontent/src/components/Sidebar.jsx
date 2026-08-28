@@ -93,10 +93,15 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
   const sidebarContent = (
     <aside className="w-64 bg-white text-slate-800 flex flex-col h-full font-sans-clean border-r border-slate-200 shadow-xs">
       {/* Brand Header */}
-      <div className="h-16 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50 shrink-0">
-        <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none">
-          SERTIFIKATOR
-        </h1>
+      <div className="h-20 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50 shrink-0">
+        <div className="flex flex-col justify-center">
+          <h1 className="font-logo-sutasoma text-2xl font-bold tracking-tight text-[#005ea4] select-none leading-none">
+            PERISAI
+          </h1>
+          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 select-none leading-tight">
+            Pengelolaan Riwayat<br/>Sertifikasi & Izin
+          </span>
+        </div>
         {/* Tombol close untuk mobile drawer */}
         <button
           onClick={onMobileClose}

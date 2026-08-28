@@ -13,7 +13,7 @@ export default function InformasiWebsite() {
               Informasi Website
             </h1>
             <p className="text-sm font-medium text-slate-500 mt-1">
-              Kenali lebih dekat platform Sertifikator dan unduh panduan penggunaannya.
+              Kenali lebih dekat platform PERISAI dan unduh panduan penggunaannya.
             </p>
           </div>
           <button
@@ -35,10 +35,10 @@ export default function InformasiWebsite() {
           <div className="bg-gradient-to-br from-[#005ea4] to-[#004881] rounded-3xl p-10 text-white shadow-xl relative overflow-hidden">
             <div className="relative z-10 max-w-2xl">
               <h2 className="font-logo-sutasoma text-4xl font-bold tracking-tight mb-4">
-                Sistem Terpadu <span className="text-blue-200">Sertifikator</span>
+                Sistem Terpadu <span className="text-blue-200">PERISAI</span>
               </h2>
               <p className="text-blue-50 text-base leading-relaxed font-medium mb-6">
-                Sertifikator adalah platform digital komprehensif yang dirancang untuk mendigitalkan, memantau, dan mengelola seluruh siklus hidup dokumen perizinan.
+                PERISAI (Pengelolaan Riwayat Sertifikasi & Izin) adalah platform digital komprehensif yang dirancang untuk mendigitalkan, memantau, dan mengelola seluruh siklus hidup dokumen perizinan.
               </p>
               <div className="flex gap-4">
                 <div className="flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg backdrop-blur-sm border border-white/20">
@@ -96,7 +96,7 @@ export default function InformasiWebsite() {
                 </div>
                 <h3 className="text-lg font-bold text-slate-800 mb-2">Guide Book & Panduan</h3>
                 <p className="text-sm text-slate-600 leading-relaxed">
-                  Buku panduan lengkap (PDF) akan segera tersedia untuk memandu setiap divisi dalam memanfaatkan platform Sertifikator secara maksimal, mulai dari tahap input data hingga ekspor laporan.
+                  Buku panduan lengkap (PDF) akan segera tersedia untuk memandu setiap divisi dalam memanfaatkan platform PERISAI secara maksimal, mulai dari tahap input data hingga ekspor laporan.
                 </p>
               </div>
 
@@ -109,7 +109,7 @@ export default function InformasiWebsite() {
 
           <div className="bg-slate-100 rounded-2xl p-6 text-center border border-slate-200">
             <p className="text-sm text-slate-500 font-medium">
-              Sertifikator v2.0.0 &copy; 2026. Dikembangkan untuk sentralisasi tata kelola perizinan perusahaan.
+              PERISAI v2.0.0 &copy; 2026. Dikembangkan untuk sentralisasi tata kelola perizinan perusahaan.
             </p>
           </div>
 

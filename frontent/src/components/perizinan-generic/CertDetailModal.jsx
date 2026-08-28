@@ -36,7 +36,7 @@ export default function CertDetailModal({
       if (!isNaN(d.getTime())) {
         return d.toISOString().split('T')[0];
       }
-    } catch (_) {}
+    } catch (_) { }
     return str;
   };
 
@@ -181,10 +181,13 @@ export default function CertDetailModal({
     ? [activeCert, ...activeCert.history]
     : [activeCert];
 
+  const masterStatusLower = (masterItem?.status || masterItem?.docStatus || '').toLowerCase();
+  const isMasterAfkir = masterStatusLower === 'afkir' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut' || masterStatusLower === 'non-aktif';
+
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[92vh] border border-slate-200">
-        
+
         {/* Modal Header */}
         <div className="px-6 py-4 bg-[#0f172a] text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -205,7 +208,7 @@ export default function CertDetailModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {!isEditing ? (
+            {!isEditing && !isMasterAfkir ? (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
@@ -213,7 +216,7 @@ export default function CertDetailModal({
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit Sertifikat
               </button>
-            ) : (
+            ) : (!isEditing && isMasterAfkir) ? null : (
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
@@ -630,7 +633,7 @@ export default function CertDetailModal({
                 <div className="pt-4 border-t border-slate-100 space-y-3">
                   <h5 className="font-bold text-xs text-slate-700 flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5 text-[#005ea4]" />
-                    Garis Waktu Audit & Kronologi Resertifikasi:
+                    Garis Waktu
                   </h5>
 
                   <div className="relative pl-6 space-y-3 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">

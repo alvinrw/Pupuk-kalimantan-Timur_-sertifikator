@@ -170,7 +170,7 @@ export default function ManajemenPengguna() {
             Manajemen Pengguna
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Kelola hak akses, role, dan data pengguna sistem Sertifikator.
+            Kelola hak akses, role, dan data pengguna sistem PERISAI.
           </p>
         </div>
         

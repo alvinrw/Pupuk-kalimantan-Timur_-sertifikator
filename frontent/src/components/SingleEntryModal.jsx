@@ -388,26 +388,27 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Merek / Nama Peralatan <span className="text-rose-500">*</span></label>
+            <label className="font-bold text-slate-700 block mb-1">Nomor Tag / Kode Alat <span className="text-rose-500">*</span></label>
             <input type="text" required value={formData.merekItem}
               onChange={(e) => setFormData({ ...formData, merekItem: e.target.value })}
-              placeholder="Contoh: Crane Kapasitas 5T"
+              placeholder="Contoh: SN-CR020-0060"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Jenis Peralatan <span className="text-rose-500">*</span></label>
+            <label className="font-bold text-slate-700 block mb-1">Nama Alat <span className="text-rose-500">*</span></label>
             <input type="text" required value={formData.jenisPeralatan}
               onChange={(e) => setFormData({ ...formData, jenisPeralatan: e.target.value })}
-              placeholder="Contoh: Overhead Crane"
+              placeholder="Contoh: Overhead Crane 20 Ton"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="font-bold text-slate-700 block mb-1">Tipe</label>
+            <label className="font-bold text-slate-700 block mb-1">Jenis Peralatan Pabrik</label>
             <input type="text" value={formData.tipe}
               onChange={(e) => setFormData({ ...formData, tipe: e.target.value })}
+              placeholder="Contoh: Peralatan Keamanan"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]" />
           </div>
           <div>

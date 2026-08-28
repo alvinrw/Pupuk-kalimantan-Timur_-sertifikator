@@ -10,7 +10,9 @@ import { useLinkedCertificates } from './document-detail/useLinkedCertificates';
 import { useNotificationSettings } from './document-detail/useNotificationSettings';
 
 export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDeleteSuccess, onRefreshRequired, initialCertId }) {
-  const item = rawItem?.parentDoc || rawItem;
+  const item = rawItem?.parentDoc 
+    ? { ...rawItem.parentDoc, _scrollToHistory: rawItem._scrollToHistory }
+    : rawItem;
   const parentDoc = item;
   const effectiveCategoryKey = item?.categoryKey || '';
 

@@ -14,7 +14,7 @@ export default function DocumentReadView({ hook, item }) {
         const parsed = JSON.parse(ket);
         return parsed.keteranganAsli !== undefined ? parsed.keteranganAsli : ket;
       }
-    } catch (_) {}
+    } catch (_) { }
     return ket;
   };
 
@@ -24,7 +24,7 @@ export default function DocumentReadView({ hook, item }) {
         const parsed = JSON.parse(ket);
         return Array.isArray(parsed.additionalEntities) ? parsed.additionalEntities : [];
       }
-    } catch (_) {}
+    } catch (_) { }
     return [];
   };
 
@@ -57,6 +57,9 @@ export default function DocumentReadView({ hook, item }) {
     handleToggleReminder, linkedCerts = []
   } = hook;
 
+  const masterStatusLower = (formData.status || item?.status || '').toLowerCase();
+  const isMasterAfkir = masterStatusLower === 'afkir' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut' || masterStatusLower === 'non-aktif';
+
   const getTimestamp = (dateStr) => {
     if (!dateStr || dateStr === '-') return 0;
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
@@ -68,8 +71,6 @@ export default function DocumentReadView({ hook, item }) {
   };
 
   const calculateCertStatus = (cert) => {
-    const masterStatusLower = (formData.status || item?.status || '').toLowerCase();
-    const isMasterAfkir = masterStatusLower === 'afkir' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut';
     const isMasterProses = masterStatusLower.includes('perpanjang') || masterStatusLower === 'in progress' || masterStatusLower === 'in_progress' || masterStatusLower === 'proses';
 
     const statusLower = (cert?.status || '').toLowerCase();
@@ -150,6 +151,21 @@ export default function DocumentReadView({ hook, item }) {
 
   const childStatusInfo = (!isMultiCertItem || isSingleCertScope) ? calculateCertStatus(primaryCert || formData) : null;
 
+  React.useEffect(() => {
+    if (item?._scrollToHistory) {
+      setTimeout(() => {
+        const el = document.getElementById('cert-history-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-4', 'ring-[#005ea4]/30', 'ring-offset-2');
+          setTimeout(() => {
+            el.classList.remove('ring-4', 'ring-[#005ea4]/30', 'ring-offset-2');
+          }, 2000);
+        }
+      }, 300);
+    }
+  }, [item]);
+
   return (
     <div className="space-y-6">
       {/* KARTU STATUS PERIZINAN UNTUK CHILD VIEW */}
@@ -223,7 +239,7 @@ export default function DocumentReadView({ hook, item }) {
                     {(!isMultiCertItem || isSingleCertScope) && (
                       <div className="pt-4 border-t border-slate-100">
                         <h5 className="font-bold text-sm text-slate-800 mb-4">
-                          Detail Sertifikat Dokumen & Pengecualian
+                          Detail Sertifikat Dokumen
                         </h5>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 font-mono-data text-xs">
                           {[
@@ -278,15 +294,17 @@ export default function DocumentReadView({ hook, item }) {
                 <span className="text-xs font-bold text-slate-700">
                   Status Pengingat: {reminderEnabled ? 'Aktif' : 'Nonaktif'}
                 </span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleReminder(!reminderEnabled)}
-                  className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${reminderEnabled ? 'bg-slate-800' : 'bg-slate-300'}`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`}
-                  />
-                </button>
+                {!isMasterAfkir && (
+                  <button
+                    type="button"
+                    onClick={() => handleToggleReminder(!reminderEnabled)}
+                    className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${reminderEnabled ? 'bg-slate-800' : 'bg-slate-300'}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`}
+                    />
+                  </button>
+                )}
               </div>
               {reminderEnabled ? (
                 <div className="text-xs text-slate-500 font-mono-data space-y-1">
@@ -300,12 +318,14 @@ export default function DocumentReadView({ hook, item }) {
                 <p className="text-xs text-slate-500 font-mono-data">Sistem tidak akan mengirimkan notifikasi pengingat untuk dokumen ini.</p>
               )}
             </div>
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors cursor-pointer"
-            >
-              Ubah Pengaturan
-            </button>
+            {!isMasterAfkir && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 text-xs font-bold text-slate-800 hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors cursor-pointer"
+              >
+                Ubah Pengaturan
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -318,6 +338,7 @@ export default function DocumentReadView({ hook, item }) {
           setEditingHistoryRow={setEditingHistoryRow}
           setSelectedHistoryToDelete={setSelectedHistoryToDelete}
           primaryCert={primaryCert}
+          isMasterAfkir={isMasterAfkir}
         />
       )}
 
@@ -331,22 +352,26 @@ export default function DocumentReadView({ hook, item }) {
             Alasan: {(isSingleCertScope && primaryCert?.status === 'EXEMPT') ? (primaryCert?.instansi || 'Tanpa Sertifikat / Dihapus') : (item?.exemptionNote || 'Tidak ada catatan khusus')}
           </p>
           <div className="pt-4 mt-2 border-t border-slate-200 flex items-center justify-center gap-3">
-            <button
-              onClick={() => { setRenewExemptDate(formData.berakhir && formData.berakhir !== '-' ? formData.berakhir : ''); setIsRenewExemptModalOpen(true); }}
-              className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer"
-            >
-              Ajukan Perpanjangan
-            </button>
-            <button
-              onClick={() => openUploadModal('archive', primaryCert?.id)}
-              className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-xl transition-all shadow-sm cursor-pointer"
-            >
-              Upload Sertifikat Sekarang
-            </button>
+            {!isMasterAfkir && (
+              <>
+                <button
+                  onClick={() => { setRenewExemptDate(formData.berakhir && formData.berakhir !== '-' ? formData.berakhir : ''); setIsRenewExemptModalOpen(true); }}
+                  className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-all shadow-md cursor-pointer"
+                >
+                  Ajukan Perpanjangan
+                </button>
+                <button
+                  onClick={() => openUploadModal('archive', primaryCert?.id)}
+                  className="px-5 py-2.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-xl transition-all shadow-sm cursor-pointer"
+                >
+                  Upload Sertifikat Sekarang
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : (
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 font-mono-data">
+        <div id="cert-history-section" className="bg-white border border-slate-200 rounded-2xl p-6 space-y-4 font-mono-data transition-all duration-500">
           <h4 className="font-bold text-sm text-slate-900 border-b border-slate-200 pb-3 flex items-center justify-between font-sans">
             <span>Daftar Sertifikat Terhubung</span>
             <span className="text-xs text-slate-600 font-mono-data font-bold">Terverifikasi Disnaker / Kemenperin</span>
@@ -425,7 +450,7 @@ export default function DocumentReadView({ hook, item }) {
                           Buka File PDF
                         </button>
                       ) : (
-                        (!isMultiCertItem || isSingleCertScope) && (
+                        (!isMultiCertItem || isSingleCertScope) && !isMasterAfkir && (
                           <button
                             onClick={() => openUploadModal('current')}
                             className="px-4 py-1.5 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-xl transition-colors cursor-pointer"

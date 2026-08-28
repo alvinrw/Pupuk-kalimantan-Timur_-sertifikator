@@ -16,6 +16,7 @@ export default function CertHistorySection({
   setEditingHistoryRow,
   setSelectedHistoryToDelete,
   primaryCert,
+  isMasterAfkir
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
@@ -31,7 +32,7 @@ export default function CertHistorySection({
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-6">
+    <div id="cert-history-section" className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 space-y-6 transition-all duration-500">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div>
@@ -43,7 +44,7 @@ export default function CertHistorySection({
             Daftar seluruh berkas SK, hasil inspeksi, dan histori dokumen. Ini adalah histori dari dokumen terhubung.
           </p>
         </div>
-        {!isViewer && (
+        {!isViewer && !isMasterAfkir && (
         <button
           onClick={() => openUploadModal('archive', primaryCert?.id)}
           className="px-3.5 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs font-mono-data shrink-0"
@@ -119,7 +120,7 @@ export default function CertHistorySection({
                           <FileText className="w-3.5 h-3.5" />
                           <span>{row.fileUrl ? 'Liat PDF' : 'Belum Ada'}</span>
                         </button>
-                        {!isViewer && (
+                        {!isViewer && !isMasterAfkir && (
                           <>
                             <button
                               onClick={() => setEditingHistoryRow({ ...row })}
