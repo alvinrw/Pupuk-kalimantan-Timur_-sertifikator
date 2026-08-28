@@ -48,7 +48,7 @@ export default function ViewDocumentModal({ isOpen, onClose, documentData }) {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <p className="text-slate-500 mb-1">Luas (mÃƒâ€šÃ‚Â²)</p>
+                  <p className="text-slate-500 mb-1">Luas (m²)</p>
                   <p className="font-bold text-slate-900 font-mono-data">{documentData.areaSqm}</p>
                 </div>
                 <div>
@@ -96,7 +96,7 @@ export default function ViewDocumentModal({ isOpen, onClose, documentData }) {
                   {documentData.location}<br />
                   Diperuntukkan sebagai: {documentData.purpose}
                 </p>
-                <p>Dengan rincian luas sebesar <strong>{documentData.areaSqm} mÃƒâ€šÃ‚Â²</strong> (atau setara dengan {documentData.areaHa} Hektar).</p>
+                <p>Dengan rincian luas sebesar <strong>{documentData.areaSqm} m²</strong> (atau setara dengan {documentData.areaHa} Hektar).</p>
                 <p>Berlaku hingga: <span className="font-bold underline">{documentData.validityPeriod}</span></p>
               </div>
               <div className="pt-8 flex justify-between items-end text-xs font-serif text-slate-600">

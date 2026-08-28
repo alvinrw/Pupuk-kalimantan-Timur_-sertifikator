@@ -39,7 +39,7 @@ export default function PeralatanTable({
                   />
                 </th>
               )}
-              {isVisible("no") && <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">NO.</th>}
+              <th className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">NO.</th>
 
               {/* JENIS PERALATAN PABRIK */}
               {isVisible("jenisPeralatan") && (
@@ -150,11 +150,9 @@ export default function PeralatanTable({
                         />
                       </td>
                     )}
-                    {isVisible("no") && (
-                      <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
-                        {index + 1}
-                      </td>
-                    )}
+                    <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
+                      {index + 1}
+                    </td>
                     {isVisible("jenisPeralatan") && (
                       <td className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${isAfkir ? 'text-slate-200' : 'text-[#005ea4]'}`}>
                         <span>{row.jenisPeralatan}</span>

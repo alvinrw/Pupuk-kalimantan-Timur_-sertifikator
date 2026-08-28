@@ -73,7 +73,7 @@ export function useInformasiLainnya() {
       step: 1,
       title: "Import CSV Massal atau Input Single Perizinan Baru",
       icon: Database,
-      desc: "Pengguna memasukkan data perizinan melalui dua jalur: (A) Impor file CSV master multi-unit sekaligus via tombol 'Import CSV', atau (B) Input satu per satu via form 'Input Single Perizinan Baru'. Data yang baru masuk akan otomatis masuk ke tab Staging."
+      desc: "Pengguna memasukkan data perizinan melalui dua jalur: (A) Impor file CSV master multi-unit sekaligus via tombol 'Import CSV', atau (B) Input satu satu via form 'Input Single Perizinan Baru'. Data yang baru masuk akan otomatis masuk ke tab Staging."
     },
     {
       step: 2,
@@ -127,12 +127,12 @@ export function useInformasiLainnya() {
     {
       title: "Perizinan Proyek & Konstruksi",
       icon: FolderKanban,
-      items: "Sertifikat Laik Fungsi (SLF), PBG Proyek Ekspansi Kilang, Izin K3 Heavy Lifting Crane Proyek, PBG Gudang Bagging Plant, Piping Pipe-Rack. Input & monitoring per batch proyek."
+      items: "Sertifikat Laik Fungsi (SLF), PBG Proyek Ekspansi Kilang, Izin K3 Heavy Lifting Crane Proyek, PBG Gudang Bagging Plant, Piping Pipe-Rack. Input & monitoring batch proyek."
     },
     {
       title: "Perizinan & Sertifikasi Produk",
       icon: PackageCheck,
-      items: "Sertifikat SNI Urea & NPK Pelangi, Sertifikat Halal BPJPH Kemenag, Sertifikat Industri Hijau Level 5, Standard Mutu Ekspor. Monitoring masa berlaku per produk fertilizer."
+      items: "Sertifikat SNI Urea & NPK Pelangi, Sertifikat Halal BPJPH Kemenag, Sertifikat Industri Hijau Level 5, Standard Mutu Ekspor. Monitoring masa berlaku produk fertilizer."
     },
     {
       title: "Administrasi Lainnya / HAKI",

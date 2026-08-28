@@ -21,8 +21,6 @@ export default function DocumentHeader({ hook, item, onBack }) {
     historyList,
   } = hook;
 
-  const { user } = useAuth();
-  const isViewer = user?.role === 'Viewer';
 
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const actionMenuRef = useRef(null);
@@ -42,6 +40,16 @@ export default function DocumentHeader({ hook, item, onBack }) {
     ? activeCerts.slice().sort((a, b) => new Date(b.expired || '1970-01-01') - new Date(a.expired || '1970-01-01'))[0]
     : (historyList.length > 0 ? historyList[0] : null);
 
+  const getHeaderLabel = () => {
+    if (hook.isHaki) return 'HAKI / CIPTAAN';
+    if (hook.effectiveCategoryKey === 'peralatan-pabrik') return 'ITEM / PERALATAN';
+    if (hook.effectiveCategoryKey === 'perizinan-aset') return 'ASET';
+    if (hook.effectiveCategoryKey === 'perizinan-proyek') return 'PROYEK';
+    if (hook.effectiveCategoryKey === 'perizinan-produk') return 'PRODUK';
+    if (hook.isEquipment) return 'ASET / PERALATAN';
+    return 'DOKUMEN';
+  };
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
       {/* Left: Back Button + Title */}
@@ -56,7 +64,7 @@ export default function DocumentHeader({ hook, item, onBack }) {
         <div>
           <div className="flex items-center gap-2">
             <span className="px-2.5 py-1 bg-slate-800 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm">
-              {hook.isHaki ? 'HAKI / CIPTAAN' : hook.isEquipment ? 'ASET / PERALATAN' : 'DOKUMEN / PROYEK'}
+              {getHeaderLabel()}
             </span>
             <h2 className="font-bold text-2xl text-slate-900 tracking-tight">
               {formData.merekItem || formData.title || targetCert?.jenisSertifikat || formData.jenisPeralatan || 'Detail Dokumen'}
@@ -90,13 +98,20 @@ export default function DocumentHeader({ hook, item, onBack }) {
           <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isActionMenuOpen ? 'rotate-180' : ''}`} />
         </button>
 
-        {isActionMenuOpen && (
-          <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-100">
+        <div className={`absolute right-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1 overflow-hidden flex flex-col transition-all duration-200 origin-top-right ${isActionMenuOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 pointer-events-none invisible -translate-y-2'}`}>
             {/* Edit Toggle */}
             {!isEditing ? (
               <button
-                onClick={() => { setIsEditing(true); setIsActionMenuOpen(false); }}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 cursor-pointer transition-colors"
+                onClick={() => { 
+                  if(isAfkirStatus) return;
+                  setIsEditing(true); setIsActionMenuOpen(false); 
+                }}
+                className={`w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-2.5 transition-colors ${
+                  isAfkirStatus 
+                    ? 'text-slate-400 bg-slate-50 cursor-not-allowed opacity-60' 
+                    : 'text-slate-700 hover:bg-slate-50 cursor-pointer'
+                }`}
+                title={isAfkirStatus ? "Item Afkir/Non-aktif tidak dapat diedit" : ""}
               >
                 <Edit3 className="w-4 h-4 text-slate-400" />
                 <span>Edit Data Dokumen</span>
@@ -163,8 +178,16 @@ export default function DocumentHeader({ hook, item, onBack }) {
             {/* Hapus Sertifikat */}
             {primaryCert ? (
               <button
-                onClick={() => { setSelectedHistoryToDelete(primaryCert); setIsActionMenuOpen(false); }}
-                className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
+                onClick={() => { 
+                  if(isAfkirStatus) return;
+                  setSelectedHistoryToDelete(primaryCert); setIsActionMenuOpen(false); 
+                }}
+                className={`w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-2.5 transition-colors ${
+                  isAfkirStatus 
+                    ? 'text-slate-400 bg-slate-50 cursor-not-allowed opacity-60' 
+                    : 'text-slate-700 hover:bg-rose-50 hover:text-rose-700 cursor-pointer'
+                }`}
+                title={isAfkirStatus ? "Item Afkir/Non-aktif tidak dapat dihapus" : ""}
               >
                 <Trash2 className="w-4 h-4 text-slate-400" />
                 <span>Hapus Data Item (Sertifikat)</span>
@@ -182,16 +205,22 @@ export default function DocumentHeader({ hook, item, onBack }) {
 
             <div className="h-px bg-slate-100 my-1 mx-2" />
 
-            {/* Hapus Master */}
             <button
-              onClick={() => { setIsDeleteDialogOpen(true); setIsActionMenuOpen(false); }}
-              className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-rose-50 hover:text-rose-700 flex items-center gap-2.5 cursor-pointer transition-colors"
+              onClick={() => { 
+                if(isAfkirStatus) return;
+                setIsDeleteDialogOpen(true); setIsActionMenuOpen(false); 
+              }}
+              className={`w-full text-left px-4 py-2.5 text-xs font-bold flex items-center gap-2.5 transition-colors ${
+                isAfkirStatus 
+                  ? 'text-slate-400 bg-slate-50 cursor-not-allowed opacity-60' 
+                  : 'text-slate-700 hover:bg-rose-50 hover:text-rose-700 cursor-pointer'
+              }`}
+              title={isAfkirStatus ? "Item Afkir/Non-aktif tidak dapat dihapus" : ""}
             >
               <Trash2 className="w-4 h-4 text-slate-400" />
               <span>Hapus Item / Dokumen</span>
             </button>
           </div>
-        )}
       </div>
       )}
     </div>

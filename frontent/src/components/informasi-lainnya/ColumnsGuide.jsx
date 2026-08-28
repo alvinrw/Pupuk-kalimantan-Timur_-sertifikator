@@ -36,7 +36,7 @@ export default function ColumnsGuide({
         <div className="flex items-center justify-between border-b border-slate-200 pb-2">
           <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
             <FileText className="w-5 h-5 text-[#005ea4]" />
-            <span>Rincian Struktur Kolom per 5 Kategori Perizinan</span>
+            <span>Rincian Struktur Kolom 5 Kategori Perizinan</span>
           </h3>
         </div>
 

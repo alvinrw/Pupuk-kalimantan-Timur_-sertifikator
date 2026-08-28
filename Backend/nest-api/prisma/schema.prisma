@@ -49,6 +49,7 @@ model Certificate {
   expired         String?
   status          String   @default("Aktif")
   fileUrl         String?  // URL/Path file PDF di MinIO Storage
+  uploadedBy      String?  // Nama/Identitas pengunggah
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -58,6 +59,9 @@ model Certificate {
   monitoringLogs        MonitoringLog[]
   notificationSetting   NotificationSetting?
   reminderNotifications ReminderNotification[]
+
+  isDeleted       Boolean  @default(false)
+  deletedAt       DateTime?
 
   @@map("certificates")
 }
@@ -93,6 +97,8 @@ model DocumentHistory {
 
   // Definisi Relasi
   item            MasterItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  targetId        String?  // BISA UNTUK NYIMPEN certificateId
 
   @@map("document_history")
 }

@@ -88,21 +88,23 @@ export default function MonitoringSummaryCards({
         onClick={() => setExpiryTab(expiryTab === 'urgent' ? 'all' : 'urgent')}
         className={`${cardBase} ${expiryTab === 'urgent' ? activeRing : inactiveCard}`}
       >
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1 text-slate-500">
-            <span className="text-[10px] font-bold uppercase tracking-wider">Urgent ≤</span>
+        <div className="flex items-center justify-between mb-2 gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-tight text-slate-500 flex items-center gap-1 shrink-0">
+            Urgent ≤
             <input
-              type="number"
+              type="text"
+              pattern="[0-9]*"
+              inputMode="numeric"
               value={customUrgentDays}
               onChange={(e) => {
                 e.stopPropagation();
-                setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1));
+                const val = e.target.value.replace(/[^0-9]/g, '');
+                setCustomUrgentDays(val === '' ? '' : Math.max(1, parseInt(val) || 1));
               }}
               onClick={(e) => e.stopPropagation()}
-              className="w-12 px-1.5 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
+              className="w-7 px-0 py-0.5 text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
             />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Hr</span>
-          </div>
+          </span>
           <Clock className="w-4 h-4 text-slate-400 shrink-0" />
         </div>
         <div className="flex items-end gap-1">

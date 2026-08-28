@@ -302,7 +302,7 @@ export default function SingleEntryCiptaanModal({ isOpen, onClose, onAddSuccess 
                   <span className="text-xs font-bold text-[#005ea4]">
                     {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih File PDF Sertifikat'}
                   </span>
-                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF (Maks. 5 MB)</span>
                 </div>
               </div>
 

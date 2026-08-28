@@ -237,7 +237,7 @@ export default function ModalAddLinkedCert({ isOpen, onClose, onSave }) {
                       <span className="text-xs font-bold text-[#005ea4]">
                         {pdfFile ? `✓ Terpilih: ${pdfFile.name}` : 'Pilih File PDF Dokumen'}
                       </span>
-                      <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+                      <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF (Maks. 5 MB)</span>
                     </div>
                   </div>
 

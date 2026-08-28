@@ -126,7 +126,7 @@ export default function IuranKeanggotaan() {
           className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
         >
           <PlusCircle className="w-4 h-4" />
-          <span>+ Input Data Iuran</span>
+          <span>Input Data Iuran</span>
         </button>
       </div>
 
@@ -222,27 +222,25 @@ export default function IuranKeanggotaan() {
                         onClick={() => setIsKompartemenFilterOpen(!isKompartemenFilterOpen)}
                         className="p-1 hover:bg-white/80 rounded transition-colors"
                       >
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-600" />
+                        <ChevronDown className={`w-3.5 h-3.5 text-slate-600 transition-transform duration-200 ${isKompartemenFilterOpen ? 'rotate-180' : ''}`} />
                       </button>
-                      {isKompartemenFilterOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl py-2 z-50 text-left font-normal normal-case">
+                      <div className={`absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl py-2 z-50 text-left font-normal normal-case flex flex-col transition-all duration-200 origin-top-left ${isKompartemenFilterOpen ? 'opacity-100 scale-100 pointer-events-auto visible' : 'opacity-0 scale-95 pointer-events-none invisible'}`}>
+                        <button
+                          onClick={() => { setFilterKompartemen(''); setIsKompartemenFilterOpen(false); }}
+                          className={`w-full px-3 py-1.5 text-xs hover:bg-slate-50 text-left ${!filterKompartemen ? 'font-bold text-[#005ea4]' : 'text-slate-700'}`}
+                        >
+                          Semua Kompartemen
+                        </button>
+                        {uniqueKompartemen.map((k, idx) => (
                           <button
-                            onClick={() => { setFilterKompartemen(''); setIsKompartemenFilterOpen(false); }}
-                            className={`w-full px-3 py-1.5 text-xs hover:bg-slate-50 text-left ${!filterKompartemen ? 'font-bold text-[#005ea4]' : 'text-slate-700'}`}
+                            key={idx}
+                            onClick={() => { setFilterKompartemen(k); setIsKompartemenFilterOpen(false); }}
+                            className={`w-full px-3 py-1.5 text-xs hover:bg-slate-50 text-left truncate ${filterKompartemen === k ? 'font-bold text-[#005ea4]' : 'text-slate-700'}`}
                           >
-                            Semua Kompartemen
+                            {k}
                           </button>
-                          {uniqueKompartemen.map((k, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => { setFilterKompartemen(k); setIsKompartemenFilterOpen(false); }}
-                              className={`w-full px-3 py-1.5 text-xs hover:bg-slate-50 text-left truncate ${filterKompartemen === k ? 'font-bold text-[#005ea4]' : 'text-slate-700'}`}
-                            >
-                              {k}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </div>
                   </th>
                 )}

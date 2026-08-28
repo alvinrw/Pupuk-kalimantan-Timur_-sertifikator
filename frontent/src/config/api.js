@@ -14,6 +14,9 @@ export const UPLOAD_ENDPOINT = `${BASE_URL}/api/v1/document-history/upload`;
 export function getFullFileUrl(path) {
   if (!path) return null;
   
+  // Mengizinkan URL lokal untuk preview langsung
+  if (path.startsWith('blob:') || path.startsWith('data:')) return path;
+
   const token = sessionStorage.getItem('token') || '';
   // Check if it's a PDF file
   const isPdf = path.toLowerCase().endsWith('.pdf') || path.includes('.pdf?');

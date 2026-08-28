@@ -66,7 +66,7 @@ export function parseDate(rawText) {
   }
 
   // Format: "YYYY-MM-DD" atau "YYYY/MM/DD"
-  const isoMatch = clean.match(/(\d{4})[-\/\.](\d{2})[-\/\.](\d{2})/);
+  const isoMatch = clean.match(/(\d{4})[-/.](\d{2})[-/.](\d{2})/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
     if (parseInt(month) <= 12 && parseInt(day) <= 31) {
@@ -75,7 +75,7 @@ export function parseDate(rawText) {
   }
 
   // Format: "DD/MM/YYYY" atau "DD-MM-YYYY" atau "DD.MM.YYYY"
-  const dmyMatch = clean.match(/(\d{1,2})[-\/\.](\d{1,2})[-\/\.](\d{4})/);
+  const dmyMatch = clean.match(/(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})/);
   if (dmyMatch) {
     const day = dmyMatch[1].padStart(2, '0');
     const month = dmyMatch[2].padStart(2, '0');
@@ -167,10 +167,10 @@ export function parseCertificateNumber(rawText) {
     const trimmed = line.trim();
     // Label nomor/no diikuti dengan nilai
     const labelMatch = trimmed.match(
-      /(?:nomor|no\.?|sk\s*no\.?|registrasi\s*no\.?|seri)\s*[:\.]?\s*([A-Za-z0-9][A-Za-z0-9\.\/\-\s]{3,50})/i
+      /(?:nomor|no\.?|sk\s*no\.?|registrasi\s*no\.?|seri)\s*[:.]?\s*([A-Za-z0-9][A-Za-z0-9./-\s]{3,50})/i
     );
     if (labelMatch) {
-      const candidate = labelMatch[1].trim().replace(/[,;:\.\s]+$/, '');
+      const candidate = labelMatch[1].trim().replace(/[,;:.\s]+$/, '');
       if (candidate.length >= 4 && !isBlacklisted(candidate)) {
         return candidate;
       }
@@ -179,16 +179,16 @@ export function parseCertificateNumber(rawText) {
 
   // Fallback: cari pola nomor sertifikat khas (angka/huruf dengan slash)
   const certPatterns = [
-    /([0-9]{3,}[\/\.][A-Za-z0-9\/\.\-]{4,40})/,
-    /(SK[-\s][A-Za-z0-9\-\/]{4,30})/i,
-    /(CERT[-\s][A-Za-z0-9\-\/]{4,30})/i,
-    /([A-Z]{2,6}[-\/][0-9]{4}[-\/][A-Za-z0-9\.\/-]{3,20})/,
+    /([0-9]{3,}[/.][A-Za-z0-9/.-]{4,40})/,
+    /(SK[-\s][A-Za-z0-9-/]{4,30})/i,
+    /(CERT[-\s][A-Za-z0-9-/]{4,30})/i,
+    /([A-Z]{2,6}[-/][0-9]{4}[-/][A-Za-z0-9./-]{3,20})/,
   ];
 
   for (const pattern of certPatterns) {
     const match = rawText.match(pattern);
     if (match && match[1] && !isBlacklisted(match[1])) {
-      return match[1].trim().replace(/[,;:\.\s]+$/, '');
+      return match[1].trim().replace(/[,;:.\s]+$/, '');
     }
   }
 

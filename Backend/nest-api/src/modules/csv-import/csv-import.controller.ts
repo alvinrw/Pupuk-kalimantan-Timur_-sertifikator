@@ -13,7 +13,9 @@ export class CsvImportController {
 
   @Roles('Super Admin', 'Admin', 'User')
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', {
+    limits: { fileSize: 5 * 1024 * 1024 },
+  }))
   async uploadCsv(
     @UploadedFile() file: any,
     @Body('type') type: string, // 'master_items', 'certificates', or 'permits'

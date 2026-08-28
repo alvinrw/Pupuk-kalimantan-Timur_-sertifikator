@@ -220,7 +220,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
     onClose();
   };
 
-  // ─── Tombol Scan (🎯) per field ────────────────────────────────────────────
+  // ─── Tombol Scan (🎯) field ────────────────────────────────────────────
   const ScanButton = ({ fieldKey, label }) => {
     const isActive = scanMode === fieldKey;
     const baseClass = 'shrink-0 w-7 h-7 rounded-lg border flex items-center justify-center transition-all text-xs font-bold';
@@ -394,7 +394,7 @@ export default function SingleEntryModal({ isOpen, onClose, onAddSuccess }) {
                   <span className="text-xs font-bold text-[#005ea4]">
                     {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih / Drop File PDF Dokumen'}
                   </span>
-                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF (Maks. 5 MB)</span>
                 </div>
               </div>
 

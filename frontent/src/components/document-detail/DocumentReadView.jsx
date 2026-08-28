@@ -246,17 +246,6 @@ export default function DocumentReadView({ hook, item }) {
           </div>
         </div>
       )}
-
-      {/* SECTION 3: HISTORY */}
-      {(!isMultiCertItem || isSingleCertScope) && (
-        <CertHistorySection
-          historyList={historyList}
-          isLoadingHistory={isLoadingHistory}
-          openUploadModal={openUploadModal}
-          setEditingHistoryRow={setEditingHistoryRow}
-          setSelectedHistoryToDelete={setSelectedHistoryToDelete}
-        />
-      )}
     </div>
   );
 }

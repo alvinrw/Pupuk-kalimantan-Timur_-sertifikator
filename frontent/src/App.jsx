@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import Profile from './components/Profile';
 import Login from './pages/Login';
 import { useAuth } from './contexts/AuthContext';
 
@@ -32,6 +33,12 @@ export default function App() {
   // Call heartbeat hook to keep online status active
   useHeartbeat(60000); // 1 minute interval
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  useEffect(() => {
+    if (!user) {
+      setActiveTab('dashboard');
+    }
+  }, [user]);
 
   const [equipmentList] = useState(mockEquipmentList);
   const [ocrExtractions] = useState(mockOcrExtractions);
@@ -90,6 +97,7 @@ export default function App() {
       case 'perizinan-aset':
         return (
           <PerizinanGeneric
+            key="perizinan-aset"
             title="Perizinan Aset & Bangunan Pabrik"
             subtitle="Izin lokasi, sertifikat HGB, kelayakan bangunan, dan AMDAL kawasan pabrik"
             categoryName="Aset & Bangunan"
@@ -100,6 +108,7 @@ export default function App() {
       case 'perizinan-proyek':
         return (
           <PerizinanGeneric
+            key="perizinan-proyek"
             title="Perizinan Proyek & Konstruksi Fabrikasi"
             subtitle="PBG/IMB konstruksi, sertifikat laik fungsi proyek ekspansi pabrik baru"
             categoryName="Proyek & Konstruksi"
@@ -109,6 +118,7 @@ export default function App() {
       case 'perizinan-produk':
         return (
           <PerizinanGeneric
+            key="perizinan-produk"
             title="Perizinan & Sertifikasi Produk Fertilizer"
             subtitle="Sertifikasi SNI Urea, NPK, sertifikat Halal, dan registrasi edar Kementerian Pertanian"
             categoryName="Sertifikasi Produk"
@@ -117,16 +127,8 @@ export default function App() {
         );
       case 'riwayat-perpanjangan':
         return <RiwayatPerpanjangan />;
-      case 'informasi-modul':
-        return <InformasiLainnya activeSection="overview" />;
-      case 'informasi-status':
-        return <InformasiLainnya activeSection="status" />;
-      case 'informasi-alur-kerja':
-        return <InformasiLainnya activeSection="workflow" />;
-      case 'informasi-panduan':
-        return <InformasiLainnya activeSection="multicert" />;
-      case 'informasi-kolom-csv':
-        return <InformasiLainnya activeSection="columns" />;
+      case 'panduan-sop':
+        return <InformasiLainnya />;
       case 'iuran-keanggotaan':
         return <IuranKeanggotaan />;
       case 'tugas-terdekat':
@@ -135,6 +137,8 @@ export default function App() {
         return <HistoriPencatatan />;
       case 'manajemen-pengguna':
         return <ManajemenPengguna />;
+      case 'profil':
+        return <Profile />;
       default:
         return (
           <Dashboard

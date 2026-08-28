@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   AlertTriangle,
   FileCheck2,
@@ -14,8 +14,73 @@ import {
   Wallet,
   FileX,
   Ban,
-  Database
+  Database,
+  Users,
+  ChevronDown
 } from 'lucide-react';
+
+const AnimatedDropdown = ({ value, options, onChange, variant = 'light' }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const getLabel = (val) => {
+    const opt = options.find(o => o.value === val);
+    return opt ? opt.label : val;
+  };
+
+  const isLight = variant === 'light';
+  
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center justify-between gap-2 rounded-lg px-3 py-1.5 text-xs font-bold focus:outline-none transition-all duration-200 cursor-pointer shadow-xs min-w-[180px] ${
+          isLight 
+            ? 'bg-white border border-slate-300 text-slate-800 hover:border-[#005ea4] hover:bg-slate-50' 
+            : 'bg-slate-700 border border-slate-600 text-white hover:border-[#005ea4] hover:bg-slate-600'
+        } ${isOpen && isLight ? 'border-[#005ea4] ring-1 ring-[#005ea4]/20' : ''} ${isOpen && !isLight ? 'border-[#005ea4] ring-1 ring-[#005ea4]/50' : ''}`}
+      >
+        <span className="truncate">{getLabel(value)}</span>
+        <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform duration-300 ${isOpen ? 'rotate-180' : 'rotate-0'} ${isLight ? 'text-slate-400' : 'text-slate-300'}`} />
+      </button>
+
+      <div 
+        className={`absolute z-50 mt-1 w-max min-w-[100%] rounded-xl border shadow-xl overflow-hidden transform transition-all duration-200 origin-top-left ${
+          isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-2 pointer-events-none'
+        } ${isLight ? 'bg-white border-slate-200' : 'bg-slate-800 border-slate-700'}`}
+      >
+        <div className="py-1.5 flex flex-col max-h-[250px] overflow-y-auto custom-scrollbar">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`text-left px-3 py-2 text-xs font-semibold transition-colors duration-150 ${
+                value === opt.value
+                  ? (isLight ? 'bg-blue-50 text-[#005ea4]' : 'bg-slate-700 text-white')
+                  : (isLight ? 'text-slate-700 hover:bg-slate-50 hover:text-slate-900' : 'text-slate-300 hover:bg-slate-700/50 hover:text-white')
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 import {
   BarChart,
   Bar,
@@ -29,9 +94,9 @@ import {
   Legend
 } from 'recharts';
 import { getMasterItems } from '../services/masterItemsService';
-import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';
-
-export default function Dashboard() {
+import { getIuranKeanggotaan } from '../services/iuranService';
+import MonitoringAnggaran from '../components/monitoring/MonitoringAnggaran';export default function Dashboard() {
+  const [activeTab, setActiveTab] = useState('perizinan'); // 'perizinan' | 'administrasi'
   const [filterKategori, setFilterKategori] = useState('All');
   const [customUrgentDays, setCustomUrgentDays] = useState(30);
 
@@ -44,14 +109,19 @@ export default function Dashboard() {
   const [filterKategoriBawah, setFilterKategoriBawah] = useState('All');
 
   const [rawItems, setRawItems] = useState([]);
+  const [iuranData, setIuranData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const data = await getMasterItems();
+        const [data, iuran] = await Promise.all([
+          getMasterItems(),
+          getIuranKeanggotaan()
+        ]);
         setRawItems(data);
+        setIuranData(iuran);
       } catch (error) {
         console.error("Failed to load dashboard data:", error);
       } finally {
@@ -60,6 +130,19 @@ export default function Dashboard() {
     };
     loadData();
   }, []);
+
+  const COLORS = ['#005ea4', '#0284c7', '#0ea5e9', '#38bdf8', '#7dd3fc', '#10b981', '#34d399', '#6ee7b7', '#f59e0b', '#f97316'];
+
+  const iuranChartData = useMemo(() => {
+    const counts = {};
+    iuranData.forEach(item => {
+      const comp = item.kompartemen || 'Lainnya';
+      counts[comp] = (counts[comp] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [iuranData]);
 
   // Memetakan semua items ke format flat untuk dashboard
   const allDashboardItems = useMemo(() => {
@@ -103,6 +186,17 @@ export default function Dashboard() {
         primaryCert = certs[0];
       }
 
+      const formatCategoryName = (key) => {
+        if (!key) return 'Lainnya';
+        if (key === 'peralatan-pabrik' || key.toLowerCase() === 'peralatan pabrik') return 'Perizinan Peralatan Pabrik';
+        if (key === 'perizinan-aset' || key.toLowerCase() === 'perizinan aset') return 'Perizinan Aset';
+        if (key === 'perizinan-proyek' || key.toLowerCase() === 'perizinan proyek') return 'Perizinan Proyek';
+        if (key === 'perizinan-produk' || key.toLowerCase() === 'perizinan produk') return 'Perizinan Produk';
+        if (key === 'sertifikat-ciptaan' || key.toLowerCase() === 'sertifikat ciptaan') return 'Perizinan Hak Cipta';
+        // Biarkan key aslinya jika tidak match, contohnya "Perizinan"
+        return key.charAt(0).toUpperCase() + key.slice(1);
+      };
+
       const formatToDDMMYYYY = (rawDateStr) => {
         if (!rawDateStr || rawDateStr === '-') return '-';
         if (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDateStr)) return rawDateStr;
@@ -130,7 +224,7 @@ export default function Dashboard() {
 
       flattened.push({
         id: item.id,
-        kategori: item.categoryKey || 'Lainnya',
+        kategori: formatCategoryName(item.categoryKey),
         jenis: item.title || 'Unknown',
         unit: item.unitLocation || 'Umum',
         opStatus: item.status || 'Aktif',
@@ -178,7 +272,7 @@ export default function Dashboard() {
     { name: 'Expired', value: stats.expired, color: '#EF4444' },
   ];
 
-  // Data Bar Chart (pemetaan per kategori)
+  // Data Bar Chart (pemetaan kategori)
   const categoryBarData = useMemo(() => {
     const threshold = parseInt(customUrgentDays) || 30;
     const categories = Array.from(new Set(allDashboardItems.map(i => i.kategori)));
@@ -300,8 +394,15 @@ export default function Dashboard() {
   }
 
   const getCategoryOptions = () => {
+    const predefined = [
+      'Perizinan Peralatan Pabrik',
+      'Perizinan Aset',
+      'Perizinan Proyek',
+      'Perizinan Produk'
+    ];
     const categories = Array.from(new Set(allDashboardItems.map(i => i.kategori))).filter(Boolean);
-    return ['All', ...categories.sort()];
+    const combined = Array.from(new Set([...predefined, ...categories]));
+    return ['All', ...combined.sort()];
   };
 
   const indicators = [
@@ -325,47 +426,74 @@ export default function Dashboard() {
         </div>
 
         {/* Inline Filter Kategori */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500" />
-            <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
-            <select
-              value={filterKategori}
-              onChange={(e) => setFilterKategori(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
-            >
-              {getCategoryOptions().map(cat => (
-                <option key={cat} value={cat}>{cat === 'All' ? 'Semua Jenis Perizinan' : cat}</option>
-              ))}
-            </select>
+        {activeTab === 'perizinan' && (
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-slate-500" />
+              <label className="text-xs font-bold text-slate-600 font-mono-data whitespace-nowrap">Kategori Perizinan:</label>
+              <AnimatedDropdown
+                variant="light"
+                value={filterKategori}
+                onChange={setFilterKategori}
+                options={getCategoryOptions().map(cat => ({
+                  value: cat,
+                  label: cat === 'All' ? 'Semua Jenis Perizinan' : cat
+                }))}
+              />
+            </div>
           </div>
-
-          {filterKategori !== 'All' && (
-            <button
-              onClick={() => setFilterKategori('All')}
-              className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 font-bold text-xs rounded-lg transition-colors shadow-2xs font-mono-data"
-            >
-              <RotateCcw className="w-3.5 h-3.5" /> Reset
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
-      {/* SUMMARY CARDS — 6 cards */}
+      {/* TABS */}
+      <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-xl shadow-xs border border-slate-200">
+        <button
+          onClick={() => setActiveTab('perizinan')}
+          className={`flex-1 sm:flex-none px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+            activeTab === 'perizinan'
+              ? 'bg-[#005ea4] text-white shadow-md'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <FileCheck2 className="w-4 h-4" />
+          Overview Perizinan & Sertifikat
+        </button>
+        <button
+          onClick={() => setActiveTab('administrasi')}
+          className={`flex-1 sm:flex-none px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 ${
+            activeTab === 'administrasi'
+              ? 'bg-[#005ea4] text-white shadow-md'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          Administrasi & Keanggotaan
+        </button>
+      </div>
+
+      {activeTab === 'perizinan' && (
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          {/* SUMMARY CARDS — 6 cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Card 1: Urgent */}
         <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs">
           <div className="flex flex-col space-y-2">
             <div className="flex items-center gap-1 text-slate-500">
               <Clock className="w-3.5 h-3.5 shrink-0" />
-              <span className="font-mono-data text-[10px] font-bold uppercase">Urgent ≤</span>
-              <input
-                type="number"
-                value={customUrgentDays}
-                onChange={(e) => setCustomUrgentDays(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-12 px-1.5 py-0.5 text-xs font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
-              />
-              <span className="font-mono-data text-[10px] font-bold uppercase">Hr</span>
+              <span className="font-mono-data text-[10px] font-bold uppercase tracking-tight flex items-center gap-1">
+                Urgent ≤
+                <input
+                  type="text"
+                  pattern="[0-9]*"
+                  inputMode="numeric"
+                  value={customUrgentDays}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setCustomUrgentDays(val === '' ? '' : Math.max(1, parseInt(val) || 1));
+                  }}
+                  className="w-7 px-0 py-0.5 text-[10px] font-bold text-slate-800 bg-slate-100 border border-slate-300 rounded text-center focus:outline-none focus:ring-1 focus:ring-[#005ea4] focus:bg-white"
+                />
+              </span>
             </div>
             <div className="flex items-end gap-1">
               <span className="text-3xl font-extrabold text-slate-800">{stats.urgent}</span>
@@ -482,10 +610,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Bar Chart (Per Kategori) */}
+        {/* Bar Chart (Kategori) */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-2xs col-span-1 lg:col-span-2 flex flex-col relative overflow-hidden">
           <div className="flex items-center justify-between mb-6 relative z-10">
-            <h3 className="font-bold text-slate-800 text-sm">Pemetaan Status per Kategori Perizinan</h3>
+            <h3 className="font-bold text-slate-800 text-sm">Pemetaan Status Kategori Perizinan</h3>
           </div>
 
           <div className="flex-1 min-h-[250px] w-full relative z-10">
@@ -497,8 +625,6 @@ export default function Dashboard() {
                   axisLine={false}
                   tickLine={false}
                   interval={0}
-                  angle={-15}
-                  textAnchor="end"
                 />
                 <YAxis tick={{ fontSize: 10, fill: '#64748B' }} axisLine={false} tickLine={false} />
                 <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px', fontSize: '12px' }} />
@@ -512,17 +638,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* MONITORING ANGGARAN */}
-      <div className="pt-8 mt-8 border-t border-slate-200">
-        <div className="mb-6">
-          <h2 className="text-2xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
-            <Wallet className="w-6 h-6 text-[#005ea4]" />
-            Anggaran Iuran Keanggotaan
-          </h2>
-          <p className="text-sm text-slate-500 font-medium ml-8">Ringkasan serapan dan rincian iuran keanggotaan.</p>
-        </div>
-        <MonitoringAnggaran />
-      </div>
 
       {/* SECTION: Sertifikat Terbit — Filter + Tabel */}
       <div className="pt-8 mt-8 border-t border-slate-200">
@@ -603,25 +718,19 @@ export default function Dashboard() {
               <span className="text-[10px] text-slate-400 font-mono-data font-bold mb-0.5 flex items-center gap-1">
                 <Filter className="w-3 h-3" /> Kategori / Jenis Perizinan
               </span>
-              <select
+              <AnimatedDropdown
+                variant="dark"
                 value={filterKategoriBawah}
-                onChange={(e) => setFilterKategoriBawah(e.target.value)}
-                className="bg-slate-700 border border-slate-600 rounded-lg px-2.5 py-1 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
-              >
-                <option value="All">Semua Jenis</option>
-                {getCategoryOptions().filter(cat => cat !== 'All').map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
+                onChange={setFilterKategoriBawah}
+                options={[
+                  { value: 'All', label: 'Semua Jenis Perizinan' },
+                  ...getCategoryOptions().filter(cat => cat !== 'All').map(cat => ({
+                    value: cat,
+                    label: cat
+                  }))
+                ]}
+              />
             </div>
-            {filterKategoriBawah !== 'All' && (
-              <button
-                onClick={() => setFilterKategoriBawah('All')}
-                className="text-[11px] font-bold text-rose-400 hover:text-rose-300 mb-1"
-              >
-                Reset
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -704,6 +813,23 @@ export default function Dashboard() {
           </tbody>
         </table>
       </div>
+      </div>
+      )}
+
+      {activeTab === 'administrasi' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="mb-6 flex flex-col xl:flex-row xl:items-end justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-black text-slate-900 flex items-center gap-2 tracking-tight">
+                <Users className="w-5 h-5 text-[#005ea4]" />
+                Data Keanggotaan & Administrasi Lainnya
+              </h2>
+              <p className="text-sm text-slate-500 font-medium ml-7">Overview sebaran kapasitas anggota dan asosiasi per kompartemen.</p>
+            </div>
+          </div>
+          <MonitoringAnggaran />
+        </div>
+      )}
     </div>
   );
 }

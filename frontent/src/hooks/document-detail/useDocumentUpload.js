@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { updateCertificate, updateMasterItem, createCertificate } from '../../services/masterItemsService';
 import { UPLOAD_ENDPOINT } from '../../config/api';
+import toast from 'react-hot-toast';
 
 export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshRequired }) {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
@@ -17,7 +18,7 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
   const handleUploadSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!selectedUploadFile) {
-      alert('Silakan pilih file PDF terlebih dahulu.');
+      toast.error('Silakan pilih file PDF terlebih dahulu.');
       return;
     }
 
@@ -77,15 +78,39 @@ export function useDocumentUpload({ item, fetchHistory, onSaveUpdate, onRefreshR
         }
       }
 
+      // Jika sebelumnya master item berstatus EXEMPT, kita cabut status EXEMPT-nya karena sudah ada sertifikat baru
+      if (item.documentStatus === 'EXEMPT') {
+        await updateMasterItem(masterItemId, { documentStatus: 'COMPLETED', exemptionNote: null });
+      }
+
+      // Inform the user
+      toast.success('Berhasil mengunggah berkas baru!');
       setIsUploadModalOpen(false);
-      setSelectedUploadFile(null);
-      await fetchHistory();
-      if (onSaveUpdate) onSaveUpdate({ ...item, fileUrl: newFileUrl });
+      
+      const newLog = {
+        id: 'temp-add-' + Date.now(),
+        action: 'ADDED_CERTIFICATE',
+        description: `Sertifikat / lampiran "${certPayload.noSertifikat}" berhasil ditambahkan.`,
+        changedBy: 'System / User',
+        createdAt: new Date().toISOString(),
+        type: 'audit_log',
+        sortDate: Date.now()
+      };
+      
+      if (fetchHistory && typeof fetchHistory === 'function') {
+        // optimistically push the log if possible, but fetchHistory will replace it anyway
+        await fetchHistory();
+      }
+
       if (onRefreshRequired) onRefreshRequired();
+      // Optional callback
+      if (onSaveUpdate) onSaveUpdate({ ...item, fileUrl: newFileUrl });
+      
+      setSelectedUploadFile(null);
       
     } catch (err) {
       console.error('Upload fail:', err);
-      alert(err.message || 'Gagal mengunggah file.');
+      toast.error(err.message || 'Gagal mengunggah file.');
     }
   };
 

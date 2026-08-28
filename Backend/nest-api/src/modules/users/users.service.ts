@@ -6,9 +6,14 @@ import * as bcrypt from 'bcrypt';
 export class UsersService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createUserDto: any) {
+  async create(createUserDto: any, currentUser?: any) {
     const { roleName, ...userData } = createUserDto;
     
+    // Hanya Super Admin yang bisa membuat akun Super Admin
+    if (roleName === 'Super Admin' && currentUser?.role !== 'Super Admin') {
+      throw new ForbiddenException('Hanya Super Admin yang diizinkan untuk membuat akun Super Admin baru.');
+    }
+
     // Cari roleId berdasarkan roleName
     const role = await this.prisma.role.findUnique({ where: { name: roleName } });
     if (!role) throw new NotFoundException(`Role ${roleName} tidak ditemukan`);
@@ -73,12 +78,20 @@ export class UsersService {
     const { roleName, ...data } = updateUserDto;
     
     if (roleName) {
+      if (roleName === 'Super Admin' && currentUser?.role !== 'Super Admin') {
+        throw new ForbiddenException('Hanya Super Admin yang diizinkan untuk mengubah role pengguna menjadi Super Admin.');
+      }
+
       const role = await this.prisma.role.findUnique({ where: { name: roleName } });
       if (!role) throw new NotFoundException(`Role ${roleName} tidak ditemukan`);
       (data as any).roleId = role.id;
     }
 
     if (data.password) {
+      // Hanya Super Admin yang bisa mengubah password Viewer
+      if (userToUpdate.role.name === 'Viewer' && currentUser?.role !== 'Super Admin') {
+        throw new ForbiddenException('Hanya Super Admin yang diizinkan untuk mengubah password akun Viewer.');
+      }
       data.password = await bcrypt.hash(data.password, 10);
     }
 
@@ -88,6 +101,31 @@ export class UsersService {
       select: { id: true, nama: true, username: true, npk: true, role: true }
     });
   }
+
+
+  async changePassword(id: string, currentPassword: string, newPassword: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: { role: true }
+    });
+
+    if (!user) throw new NotFoundException('User tidak ditemukan');
+    if (user.role.name === 'Viewer') {
+      throw new ForbiddenException('Viewer tidak diizinkan mengubah password. Silakan hubungi Super Admin.');
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) throw new ForbiddenException('Password saat ini salah');
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    return this.prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+      select: { id: true, nama: true, username: true }
+    });
+  }
+
 
   async remove(id: string) {
     const userToDelete = await this.prisma.user.findUnique({
@@ -100,6 +138,12 @@ export class UsersService {
     if (userToDelete.role.name === 'Super Admin') {
       throw new ForbiddenException('Super Admin (Super Admin) tidak dapat dihapus oleh siapapun.');
     }
+
+    // Hapus terlebih dahulu semua activity log yang terhubung dengan user ini
+    // untuk mencegah error "Foreign key constraint violated"
+    await this.prisma.activityLog.deleteMany({
+      where: { userId: id }
+    });
 
     return this.prisma.user.delete({
       where: { id }

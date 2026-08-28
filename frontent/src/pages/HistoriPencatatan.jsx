@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { History, FileText, Search } from 'lucide-react';
+import { History, FileText, Search, Eye, X } from 'lucide-react';
 import api from '../services/api';
 
 export default function HistoriPencatatan() {
   const [logs, setLogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   useEffect(() => {
     fetchLogs();
@@ -30,6 +31,21 @@ export default function HistoriPencatatan() {
       case 'LOGIN': return 'bg-slate-100 text-slate-700 border-slate-200';
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
+  };
+
+  const parseTargetName = (log) => {
+    try {
+      if (log.details) {
+        const parsed = JSON.parse(log.details);
+        if (parsed.body) {
+          const body = parsed.body;
+          if (body.title) return body.title;
+          if (body.merekItem) return body.merekItem;
+          if (body.namaSertifikat) return body.namaSertifikat;
+        }
+      }
+    } catch(e) {}
+    return log.target;
   };
 
   return (
@@ -69,36 +85,135 @@ export default function HistoriPencatatan() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {logs.map((log) => (
-                <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="px-6 py-4 text-slate-500">
-                    {new Date(log.timestamp).toLocaleString('id-ID', {
-                      year: 'numeric', month: 'short', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-slate-900">{log.user}</td>
-                  <td className="px-6 py-4 text-slate-500">{log.role}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${getBadgeColor(log.action)}`}>
-                      {log.action}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-1.5 text-slate-700">
-                      <FileText className="w-3.5 h-3.5 text-slate-400" />
-                      {log.module}
+              {isLoading ? (
+                // 1. LOADING SKELETON STATE
+                [...Array(5)].map((_, index) => (
+                  <tr key={`skeleton-${index}`} className="animate-pulse">
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-28"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-32"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-20"></div></td>
+                    <td className="px-6 py-4"><div className="h-5 bg-slate-200 rounded-full w-16"></div></td>
+                    <td className="px-6 py-4"><div className="h-4 bg-slate-200 rounded w-24"></div></td>
+                    <td className="px-6 py-4 flex justify-between"><div className="h-4 bg-slate-200 rounded w-32"></div><div className="h-6 bg-slate-200 rounded w-16"></div></td>
+                  </tr>
+                ))
+              ) : logs.length === 0 ? (
+                // 2. EMPTY STATE
+                <tr>
+                  <td colSpan="6" className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center">
+                        <History className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div className="text-slate-500 font-medium">Belum ada histori pencatatan</div>
+                      <p className="text-sm text-slate-400">Data aktivitas pengguna dan sistem akan muncul di sini.</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-slate-600 max-w-[200px] truncate" title={log.target}>
-                    {log.target}
-                  </td>
                 </tr>
-              ))}
+              ) : (
+                // 3. DATA STATE
+                logs.map((log) => (
+                  <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-4 text-slate-500">
+                      {new Date(log.timestamp).toLocaleString('id-ID', {
+                        year: 'numeric', month: 'short', day: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })}
+                    </td>
+                    <td className="px-6 py-4 font-medium text-slate-900">{log.user}</td>
+                    <td className="px-6 py-4 text-slate-500">{log.role}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${getBadgeColor(log.action)}`}>
+                        {log.action}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1.5 text-slate-700">
+                        <FileText className="w-3.5 h-3.5 text-slate-400" />
+                        {log.module}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      <div className="flex items-center justify-between gap-4">
+                        <span className="truncate max-w-[150px] inline-block font-mono-data text-xs" title={log.target}>
+                          {parseTargetName(log)}
+                        </span>
+                        <button 
+                          onClick={() => setSelectedLog(log)}
+                          className="text-[#005ea4] hover:text-[#004881] bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Detail
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Detail Modal */}
+      {selectedLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-slate-50">
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg">Detail Perubahan Data</h3>
+                <p className="text-xs text-slate-500 font-mono-data">Target ID: {selectedLog.target}</p>
+              </div>
+              <button onClick={() => setSelectedLog(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="block text-slate-500 mb-1">Aksi:</span>
+                  <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full border ${getBadgeColor(selectedLog.action)} inline-block`}>
+                    {selectedLog.action}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-slate-500 mb-1">Modul:</span>
+                  <span className="font-semibold text-slate-700">{selectedLog.module}</span>
+                </div>
+                <div>
+                  <span className="block text-slate-500 mb-1">Waktu:</span>
+                  <span className="font-semibold text-slate-700">
+                    {new Date(selectedLog.timestamp).toLocaleString('id-ID')}
+                  </span>
+                </div>
+                <div>
+                  <span className="block text-slate-500 mb-1">Pengguna:</span>
+                  <span className="font-semibold text-slate-700">{selectedLog.user} ({selectedLog.role})</span>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <span className="block text-slate-500 mb-2 text-sm font-semibold">Payload Data (Detail Perubahan):</span>
+                <div className="bg-slate-800 text-slate-300 p-4 rounded-xl font-mono-data text-xs overflow-x-auto">
+                  <pre>
+                    {selectedLog.details ? JSON.stringify(JSON.parse(selectedLog.details), null, 2) : 'Tidak ada payload data'}
+                  </pre>
+                </div>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex justify-end">
+              <button 
+                onClick={() => setSelectedLog(null)}
+                className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 text-sm font-bold rounded-lg transition-colors cursor-pointer"
+              >
+                Tutup Modal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

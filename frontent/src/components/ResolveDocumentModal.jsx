@@ -37,6 +37,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
   const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const [ocrSuccess, setOcrSuccess] = useState(false);
   const [tempUrl, setTempUrl] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [scanMode, setScanMode] = useState(null);
 
   // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
@@ -83,6 +84,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       });
       setSelectedFile(null);
       setTempUrl(null);
+      setPreviewUrl(null);
       setSertifikatMode(activeDoc.documentStatus === 'EXEMPT' ? 'tanpa' : 'dengan');
       setIsScanningOcr(false);
       setIsUploadingTemp(false);
@@ -222,9 +224,9 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       submitIcon={Save}
       tempUrl={tempUrl || activeDoc.fileUrl}
       rightPanelContent={
-        (tempUrl || activeDoc.fileUrl) ? (
+        (previewUrl || tempUrl || activeDoc.fileUrl) ? (
           <PdfCanvasOcrViewer
-            pdfUrl={(tempUrl || activeDoc.fileUrl) ? getFullFileUrl(tempUrl || activeDoc.fileUrl) : null}
+            pdfUrl={(previewUrl || tempUrl || activeDoc.fileUrl) ? getFullFileUrl(previewUrl || tempUrl || activeDoc.fileUrl) : null}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}
@@ -280,6 +282,11 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                   if (file) {
                     setSelectedFile(file);
                     setTempUrl(null);
+                    
+                    // Buat local URL untuk Live Preview yang instan
+                    const localUrl = URL.createObjectURL(file);
+                    setPreviewUrl(localUrl);
+                    
                     setOcrSuccess(false);
 
                     if (file.type.includes('pdf') || file.name.toLowerCase().endsWith('.pdf')) {
@@ -340,7 +347,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                 <span className="text-xs font-bold text-[#005ea4]">
                   {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih / Ganti File PDF'}
                 </span>
-                <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+                <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF (Maks. 5 MB)</span>
               </div>
             </div>
 

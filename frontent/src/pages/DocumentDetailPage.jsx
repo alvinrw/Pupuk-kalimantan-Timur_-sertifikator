@@ -16,6 +16,7 @@ import DocumentStatusBar from '../components/document-detail/DocumentStatusBar';
 import DocumentFormFields from '../components/document-detail/DocumentFormFields';
 import DocumentReadView from '../components/document-detail/DocumentReadView';
 import CertificateNavCards from '../components/document-detail/CertificateNavCards';
+import CertHistorySection from '../components/document-detail/CertHistorySection';
 import DocumentModals from '../components/document-detail/DocumentModals';
 
 export default function DocumentDetailPage({
@@ -88,6 +89,19 @@ export default function DocumentDetailPage({
             onSelectCert={setActiveCertId}
             onAddCert={() => setIsAddCertModalOpen(true)}
             onDeleteCert={(id) => setDeletingLinkedCertId(id)}
+          />
+        )}
+
+        {/* HISTORY SECTION (Moved to bottom) */}
+        {!isEditing && (
+          <CertHistorySection
+            historyList={hook.historyList}
+            isLoadingHistory={hook.isLoadingHistory}
+            openUploadModal={hook.openUploadModal}
+            setEditingHistoryRow={hook.setEditingHistoryRow}
+            setSelectedHistoryToDelete={hook.setSelectedHistoryToDelete}
+            handleRestoreCert={hook.handleRestoreCert}
+            isAfkirStatus={hook.isAfkirStatus}
           />
         )}
 

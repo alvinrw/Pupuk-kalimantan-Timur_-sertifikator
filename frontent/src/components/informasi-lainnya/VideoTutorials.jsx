@@ -48,7 +48,7 @@ export default function VideoTutorials({
             </p>
             <ul className="ml-7 pl-4 list-disc list-outside space-y-1 text-slate-600 text-[11px]">
               <li><b>Karakteristik</b>: 1 Entitas dapat memiliki <b>banyak sertifikat terhubung</b> (PBG, SLF, HGB, Amdal, SNI, Halal).</li>
-              <li><b>Behavior Tabel Utama</b>: <b>1 baris per sertifikat</b> (1 aset/proyek dengan 3 sertifikat = 3 baris di tabel).</li>
+              <li><b>Behavior Tabel Utama</b>: <b>1 baris sertifikat</b> (1 aset/proyek dengan 3 sertifikat = 3 baris di tabel).</li>
             </ul>
           </div>
 
@@ -124,11 +124,11 @@ export default function VideoTutorials({
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                 <div className="flex items-center gap-2 text-[#005ea4] font-bold">
                   <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">2</span>
-                  <span>Klik "+ Kelola / Impor"</span>
+                  <span>Klik "Impor"</span>
                 </div>
-                <p className="text-slate-600 leading-relaxed">
-                  Pada kanan atas tabel, klik tombol <b>+ Kelola / Impor Dokumen</b> lalu pilih opsi <b>+ Input 1 Data Manual</b>.
-                </p>
+                <div className="text-slate-600 leading-relaxed">
+                  Pada kanan atas tabel, klik tombol <b>Impor Dokumen</b> lalu pilih opsi <b>Input 1 Data Manual</b>.
+                </div>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
@@ -149,7 +149,7 @@ export default function VideoTutorials({
                 B
               </div>
               <div>
-                <h4 className="font-bold text-base text-slate-900">2. Cara Menambahkan Sertifikat Terhubung (Multi-Sertifikat Per Item)</h4>
+                <h4 className="font-bold text-base text-slate-900">2. Cara Menambahkan Sertifikat Terhubung (Multi-Sertifikat Item)</h4>
                 <p className="pl-[16px] text-xs text-slate-500 font-mono-data">Untuk menghubungkan beberapa dokumen sertifikat (PBG, SLF, Amdal, SNI, Halal) ke satu entitas yang sama</p>
               </div>
             </div>
@@ -199,11 +199,11 @@ export default function VideoTutorials({
             <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 font-mono-data text-xs text-slate-800">
               <div className="flex items-center gap-2 font-bold text-slate-900">
                 <Info className="w-4 h-4 text-[#005ea4]" />
-                <span>Prinsip Kerja Multi-Sertifikat Per Baris Tabel Utama:</span>
+                <span>Prinsip Kerja Multi-Sertifikat Baris Tabel Utama:</span>
               </div>
               <ul className="list-disc list-inside space-y-1 text-[11px] text-slate-600">
                 <li><b>Data Utama Tetap 1 Entitas</b>: Menambahkan sertifikat terhubung tidak membuat aset/alat baru, melainkan menambahkan sertifikat di bawah entitas yang sama.</li>
-                <li><b>Tabel Utama Menampilkan Per Sertifikat</b>: Jika 1 aset punya 3 sertifikat terhubung, tabel utama menampilkan 3 baris terpisah untuk sertifikat tersebut.</li>
+                <li><b>Tabel Utama Menampilkan Sertifikat</b>: Jika 1 aset punya 3 sertifikat terhubung, tabel utama menampilkan 3 baris terpisah untuk sertifikat tersebut.</li>
               </ul>
             </div>
           </div>
@@ -247,11 +247,11 @@ export default function VideoTutorials({
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
                 <div className="flex items-center gap-2 text-slate-800 font-bold">
                   <span className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs text-slate-800">2</span>
-                  <span>Klik "+ Input Data Manual"</span>
+                  <span>Klik "Input Data Manual"</span>
                 </div>
-                <p className="text-slate-600 leading-relaxed">
-                  Klik tombol <b>+ Kelola / Impor</b> lalu pilih opsi <b>+ Input 1 Data Manual</b> untuk membuka formulir registrasi.
-                </p>
+                <div className="text-slate-600 leading-relaxed">
+                  Klik tombol <b>Impor</b> lalu pilih opsi <b>Input 1 Data Manual</b> untuk membuka formulir registrasi.
+                </div>
               </div>
 
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">

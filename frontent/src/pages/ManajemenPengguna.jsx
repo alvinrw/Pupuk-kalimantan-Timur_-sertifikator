@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Plus, Edit2, Trash2, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import { Users, Shield, Plus, Edit2, Trash2, Search, CheckCircle, AlertCircle, AlertTriangle, KeyRound } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { socket } from '../services/socket';
 
 export default function ManajemenPengguna() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, logout } = useAuth();
   
   const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ type: '', title: '', user: null });
   const [deleteConfirmData, setDeleteConfirmData] = useState({ isOpen: false, user: null });
+
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ nama: '', npk: '', username: '', password: '', roleName: 'Admin' });
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
@@ -24,14 +26,16 @@ export default function ManajemenPengguna() {
     try {
       setIsLoading(true);
       const response = await api.get('/users');
-      const formattedUsers = response.data.map(u => ({
-        id: u.id,
-        nama: u.nama,
-        npk: u.npk,
-        username: u.username,
-        role: typeof u.role === 'object' ? u.role.name : u.role,
-        isOnline: u.isOnline
-      }));
+      const formattedUsers = response.data
+        .map(u => ({
+          id: u.id,
+          nama: u.nama,
+          npk: u.npk,
+          username: u.username,
+          role: typeof u.role === 'object' ? u.role.name : u.role,
+          isOnline: u.isOnline
+        }))
+        .filter(u => u.role !== 'Super Admin');
       setUsers(formattedUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -89,6 +93,16 @@ export default function ManajemenPengguna() {
         const payload = { ...formData };
         if (!payload.password) delete payload.password; // Jangan kirim jika kosong
         await api.patch(`/users/${modalData.user.id}`, payload);
+        
+        // KONSEP 1: Force Logout jika user mengubah datanya sendiri
+        if (modalData.user.id === currentUser.id) {
+          showToast('Data/Role Anda telah diubah. Demi keamanan, silakan Login kembali.', 'success');
+          setTimeout(() => {
+            logout();
+          }, 2000);
+          return; // Hentikan eksekusi selanjutnya
+        }
+
         showToast('Data pengguna berhasil diperbarui!');
       }
       closeModal();
@@ -142,7 +156,6 @@ export default function ManajemenPengguna() {
   const getRoleBadge = (role) => {
     switch (role) {
       case 'Super Admin': return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Admin':
       case 'Admin': return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'User': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
       case 'Viewer': return 'bg-slate-100 text-slate-700 border-slate-200';
@@ -193,15 +206,15 @@ export default function ManajemenPengguna() {
 
       <div className="bg-white rounded-xl shadow-xs border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm whitespace-nowrap">
+          <table className="w-full text-center text-sm whitespace-nowrap">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
-              <tr>
+              <tr className="text-center">
                 <th className="px-6 py-4 font-semibold">Nama Pengguna</th>
                 <th className="px-6 py-4 font-semibold">NPK</th>
                 <th className="px-6 py-4 font-semibold">Username</th>
                 <th className="px-6 py-4 font-semibold">Role</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Aksi</th>
+                <th className="px-6 py-4 font-semibold">Status</th>
+                <th className="px-6 py-4 font-semibold">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -226,12 +239,14 @@ export default function ManajemenPengguna() {
 
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[#005ea4] font-bold text-xs">
-                        {u.nama.charAt(0)}
+                    <td className="px-6 py-4 font-medium text-slate-900">
+                      <div className="flex items-center gap-2 w-56 mx-auto">
+                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[#005ea4] font-bold text-xs shrink-0">
+                          {u.nama.charAt(0)}
+                        </div>
+                        <span className="truncate">{u.nama}</span>
+                        {isAdmin1 && <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0" title="Super Admin" />}
                       </div>
-                      {u.nama}
-                      {isAdmin1 && <Shield className="w-3.5 h-3.5 text-purple-500 ml-1" title="Super Admin" />}
                     </td>
                     <td className="px-6 py-4 text-slate-500 font-mono text-xs">{u.npk}</td>
                     <td className="px-6 py-4 text-slate-500">{u.username}</td>
@@ -248,21 +263,21 @@ export default function ManajemenPengguna() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-6 py-4">
+                      <div className="flex justify-center gap-2">
                         <button 
-                          onClick={() => openModal('edit', `Edit Data: ${u.nama}`, u)}
-                          className={`p-1.5 rounded-lg transition-colors ${isActionDisabled ? 'text-slate-300 cursor-not-allowed' : 'text-blue-600 hover:bg-blue-50'}`}
+                          onClick={() => openModal('edit', 'Edit Pengguna', u)}
+                          className={`p-1.5 rounded-lg transition-colors ${isActionDisabled ? 'text-slate-300 cursor-not-allowed' : 'text-[#005ea4] hover:bg-blue-50'}`}
                           disabled={isActionDisabled}
-                          title={isActionDisabled ? "Tidak bisa mengubah Super Admin" : "Edit Akun"}
+                          title={isActionDisabled ? "Hanya Super Admin yang bisa mengedit akun ini" : "Edit Akun"}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleDelete(u)}
-                          className={`p-1.5 rounded-lg transition-colors ${isAdmin1 ? 'text-slate-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
-                          disabled={isAdmin1}
-                          title={isAdmin1 ? "Super Admin Permanen (Tidak bisa dihapus)" : "Hapus Akun"}
+                          className={`p-1.5 rounded-lg transition-colors ${isAdmin1 || u.id === currentUser.id ? 'text-slate-300 cursor-not-allowed' : 'text-red-500 hover:bg-red-50'}`}
+                          disabled={isAdmin1 || u.id === currentUser.id}
+                          title={u.id === currentUser.id ? "Tidak bisa menghapus akun sendiri" : isAdmin1 ? "Super Admin Permanen (Tidak bisa dihapus)" : "Hapus Akun"}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -303,13 +318,23 @@ export default function ManajemenPengguna() {
                 <label className="text-sm font-semibold text-slate-700">
                   Password {modalData.type === 'edit' && <span className="text-xs text-slate-400 font-normal">(Kosongkan jika tidak ingin mengubah)</span>}
                 </label>
-                <input type="password" name="password" value={formData.password} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none" placeholder="Masukkan Password..." />
+                <input 
+                  type="password" 
+                  name="password" 
+                  value={formData.password} 
+                  onChange={handleInputChange} 
+                  autoComplete="new-password" 
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed" 
+                  placeholder={modalData.type === 'edit' && modalData.user?.role === 'Viewer' && currentUser.role !== 'Super Admin' ? "Hanya Super Admin yang bisa mengubah" : "Masukkan Password..."} 
+                  disabled={modalData.type === 'edit' && modalData.user?.role === 'Viewer' && currentUser.role !== 'Super Admin'}
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-semibold text-slate-700">Pilih Role</label>
                 <select name="roleName" value={formData.roleName} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none">
-                  <option value="Super Admin" disabled={currentUser.role !== 'Super Admin'}>Super Admin</option>
-                  <option value="Admin">Admin</option>
+                  {currentUser.role === 'Super Admin' && (
+                    <option value="Super Admin">Super Admin</option>
+                  )}
                   <option value="Admin">Admin</option>
                   <option value="User">User</option>
                   <option value="Viewer">Viewer</option>
@@ -357,6 +382,7 @@ export default function ManajemenPengguna() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

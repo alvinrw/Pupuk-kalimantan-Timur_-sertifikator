@@ -24,7 +24,7 @@ export default function Login() {
             <Shield className="w-8 h-8 text-[#005ea4]" />
           </div>
           <h1 className="font-logo-sutasoma text-3xl font-bold tracking-tight text-[#005ea4] select-none text-center">
-            SERTIFIKATOR
+            SINTESIS
           </h1>
           <p className="text-sm text-slate-500 mt-2 text-center">
             Sistem Manajemen Dokumen & Perizinan Terpadu

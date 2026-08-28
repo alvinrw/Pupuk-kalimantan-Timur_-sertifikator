@@ -73,7 +73,7 @@ export default function GenericTable({
                 )}
                 <th className="py-3.5 px-2 w-10 text-center align-middle"></th>
 
-                {isVisible("no") && <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>}
+                <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>
 
                 {isVisible("namaItem") && (
                   <th className="py-3.5 px-4 font-bold whitespace-nowrap text-slate-900 text-center align-middle">
@@ -211,11 +211,9 @@ export default function GenericTable({
                           )}
                         </td>
 
-                        {isVisible("no") && (
-                          <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
-                            {index + 1}
-                          </td>
-                        )}
+                        <td className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
+                          {index + 1}
+                        </td>
 
                         {isVisible("namaItem") && (
                           <td

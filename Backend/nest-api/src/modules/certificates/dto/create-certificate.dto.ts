@@ -36,4 +36,8 @@ export class CreateCertificateDto {
   @IsString()
   @IsOptional()
   fileUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  uploadedBy?: string;
 }

@@ -7,6 +7,7 @@ export class ActivityLogsService {
 
   async findAll() {
     const logs = await this.prisma.activityLog.findMany({
+      take: 200,
       include: {
         user: {
           include: { role: true }
@@ -22,7 +23,8 @@ export class ActivityLogsService {
       role: log.user.role.name,
       action: log.action,
       module: log.targetTable,
-      target: log.targetId || '-'
+      target: log.targetId || '-',
+      details: log.details || null
     }));
   }
 }

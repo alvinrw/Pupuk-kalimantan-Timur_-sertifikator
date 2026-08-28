@@ -75,7 +75,7 @@ export class DocumentHistoryService implements OnModuleInit {
       );
 
       // Membuat URL akses publik
-      const endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
+      const endPoint = this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || 'localhost';
       const port = this.configService.get<string>('MINIO_PORT', '9000');
       const protocol = this.configService.get<string>('MINIO_USE_SSL') === 'true' ? 'https' : 'http';
       
@@ -112,7 +112,7 @@ export class DocumentHistoryService implements OnModuleInit {
         { 'Content-Type': file.mimetype }
       );
 
-      const endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
+      const endPoint = this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || 'localhost';
       const port = this.configService.get<string>('MINIO_PORT', '9000');
       const protocol = this.configService.get<string>('MINIO_USE_SSL') === 'true' ? 'https' : 'http';
       
@@ -152,7 +152,7 @@ export class DocumentHistoryService implements OnModuleInit {
       
       await this.minioClient.removeObject(this.bucketName, fileName);
 
-      const endPoint = this.configService.get<string>('MINIO_ENDPOINT', 'localhost');
+      const endPoint = this.configService.get<string>('MINIO_PUBLIC_ENDPOINT') || 'localhost';
       const port = this.configService.get<string>('MINIO_PORT', '9000');
       const protocol = this.configService.get<string>('MINIO_USE_SSL') === 'true' ? 'https' : 'http';
       

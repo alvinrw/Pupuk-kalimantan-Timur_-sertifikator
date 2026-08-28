@@ -2,7 +2,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import 'multer';
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, Body , UseGuards } from '@nestjs/common';
+import { Controller, Post, Get, Query, Req, Res, UseInterceptors, UploadedFile, BadRequestException, Body , UseGuards } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiConsumes, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { DocumentHistoryService } from './document-history.service';

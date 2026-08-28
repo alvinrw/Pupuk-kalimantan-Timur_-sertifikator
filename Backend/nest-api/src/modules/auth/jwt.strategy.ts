@@ -6,7 +6,13 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        ExtractJwt.fromUrlQueryParameter('token'),
+        (req: any) => {
+          return req?.query?.token ? String(req.query.token) : null;
+        }
+      ]),
       ignoreExpiration: false,
       secretOrKey: 'SECRET_KEY_SEMENTARA_SANGAT_RAHASIA',
     });
@@ -16,6 +22,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     return {
       id: payload.sub,
       username: payload.username,
+      nama: payload.nama,
       role: payload.role,
       npk: payload.npk,
     };

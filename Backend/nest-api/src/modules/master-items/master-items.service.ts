@@ -38,7 +38,9 @@ export class MasterItemsService implements OnModuleInit {
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        certificates: true,
+        certificates: {
+          where: { isDeleted: false }
+        },
         permits: true,
         documentHistories: {
           orderBy: { createdAt: 'desc' }
@@ -55,7 +57,9 @@ export class MasterItemsService implements OnModuleInit {
     const item = await this.prisma.masterItem.findUnique({
       where: { id },
       include: {
-        certificates: true,
+        certificates: {
+          where: { isDeleted: false }
+        },
         permits: true,
         documentHistories: {
           orderBy: { createdAt: 'desc' }
@@ -72,8 +76,8 @@ export class MasterItemsService implements OnModuleInit {
     return item;
   }
 
-  async update(id: string, updateMasterItemDto: UpdateMasterItemDto) {
-    await this.findOne(id); // Check if exists
+  async update(id: string, updateMasterItemDto: UpdateMasterItemDto, currentUser?: string) {
+    const oldItem = await this.findOne(id); // Check if exists
 
     // Resolve any active notifications on manual update/renewal
     await this.prisma.reminderNotification.updateMany({
@@ -81,10 +85,35 @@ export class MasterItemsService implements OnModuleInit {
       data: { isResolved: true, resolvedAt: new Date() }
     }).catch(() => {});
 
-    return this.prisma.masterItem.update({
+    const updatedItem = await this.prisma.masterItem.update({
       where: { id },
       data: updateMasterItemDto,
     });
+
+    const changes = [];
+    if (updateMasterItemDto.title && updateMasterItemDto.title !== oldItem.title) {
+      changes.push(`Nama Item diubah dari '${oldItem.title || '-'}' menjadi '${updateMasterItemDto.title}'`);
+    }
+    if (updateMasterItemDto.unitLocation && updateMasterItemDto.unitLocation !== oldItem.unitLocation) {
+      changes.push(`Lokasi diubah dari '${oldItem.unitLocation || '-'}' menjadi '${updateMasterItemDto.unitLocation}'`);
+    }
+    
+    let descriptionText = `Informasi aset / dokumen "${updatedItem.title}" telah diperbarui.`;
+    if (changes.length > 0) {
+      descriptionText = `Perubahan data pada "${updatedItem.title}": ` + changes.join(', ') + '.';
+    }
+
+    // Log the update event
+    await this.prisma.documentHistory.create({
+      data: {
+        itemId: id,
+        action: 'UPDATED_ITEM',
+        description: descriptionText,
+        changedBy: currentUser || 'System / User',
+      }
+    });
+
+    return updatedItem;
   }
 
   async remove(id: string) {
@@ -140,7 +169,9 @@ export class MasterItemsService implements OnModuleInit {
       include: {
         item: {
           include: {
-            certificates: true
+            certificates: {
+              where: { isDeleted: false }
+            }
           }
         }
       },
@@ -161,6 +192,7 @@ export class MasterItemsService implements OnModuleInit {
       include: {
         notificationSetting: true,
         certificates: {
+          where: { isDeleted: false },
           include: {
             notificationSetting: true
           }
@@ -341,6 +373,7 @@ export class MasterItemsService implements OnModuleInit {
       include: {
         notificationSetting: true,
         certificates: {
+          where: { isDeleted: false },
           include: {
             notificationSetting: true
           }

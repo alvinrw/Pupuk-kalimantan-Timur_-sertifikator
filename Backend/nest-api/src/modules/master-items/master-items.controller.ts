@@ -1,7 +1,7 @@
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put , UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, Put, UseGuards, Request } from '@nestjs/common';
 import { MasterItemsService } from './master-items.service';
 import { CreateMasterItemDto } from './dto/create-master-item.dto';
 import { UpdateMasterItemDto } from './dto/update-master-item.dto';
@@ -50,8 +50,8 @@ export class MasterItemsController {
 
   @Roles('Super Admin', 'Admin', 'User')
   @Put(':id')
-  update(@Param('id') id: string, @Body() updateMasterItemDto: UpdateMasterItemDto) {
-    return this.masterItemsService.update(id, updateMasterItemDto);
+  update(@Param('id') id: string, @Request() req, @Body() updateMasterItemDto: UpdateMasterItemDto) {
+    return this.masterItemsService.update(id, updateMasterItemDto, req?.user?.nama);
   }
 
   @Roles('Super Admin', 'Admin', 'User')

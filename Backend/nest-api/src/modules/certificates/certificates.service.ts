@@ -39,6 +39,15 @@ export class CertificatesService {
           data: { documentStatus: 'COMPLETED' },
         }).catch(() => {});
 
+        await this.prisma.documentHistory.create({
+          data: {
+            itemId: cert.itemId,
+            action: 'UPDATED_CERTIFICATE',
+            description: `Sertifikat / dokumen lampiran "${cert.namaSertifikat || cert.jenisSertifikat}" telah diperbarui.`,
+            changedBy: 'System / User'
+          }
+        });
+
         return cert;
       }
     }
@@ -64,6 +73,14 @@ export class CertificatesService {
           expiryDate: createCertificateDto.expired || null,
         },
       }).catch(() => {});
+      await this.prisma.documentHistory.create({
+        data: {
+          itemId: createCertificateDto.itemId,
+          action: 'ADDED_CERTIFICATE',
+          description: `Sertifikat / dokumen lampiran baru "${cert.namaSertifikat || cert.jenisSertifikat}" telah diunggah.`,
+          changedBy: 'System / User'
+        }
+      });
     }
 
     return cert;
@@ -71,7 +88,7 @@ export class CertificatesService {
 
   async findByItemId(itemId: string) {
     return this.prisma.certificate.findMany({
-      where: { itemId },
+      where: { itemId, isDeleted: false },
       orderBy: { createdAt: 'desc' },
     });
   }
@@ -86,7 +103,7 @@ export class CertificatesService {
     return cert;
   }
 
-  async update(id: string, updateCertificateDto: UpdateCertificateDto) {
+  async update(id: string, updateCertificateDto: UpdateCertificateDto, currentUser?: string) {
     const cert = await this.findOne(id);
     const result = await this.prisma.certificate.update({
       where: { id },
@@ -107,21 +124,64 @@ export class CertificatesService {
           expiryDate: updateCertificateDto.expired !== undefined ? updateCertificateDto.expired : undefined,
         }
       }).catch(() => {});
+      const changes = [];
+      if (updateCertificateDto.namaSertifikat && updateCertificateDto.namaSertifikat !== cert.namaSertifikat) {
+        changes.push(`Nama Sertifikat diubah dari '${cert.namaSertifikat || '-'}' menjadi '${updateCertificateDto.namaSertifikat}'`);
+      }
+      if (updateCertificateDto.noSertifikat && updateCertificateDto.noSertifikat !== cert.noSertifikat) {
+        changes.push(`No. SK diubah dari '${cert.noSertifikat || '-'}' menjadi '${updateCertificateDto.noSertifikat}'`);
+      }
+      if (updateCertificateDto.terbit && updateCertificateDto.terbit !== cert.terbit) {
+        changes.push(`Tgl Terbit diubah dari '${cert.terbit || '-'}' menjadi '${updateCertificateDto.terbit}'`);
+      }
+      if (updateCertificateDto.expired && updateCertificateDto.expired !== cert.expired) {
+        changes.push(`Tgl Expired diubah dari '${cert.expired || '-'}' menjadi '${updateCertificateDto.expired}'`);
+      }
+      if (updateCertificateDto.status && updateCertificateDto.status !== cert.status) {
+        changes.push(`Status diubah dari '${cert.status || '-'}' menjadi '${updateCertificateDto.status}'`);
+      }
+      if (updateCertificateDto.instansi && updateCertificateDto.instansi !== cert.instansi) {
+        changes.push(`Instansi diubah dari '${cert.instansi || '-'}' menjadi '${updateCertificateDto.instansi}'`);
+      }
+
+      let descriptionText = `Informasi sertifikat / lampiran "${result.namaSertifikat || result.jenisSertifikat}" telah diedit.`;
+      if (changes.length > 0) {
+        descriptionText = `Perubahan data pada "${result.namaSertifikat || result.jenisSertifikat}": ` + changes.join(', ') + '.';
+      }
+
+      await this.prisma.documentHistory.create({
+        data: {
+          itemId: cert.itemId,
+          action: 'UPDATED_CERTIFICATE',
+          description: descriptionText,
+          changedBy: currentUser || updateCertificateDto.uploadedBy || 'System / User'
+        }
+      });
     }
 
     return result;
   }
 
-  async remove(id: string) {
+  async remove(id: string, currentUser?: string) {
     const cert = await this.findOne(id);
-    const result = await this.prisma.certificate.delete({
+    const result = await this.prisma.certificate.update({
       where: { id },
+      data: { isDeleted: true, deletedAt: new Date() },
     });
 
-    // Update MasterItem status and dates based on remaining certificates
     if (cert.itemId) {
+      await this.prisma.documentHistory.create({
+        data: {
+          itemId: cert.itemId,
+          targetId: cert.id,
+          action: 'SOFT_DELETED_CERTIFICATE',
+          description: `Dokumen "${cert.namaSertifikat || cert.jenisSertifikat}" beserta lampirannya telah dipindahkan ke tempat sampah.`,
+          changedBy: currentUser || 'System / User'
+        }
+      });
+
       const remainingCerts = await this.prisma.certificate.findMany({
-        where: { itemId: cert.itemId },
+        where: { itemId: cert.itemId, isDeleted: false },
         orderBy: { createdAt: 'desc' },
       });
 
@@ -145,6 +205,38 @@ export class CertificatesService {
           },
         }).catch(() => {});
       }
+    }
+
+    return result;
+  }
+
+  async restore(id: string, currentUser?: string) {
+    const cert = await this.findOne(id);
+    const result = await this.prisma.certificate.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
+    });
+
+    if (cert.itemId) {
+      await this.prisma.documentHistory.create({
+        data: {
+          itemId: cert.itemId,
+          targetId: cert.id,
+          action: 'RESTORED_CERTIFICATE',
+          description: `Dokumen "${cert.namaSertifikat || cert.jenisSertifikat}" berhasil dipulihkan dari tempat sampah.`,
+          changedBy: currentUser || 'System / User'
+        }
+      });
+
+      // Update the master item status to reflect the restored certificate
+      await this.prisma.masterItem.update({
+        where: { id: cert.itemId },
+        data: {
+          documentStatus: 'COMPLETED',
+          issueDate: result.terbit !== undefined ? result.terbit : undefined,
+          expiryDate: result.expired !== undefined ? result.expired : undefined,
+        }
+      }).catch(() => {});
     }
 
     return result;

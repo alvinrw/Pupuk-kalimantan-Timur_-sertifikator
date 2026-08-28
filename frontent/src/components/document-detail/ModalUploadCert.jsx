@@ -138,7 +138,7 @@ export default function ModalUploadCert({
                             setIsUploadingTemp(false);
                           }
                           // Fitur AI Auto-Extract keseluruhan saat upload kita matikan
-                          // agar Preview instan muncul. User akan pakai tombol 🎯 per field.
+                          // agar Preview instan muncul. User akan pakai tombol 🎯 field.
                         }
                       }
                     }}
@@ -149,7 +149,7 @@ export default function ModalUploadCert({
                   <span className="text-xs font-bold text-[#005ea4] block">
                     {selectedUploadFile ? `✓ Terpilih: ${selectedUploadFile.name}` : 'Ganti / Pilih File PDF'}
                   </span>
-                  <span className="text-[10px] text-slate-400 mt-0.5 block">Hanya menerima format PDF</span>
+                  <span className="text-[10px] text-slate-400 mt-0.5 block">Hanya menerima format PDF (Maks. 5 MB)</span>
                 </div>
 
                 {(isUploadingTemp || isScanningOcr) && (

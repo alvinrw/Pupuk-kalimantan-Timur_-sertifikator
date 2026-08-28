@@ -1,5 +1,5 @@
-import React from 'react';
-import { PlusCircle, X, Save } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { PlusCircle, X, Save, ChevronDown } from 'lucide-react';
 
 export default function IuranFormModal({
   isOpen,
@@ -10,6 +10,26 @@ export default function IuranFormModal({
   handleInputChange,
   handleSubmit,
 }) {
+  const [isKompartemenOpen, setIsKompartemenOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const kompartemenRef = useRef(null);
+  const statusRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (kompartemenRef.current && !kompartemenRef.current.contains(event.target)) {
+        setIsKompartemenOpen(false);
+      }
+      if (statusRef.current && !statusRef.current.contains(event.target)) {
+        setIsStatusOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -38,16 +58,64 @@ export default function IuranFormModal({
         {/* Body Form */}
         <div className="p-6 overflow-y-auto">
           <form id="iuranForm" onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
-            <div>
+            <div ref={kompartemenRef} className="relative z-20">
               <label className="block text-sm font-bold text-slate-900 mb-2">
                 Kompartemen <span className="text-red-500">*</span>
               </label>
+              
+              <div 
+                onClick={() => setIsKompartemenOpen(!isKompartemenOpen)}
+                className={`w-full text-sm px-4 py-2.5 bg-slate-50 border rounded-lg flex items-center justify-between cursor-pointer transition-all outline-none ${
+                  isKompartemenOpen ? 'border-[#005ea4] ring-4 ring-blue-50 bg-white' : 'border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                <span className={formData.kompartemen ? 'text-slate-900' : 'text-slate-500'}>
+                  {formData.kompartemen || '-- Pilih Kompartemen --'}
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isKompartemenOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {/* Custom Dropdown List */}
+              <div 
+                className={`absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg shadow-xl py-1.5 text-left font-normal normal-case flex flex-col origin-top transition-all duration-200 ease-out overflow-hidden ${
+                  isKompartemenOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2'
+                }`}
+              >
+                {[
+                  { value: "", label: "-- Pilih Kompartemen --" },
+                  { value: "Manajemen Keuangan", label: "Manajemen Keuangan" },
+                  { value: "Satuan Pengawasan Intern", label: "Satuan Pengawasan Intern" },
+                  { value: "Sekretaris Perusahaan", label: "Sekretaris Perusahaan" },
+                  { value: "HSE dan Teknologi", label: "HSE dan Teknologi" },
+                  { value: "Sumber Daya Manusia", label: "Sumber Daya Manusia" }
+                ].map((item, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      handleInputChange({ target: { name: 'kompartemen', value: item.value } });
+                      setIsKompartemenOpen(false);
+                    }}
+                    className={`w-full px-4 py-2.5 text-sm text-left transition-colors ${
+                      formData.kompartemen === item.value 
+                        ? 'bg-blue-50/70 font-bold text-[#005ea4]' 
+                        : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Hidden select for HTML5 validation */}
               <select
                 name="kompartemen"
                 value={formData.kompartemen}
-                onChange={handleInputChange}
+                onChange={() => {}}
                 required
-                className="w-full text-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 focus:bg-white focus:border-[#005ea4] focus:ring-4 focus:ring-blue-50 transition-all outline-none"
+                className="absolute opacity-0 w-full h-0 pointer-events-none -z-10"
+                style={{ bottom: '10px' }}
+                tabIndex={-1}
               >
                 <option value="">-- Pilih Kompartemen --</option>
                 <option value="Manajemen Keuangan">Manajemen Keuangan</option>
@@ -103,16 +171,61 @@ export default function IuranFormModal({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+              <div ref={statusRef} className="relative z-10">
                 <label className="block text-sm font-bold text-slate-900 mb-2">
                   Status <span className="text-red-500">*</span>
                 </label>
+                
+                <div 
+                  onClick={() => setIsStatusOpen(!isStatusOpen)}
+                  className={`w-full text-sm px-4 py-2.5 bg-slate-50 border rounded-lg flex items-center justify-between cursor-pointer transition-all outline-none ${
+                    isStatusOpen ? 'border-[#005ea4] ring-4 ring-blue-50 bg-white' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  <span className={formData.status ? 'text-slate-900' : 'text-slate-500'}>
+                    {formData.status || '-- Pilih Status --'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isStatusOpen ? 'rotate-180' : ''}`} />
+                </div>
+
+                {/* Custom Dropdown List */}
+                <div 
+                  className={`absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg shadow-xl py-1.5 text-left font-normal normal-case flex flex-col origin-top transition-all duration-200 ease-out overflow-hidden z-50 ${
+                    isStatusOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2'
+                  }`}
+                >
+                  {[
+                    { value: "", label: "-- Pilih Status --" },
+                    { value: "Karyawan", label: "Karyawan" },
+                    { value: "Perusahaan", label: "Perusahaan" }
+                  ].map((item, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        handleInputChange({ target: { name: 'status', value: item.value } });
+                        setIsStatusOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 text-sm text-left transition-colors ${
+                        formData.status === item.value 
+                          ? 'bg-blue-50/70 font-bold text-[#005ea4]' 
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Hidden select for HTML5 validation */}
                 <select
                   name="status"
                   value={formData.status}
-                  onChange={handleInputChange}
+                  onChange={() => {}}
                   required
-                  className="w-full text-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 focus:bg-white focus:border-[#005ea4] focus:ring-4 focus:ring-blue-50 transition-all outline-none"
+                  className="absolute opacity-0 w-full h-0 pointer-events-none -z-10"
+                  style={{ bottom: '10px' }}
+                  tabIndex={-1}
                 >
                   <option value="">-- Pilih Status --</option>
                   <option value="Karyawan">Karyawan</option>

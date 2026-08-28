@@ -109,7 +109,6 @@ export default function useAdministrasiLainnya() {
 
   // ─── Column Visibility State ─────────────────────────────────
   const allColumns = [
-    { key: 'no', label: 'No.' },
     { key: 'judulCiptaan', label: 'Judul Ciptaan' },
     { key: 'jenisCiptaan', label: 'Jenis Ciptaan' },
     { key: 'hasSertifikat', label: 'Ada Sertifikat' },
@@ -124,7 +123,15 @@ export default function useAdministrasiLainnya() {
     try {
       setIsLoading(true);
       const data = await getMasterItems(CATEGORY_KEY);
-      setCiptaanList(data.map(mapItemToRow));
+      const mapped = data.map(mapItemToRow);
+      setCiptaanList(mapped);
+      
+      // Update the detail modal item if it is currently open so DocumentDetailPage re-renders
+      setDetailModalItem(prev => {
+        if (!prev) return prev;
+        const updatedItem = mapped.find(i => i.id === prev.id);
+        return updatedItem || prev;
+      });
     } catch (error) {
       console.error('Failed to load AdministrasiLainnya', error);
     } finally {

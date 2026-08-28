@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { FileText, ChevronLeft, ChevronRight, Crosshair, Loader2, X, ScanLine, ZoomIn, ZoomOut } from 'lucide-react';
 import { API_BASE } from '../../config/api';
+import Tesseract from 'tesseract.js';
 import 'pdfjs-dist/web/pdf_viewer.css';
 
 // Label yang ditampilkan di overlay saat scan mode aktif
@@ -106,16 +107,34 @@ export default function PdfCanvasOcrViewer({
 
     const scaledViewport = page.getViewport({ scale: finalScale });
 
-    canvas.width = scaledViewport.width;
-    canvas.height = scaledViewport.height;
+    const outputScale = window.devicePixelRatio || 2; // Gunakan minimum 2x untuk layar biasa agar tetap tajam
+
+    // Ukuran CSS (tampilan fisik di layar)
+    canvas.style.width = `${scaledViewport.width}px`;
+    canvas.style.height = `${scaledViewport.height}px`;
+
+    // Ukuran internal canvas (piksel asli)
+    canvas.width = Math.floor(scaledViewport.width * outputScale);
+    canvas.height = Math.floor(scaledViewport.height * outputScale);
 
     if (selectionCanvasRef.current) {
+      selectionCanvasRef.current.style.width = `${scaledViewport.width}px`;
+      selectionCanvasRef.current.style.height = `${scaledViewport.height}px`;
+      // Selection canvas tidak butuh resolusi tinggi karena hanya untuk kotak seleksi drag
       selectionCanvasRef.current.width = scaledViewport.width;
       selectionCanvasRef.current.height = scaledViewport.height;
     }
 
     const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport: scaledViewport }).promise;
+    
+    // Transform ctx agar pdf render mengikuti resolusi tinggi
+    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+
+    await page.render({ 
+      canvasContext: ctx, 
+      transform,
+      viewport: scaledViewport 
+    }).promise;
 
     // ─── Render Text Layer untuk Native Selection ───
     try {
@@ -233,11 +252,19 @@ export default function PdfCanvasOcrViewer({
     cropCtx.fillStyle = '#ffffff';
     cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
     
-    // Biarkan smoothing menyala (default) karena PaddleOCR butuh garis anti-aliasing yang halus
+    // Perlu mengalikan x, y, w, h dengan outputScale dari mainCanvas
+    // karena ukuran fisik mainCanvas = ukuran logical * outputScale
+    const outputScale = window.devicePixelRatio || 2;
+    const sx = x * outputScale;
+    const sy = y * outputScale;
+    const sw = w * outputScale;
+    const sh = h * outputScale;
+
+    // Biarkan smoothing menyala (default)
     // cropCtx.imageSmoothingEnabled = false; 
     
     // Gambar potongan PDF di tengah-tengah area padding
-    cropCtx.drawImage(mainCanvas, x, y, w, h, padding, padding, w * scaleFactor, h * scaleFactor);
+    cropCtx.drawImage(mainCanvas, sx, sy, sw, sh, padding, padding, w * scaleFactor, h * scaleFactor);
 
     // Filter Binarization (Hitam-Putih paksa) DIHAPUS.
     // PaddleOCR adalah AI Deep Learning yang dilatih dengan gambar RGB asli. 
@@ -246,44 +273,34 @@ export default function PdfCanvasOcrViewer({
 
     try {
       setIsOcrRunning(true);
-      setOcrStatusMsg('Mengirim gambar ke Backend AI (PaddleOCR)...');
+      setOcrStatusMsg('Mengekstrak teks di browser (Tesseract AI)...');
 
-      // Convert canvas ke Blob untuk dikirim via FormData
-      cropCanvas.toBlob(async (blob) => {
-        try {
-          console.log('Mengirim crop image ke backend... Size:', blob.size, 'bytes');
-          const fd = new FormData();
-          fd.append('file', blob, 'crop.png');
-          
-          setOcrStatusMsg('Sedang memindai dengan AI...');
-          // Gunakan 127.0.0.1 untuk mencegah masalah resolusi IPv6 'localhost' di Windows
-          const res = await fetch(`http://127.0.0.1:8000/api/v1/ocr/ocr-crop`, {
-            method: 'POST',
-            body: fd
-          });
-          
-          console.log('Response status:', res.status);
-          const json = await res.json();
-          if (!res.ok) throw new Error(json.detail || 'Gagal OCR backend');
-          
-          setOcrStatusMsg('Selesai!');
-          console.log('OCR Result:', json);
-          onScanComplete(scanMode, json.data?.text || '');
-        } catch (err) {
-          console.error('Backend OCR Fetch error:', err.message, err);
-          setOcrStatusMsg(`Error: ${err.message}`);
-          setTimeout(() => setOcrStatusMsg(''), 4000);
-        } finally {
-          setIsOcrRunning(false);
-          const selCanvas = selectionCanvasRef.current;
-          if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
-        }
-      }, 'image/png');
+      // Gunakan Tesseract.js secara langsung di sisi client (browser)
+      // Ini akan menghilangkan ketergantungan pada backend Python yang mungkin tidak menyala
+      Tesseract.recognize(
+        cropCanvas,
+        'ind+eng', // Bahasa Indonesia dan Inggris
+        { logger: m => console.log(m) }
+      ).then(({ data: { text } }) => {
+        setOcrStatusMsg('Ekstraksi selesai!');
+        console.log('Tesseract OCR Result:', text);
+        
+        // Kirim hasilnya ke form
+        onScanComplete(scanMode, text || '');
+      }).catch(err => {
+        console.error('Tesseract OCR error:', err);
+        setOcrStatusMsg(`Gagal membaca teks: ${err.message}`);
+        setTimeout(() => setOcrStatusMsg(''), 4000);
+      }).finally(() => {
+        setIsOcrRunning(false);
+        const selCanvas = selectionCanvasRef.current;
+        if (selCanvas) selCanvas.getContext('2d').clearRect(0, 0, selCanvas.width, selCanvas.height);
+      });
 
     } catch (err) {
-      console.error('Canvas toBlob error:', err);
+      console.error('OCR Processing error:', err);
       setIsOcrRunning(false);
-      setOcrStatusMsg('Gagal memproses gambar crop.');
+      setOcrStatusMsg('Gagal memproses gambar.');
       setTimeout(() => setOcrStatusMsg(''), 3000);
     }
   }, [scanMode, onScanComplete]);

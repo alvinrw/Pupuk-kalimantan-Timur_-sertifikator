@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { createCertificateForMasterItem, deleteCertificate } from '../../services/masterItemsService';
+import { createCertificateForMasterItem, deleteCertificate, updateMasterItem } from '../../services/masterItemsService';
 
 export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefreshRequired }) {
   const [linkedCerts, setLinkedCerts] = useState(item?.linkedCertificates || []);
   const [isAddCertModalOpen, setIsAddCertModalOpen] = useState(false);
   const [deletingLinkedCertId, setDeletingLinkedCertId] = useState(null);
-  
+
   const [newCertData, setNewCertData] = useState({
     jenisSertifikat: '', noSertifikat: '', instansi: '',
     terbit: '', expired: '', status: 'Aktif', hasPdf: false, pdfName: ''
@@ -52,6 +52,11 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
       const payload = { itemId: masterItemId, ...certPayload };
       if (fileUrl) payload.fileUrl = fileUrl;
       const saved = await createCertificateForMasterItem(payload);
+
+      if (item.documentStatus === 'EXEMPT') {
+        await updateMasterItem(item.id, { documentStatus: 'COMPLETED', exemptionNote: null });
+      }
+
       setLinkedCerts(prev => [...prev, saved]);
       await fetchHistory();
       if (onRefreshRequired) onRefreshRequired();

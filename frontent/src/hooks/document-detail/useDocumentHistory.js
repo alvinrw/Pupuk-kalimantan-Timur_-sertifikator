@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { updateCertificate, deleteCertificate } from '../../services/masterItemsService';
+import { updateCertificate, deleteCertificate, restoreCertificate } from '../../services/masterItemsService';
 import { UPLOAD_ENDPOINT } from '../../config/api';
 
 export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
@@ -39,6 +39,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         }
         return {
           ...m,
+          type: 'certificate',
           periode: m.periode || `${new Date(m.terbit || m.issueDate || '2024').getFullYear()} - ${new Date(m.expired || m.expiryDate || '2024').getFullYear()}`,
           noSertifikat: m.noSertifikat || m.certNo || m.certificateNo || '-',
           terbit: m.terbit || m.issueDate || '-',
@@ -46,11 +47,25 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
           status: m.status || 'Aktif',
           instansi: m.instansi || m.issuer || '-',
           fileUrl: m.fileUrl || m.pdfUrl || null,
-          isCurrent
+          isCurrent,
+          sortDate: new Date(m.createdAt || m.terbit || 0).getTime()
         };
       });
 
-      setHistoryList(parentList);
+      // Combine with Document Histories (Audit Trail)
+      const auditLogs = item.documentHistories || [];
+      const formattedLogs = auditLogs.map(log => ({
+        ...log,
+        type: 'audit_log',
+        sortDate: new Date(log.createdAt || 0).getTime()
+      }));
+
+      const combinedList = [...parentList, ...formattedLogs];
+      
+      // Sort chronologically (newest first)
+      combinedList.sort((a, b) => b.sortDate - a.sortDate);
+
+      setHistoryList(combinedList);
     } catch (err) {
       console.error('Failed to fetch history:', err);
     } finally {
@@ -65,14 +80,59 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
   const handleDeleteHistoryRow = async () => {
     try {
       if (!selectedHistoryToDelete?.id) return;
-      await deleteCertificate(selectedHistoryToDelete.id);
-      await fetchHistory();
+      const deletedId = selectedHistoryToDelete.id;
+      // Optimistic update: langsung hapus dari tampilan UI dan tambah log audit
+      const newLog = {
+        id: 'temp-del-' + Date.now(),
+        action: 'DELETED_CERTIFICATE',
+        description: `Sertifikat / lampiran "${selectedHistoryToDelete.namaSertifikat || selectedHistoryToDelete.jenisSertifikat || 'Sertifikat'}" telah dihapus secara permanen.`,
+        changedBy: 'System / User',
+        createdAt: new Date().toISOString(),
+        type: 'audit_log',
+        sortDate: Date.now()
+      };
+      
+      setHistoryList(prev => {
+        const filtered = prev.filter(h => h.id !== deletedId);
+        return [newLog, ...filtered].sort((a, b) => b.sortDate - a.sortDate);
+      });
+      
+      await deleteCertificate(deletedId);
+      // await fetchHistory(); // Tidak perlu fetch ulang langsung karena membaca dari prop lama
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       console.error('Failed to delete history row:', err);
+      // Revert jika gagal
+      fetchHistory();
       alert('Gagal menghapus baris histori: ' + (err.message || 'Error'));
     } finally {
       setSelectedHistoryToDelete(null);
+    }
+  };
+
+  const handleRestoreCert = async (targetId) => {
+    if (!targetId) return;
+    try {
+      // Optimistic update
+      const newLog = {
+        id: 'temp-res-' + Date.now(),
+        action: 'RESTORED_CERTIFICATE',
+        description: `Sertifikat / lampiran berhasil dipulihkan dari tempat sampah.`,
+        changedBy: 'Anda',
+        createdAt: new Date().toISOString(),
+        type: 'audit_log',
+        sortDate: Date.now()
+      };
+      setHistoryList(prev => {
+        return [newLog, ...prev].sort((a, b) => b.sortDate - a.sortDate);
+      });
+
+      await restoreCertificate(targetId);
+      if (onRefreshRequired) onRefreshRequired();
+    } catch (err) {
+      console.error('Failed to restore cert:', err);
+      fetchHistory();
+      alert('Gagal memulihkan dokumen: ' + (err.message || 'Error'));
     }
   };
 
@@ -108,8 +168,38 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         fileUrl: finalRow.fileUrl
       };
       
+      // Optimistic update: langsung ubah di tampilan UI dan tambah log audit
+      const oldRow = historyList.find(h => h.id === finalRow.id) || {};
+      const changes = [];
+      if (payload.namaSertifikat && payload.namaSertifikat !== oldRow.namaSertifikat) changes.push(`Nama Sertifikat`);
+      if (payload.noSertifikat && payload.noSertifikat !== oldRow.noSertifikat) changes.push(`No. SK`);
+      if (payload.terbit && payload.terbit !== oldRow.terbit) changes.push(`Tgl Terbit`);
+      if (payload.expired && payload.expired !== oldRow.expired) changes.push(`Tgl Expired`);
+      if (payload.status && payload.status !== oldRow.status) changes.push(`Status`);
+
+      let descriptionText = `Informasi sertifikat / lampiran "${finalRow.namaSertifikat || finalRow.jenisSertifikat || 'Sertifikat'}" telah diedit.`;
+      if (changes.length > 0) {
+        descriptionText = `Perubahan data (${changes.join(', ')}) pada "${finalRow.namaSertifikat || finalRow.jenisSertifikat || 'Sertifikat'}".`;
+      }
+
+      const newLog = {
+        id: 'temp-upd-' + Date.now(),
+        action: 'UPDATED_CERTIFICATE',
+        description: descriptionText,
+        changedBy: 'Anda',
+        createdAt: new Date().toISOString(),
+        type: 'audit_log',
+        sortDate: Date.now()
+      };
+
+      setHistoryList(prev => {
+        const mapped = prev.map(h => h.id === finalRow.id ? { ...h, ...payload } : h);
+        return [newLog, ...mapped].sort((a, b) => b.sortDate - a.sortDate);
+      });
+      
       await updateCertificate(finalRow.id, payload);
-      await fetchHistory();
+      // await fetchHistory(); // Baca dari UI sementara
+
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       console.error('Failed to update history row:', err);
@@ -127,6 +217,6 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
     editingHistoryRow, setEditingHistoryRow,
     selectedHistoryFile, setSelectedHistoryFile,
     editHistoryFileInputRef,
-    handleDeleteHistoryRow, handleSaveHistoryRowEdit
+    handleDeleteHistoryRow, handleSaveHistoryRowEdit, handleRestoreCert
   };
 }

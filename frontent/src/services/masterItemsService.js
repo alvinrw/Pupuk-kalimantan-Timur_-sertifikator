@@ -256,3 +256,17 @@ export const deleteCertificate = async (id) => {
   const response = await api.delete(`/certificates/${id}`);
   return response.data;
 };
+
+/**
+ * Restore a soft-deleted certificate by ID
+ */
+export const restoreCertificate = async (id) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Restoring Certificate ${id}...`);
+    await new Promise(res => setTimeout(res, 300));
+    return { message: 'Restored (Dummy)' };
+  }
+  console.log(`[REAL API] Restoring Certificate ${id}...`);
+  const response = await api.put(`/certificates/${id}/restore`);
+  return response.data;
+};

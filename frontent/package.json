@@ -17,6 +17,7 @@
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-hot-toast": "^2.6.0",
     "react-is": "^19.2.8",
     "recharts": "^3.10.0",
     "socket.io-client": "^4.8.3",

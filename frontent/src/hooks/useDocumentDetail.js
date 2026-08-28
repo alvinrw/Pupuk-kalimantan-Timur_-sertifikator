@@ -59,9 +59,10 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   const initialKetRaw = targetCert?.keterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo');
   const parsedKet = parseKeterangan(initialKetRaw);
 
-  const [localDocumentStatus, setLocalDocumentStatus] = useState(item.documentStatus || 'PENDING_DOC');
+  const localDocumentStatus = item.documentStatus || 'PENDING_DOC';
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+  
+  const buildFormData = () => ({
     merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
     jenisPeralatan: parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset',
     tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
@@ -84,23 +85,68 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || ''
   });
 
+  const [formData, setFormData] = useState(buildFormData());
+
+  useEffect(() => {
+    if (!isEditing) {
+      setFormData(buildFormData());
+    }
+  }, [item, targetCert]);
+
   const handleSave = async (e) => {
     e.preventDefault();
     try {
-      const payloadData = { ...formData };
-      if (formData.additionalEntities && formData.additionalEntities.length > 0) {
-        payloadData.keterangan = JSON.stringify({
-          keteranganAsli: formData.keterangan,
-          additionalEntities: formData.additionalEntities
-        });
-      }
+      let updatedTitle = formData.merekItem;
+      let updatedCode = formData.nomorSeri || formData.tipe; // Prioritize nomorSeri for doc.code in Generic
       
+      const metaObject = {
+        keteranganAsli: formData.keterangan || '-',
+        additionalEntities: formData.additionalEntities || [],
+        tipe: formData.tipe,
+        nomorSeri: formData.nomorSeri,
+        penanggungJawab: formData.user,
+        namaSertifikat: formData.namaSertifikat,
+      };
+
+      if (effectiveCategoryKey === 'peralatan-pabrik') {
+        updatedTitle = formData.jenisPeralatan;
+        updatedCode = formData.merekItem;
+      } else if (isHaki) {
+        updatedTitle = formData.merekItem;
+        updatedCode = formData.tipe;
+      }
+
+      const payloadData = {
+        title: updatedTitle,
+        code: updatedCode,
+        unitLocation: formData.lokasi,
+        status: formData.status,
+        keterangan: JSON.stringify(metaObject),
+        issueDate: isHaki ? formData.tanggalCiptaan : (formData.terbit || formData.issueDate),
+        expiryDate: isHaki ? formData.masaBerlaku : (formData.berakhir || formData.expiryDate),
+        categoryKey: effectiveCategoryKey,
+      };
+
       const targetId = item?.MasterId || item?.id;
       if (targetId) {
         await updateMasterItem(targetId, payloadData);
       }
+
+      if (targetCert?.id && formData.noSertifikat !== undefined) {
+        const { updateCertificate } = await import('../services/masterItemsService');
+        await updateCertificate(targetCert.id, {
+          namaSertifikat: formData.namaSertifikat,
+          noSertifikat: formData.noSertifikat,
+          terbit: formData.terbit,
+          expired: formData.berakhir,
+          status: formData.status,
+        });
+      }
+
       setIsEditing(false);
-      if (onSaveUpdate) onSaveUpdate({ ...item, ...payloadData, id: targetId });
+      // Construct a faux updated item to refresh the local view immediately
+      const updatedLocalItem = { ...item, ...payloadData, ...metaObject, tipe: formData.tipe, nomorSeri: formData.nomorSeri };
+      if (onSaveUpdate) onSaveUpdate({ ...updatedLocalItem, id: targetId });
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       alert('Gagal update dokumen: ' + (err.message || 'Error'));

@@ -122,6 +122,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           namaItem: doc.title || '-',
           merekItem: doc.title,
           code: doc.code || "-",
+          tipe: meta.tipe || (categoryName?.toLowerCase().includes('aset') ? '' : doc.code),
+          nomorSeri: meta.nomorSeri || (categoryName?.toLowerCase().includes('aset') ? doc.code : ''),
           no: index + 1,
           hasSertifikat: certs.length > 0 ? "Ada" : "Tidak Ada",
           hasPdf: !!primaryCert?.fileUrl,
@@ -143,11 +145,19 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           documentStatus: doc.documentStatus || doc.document_status || (certs.length > 0 ? 'COMPLETED' : 'PENDING_DOC'),
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs,
+          documentHistories: doc.documentHistories || [],
           notificationSetting: doc.notificationSetting || null,
           reminderEnabled: doc.notificationSetting ? doc.notificationSetting.isEnabled : true
         };
       });
       setDocuments(mapped);
+      
+      // Update the detail modal item if it is currently open so DocumentDetailPage re-renders
+      setDetailModalItem(prev => {
+        if (!prev) return prev;
+        const updatedItem = mapped.find(i => i.id === prev.id);
+        return updatedItem || prev;
+      });
     } catch (error) {
       console.error("Failed to load generic permissions", error);
     } finally {
@@ -163,7 +173,6 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
 
   const defaultColumns = [
-    { key: "no", label: "NO." },
     { key: "namaItem", label: isProyek ? "NAMA PROYEK" : isProduk ? "NAMA PRODUK" : "NAMA ITEM" },
     { key: "code", label: isProyek ? "KODE PROYEK" : isProduk ? "KODE PRODUK" : "KODE REGISTRASI" },
     { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
@@ -174,7 +183,6 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   ];
 
   const asetColumns = [
-    { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
     { key: "code", label: "NOMOR SERI ASSET" },
     { key: "jenisItem", label: "JENIS ASET" },

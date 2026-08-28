@@ -225,7 +225,7 @@ export default function RiwayatPerpanjangan() {
                       <div className="font-bold text-slate-900 group-hover:text-[#005ea4] group-hover:underline font-sans">{log.merekItem}</div>
                       <div className="text-[11px] text-slate-500 font-mono-data flex items-center justify-center gap-1.5 mt-0.5">
                         <span>{log.jenisItem}</span>
-                        <span>ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¢</span>
+                        <span>•</span>
                         <span className="font-bold text-[#005ea4] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200 text-[10px]">
                           {log.unitPabrik}
                         </span>

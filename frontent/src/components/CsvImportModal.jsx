@@ -368,7 +368,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                       Klik atau Tarik Berkas CSV / Excel ke Sini
                     </p>
                     <p className="text-xs text-slate-500 mb-4">
-                      Format mendukung CSV / Excel gabungan multi-unit
+                      Format mendukung CSV / Excel gabungan multi-unit (Maks. 5 MB)
                     </p>
                     <span className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs">
                       Pilih Berkas CSV / Excel

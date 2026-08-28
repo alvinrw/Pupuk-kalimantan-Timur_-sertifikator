@@ -332,7 +332,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
                   <span className="text-xs font-bold text-[#005ea4]">
                     {selectedFile ? `✓ Terpilih: ${selectedFile.name}` : 'Pilih File PDF Dokumen'}
                   </span>
-                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF</span>
+                  <span className="text-[10px] text-slate-500 mt-1">Hanya format PDF (Maks. 5 MB)</span>
                 </div>
               </div>
 
@@ -380,7 +380,7 @@ export default function SingleEntryAsetModal({ isOpen, onClose, onAddSuccess }) 
             </div>
 
             <div>
-              <label className="font-bold text-slate-900 block mb-1">Luas (mÃƒâ€šÃ‚Â²)</label>
+              <label className="font-bold text-slate-900 block mb-1">Luas (m²)</label>
               <input
                 type="number"
                 value={formData.areaSqm}

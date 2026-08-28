@@ -73,19 +73,18 @@ export default function PeralatanPabrik() {
             className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>+ Kelola / Impor Dokumen</span>
+            <span>Impor Dokumen</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${data.isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {data.isImportMenuOpen && (
-            <div className="absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean">
+          <div className={`absolute right-0 top-11 z-40 w-64 bg-white rounded-xl shadow-2xl border border-slate-200 p-1 space-y-1 text-xs font-sans-clean transition-all duration-200 origin-top-right ${data.isImportMenuOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 pointer-events-none invisible -translate-y-2'}`}>
               <button
                 onClick={() => { data.setIsSingleModalOpen(true); data.setIsImportMenuOpen(false); }}
                 className="w-full text-left px-3 py-2.5 hover:bg-slate-100 rounded-lg flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
-                  <span className="block">+ Input 1 Data Manual</span>
+                  <span className="block">Input 1 Data Manual</span>
                   <span className="text-[10px] text-slate-500 font-normal font-mono-data">Termasuk unggah foto / PDF sertifikat</span>
                 </div>
               </button>
@@ -102,7 +101,6 @@ export default function PeralatanPabrik() {
                 </div>
               </button>
             </div>
-          )}
         </div>
         )}
       </div>

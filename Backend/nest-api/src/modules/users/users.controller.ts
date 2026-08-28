@@ -13,14 +13,21 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  create(@Body() createUserDto: any) {
-    return this.usersService.create(createUserDto);
+  create(@Body() createUserDto: any, @Req() req: any) {
+    return this.usersService.create(createUserDto, req.user);
   }
 
   @Get()
   findAll() {
     return this.usersService.findAll();
   }
+
+  @Patch('change-password')
+  @Roles('Super Admin', 'Admin', 'User')
+  changePassword(@Body() body: any, @Req() req: any) {
+    return this.usersService.changePassword(req.user.id, body.currentPassword, body.newPassword);
+  }
+
 
   @Get(':id')
   findOne(@Param('id') id: string) {

@@ -40,7 +40,6 @@ export function usePeralatanPabrik() {
   const [selectedNewTargetItem, setSelectedNewTargetItem] = useState(null);
 
   const allColumns = [
-    { key: "no", label: "No." },
     { key: "jenisPeralatan", label: "Jenis Peralatan Pabrik" },
     { key: "merekItem", label: "Merek/Item" },
     { key: "tipe", label: "Tipe" },
@@ -143,6 +142,13 @@ export function usePeralatanPabrik() {
       });
 
       setEquipmentList(mapped);
+      
+      // Update the detail modal item if it is currently open so DocumentDetailPage re-renders
+      setDetailModalItem(prev => {
+        if (!prev) return prev;
+        const updatedItem = mapped.find(i => i.id === prev.id);
+        return updatedItem || prev;
+      });
     } catch (err) {
       console.error("Failed to fetch PeralatanPabrik:", err);
     } finally {

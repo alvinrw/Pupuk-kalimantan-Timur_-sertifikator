@@ -51,19 +51,18 @@ export default function GenericFilterBar({
             className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>+ Kelola / Impor Data {categoryName}</span>
+            <span>Impor Data {categoryName}</span>
             <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isImportMenuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {isImportMenuOpen && (
-            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs">
+          <div className={`absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-40 text-xs transition-all duration-200 origin-top-right ${isImportMenuOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 pointer-events-none invisible -translate-y-2'}`}>
               <button
                 onClick={() => { setIsSingleModalOpen(true); setIsImportMenuOpen(false); }}
                 className="w-full text-left px-3 py-2.5 hover:bg-slate-50 border-b border-slate-100 flex items-center gap-2.5 font-bold text-slate-800 cursor-pointer"
               >
                 <PlusCircle className="w-4 h-4 text-[#005ea4]" />
                 <div>
-                  <span className="block">+ Tambah Data {categoryName} Baru</span>
+                  <span className="block">Tambah Data {categoryName} Baru</span>
                   <span className="text-[10px] text-slate-500 font-normal font-mono-data">Input manual 1 entitas master {categoryName}</span>
                 </div>
               </button>
@@ -79,7 +78,6 @@ export default function GenericFilterBar({
                 </div>
               </button>
             </div>
-          )}
         </div>
         )}
       </div>
@@ -150,12 +148,11 @@ export default function GenericFilterBar({
             >
               <Columns className="w-4 h-4 text-[#005ea4]" />
               <span>Pilih Kolom ({visibleColumnKeys.length}/{allColumns.length})</span>
-              <ChevronDown className="w-3.5 h-3.5" />
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isColumnDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
 
-            {isColumnDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-40 text-xs space-y-2">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <div className={`absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-40 text-xs space-y-2 transition-all duration-200 origin-top-right ${isColumnDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 pointer-events-none invisible -translate-y-2'}`}>
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <span className="font-bold text-slate-900">Visibilitas Kolom</span>
                   <button
                     onClick={selectAllColumns}
@@ -181,7 +178,6 @@ export default function GenericFilterBar({
                   ))}
                 </div>
               </div>
-            )}
           </div>
         </div>
       </div>
