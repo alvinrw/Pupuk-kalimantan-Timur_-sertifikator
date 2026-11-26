@@ -104,6 +104,7 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         setDetailModalItem={data.setDetailModalItem}
         setActiveCertId={data.setActiveCertId}
         setResolveTargetItem={data.setResolveTargetItem}
+        setEditStagingItem={data.setEditStagingItem}
         visibleColumnKeys={data.visibleColumnKeys}
         setViewingCert={data.setViewingCert}
         setAddCertTargetMaster={data.setAddCertTargetMaster}
@@ -123,6 +124,9 @@ export default function PerizinanGeneric({ title, subtitle, categoryName }) {
         handleCsvImported={data.handleCsvImported}
         resolveTargetItem={data.resolveTargetItem}
         setResolveTargetItem={data.setResolveTargetItem}
+        editStagingItem={data.editStagingItem}
+        setEditStagingItem={data.setEditStagingItem}
+        handleSaveStagingEdit={data.handleSaveStagingEdit}
         loadData={data.loadData}
         bulkExemptModalOpen={data.bulkExemptModalOpen}
         setBulkExemptModalOpen={data.setBulkExemptModalOpen}

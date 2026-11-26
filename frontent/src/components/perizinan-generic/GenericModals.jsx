@@ -5,6 +5,7 @@ import CsvImportModal from '../CsvImportModal';
 import ResolveDocumentModal from '../ResolveDocumentModal';
 import CertDetailModal from './CertDetailModal';
 import ModalAddLinkedCert from '../document-detail/ModalAddLinkedCert';
+import StagingEditModal from '../document-detail/StagingEditModal';
 
 export default function GenericModals({
   categoryName,
@@ -17,6 +18,9 @@ export default function GenericModals({
   handleCsvImported,
   resolveTargetItem,
   setResolveTargetItem,
+  editStagingItem,
+  setEditStagingItem,
+  handleSaveStagingEdit,
   loadData,
   bulkExemptModalOpen,
   setBulkExemptModalOpen,
@@ -54,6 +58,13 @@ export default function GenericModals({
         onClose={() => setResolveTargetItem(null)}
         item={resolveTargetItem}
         onSuccess={loadData}
+      />
+
+      <StagingEditModal
+        isOpen={!!editStagingItem}
+        onClose={() => setEditStagingItem(null)}
+        item={editStagingItem}
+        onSave={handleSaveStagingEdit}
       />
 
       <CertDetailModal

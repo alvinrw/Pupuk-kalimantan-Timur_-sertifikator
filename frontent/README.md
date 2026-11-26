@@ -1,4 +1,4 @@
-# 📖 Frontend — Inventor PKT (Sertifikator)
+# 📖 Frontend — Inventor PKT (PERISAI)
 
 > React + Vite + TailwindCSS 4.x frontend untuk sistem manajemen sertifikasi aset, peralatan pabrik, dan legalitas dokumen PKT.
 

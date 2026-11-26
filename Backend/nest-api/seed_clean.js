@@ -109,30 +109,6 @@ async function resetAndSeed() {
     }
   });
 
-  // 4. Sertifikat Ciptaan
-  await prisma.masterItem.create({
-    data: {
-      code: 'EC-001-2026',
-      title: 'Hak Cipta Sistem Monitoring Sertifikasi K3 (Sertifikator)',
-      categoryKey: 'sertifikat-ciptaan',
-      unitLocation: 'Direksi & TI',
-      status: 'Aktif',
-      keterangan: 'Hak Cipta Software',
-      certificates: {
-        create: [
-          {
-            jenisSertifikat: 'Sertifikat Hak Cipta',
-            noSertifikat: 'EC00202601928',
-            instansi: 'DJKI Kemenkumham RI',
-            terbit: '2026-01-15',
-            expired: '2076-01-15',
-            status: 'Aktif'
-          }
-        ]
-      }
-    }
-  });
-
   console.log('Database berhasil dibersihkan dan diisi data contoh per kategori!');
 }
 

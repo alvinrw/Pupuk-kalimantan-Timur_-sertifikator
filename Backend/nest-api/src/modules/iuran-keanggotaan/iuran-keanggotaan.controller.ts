@@ -9,14 +9,14 @@ import { PrismaService } from '../../database/prisma.service';
 
 @Controller('iuran-keanggotaan')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Super Admin', 'Admin', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'Viewer')
 export class IuranKeanggotaanController {
   constructor(
     private readonly iuranService: IuranKeanggotaanService,
     private readonly prisma: PrismaService,
   ) {}
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Post()
   async create(@Body() createIuranDto: CreateIuranDto, @Req() req: any) {
     const item = await this.iuranService.create(createIuranDto);
@@ -42,7 +42,7 @@ export class IuranKeanggotaanController {
     return this.iuranService.findOne(id);
   }
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateIuranDto: UpdateIuranDto, @Req() req: any) {
     const item = await this.iuranService.update(id, updateIuranDto);
@@ -58,7 +58,7 @@ export class IuranKeanggotaanController {
     return item;
   }
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Delete(':id')
   async remove(@Param('id') id: string, @Req() req: any) {
     const item = await this.iuranService.remove(id);

@@ -26,10 +26,13 @@ export default function PdfCanvasOcrViewer({
   scanMode,
   onScanComplete,
   onScanCancel,
+  autoDetectPage = false, // Prop baru untuk mengaktifkan pencarian halaman otomatis
 }) {
   const canvasRef = useRef(null);
   const pdfDocRef = useRef(null);
   const textLayerRef = useRef(null);
+  const renderTaskRef = useRef(null);
+  const cleanCanvasRef = useRef(null);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isOcrRunning, setIsOcrRunning] = useState(false);
@@ -38,6 +41,7 @@ export default function PdfCanvasOcrViewer({
   const [zoomLevel, setZoomLevel] = useState(1); // UI Zoom Level
   const [error, setError] = useState(null);
   const [ocrStatusMsg, setOcrStatusMsg] = useState('');
+  const [isAutoDetecting, setIsAutoDetecting] = useState(false); // State untuk loading pencarian halaman
 
   // Drag selection state
   const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, endX: 0, endY: 0 });
@@ -55,11 +59,13 @@ export default function PdfCanvasOcrViewer({
         setError(null);
 
         const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+        const workerUrl = await import('pdfjs-dist/build/pdf.worker.min.mjs?url');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl.default;
 
+        const isBlob = pdfUrl.startsWith('blob:');
         const loadingTask = pdfjsLib.getDocument({
           url: pdfUrl,
-          withCredentials: true,
+          withCredentials: !isBlob,
           cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/cmaps/`,
           cMapPacked: true,
         });
@@ -72,6 +78,11 @@ export default function PdfCanvasOcrViewer({
         setCurrentPage(1);
         setZoomLevel(1); // Reset zoom
         await renderPage(pdfDoc, 1, 1);
+
+        if (autoDetectPage) {
+          runAutoDetect(pdfDoc);
+        }
+
       } catch (err) {
         if (!cancelled) {
           console.error('PDF load error:', err);
@@ -82,9 +93,47 @@ export default function PdfCanvasOcrViewer({
       }
     };
 
+    const runAutoDetect = async (pdfDoc) => {
+      try {
+        if (cancelled) return;
+        setIsAutoDetecting(true);
+        const maxPagesToScan = Math.min(pdfDoc.numPages, 10); // Batasi scan max 10 halaman pertama
+        
+        let bestPage = 1;
+        let maxScore = 0;
+
+        for (let i = 1; i <= maxPagesToScan; i++) {
+          if (cancelled) break;
+          const page = await pdfDoc.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(item => item.str).join(' ').toLowerCase();
+
+          // Kriteria keyword pencarian
+          const keywords = ['sertifikat', 'certificate', 'izin', 'keputusan', 'peralatan', 'pabrik', 'berlaku'];
+          let score = 0;
+          keywords.forEach(kw => {
+            if (pageText.includes(kw)) score++;
+          });
+
+          if (score > maxScore) {
+            maxScore = score;
+            bestPage = i;
+          }
+        }
+
+        if (maxScore > 0 && bestPage !== 1) {
+          setCurrentPage(bestPage);
+        }
+      } catch (err) {
+        console.warn('Auto detect failed:', err);
+      } finally {
+        if (!cancelled) setIsAutoDetecting(false);
+      }
+    };
+
     loadPdf();
     return () => { cancelled = true; };
-  }, [pdfUrl]);
+  }, [pdfUrl, autoDetectPage]);
 
   // ─── Re-render saat halaman berubah atau zoom ─────────────────────────────
   useEffect(() => {
@@ -95,108 +144,102 @@ export default function PdfCanvasOcrViewer({
 
   // ─── Render halaman PDF ke canvas ─────────────────────────────────────────
   const renderPage = async (pdfDoc, pageNum, currentZoom) => {
+    if (renderTaskRef.current) {
+      renderTaskRef.current.cancel();
+      renderTaskRef.current = null;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const page = await pdfDoc.getPage(pageNum);
-    
-    // Gunakan scrollContainer (parent dari wrapper) untuk referensi baseScale
-    // agar ukurannya tidak ikut membesar secara rekursif saat canvas membesar.
-    const wrapper = canvas.parentElement;
-    const scrollContainer = wrapper?.parentElement;
-    const containerWidth = (scrollContainer?.clientWidth || 600) - 32; // kurangi padding
-
-    const viewport = page.getViewport({ scale: 1 });
-    const baseScale = containerWidth / viewport.width;
-    const finalScale = baseScale * currentZoom;
-
-    const scaledViewport = page.getViewport({ scale: finalScale });
-
-    const outputScale = window.devicePixelRatio || 2; // Gunakan minimum 2x untuk layar biasa agar tetap tajam
-
-    // Ukuran CSS (tampilan fisik di layar)
-    canvas.style.width = `${scaledViewport.width}px`;
-    canvas.style.height = `${scaledViewport.height}px`;
-
-    // Ukuran internal canvas (piksel asli)
-    canvas.width = Math.floor(scaledViewport.width * outputScale);
-    canvas.height = Math.floor(scaledViewport.height * outputScale);
-
-    if (selectionCanvasRef.current) {
-      selectionCanvasRef.current.style.width = `${scaledViewport.width}px`;
-      selectionCanvasRef.current.style.height = `${scaledViewport.height}px`;
-      // Selection canvas tidak butuh resolusi tinggi karena hanya untuk kotak seleksi drag
-      selectionCanvasRef.current.width = scaledViewport.width;
-      selectionCanvasRef.current.height = scaledViewport.height;
-    }
-
-    const ctx = canvas.getContext('2d');
-    
-    // Transform ctx agar pdf render mengikuti resolusi tinggi
-    const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
-
-    await page.render({ 
-      canvasContext: ctx, 
-      transform,
-      viewport: scaledViewport 
-    }).promise;
-
-    // ─── Render Text Layer untuk Native Selection ───
     try {
-      if (textLayerRef.current) {
-        textLayerRef.current.innerHTML = '';
-        const textContent = await page.getTextContent();
-        const pdfjsLib = await import('pdfjs-dist');
-        textLayerRef.current.style.setProperty('--scale-factor', finalScale);
-        textLayerRef.current.style.setProperty('--user-unit', '1');
-        textLayerRef.current.style.setProperty('--total-scale-factor', finalScale);
+      const page = await pdfDoc.getPage(pageNum);
 
-        const textLayer = new pdfjsLib.TextLayer({
-          textContentSource: textContent,
-          container: textLayerRef.current,
-          viewport: scaledViewport,
-        });
-        await textLayer.render();
-      }
-    } catch (e) {
-      console.warn('Text layer render failed:', e);
-    }
+      // Gunakan scrollContainer (parent dari wrapper) untuk referensi baseScale
+      // agar ukurannya tidak ikut membesar secara rekursif saat canvas membesar.
+      const wrapper = canvas.parentElement;
+      const scrollContainer = wrapper?.parentElement;
+      const containerWidth = (scrollContainer?.clientWidth || 600) - 32; // kurangi padding
 
-    // ─── Draw Watermark ───
-    try {
-      const userStr = sessionStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        const userName = user.name || user.nama || user.username || 'USER';
-        const userCode = user.nik || user.employeeId || 'PKT';
-        const dateStr = new Date().toLocaleString('id-ID', {
-          day: 'numeric',
-          month: 'numeric',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-        
-        const watermarkText = `DIKUNJUNGI OLEH ${userName.toUpperCase()} (${userCode}) PADA ${dateStr}`;
-        
-        ctx.save();
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.rotate(-Math.PI / 6); // -30 degrees
-        
-        const fontSize = Math.max(16, canvas.width / 25);
-        ctx.font = `bold ${fontSize}px sans-serif`;
-        ctx.fillStyle = 'rgba(220, 38, 38, 0.25)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        ctx.fillText(watermarkText, 0, 0);
-        ctx.fillText(watermarkText, 0, -canvas.height / 3);
-        ctx.fillText(watermarkText, 0, canvas.height / 3);
-        
-        ctx.restore();
+      const viewport = page.getViewport({ scale: 1 });
+      const baseScale = containerWidth / viewport.width;
+      const finalScale = baseScale * currentZoom;
+
+      const scaledViewport = page.getViewport({ scale: finalScale });
+
+      const outputScale = window.devicePixelRatio || 2; // Gunakan minimum 2x untuk layar biasa agar tetap tajam
+
+      // Ukuran CSS (tampilan fisik di layar)
+      canvas.style.width = `${scaledViewport.width}px`;
+      canvas.style.height = `${scaledViewport.height}px`;
+
+      // Ukuran internal canvas (piksel asli)
+      canvas.width = Math.floor(scaledViewport.width * outputScale);
+      canvas.height = Math.floor(scaledViewport.height * outputScale);
+
+      if (selectionCanvasRef.current) {
+        selectionCanvasRef.current.style.width = `${scaledViewport.width}px`;
+        selectionCanvasRef.current.style.height = `${scaledViewport.height}px`;
+        // Selection canvas tidak butuh resolusi tinggi karena hanya untuk kotak seleksi drag
+        selectionCanvasRef.current.width = scaledViewport.width;
+        selectionCanvasRef.current.height = scaledViewport.height;
       }
-    } catch (e) {
-      console.warn('Failed to draw watermark on canvas:', e);
+
+      if (!cleanCanvasRef.current) {
+        cleanCanvasRef.current = document.createElement('canvas');
+      }
+      const cleanCanvas = cleanCanvasRef.current;
+      cleanCanvas.width = canvas.width;
+      cleanCanvas.height = canvas.height;
+      const cleanCtx = cleanCanvas.getContext('2d');
+
+      // Transform ctx agar pdf render mengikuti resolusi tinggi
+      const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+
+      const renderTask = page.render({
+        canvasContext: cleanCtx,
+        transform,
+        viewport: scaledViewport
+      });
+      renderTaskRef.current = renderTask;
+      await renderTask.promise;
+      renderTaskRef.current = null;
+
+      // Copy clean PDF render to visible canvas for display
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(cleanCanvas, 0, 0);
+
+      // ─── Render Text Layer untuk Native Selection ───
+      try {
+        if (textLayerRef.current) {
+          textLayerRef.current.innerHTML = '';
+          const textContent = await page.getTextContent();
+          const pdfjsLib = await import('pdfjs-dist');
+          textLayerRef.current.style.setProperty('--scale-factor', finalScale);
+          textLayerRef.current.style.setProperty('--user-unit', '1');
+          textLayerRef.current.style.setProperty('--total-scale-factor', finalScale);
+
+          const textLayer = new pdfjsLib.TextLayer({
+            textContentSource: textContent,
+            container: textLayerRef.current,
+            viewport: scaledViewport,
+          });
+          await textLayer.render();
+        }
+      } catch (e) {
+        if (e?.name !== 'RenderingCancelledException') {
+          console.warn('Text layer render failed:', e);
+        }
+      }
+      // Watermark visual di display canvas dihilangkan agar pratinjau bersih saat upload/input data
+
+    } catch (err) {
+      if (err?.name === 'RenderingCancelledException') {
+        // Abaikan error pembatalan rendering
+        return;
+      }
+      console.error('Render page error:', err);
     }
   };
 
@@ -284,16 +327,16 @@ export default function PdfCanvasOcrViewer({
     // 1. Upscaling 4x agar teks super tajam + Margin (Padding)
     const scaleFactor = 4;
     const padding = 40; // Tesseract sangat butuh "ruang bernafas" (margin putih) di pinggiran teks
-    
+
     const cropCanvas = document.createElement('canvas');
     cropCanvas.width = (w * scaleFactor) + (padding * 2);
     cropCanvas.height = (h * scaleFactor) + (padding * 2);
     const cropCtx = cropCanvas.getContext('2d');
-    
+
     // Fill canvas dengan warna putih bersih sebagai background (padding)
     cropCtx.fillStyle = '#ffffff';
     cropCtx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
-    
+
     // Perlu mengalikan x, y, w, h dengan outputScale dari mainCanvas
     // karena ukuran fisik mainCanvas = ukuran logical * outputScale
     const outputScale = window.devicePixelRatio || 2;
@@ -304,9 +347,10 @@ export default function PdfCanvasOcrViewer({
 
     // Biarkan smoothing menyala (default)
     // cropCtx.imageSmoothingEnabled = false; 
-    
-    // Gambar potongan PDF di tengah-tengah area padding
-    cropCtx.drawImage(mainCanvas, sx, sy, sw, sh, padding, padding, w * scaleFactor, h * scaleFactor);
+
+    // Gambar potongan PDF murni (tanpa watermark) di tengah-tengah area padding untuk akurasi OCR 100%
+    const sourceCanvas = cleanCanvasRef.current || mainCanvas;
+    cropCtx.drawImage(sourceCanvas, sx, sy, sw, sh, padding, padding, w * scaleFactor, h * scaleFactor);
 
     // Filter Binarization (Hitam-Putih paksa) DIHAPUS.
     // PaddleOCR adalah AI Deep Learning yang dilatih dengan gambar RGB asli. 
@@ -319,21 +363,21 @@ export default function PdfCanvasOcrViewer({
 
       // Convert canvas ke Data URL untuk Tesseract.js
       const dataUrl = cropCanvas.toDataURL('image/png');
-      
+
       setOcrStatusMsg('Sedang mengekstrak teks dengan AI...');
-      
+
       // Menggunakan Tesseract.js secara lokal di browser
       const { data: { text } } = await Tesseract.recognize(dataUrl, 'ind+eng', {
         logger: m => console.log(m)
       });
-      
+
       setOcrStatusMsg('Selesai!');
       console.log('OCR Result:', text);
-      
+
       // Cleanup teks: hapus spasi berlebih
       const cleanText = (text || '').replace(/\n/g, ' ').trim();
       onScanComplete(scanMode, cleanText);
-      
+
       // Reset scan mode in Modal (parent will call onScanComplete which might not reset scanMode immediately, but ModalAddLinkedCert does reset it via onScanComplete callback if we pass the right signature)
       // Wait, ModalAddLinkedCert expects onScanComplete(text) if we change it?
       // In ModalAddLinkedCert: handleOcrResult = (text) => { ... }
@@ -419,6 +463,16 @@ export default function PdfCanvasOcrViewer({
           </div>
         )}
 
+        {isAutoDetecting && !isLoading && (
+          <div className="absolute top-4 right-4 bg-white/90 backdrop-blur shadow-lg border border-slate-200 rounded-lg p-3 z-30 flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-amber-500" />
+            <div>
+              <p className="text-xs font-bold text-slate-800">Mencari Halaman Sertifikat...</p>
+              <p className="text-[10px] text-slate-500">Menganalisis teks dokumen dengan AI</p>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 z-20 p-6 text-center">
             <FileText className="w-12 h-12 text-slate-300 mb-3" />
@@ -439,35 +493,35 @@ export default function PdfCanvasOcrViewer({
         )}
 
         {pdfUrl && (
-        <div className="relative w-max h-max mx-auto shadow-xl" style={{ lineHeight: 0 }}>
-          <canvas ref={canvasRef} className="block bg-white shadow-xl" />
+          <div className="relative w-max h-max mx-auto shadow-xl" style={{ lineHeight: 0 }}>
+            <canvas ref={canvasRef} className="block bg-white shadow-xl" />
 
-          <div 
-            ref={textLayerRef}
-            className="textLayer"
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: scanMode ? 'none' : 'auto',
-            }}
-          />
+            <div
+              ref={textLayerRef}
+              className="textLayer"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+                pointerEvents: scanMode ? 'none' : 'auto',
+              }}
+            />
 
-          <canvas
-            ref={selectionCanvasRef}
-            className="absolute top-0 left-0"
-            style={{ 
-              cursor: scanMode ? 'crosshair' : 'default',
-              pointerEvents: scanMode ? 'auto' : 'none'
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-          />
-        </div>
+            <canvas
+              ref={selectionCanvasRef}
+              className="absolute top-0 left-0"
+              style={{
+                cursor: scanMode ? 'crosshair' : 'default',
+                pointerEvents: scanMode ? 'auto' : 'none'
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+            />
+          </div>
         )}
 
         {/* OCR Running overlay */}

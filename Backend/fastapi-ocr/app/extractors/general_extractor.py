@@ -104,10 +104,11 @@ def parse_cert_number_python(raw_text: str):
             return cand.upper()
 
     patterns = [
-        r'([0-9]{2,}[\/\.][A-Za-z0-9\/\.\-]{4,40})',
-        r'(?i)(SK[-\s][A-Za-z0-9\-\/]{4,30})',
-        r'(?i)(CERT[-\s][A-Za-z0-9\-\/]{4,30})',
-        r'([A-Z]{2,6}[-\/][0-9]{2,4}[-\/][A-Za-z0-9\.\/-]{3,20})'
+        r'([0-9]{2,}[\/\.][A-Za-z0-9\/\.\-\s]{4,50})',
+        r'(?i)(SK[-\s][A-Za-z0-9\-\/\s]{4,30})',
+        r'(?i)(CERT[-\s][A-Za-z0-9\-\/\s]{4,30})',
+        r'([A-Z]{2,6}[-\/][0-9]{2,4}[-\/][A-Za-z0-9\.\/-\s]{3,20})',
+        r'([0-9\.]+\/\s*[0-9]+\s*\/\s*[A-Za-z0-9\-]+)'
     ]
     for p in patterns:
         m2 = re.search(p, clean)
@@ -121,16 +122,53 @@ def extract_general_cert(pdf_path: str, original_filename: str) -> dict:
     General OCR Extractor yang mencoba mengekstrak metadata dari dokumen apapun
     """
     doc = fitz.open(pdf_path)
-    page = doc[0]
-    pix = page.get_pixmap(dpi=200)
-    temp_img = f"temp_general_{os.getpid()}.png"
-    pix.save(temp_img)
-
+    
+    # Kumpulan keyword untuk memastikan ini adalah halaman sertifikat
+    cert_keywords = ['sertifikat', 'certificate', 'surat keterangan', 'memenuhi persyaratan', 'pengesahan', 'layak operasi', 'dtkt']
+    
+    full_text = ""
+    lines = []
+    
     try:
-        res, _ = ocr_engine(temp_img)
-        lines = [item[1].strip() for item in res] if res else []
-        full_text = "\n".join(lines)
+        max_pages_to_check = min(10, len(doc))
         
+        for i in range(max_pages_to_check):
+            page = doc[i]
+            
+            # 1. Coba deteksi teks asli dulu (sangat cepat)
+            page_text = page.get_text("text").lower()
+            score = sum(1 for kw in cert_keywords if kw in page_text)
+            
+            pix = page.get_pixmap(dpi=200)
+            temp_img_loop = f"temp_general_{os.getpid()}_{i}.png"
+            pix.save(temp_img_loop)
+            
+            try:
+                # 2. Jika teks asli tidak cukup meyakinkan, atau kosong (scanned), jalankan OCR
+                res, _ = ocr_engine(temp_img_loop)
+                page_lines = [item[1].strip() for item in res] if res else []
+                page_full_text = "\n".join(page_lines)
+                
+                ocr_score = sum(1 for kw in cert_keywords if kw in page_full_text.lower())
+                
+                # Jika halaman ini mengandung cukup banyak keyword sertifikat, jadikan ini sebagai halaman utama!
+                if score > 0 or ocr_score > 0 or (len(doc) == 1):
+                    lines = page_lines
+                    full_text = page_full_text
+                    os.remove(temp_img_loop)
+                    break
+                
+                # Jika ini halaman terakhir yang dicek dan belum ketemu juga, gunakan halaman terakhir ini sebagai fallback
+                if i == max_pages_to_check - 1:
+                    lines = page_lines
+                    full_text = page_full_text
+                    
+            except Exception as e:
+                pass
+            finally:
+                if os.path.exists(temp_img_loop):
+                    os.remove(temp_img_loop)
+            
         # 1. Coba cari Baris yang berisi tanggal
         tanggal_terbit_iso = None
         for l in lines:
@@ -203,6 +241,3 @@ def extract_general_cert(pdf_path: str, original_filename: str) -> dict:
         with open("logs/ocr_errors.log", "a") as f:
             f.write(f"[{datetime.now()}] ERROR General OCR on {original_filename}: {str(e)}\n")
         raise e
-    finally:
-        if os.path.exists(temp_img):
-            os.remove(temp_img)

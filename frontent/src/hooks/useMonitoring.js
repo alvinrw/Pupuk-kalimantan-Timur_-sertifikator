@@ -36,7 +36,7 @@ export function useMonitoring() {
   const [isLoading, setIsLoading] = useState(true);
 
   // Quick Action Modals State
-  const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
+  const [isDecommissionedModalOpen, setIsDecommissionedModalOpen] = useState(false);
   const [isAktifkanModalOpen, setIsAktifkanModalOpen] = useState(false);
   const [isRenewConfirmModalOpen, setIsRenewConfirmModalOpen] = useState(false);
   const [isCancelRenewModalOpen, setIsCancelRenewModalOpen] = useState(false);
@@ -57,6 +57,7 @@ export function useMonitoring() {
 
   // OCR Extracted & Editable Fields
   const [newCertNumber, setNewCertNumber] = useState('');
+  const [instansi, setInstansi] = useState('');
   const [inspectionDate, setInspectionDate] = useState('');
   const [issueDate, setIssueDate] = useState('');
   const [newExpiryDate, setNewExpiryDate] = useState('');
@@ -70,22 +71,30 @@ export function useMonitoring() {
       setCountTanpaSertifikat(exemptCount);
       
       const parseCustomDate = (dStr) => {
-        if (!dStr || dStr === '-' || dStr === '2030-01-01' || dStr.trim() === '') return null;
+        if (!dStr || dStr === '-' || dStr === '2030-01-01' || String(dStr).trim() === '') return null;
         if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) return new Date(dStr);
         
-        // DD/MM/YYYY
-        if (/^\d{2}\/\d{2}\/\d{4}$/.test(dStr)) {
+        // 4-digit year: DD/MM/YYYY or MM/DD/YYYY
+        if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dStr)) {
           const parts = dStr.split('/');
-          return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0]));
+          const p0 = parseInt(parts[0]);
+          const p1 = parseInt(parts[1]);
+          const y = parseInt(parts[2]);
+          if (p0 > 12) return new Date(y, p1 - 1, p0);
+          if (p1 > 12) return new Date(y, p0 - 1, p1);
+          return new Date(y, p1 - 1, p0);
         }
         
-        // M/D/YY or MM/DD/YY
+        // 2-digit year: M/D/YY or DD/MM/YY
         if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(dStr)) {
           const parts = dStr.split('/');
-          const year = 2000 + parseInt(parts[2]);
-          const month = parseInt(parts[0]) - 1;
-          const day = parseInt(parts[1]);
-          return new Date(year, month, day);
+          const p0 = parseInt(parts[0]);
+          const p1 = parseInt(parts[1]);
+          const rawY = parseInt(parts[2]);
+          const y = (rawY > 30 ? 1900 : 2000) + rawY;
+          if (p0 > 12) return new Date(y, p1 - 1, p0);
+          if (p1 > 12) return new Date(y, p0 - 1, p1);
+          return new Date(y, p1 - 1, p0);
         }
         
         const d = new Date(dStr);
@@ -111,10 +120,10 @@ export function useMonitoring() {
       const getWfStatus = (st, docSt, certSt, hasCert) => {
          const lowerSt = (st || '').toLowerCase();
          const lowerCertSt = (certSt || '').toLowerCase();
-         if (lowerCertSt === 'afkir' || lowerCertSt === 'decommissioned' || lowerCertSt === 'dicabut') return 'decommissioned';
+         if (lowerCertSt === 'decommissioned' || lowerCertSt === 'decommissioned' || lowerCertSt === 'dicabut') return 'decommissioned';
          if (lowerCertSt === 'perpanjang' || lowerCertSt === 'perpanjangan' || lowerCertSt === 'in progress' || lowerCertSt === 'in_progress') return 'in_progress';
 
-         if (lowerSt === 'afkir' || lowerSt === 'decommissioned') return 'decommissioned';
+         if (lowerSt === 'decommissioned' || lowerSt === 'decommissioned') return 'decommissioned';
          if (lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress') return 'in_progress';
          if (docSt === 'EXEMPT' && !hasCert) return 'exempt';
          return 'completed';
@@ -122,7 +131,7 @@ export function useMonitoring() {
 
       const formatStatus = (rawStatus, catKey, certSt) => {
         const lowerCertSt = (certSt || '').toLowerCase();
-        if (lowerCertSt === 'afkir' || lowerCertSt === 'decommissioned' || lowerCertSt === 'dicabut') return 'Afkir';
+        if (lowerCertSt === 'decommissioned' || lowerCertSt === 'decommissioned' || lowerCertSt === 'dicabut') return 'Decommissioned';
         if (lowerCertSt === 'perpanjang' || lowerCertSt === 'perpanjangan' || lowerCertSt === 'in progress') return 'Perpanjang';
 
         if (catKey === 'perizinan-proyek') {
@@ -163,6 +172,24 @@ export function useMonitoring() {
           return rawDateStr;
         };
 
+        let meta = {};
+        try {
+          if (item.keterangan && item.keterangan.startsWith('{')) {
+            meta = JSON.parse(item.keterangan);
+          }
+        } catch (_) {}
+
+        const catKeyLower = String(item.categoryKey || '').toLowerCase();
+        const isAdm = catKeyLower === 'administrasi-lainnya' || catKeyLower === 'sertifikat-ciptaan' || catKeyLower === 'hak-cipta' || catKeyLower === 'hak-paten' || catKeyLower.includes('administrasi');
+
+        let resolvedJenis = meta.additionalEntities?.find(e => e.key.toUpperCase() === 'JENIS PERALATAN PABRIK')?.value || meta.jenisPeralatan || meta.tipe || item.jenisPeralatan;
+        if (isAdm) {
+          const checkStr = `${resolvedJenis || ''} ${item.title || ''} ${item.description || ''} ${meta.tipe || ''}`.toLowerCase();
+          resolvedJenis = checkStr.includes('paten') ? 'Hak Paten' : 'Hak Cipta';
+        } else if (!resolvedJenis) {
+          resolvedJenis = item.categoryKey === 'peralatan-pabrik' ? 'Peralatan Pabrik' : (item.categoryKey || 'Peralatan');
+        }
+
         const mapToRow = (targetCert) => {
           const rawTerbit = targetCert?.terbit || item.issueDate || '-';
           const terbitVal = formatToDDMMYYYY(rawTerbit);
@@ -180,10 +207,10 @@ export function useMonitoring() {
             id: targetCert?.id || item.id,
             MasterId: item.id,
             no: flattened.length + 1,
-            categoryKey: item.categoryKey || 'Lainnya',
-            kategoriDokumen: item.categoryKey || 'Lainnya',
-            jenisItem: item.categoryKey || 'Peralatan',
-            jenisPeralatan: item.categoryKey || 'Peralatan',
+            categoryKey: isAdm ? 'administrasi-lainnya' : (item.categoryKey || 'Lainnya'),
+            kategoriDokumen: isAdm ? 'Perizinan Administrasi Lainnya' : (item.categoryKey || 'Lainnya'),
+            jenisItem: resolvedJenis,
+            jenisPeralatan: resolvedJenis,
             merekItem: displayName,
             tipe: item.categoryKey || '-',
             code: item.code || item.id,
@@ -399,7 +426,7 @@ export function useMonitoring() {
     const item = allCertificates.find(c => c.id === id);
     if (item) {
       setActiveItemForAction(item);
-      setIsAfkirModalOpen(true);
+      setIsDecommissionedModalOpen(true);
     }
   };
 
@@ -409,23 +436,23 @@ export function useMonitoring() {
     try {
       const targetId = activeItemForAction.MasterId || activeItemForAction.id;
       if (activeItemForAction.primaryCertId) {
-        await updateCertificate(activeItemForAction.primaryCertId, { status: 'Afkir' });
+        await updateCertificate(activeItemForAction.primaryCertId, { status: 'Decommissioned' });
       }
       if (activeItemForAction.categoryKey === 'peralatan-pabrik') {
-        await updateMasterItem(targetId, { status: 'Afkir' });
+        await updateMasterItem(targetId, { status: 'Decommissioned' });
       }
       await fetchMonitoringData();
-      setIsAfkirModalOpen(false);
+      setIsDecommissionedModalOpen(false);
     } catch (err) {
-      console.error('Failed to update status to Afkir:', err);
-      alert('Gagal mengubah status menjadi Afkir: ' + (err.message || 'Error'));
+      console.error('Failed to update status to Decommissioned:', err);
+      alert('Gagal mengubah status menjadi Decommissioned: ' + (err.message || 'Error'));
     } finally {
       setIsProcessingAction(false);
       setActiveItemForAction(null);
     }
   };
 
-  const handleCancelAfkir = (id) => {
+  const handleCancelDecommissioned = (id) => {
     const item = allCertificates.find(c => c.id === id);
     if (item) {
       setActiveItemForAction(item);
@@ -433,7 +460,7 @@ export function useMonitoring() {
     }
   };
 
-  const confirmCancelAfkir = async () => {
+  const confirmCancelDecommissioned = async () => {
     if (!activeItemForAction) return;
     setIsProcessingAction(true);
     try {
@@ -492,11 +519,12 @@ export function useMonitoring() {
     setIsOcrScanning(false);
     setOcrSuccess(false);
 
-    setNewCertNumber(item.certificateNo || '');
+    setNewCertNumber(item.certificateNo || item.noSertifikat || '');
+    setInstansi(item.instansiPenerbit && item.instansiPenerbit !== '-' ? item.instansiPenerbit : (item.instansi || ''));
     setInspectionDate(item.inspectionDate || "2026-04-10");
     setIssueDate(item.issueDate || "2026-04-15");
     setNewExpiryDate("2028-04-15");
-    setResertifikasiNotes("Perpanjangan selesai. File sertifikat baru telah diunggah dan terverifikasi oleh OCR.");
+    setResertifikasiNotes(item.keterangan && item.keterangan !== '-' ? item.keterangan : "Perpanjangan selesai. File sertifikat baru telah diunggah dan terverifikasi.");
   };
 
   const handleFileSelect = (e) => {
@@ -524,11 +552,29 @@ export function useMonitoring() {
 
       const targetId = activeModalItem.MasterId || activeModalItem.id;
 
+      // Extract existing meta to preserve other JSON metadata
+      let existingMeta = {};
+      try {
+        const rawKet = activeModalItem.rawItem?.keterangan || activeModalItem.keterangan;
+        if (rawKet && typeof rawKet === 'string' && rawKet.startsWith('{')) {
+          existingMeta = JSON.parse(rawKet);
+        }
+      } catch (_) {}
+
+      const updatedMeta = {
+        ...existingMeta,
+        keteranganAsli: resertifikasiNotes || existingMeta.keteranganAsli || '-',
+        instansi: instansi || activeModalItem.instansiPenerbit || existingMeta.instansi || '',
+        noSertifikat: newCertNumber || existingMeta.noSertifikat || '',
+      };
+
       const certPayload = {
         itemId: targetId,
         jenisSertifikat: activeModalItem.jenisSertifikat || activeModalItem.jenisPeralatan || 'Riksa Uji Disnaker',
         namaSertifikat: activeModalItem.namaSertifikat !== '-' ? activeModalItem.namaSertifikat : undefined,
         noSertifikat: newCertNumber || activeModalItem.noSertifikat || `CERT-${Date.now()}`,
+        instansi: instansi || activeModalItem.instansiPenerbit || activeModalItem.instansi || undefined,
+        keterangan: resertifikasiNotes || undefined,
         status: 'Aktif',
       };
       if (issueDate) certPayload.terbit = issueDate;
@@ -547,6 +593,8 @@ export function useMonitoring() {
         status: 'Aktif',
         issueDate: issueDate || activeModalItem.tglTerbit,
         expiryDate: newExpiryDate || activeModalItem.tglExpired,
+        keterangan: JSON.stringify(updatedMeta),
+        documentStatus: 'COMPLETED'
       });
 
       await fetchMonitoringData();
@@ -554,6 +602,7 @@ export function useMonitoring() {
       setActiveModalItem(null);
       setUploadedFile(null);
       setNewCertNumber("");
+      setInstansi("");
       setInspectionDate("");
       setIssueDate("");
       setNewExpiryDate("");
@@ -583,7 +632,7 @@ export function useMonitoring() {
   const countTotal = countAdaSertifikat + countTanpaSertifikat;
 
   const handleExportCSV = (data) => {
-    const headers = ['No', 'Kategori', 'Jenis', 'Unit', 'Merek/Nama', 'No Seri', 'No Sertifikat', 'Tgl Expired', 'Sisa Hari', 'Status'];
+    const headers = ['No', 'Kategori', 'Jenis', 'Unit', 'Alat', 'No Seri', 'No Sertifikat', 'Tgl Expired', 'Sisa Hari', 'Status'];
     const rows = data.map((doc, idx) => [
       idx + 1,
       doc.kategoriDokumen || doc.kategori || '-',
@@ -638,13 +687,14 @@ export function useMonitoring() {
     ocrSuccess, setOcrSuccess,
     allCertificates, setAllCertificates,
     isLoading, setIsLoading,
-    isAfkirModalOpen, setIsAfkirModalOpen,
+    isDecommissionedModalOpen, setIsDecommissionedModalOpen,
     isAktifkanModalOpen, setIsAktifkanModalOpen,
     isRenewConfirmModalOpen, setIsRenewConfirmModalOpen,
     isCancelRenewModalOpen, setIsCancelRenewModalOpen,
     activeItemForAction, setActiveItemForAction,
     isProcessingAction, setIsProcessingAction,
     newCertNumber, setNewCertNumber,
+    instansi, setInstansi,
     inspectionDate, setInspectionDate,
     issueDate, setIssueDate,
     newExpiryDate, setNewExpiryDate,
@@ -664,8 +714,8 @@ export function useMonitoring() {
     confirmQuickRenew,
     handleQuickDecommission,
     confirmQuickDecommission,
-    handleCancelAfkir,
-    confirmCancelAfkir,
+    handleCancelDecommissioned,
+    confirmCancelDecommissioned,
     handleCancelAction,
     confirmCancelRenew,
     openCompleteModal,

@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useRef, useEffect } from 'react';
 import { X, UploadCloud, FileText, Loader2, Sparkles, AlertTriangle, CheckCircle, Crosshair } from 'lucide-react';
 import { API_BASE, getFullFileUrl } from '../../config/api';
@@ -11,19 +12,20 @@ export default function UploadRenewalModal({
   uploadedFile, isOcrScanning, ocrSuccess, ocrErrorMsg,
   handleFileSelect,
   newCertNumber, setNewCertNumber,
+  instansi, setInstansi,
   inspectionDate, setInspectionDate,
   issueDate, setIssueDate,
   newExpiryDate, setNewExpiryDate,
   resertifikasiNotes, setResertifikasiNotes,
   handleConfirmUploadRenewal
 }) {
-  if (!activeModalItem) return null;
-
   // Local state for temp uploading
   const [tempUrl, setTempUrl] = useState(null);
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [scanMode, setScanMode] = useState(null);
+
+  if (!activeModalItem) return null;
 
   const handleOcrResult = async (fieldKey, rawText) => {
     try {
@@ -32,6 +34,8 @@ export default function UploadRenewalModal({
       if (fieldKey === 'noSertifikat') {
         const certNo = parseCertificateNumber(rawText);
         setNewCertNumber(certNo || rawText.replace(/\n+/g, ' ').trim());
+      } else if (fieldKey === 'instansi') {
+        setInstansi(rawText.replace(/\n+/g, ' ').trim());
       } else if (fieldKey === 'terbit') {
         const parsed = parseDate(rawText);
         if (parsed) setIssueDate(parsed.iso);
@@ -67,16 +71,14 @@ export default function UploadRenewalModal({
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      // Mock event object for onFileChange
       onFileChange({ target: { files: [file] } });
     }
   };
 
-  // Intercept file selection to upload to temp bucket
+  // Intercept file selection to upload to temp bucket & run OCR
   const onFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      // call parent's handleFileSelect first to update their state (if they do anything)
       handleFileSelect(e);
       
       setTempUrl(null);
@@ -94,13 +96,36 @@ export default function UploadRenewalModal({
           if (uploadRes.ok) {
             const json = await uploadRes.json();
             setTempUrl(json.data.url);
+
+            // Auto-Extract OCR
+            try {
+              const fdOcr = new FormData();
+              fdOcr.append('file', file);
+              const ocrRes = await fetch(`${API_BASE}/ocr/scan-pdf`, {
+                method: 'POST',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: fdOcr
+              });
+              if (ocrRes.ok) {
+                const ocrJson = await ocrRes.json();
+                if (ocrJson.success && ocrJson.data) {
+                  const ex = ocrJson.data;
+                  if (ex.noSertifikat && !newCertNumber) setNewCertNumber(ex.noSertifikat);
+                  if (ex.terbit && !issueDate) setIssueDate(ex.terbit);
+                  if (ex.expired && !newExpiryDate) setNewExpiryDate(ex.expired);
+                  if (ex.instansi && !instansi) setInstansi(ex.instansi);
+                }
+              }
+            } catch (ocrErr) {
+              console.error('OCR auto scan failed:', ocrErr);
+            }
           } else {
             const errJson = await uploadRes.json().catch(() => ({}));
-            alert(`Gagal memuat preview dokumen (Error ${uploadRes.status}): ${errJson.message || uploadRes.statusText}`);
+            toast.error(`Gagal memuat preview dokumen (Error ${uploadRes.status}): ${errJson.message || uploadRes.statusText}`);
           }
         } catch (err) {
           console.error('Upload temp error:', err);
-          alert('Terjadi kesalahan jaringan saat memuat preview dokumen: ' + err.message);
+          toast.error('Terjadi kesalahan jaringan saat memuat preview dokumen: ' + err.message);
         } finally {
           setIsUploadingTemp(false);
         }
@@ -207,37 +232,65 @@ export default function UploadRenewalModal({
                     )}
                   </div>
                 )}
+              </div>
                 
               <div>
-              <label className="font-bold text-slate-900 block mb-1">
-                2. Nomor Sertifikat Baru <span className="text-[10px] font-normal text-slate-500">(Auto-OCR / Editable)</span>
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newCertNumber}
-                  onChange={(e) => setNewCertNumber(e.target.value)}
-                  placeholder="Nomor SK / Sertifikat baru..."
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-bold text-slate-900 text-xs"
-                />
-                <button
-                  type="button"
-                  onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
-                  className={`p-2 rounded-lg border shrink-0 transition-all ${
-                    scanMode === 'noSertifikat' 
-                    ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
-                    : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
-                  }`}
-                  title="Drag-select No. Sertifikat"
-                >
-                  <Crosshair className="w-4 h-4" />
-                </button>
+                <label className="font-bold text-slate-900 block mb-1">
+                  2. Nomor Sertifikat Baru <span className="text-[10px] font-normal text-slate-500">(Auto-OCR / Editable)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCertNumber}
+                    onChange={(e) => setNewCertNumber(e.target.value)}
+                    placeholder="Nomor SK / Sertifikat baru..."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-bold text-slate-900 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all cursor-pointer ${
+                      scanMode === 'noSertifikat' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select No. Sertifikat"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="font-bold text-slate-900 block mb-1">
+                  3. Instansi Penerbit <span className="text-[10px] font-normal text-slate-500">(Auto-OCR / Editable)</span>
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={instansi}
+                    onChange={(e) => setInstansi(e.target.value)}
+                    placeholder="Disnaker Kaltim"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-medium text-slate-900 text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setScanMode(scanMode === 'instansi' ? null : 'instansi')}
+                    className={`p-2 rounded-lg border shrink-0 transition-all cursor-pointer ${
+                      scanMode === 'instansi' 
+                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+                    }`}
+                    title="Drag-select Instansi Penerbit"
+                  >
+                    <Crosshair className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-slate-900 block mb-1">3. Tgl Terbit SK</label>
+                  <label className="font-bold text-slate-900 block mb-1">4. Tgl Terbit SK</label>
                   <div className="flex gap-1.5">
                     <input
                       type="date" required
@@ -248,7 +301,7 @@ export default function UploadRenewalModal({
                     <button
                       type="button"
                       onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
-                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      className={`p-2 rounded-lg border shrink-0 transition-all cursor-pointer ${
                         scanMode === 'terbit' 
                         ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
                         : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
@@ -260,7 +313,7 @@ export default function UploadRenewalModal({
                   </div>
                 </div>
                 <div>
-                  <label className="font-bold text-slate-900 block mb-1 text-rose-700">4. Tgl Expired Baru</label>
+                  <label className="font-bold text-slate-900 block mb-1 text-rose-700">5. Tgl Expired Baru</label>
                   <div className="flex gap-1.5">
                     <input
                       type="date" required
@@ -271,7 +324,7 @@ export default function UploadRenewalModal({
                     <button
                       type="button"
                       onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
-                      className={`p-2 rounded-lg border shrink-0 transition-all ${
+                      className={`p-2 rounded-lg border shrink-0 transition-all cursor-pointer ${
                         scanMode === 'expired' 
                         ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
                         : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
@@ -283,15 +336,14 @@ export default function UploadRenewalModal({
                   </div>
                 </div>
               </div>
-              </div>
 
               <div>
-                <label className="font-bold text-slate-900 block mb-1">6. Catatan Verifikasi</label>
+                <label className="font-bold text-slate-900 block mb-1">6. Keterangan Verifikasi</label>
                 <textarea
-                  rows="2" required
+                  rows="2"
                   value={resertifikasiNotes}
                   onChange={(e) => setResertifikasiNotes(e.target.value)}
-                  placeholder="Misal: Perpanjangan selesai..."
+                  placeholder="Perpanjangan selesai..."
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
                 />
               </div>
@@ -321,11 +373,13 @@ export default function UploadRenewalModal({
 
           {/* Sisi Kanan: Preview PDF */}
           <div className="hidden md:flex flex-col w-[55%] bg-slate-100 relative">
-            <div className="absolute top-0 inset-x-0 h-10 bg-slate-800 flex items-center px-4 text-white font-mono-data text-xs font-bold gap-2 z-10 shadow-md">
+            {!tempUrl && (
+              <div className="absolute top-0 inset-x-0 h-10 bg-slate-800 flex items-center px-4 text-white font-mono-data text-xs font-bold gap-2 z-10 shadow-md">
               <FileText className="w-4 h-4" />
               Preview PDF (Live Verification)
             </div>
-            <div className="flex-1 w-full h-full pt-10">
+            )}
+            <div className={`flex-1 w-full h-full ${tempUrl ? '' : 'pt-10'}`}>
               {tempUrl ? (
                 <PdfCanvasOcrViewer
                   pdfUrl={tempUrl ? getFullFileUrl(tempUrl) : null}

@@ -37,6 +37,7 @@ export default function DocumentDetailPage({
     onDeleteSuccess,
     onRefreshRequired,
     initialCertId,
+    hideLinkedCertificates,
   });
 
   // Null-guard setelah hooks
@@ -45,11 +46,13 @@ export default function DocumentDetailPage({
   const {
     isEditing,
     isMultiCertItem,
+    isMasterView,
     linkedCerts,
     activeCertId, setActiveCertId,
     setIsAddCertModalOpen,
     setDeletingLinkedCertId,
-    sortDateOrder, setSortDateOrder
+    sortDateOrder, setSortDateOrder,
+    effectiveCategoryKey
   } = hook;
 
   return (
@@ -63,10 +66,10 @@ export default function DocumentDetailPage({
         <DocumentFormFields hook={hook} item={item} />
 
         {/* READ-ONLY DETAIL VIEW (spec, notifikasi, legalitas, histori) */}
-        {!isEditing && <DocumentReadView hook={hook} item={item} />}
+        {!isEditing && <DocumentReadView hook={hook} item={item} hideLinkedCertificates={hideLinkedCertificates} />}
 
         {/* MULTI-CERT HUB: Sertifikat Terhubung */}
-        {!isEditing && isMultiCertItem && !hideLinkedCertificates && (
+        {!isEditing && isMultiCertItem && !hideLinkedCertificates && effectiveCategoryKey !== 'peralatan-pabrik' && effectiveCategoryKey !== 'administrasi-lainnya' && (
           <CertificateNavCards
             linkedCerts={linkedCerts}
             activeCertId={activeCertId}
@@ -75,11 +78,12 @@ export default function DocumentDetailPage({
             onDeleteCert={(id) => setDeletingLinkedCertId(id)}
             sortDateOrder={sortDateOrder}
             setSortDateOrder={setSortDateOrder}
+            categoryKey={effectiveCategoryKey}
           />
         )}
 
         {/* HISTORY SECTION (Moved to bottom) */}
-        {!isEditing && (
+        {!isEditing && !(isMasterView && effectiveCategoryKey !== 'peralatan-pabrik' && !hook.isHaki) && (
           <CertHistorySection
             historyList={hook.historyList}
             isLoadingHistory={hook.isLoadingHistory}
@@ -87,7 +91,9 @@ export default function DocumentDetailPage({
             setEditingHistoryRow={hook.setEditingHistoryRow}
             setSelectedHistoryToDelete={hook.setSelectedHistoryToDelete}
             handleRestoreCert={hook.handleRestoreCert}
-            isAfkirStatus={hook.isAfkirStatus}
+            isDecommissionedStatus={hook.isDecommissionedStatus}
+            primaryCert={hook.primaryCert}
+            isMasterDecommissioned={hook.isDecommissionedStatus}
           />
         )}
 

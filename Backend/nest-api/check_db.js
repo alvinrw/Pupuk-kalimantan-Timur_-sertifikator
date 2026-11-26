@@ -1,16 +1,17 @@
-const { PrismaClient } = require('@prisma/client');
+// @ts-nocheck
+const prismaPkg = '@prisma/client';
+const { PrismaClient } = require(prismaPkg);
 const prisma = new PrismaClient();
 
-async function check() {
-  const items = await prisma.masterItem.findMany({
-    select: { id: true, categoryKey: true, documentStatus: true }
+async function main() {
+  const keanggotaan = await prisma.columnConfig.findMany({
+    where: { categoryKey: 'iuran-keanggotaan' },
+    orderBy: { position: 'asc' }
   });
-  console.log('Total items:', items.length);
-  
-  const statusCounts = {};
-  items.forEach(i => {
-    statusCounts[i.documentStatus] = (statusCounts[i.documentStatus] || 0) + 1;
-  });
-  console.log('documentStatus counts:', statusCounts);
+  console.log('=== KEANGGOTAAN COLUMNS IN DB ===');
+  console.table(keanggotaan.map(c => ({ position: c.position, fieldKey: c.fieldKey, label: c.label, isCustom: c.isCustom })));
 }
-check().finally(() => prisma.());
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());

@@ -81,7 +81,7 @@ export default function AturKolomBaris({ categoryKey: propCategoryKey, onBack })
 
       <div className="max-w-7xl mx-auto px-8 mt-8 space-y-6">
         {/* Toggle Mode: Master vs Child */}
-        {propCategoryKey !== 'peralatan-pabrik' && (
+        {['perizinan-aset', 'perizinan-proyek', 'perizinan-produk'].includes(propCategoryKey) && (
           <div className="flex bg-white rounded-xl shadow-2xs p-1.5 w-fit border border-slate-200">
             <button
               onClick={() => {

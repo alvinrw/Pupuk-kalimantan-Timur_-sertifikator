@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 // hooks/useAdministrasiLainnya.js
 // Business logic hook untuk halaman Administrasi & Perizinan Ciptaan (HAKI)
 // Diekstrak dari pages/AdministrasiLainnya.jsx untuk memisahkan logic dari UI
@@ -219,7 +220,7 @@ export default function useAdministrasiLainnya() {
   // ─── Row Status Style Helper ──────────────────────────────────
   const getRowStatusStyle = (item) => {
     const statusStr = (item.status || '').toLowerCase();
-    if (statusStr === 'afkir' || statusStr === 'decommissioned')
+    if (statusStr === 'decommissioned' || statusStr === 'decommissioned')
       return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
     if (statusStr === 'expired')
       return 'bg-rose-50/90 text-rose-950 hover:bg-rose-100 border-b border-rose-200';
@@ -250,7 +251,7 @@ export default function useAdministrasiLainnya() {
       await loadData();
     } catch (err) {
       console.error(err);
-      alert('Gagal melakukan bulk action.');
+      toast.error('Gagal melakukan bulk action.');
     } finally {
       setIsSubmittingBulkExempt(false);
     }
@@ -279,15 +280,26 @@ export default function useAdministrasiLainnya() {
 
   const handleSingleAdded = async (newItem) => {
     try {
+      const extraData = {
+        tipe: newItem.tipe || '',
+        nomorSeri: newItem.code || '',
+        penanggungJawab: newItem.user || 'Umum',
+        noSertifikat: newItem.noSertifikat || '',
+        namaSertifikat: newItem.namaSertifikat || '',
+        instansi: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
+        instansiPenerbit: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
+        keteranganAsli: newItem.keterangan || '-'
+      };
+
       const createdItem = await createMasterItem({
-        title: newItem.judulCiptaan || 'Unknown Item',
-        code: newItem.noSertifikat || '-',
+        title: newItem.title || newItem.judulCiptaan || 'Unknown Item',
+        code: newItem.code || newItem.noSertifikat || '-',
         categoryKey: CATEGORY_KEY,
-        unitLocation: 'Umum',
-        status: 'Aktif',
-        keterangan: 'Data Manual Input',
-        issueDate: newItem.tanggalCiptaan || undefined,
-        expiryDate: newItem.expiryDate || undefined,
+        unitLocation: newItem.unitLocation || 'Umum',
+        status: newItem.status || 'Aktif',
+        keterangan: JSON.stringify(extraData),
+        issueDate: newItem.terbit || newItem.tanggalCiptaan || undefined,
+        expiryDate: newItem.expired || newItem.expiryDate || undefined,
         documentStatus: newItem.documentStatus,
       });
 
@@ -319,6 +331,8 @@ export default function useAdministrasiLainnya() {
           terbit: newItem.tanggalCiptaan || undefined,
           expired: newItem.expiryDate || undefined,
           fileUrl,
+          instansi: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
+          keterangan: (newItem.keterangan && newItem.keterangan !== '-') ? newItem.keterangan : undefined,
         });
       }
 
@@ -326,7 +340,7 @@ export default function useAdministrasiLainnya() {
       loadData();
     } catch (error) {
       console.error(error);
-      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
+      toast.error(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
     }
   };
 
@@ -342,10 +356,10 @@ export default function useAdministrasiLainnya() {
     try {
       await deleteMasterItem(pendingDeleteRowId);
       setCiptaanList((prev) => prev.filter((item) => item.id !== pendingDeleteRowId));
-      alert('Baris berhasil dihapus dari database.');
+      toast.success('Baris berhasil dihapus dari database.');
     } catch (error) {
       console.error(error);
-      alert('Gagal menghapus baris dari database.');
+      toast.error('Gagal menghapus baris dari database.');
     } finally {
       setRowConfirmModalOpen(false);
       setPendingDeleteRowId(null);
@@ -371,7 +385,7 @@ export default function useAdministrasiLainnya() {
         return eq;
       })
     );
-    alert(
+    toast.success(
       `Sertifikat ${reassignCertRowItem.noSertifikat} berhasil dipindahkan ke ${selectedNewTargetItem.judulCiptaan}!`
     );
     setReassignCertRowItem(null);
@@ -457,7 +471,6 @@ export default function useAdministrasiLainnya() {
     // Handlers
     loadData,
     handleCsvImported,
-    handleZipMatched,
     handleSingleAdded,
     sortDateOrder,
     setSortDateOrder,

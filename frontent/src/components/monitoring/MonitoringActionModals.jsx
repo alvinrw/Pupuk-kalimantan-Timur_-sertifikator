@@ -4,8 +4,8 @@ import { Ban, RotateCcw, X } from 'lucide-react';
 
 export default function MonitoringActionModals({
   // Modal states
-  isAfkirModalOpen,
-  setIsAfkirModalOpen,
+  isDecommissionedModalOpen,
+  setIsDecommissionedModalOpen,
   isAktifkanModalOpen,
   setIsAktifkanModalOpen,
   isRenewConfirmModalOpen,
@@ -21,7 +21,7 @@ export default function MonitoringActionModals({
 
   // Handlers for quick actions
   confirmQuickDecommission,
-  confirmCancelAfkir,
+  confirmCancelDecommissioned,
   confirmQuickRenew,
   confirmCancelRenew,
 
@@ -32,6 +32,8 @@ export default function MonitoringActionModals({
   ocrSuccess,
   newCertNumber,
   setNewCertNumber,
+  instansi,
+  setInstansi,
   issueDate,
   setIssueDate,
   newExpiryDate,
@@ -43,7 +45,7 @@ export default function MonitoringActionModals({
   return (
     <>
       {/* NONAKTIF CONFIRMATION MODAL */}
-      {isAfkirModalOpen && activeItemForAction && (
+      {isDecommissionedModalOpen && activeItemForAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
             <div className="p-5 text-center space-y-3">
@@ -58,7 +60,7 @@ export default function MonitoringActionModals({
               <div className="flex justify-center gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setIsAfkirModalOpen(false)}
+                  onClick={() => setIsDecommissionedModalOpen(false)}
                   disabled={isProcessingAction}
                   className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs transition-colors"
                 >
@@ -102,7 +104,7 @@ export default function MonitoringActionModals({
                 </button>
                 <button
                   type="button"
-                  onClick={confirmCancelAfkir}
+                  onClick={confirmCancelDecommissioned}
                   disabled={isProcessingAction}
                   className="px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-lg text-xs shadow-xs transition-colors flex items-center gap-2 disabled:opacity-50"
                 >
@@ -197,6 +199,8 @@ export default function MonitoringActionModals({
         handleFileSelect={handleFileSelect}
         newCertNumber={newCertNumber}
         setNewCertNumber={setNewCertNumber}
+        instansi={instansi}
+        setInstansi={setInstansi}
         issueDate={issueDate}
         setIssueDate={setIssueDate}
         newExpiryDate={newExpiryDate}

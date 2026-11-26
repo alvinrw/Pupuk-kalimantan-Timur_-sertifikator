@@ -3,8 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfParseLib = require('pdf-parse');
-const pdfParse = pdfParseLib.default || pdfParseLib;
+const pdfParse = require('pdf-parse');
 
 export interface OcrScanResult {
   noSertifikat?: string;
@@ -76,8 +75,21 @@ export class OcrService {
       }
 
       // 2. Fallback ke pdf-parse jika Python tidak tersedia / gagal
-      const parsed = await pdfParse(fileBuffer);
-      const text = parsed.text || '';
+      let text = '';
+      try {
+        const pdfParserFn = typeof pdfParse === 'function' ? pdfParse : (pdfParse.default || pdfParse.PDFParse || pdfParse);
+        const parsed = await pdfParserFn(fileBuffer);
+        text = parsed.text || '';
+      } catch (pdfErr) {
+        this.logger.error(`pdf-parse failed: ${pdfErr.message}`);
+        return {
+          noSertifikat: undefined,
+          terbit: undefined,
+          expired: undefined,
+          confidence: 50,
+          rawText: `Error pdf-parse: ${pdfErr.message}`,
+        };
+      }
       
       const noSertifikat = this.extractCertificateNumber(text);
       const terbit = this.extractIssueDate(text);
@@ -98,12 +110,13 @@ export class OcrService {
         confidence: 80,
       };
     } catch (error) {
-      this.logger.error(`Error parsing PDF: ${error.message}`, error.stack);
+      this.logger.error(`Critical Error parsing PDF: ${error.message}`, error.stack);
       return {
         noSertifikat: undefined,
         terbit: undefined,
         expired: undefined,
         confidence: 50,
+        rawText: `Critical Error: ${error.message}`, // Send the error to frontend for debugging
       };
     }
   }
@@ -111,8 +124,8 @@ export class OcrService {
   private extractCertificateNumber(text: string): string | null {
     if (!text) return null;
     const patterns = [
-      /(?:Nomor|No\.|No|SK No\.|REGISTRASI NO\.?|SERI)\s*:?\s*([A-Za-z0-9\.\-\/]{4,})/i,
-      /([0-9]{3,}[\.\/][A-Za-z0-9\.\/A-Za-z\-]{4,})/i,
+      /(?:Nomor|No\.|No|SK No\.|REGISTRASI NO\.?|SERI)\s*:?\s*([A-Za-z0-9\.\-\/\s]{4,60})/i,
+      /([0-9]{3,}[\.\/][A-Za-z0-9\.\/A-Za-z\-\s]{4,50})/i,
       /(SK-[A-Za-z0-9\-]{4,})/i,
       /(CERT-[A-Za-z0-9\-]{4,})/i,
       /([A-Z0-9]{3,}\/[A-Z0-9\.\/-]{4,})/i,
@@ -121,7 +134,8 @@ export class OcrService {
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match && match[1] && match[1].trim().length > 3) {
-        const cleaned = match[1].trim().replace(/[\,\;\:\.]$/, '');
+        // Stop at the first newline if it captured too much
+        const cleaned = match[1].split('\n')[0].trim().replace(/[\,\;\:\.]$/, '');
         if (!/^(tanggal|berlaku|nama|jenis|surat|sertifikat|halaman)$/i.test(cleaned)) {
           return cleaned;
         }
@@ -181,12 +195,13 @@ export class OcrService {
 
   private extractEquipmentName(text: string): string | null {
     const patterns = [
+      /(?:SURAT\s+KETERANGAN|SERTIFIKAT)\s+([A-Z\s]+)/i,
       /(?:nama\s+alat|jenis\s+pesawat|pesawat|peralatan|nama\s+ciptaan)\s*:?\s*([^\n]+)/i,
     ];
     for (const pattern of patterns) {
       const match = text.match(pattern);
       if (match && match[1] && match[1].trim().length > 3) {
-        return match[1].trim().substring(0, 100);
+        return match[1].split('\n')[0].trim().substring(0, 100);
       }
     }
     return null;

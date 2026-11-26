@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React from 'react';
 import { History, X, Clock, FileText, ExternalLink } from 'lucide-react';
 
@@ -40,7 +41,7 @@ export default function MonitoringHistorySidebar({
               <div className="text-slate-600 text-[11px] space-y-1">
                 <div>Merek / Tipe: <span className="font-bold text-slate-900">{selectedHistoryItem.merekItem}</span></div>
                 <div>No. Seri Tag: <span className="font-bold text-slate-800">{selectedHistoryItem.nomorSeriTipe}</span></div>
-                <div>Instansi Penguji: <span className="font-bold text-slate-800">{selectedHistoryItem.agency}</span></div>
+                <div>Instansi Penerbit: <span className="font-bold text-slate-800">{selectedHistoryItem.agency}</span></div>
                 <div>Sertifikat Aktif: <span className="font-bold text-[#005ea4]">{selectedHistoryItem.certificateNo}</span></div>
               </div>
             </div>
@@ -93,7 +94,7 @@ export default function MonitoringHistorySidebar({
                             </span>
                             <button
                               type="button"
-                              onClick={() => alert(`Membuka berkas terlampir: ${log.fileUploaded}`)}
+                              onClick={() => toast(`Membuka berkas terlampir: ${log.fileUploaded}`)}
                               className="text-[#005ea4] hover:underline font-bold flex items-center gap-0.5 cursor-pointer"
                             >
                               <span>Buka PDF</span>

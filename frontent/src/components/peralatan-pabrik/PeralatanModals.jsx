@@ -52,7 +52,7 @@ export default function PeralatanModals({
                 <textarea
                   value={bulkExemptNote}
                   onChange={(e) => setBulkExemptNote(e.target.value)}
-                  placeholder="Contoh: Dokumen fisik rusak, tidak wajib tera ulang, dll."
+                  placeholder="Dokumen fisik rusak, tidak wajib tera ulang, dll."
                   rows={3}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
                 />

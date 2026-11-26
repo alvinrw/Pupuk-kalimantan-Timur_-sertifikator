@@ -12,10 +12,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
         (request: any) => {
           return request?.cookies?.access_token;
         },
-        ExtractJwt.fromAuthHeaderAsBearerToken(),
         ExtractJwt.fromUrlQueryParameter('token'),
       ]),
       ignoreExpiration: false,
@@ -26,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(req: any, payload: any) {
     // Check blacklist
-    const token = req.cookies?.access_token || ExtractJwt.fromAuthHeaderAsBearerToken()(req) || ExtractJwt.fromUrlQueryParameter('token')(req);
+    const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req) || req.cookies?.access_token || ExtractJwt.fromUrlQueryParameter('token')(req);
     
     if (token) {
       const isBlacklisted = await this.prisma.tokenBlacklist.findUnique({

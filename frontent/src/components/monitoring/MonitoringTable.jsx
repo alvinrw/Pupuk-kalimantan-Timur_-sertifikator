@@ -13,12 +13,42 @@ export default function MonitoringTable({
   onOpenDetail,
   onCompleteModal,
   onCancelAction,
-  onCancelAfkir,
+  onCancelDecommissioned,
   onQuickRenew,
   onQuickDecommission,
 }) {
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
+
+  const getCategoryDisplayLabel = (key) => {
+    switch ((key || '').toLowerCase()) {
+      case 'peralatan-pabrik': return 'Perizinan Peralatan Pabrik';
+      case 'perizinan-aset': return 'Perizinan Aset';
+      case 'perizinan-proyek': return 'Perizinan Proyek';
+      case 'perizinan-produk': return 'Perizinan Produk';
+      case 'administrasi-lainnya':
+      case 'sertifikat-ciptaan':
+      case 'hak-cipta':
+      case 'hak-paten':
+      case 'perizinan hak cipta':
+      case 'perizinan administrasi lainnya':
+      case 'administrasi lainnya':
+        return 'Perizinan Administrasi Lainnya';
+      case 'iuran-keanggotaan': return 'Iuran Keanggotaan';
+      default: return key || 'Lainnya';
+    }
+  };
+
+  const getJenisPeralatanDisplay = (doc) => {
+    const cat = (doc.kategoriDokumen || doc.kategori || doc.categoryKey || '').toLowerCase();
+    const isAdm = cat === 'administrasi-lainnya' || cat === 'sertifikat-ciptaan' || cat === 'hak-cipta' || cat === 'hak-paten' || cat.includes('administrasi') || cat.includes('cipta');
+    if (isAdm) {
+      const raw = String(doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || doc.tipe || doc.merekItem || doc.title || '').toLowerCase();
+      if (raw.includes('paten')) return 'Hak Paten';
+      return 'Hak Cipta';
+    }
+    return doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '-';
+  };
   
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
@@ -45,7 +75,7 @@ export default function MonitoringTable({
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari item, seri, nomor sertifikat..."
+              placeholder="Cari alat, nomor seri, sertifikat..."
               className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
             />
           </div>
@@ -58,10 +88,10 @@ export default function MonitoringTable({
             <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none text-center align-middle">
               <th className="py-3 px-3 text-center font-bold whitespace-nowrap align-middle">NO.</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">KATEGORI DOKUMEN</th>
-              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">JENIS PERIZINAN / ALAT</th>
+              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">JENIS PERALATAN</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">UNIT PABRIK</th>
-              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">MEREK / NAMA ITEM</th>
-              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NOMOR SERI / TAG</th>
+              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NAMA / OBJEK PERIZINAN</th>
+              <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NOMOR SERI</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT</th>
               <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">
                 TGL EXPIRATION
@@ -97,10 +127,10 @@ export default function MonitoringTable({
                       {index + 1}
                     </td>
                     <td className={`py-3 px-3 font-bold whitespace-nowrap text-center align-middle ${isDecommissioned ? 'text-slate-200' : 'text-[#005ea4]'}`}>
-                      {doc.kategoriDokumen || doc.kategori || 'Perizinan'}
+                      {getCategoryDisplayLabel(doc.kategoriDokumen || doc.kategori || doc.categoryKey)}
                     </td>
                     <td className={`py-3 px-3 font-medium whitespace-nowrap text-center align-middle ${isDecommissioned ? 'text-slate-200' : 'text-slate-800'}`}>
-                      {doc.jenisItem || doc.jenisPeralatan || doc.jenisCiptaan || '-'}
+                      {getJenisPeralatanDisplay(doc)}
                     </td>
                     <td className="py-3 px-3 font-mono-data font-bold whitespace-nowrap text-center align-middle">
                       <span className={`px-2 py-0.5 rounded text-[11px] ${isDecommissioned ? 'bg-slate-800 text-slate-200' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
@@ -156,7 +186,7 @@ export default function MonitoringTable({
                         </div>
                       ) : isDecommissioned ? (
                         <button
-                          onClick={() => onCancelAfkir(doc.id)}
+                          onClick={() => onCancelDecommissioned(doc.id)}
                           className="text-xs text-slate-300 hover:text-white hover:underline font-medium cursor-pointer"
                         >
                           Batal Nonaktif

@@ -12,6 +12,86 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
   </head>
   <body class="bg-[#f7f9fb] text-[#191c1e] antialiased selection:bg-[#005ea4] selection:text-white font-['Plus_Jakarta_Sans',sans-serif]">
+    <div id="global-error-display" style="display: none;" class="fixed inset-0 z-[999999] bg-slate-900/60 backdrop-blur-md items-center justify-center p-4 transition-all duration-300">
+      <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 text-center relative overflow-hidden border border-slate-200/50">
+        <!-- Top accent -->
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-500 to-[#005ea4]"></div>
+        
+        <!-- Animated Icon -->
+        <div class="relative w-24 h-24 mx-auto mb-6">
+          <div class="absolute inset-0 bg-rose-100 rounded-full animate-ping opacity-75"></div>
+          <div class="relative flex items-center justify-center w-full h-full bg-white border-4 border-rose-100 rounded-full shadow-sm animate-bounce">
+            <span class="material-symbols-outlined text-rose-500 text-5xl">warning</span>
+          </div>
+        </div>
+        
+        <!-- Title & Desc -->
+        <h2 class="text-2xl font-bold text-slate-800 mb-2 tracking-tight">Oops! Terjadi Kesalahan</h2>
+        <p class="text-slate-500 mb-6 text-sm leading-relaxed">
+          Sistem <strong>PERISAI</strong> mengalami kendala teknis (Error pada Localhost). Jangan khawatir, Anda dapat mencoba memuat ulang halaman ini.
+        </p>
+        
+        <!-- Error Console Box -->
+        <div class="bg-slate-900 rounded-xl p-4 text-left mb-6 overflow-x-auto max-h-40 shadow-inner border border-slate-700">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+            <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+            <span class="text-slate-400 text-[10px] ml-2 uppercase font-bold tracking-wider">Console Log</span>
+          </div>
+          <pre id="global-error-text" class="text-[11px] text-rose-400 font-mono whitespace-pre-wrap leading-relaxed"></pre>
+        </div>
+        
+        <!-- Action Button -->
+        <button onclick="window.location.reload()" class="px-8 py-3 bg-[#005ea4] hover:bg-[#004881] text-white rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 mx-auto">
+          <span class="material-symbols-outlined text-lg">refresh</span>
+          Muat Ulang Sistem
+        </button>
+      </div>
+    </div>
+    
+    <script>
+      let isUnloading = false;
+      let errorTimeout;
+      
+      window.addEventListener('beforeunload', function() { isUnloading = true; clearTimeout(errorTimeout); });
+      window.addEventListener('pagehide', function() { isUnloading = true; clearTimeout(errorTimeout); });
+      window.addEventListener('unload', function() { isUnloading = true; clearTimeout(errorTimeout); });
+      
+      function showGlobalError(title, detail) {
+        if (isUnloading) return;
+        
+        // Delay showing error to prevent flashing during page reload/navigation
+        errorTimeout = setTimeout(() => {
+          if (isUnloading) return;
+          const errorContainer = document.getElementById('global-error-display');
+          const errorText = document.getElementById('global-error-text');
+          if (errorContainer && errorText) {
+            errorContainer.style.display = 'flex';
+            errorText.innerText += title + '\n' + detail + '\n\n';
+          }
+        }, 500);
+      }
+      
+      window.onerror = function(message, source, lineno, colno, error) {
+        if (isUnloading) return;
+        showGlobalError('ERROR: ' + message, error && error.stack ? error.stack : '');
+      };
+      
+      window.addEventListener('unhandledrejection', function(event) {
+        if (isUnloading) return;
+        if (event.reason && event.reason.name === 'AbortError') return;
+        
+        let detail = event.reason;
+        if (event.reason && event.reason.stack) detail = event.reason.stack;
+        if (event.reason && event.reason.message) detail = event.reason.message;
+        
+        // Ignore generic fetch failures that happen during navigation
+        if (typeof detail === 'string' && detail.includes('Failed to fetch')) return;
+        
+        showGlobalError('PROMISE ERROR:', detail);
+      });
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

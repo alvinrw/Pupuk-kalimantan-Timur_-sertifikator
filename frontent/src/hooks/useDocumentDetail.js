@@ -48,9 +48,12 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     : (allItemCerts.length > 0 ? allItemCerts.slice().sort((a, b) => getTimestamp(b.expired || b.expiryDate) - getTimestamp(a.expired || a.expiryDate))[0] : null);
 
   const rawTargetCert = item?.currentCert || item?.cert || activeItemCert || null;
+  
+  const isMultiCertCategory = effectiveCategoryKey === 'perizinan-aset' || effectiveCategoryKey === 'perizinan-proyek' || effectiveCategoryKey === 'perizinan-produk';
+  
   const targetCert = activeCertId && (item.linkedCertificates || item.certificates)
     ? ((item.linkedCertificates || item.certificates).find(c => c.id === activeCertId) || rawTargetCert)
-    : rawTargetCert;
+    : (isMultiCertCategory ? null : rawTargetCert);
 
   const isSingleCertScope = Boolean(
     targetCert?.id &&
@@ -59,7 +62,13 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
      effectiveCategoryKey === 'perizinan-produk')
   );
 
-  const isHaki = Boolean(effectiveCategoryKey === 'administrasi-lainnya' || item.judulCiptaan || item.jenisCiptaan);
+  const isHaki = Boolean(
+    effectiveCategoryKey === 'administrasi-lainnya' ||
+    effectiveCategoryKey?.includes('cipta') ||
+    effectiveCategoryKey?.includes('paten') ||
+    item?.judulCiptaan ||
+    item?.jenisCiptaan
+  );
   const isEquipment = Boolean(effectiveCategoryKey === 'peralatan-pabrik' || (item.nomorSeri && !isHaki && !item.linkedCertificates));
   const isMultiCertItem = Boolean(
     item.linkedCertificates ||
@@ -72,16 +81,40 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     try {
       if (ket && typeof ket === 'string' && ket.trim().startsWith('{')) {
         const parsed = JSON.parse(ket);
+        const text = (parsed.keteranganAsli !== undefined && parsed.keteranganAsli !== '-')
+          ? parsed.keteranganAsli
+          : (parsed.keterangan !== undefined && parsed.keterangan !== '-' ? parsed.keterangan : '');
         return {
-          text: parsed.keteranganAsli !== undefined ? parsed.keteranganAsli : ket,
+          text: text === '-' ? '' : text,
+          instansi: parsed.instansi !== undefined ? parsed.instansi : (parsed.instansiPenerbit !== undefined ? parsed.instansiPenerbit : ''),
+          tipe: parsed.tipe !== undefined ? parsed.tipe : '',
+          nomorSeri: parsed.nomorSeri !== undefined ? parsed.nomorSeri : '',
+          penanggungJawab: parsed.penanggungJawab !== undefined ? parsed.penanggungJawab : '',
+          noSertifikat: parsed.noSertifikat !== undefined ? parsed.noSertifikat : '',
+          unitLocation: parsed.unitLocation !== undefined ? parsed.unitLocation : '',
           additionalEntities: Array.isArray(parsed.additionalEntities) ? parsed.additionalEntities : []
         };
       }
     } catch (e) {}
-    return { text: ket || '', additionalEntities: [] };
+    return { text: ket === '-' ? '' : (ket || ''), instansi: '', tipe: '', nomorSeri: '', penanggungJawab: '', noSertifikat: '', unitLocation: '', additionalEntities: [] };
   };
 
-  const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
+  const resolveRawKeterangan = () => {
+    const certKet = targetCert?.keterangan;
+    if (certKet && typeof certKet === 'string' && certKet.trim() !== '' && certKet.trim() !== '-') {
+      return certKet;
+    }
+    const itemKet = item?.rawKeterangan || item?.keterangan;
+    if (itemKet && typeof itemKet === 'string' && itemKet.trim() !== '' && itemKet.trim() !== '-') {
+      return itemKet;
+    }
+    if (item?.notes && typeof item.notes === 'string' && item.notes.trim() !== '' && item.notes.trim() !== '-') {
+      return item.notes;
+    }
+    return '';
+  };
+
+  const initialKetRaw = resolveRawKeterangan();
   const parsedKet = parseKeterangan(initialKetRaw);
   const initialEntities = parsedKet.additionalEntities || [];
   const initialJenisPeralatanEnt = initialEntities.find(e => e.key === 'JENIS PERALATAN PABRIK');
@@ -103,35 +136,64 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
   const localDocumentStatus = item.documentStatus || 'PENDING_DOC';
   const [isEditing, setIsEditing] = useState(false);
   
-  const buildFormData = () => ({
-    merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
-    jenisPeralatan: initialJenisPeralatan,
-    tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
-    nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
-    kapasitas: item.kapasitas || '',
-    lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
-    user: isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'),
-    status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
-      ? item.status
-      : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
-    instansi: isSingleCertScope ? (targetCert?.instansi || '') : '',
-    noSertifikat: isSingleCertScope ? (targetCert?.noSertifikat || '') : (item.noSertifikat || item.certNo || item.certificateNo || ''),
-    tanggalInspeksi: isSingleCertScope ? (targetCert?.terbit || parentDoc.createdAt || '') : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
-    tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
-    masaBerlaku: item.masaBerlaku || '5 Tahun',
-    terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
-    berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
-    keterangan: parsedKet.text,
-    additionalEntities: parsedKet.additionalEntities,
-    fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
-    namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
-    imageUrl: item.imageUrl || ''
-  });
+  const parseMetaFromItem = (itm) => {
+    try {
+      const raw = itm?.rawKeterangan || itm?.keterangan;
+      if (raw && typeof raw === 'string' && raw.trim().startsWith('{')) {
+        return JSON.parse(raw);
+      }
+    } catch (_) {}
+    return null;
+  };
+  const itemMeta = parseMetaFromItem(item);
+
+  const buildFormData = () => {
+    let resolvedMerekItem = parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '';
+    let resolvedTipe = isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || '');
+    
+    if (effectiveCategoryKey === 'peralatan-pabrik') {
+      resolvedMerekItem = parentDoc.title || item.title || parentDoc.merekItem || item.merekItem || '';
+      resolvedTipe = parsedKet.tipe || item.tipe || '';
+    } else if (isHaki) {
+      resolvedMerekItem = parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '';
+      resolvedTipe = parentDoc.code || item.code || item.tipe || '';
+    }
+
+    const resolvedUser = itemMeta?.penanggungJawab || parsedKet.penanggungJawab || (isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'));
+    const resolvedKeterangan = parsedKet.text || itemMeta?.keteranganAsli || (targetCert?.keterangan && targetCert.keterangan !== '-' ? targetCert.keterangan : '') || '';
+
+    return {
+      merekItem: resolvedMerekItem,
+      jenisPeralatan: initialJenisPeralatan,
+      tipe: resolvedTipe,
+      nomorSeri: item.nomorSeri || parsedKet.nomorSeri || itemMeta?.nomorSeri || parentDoc.code || item.code || '',
+      kapasitas: item.kapasitas || '',
+      lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || itemMeta?.unitLocation || '',
+      user: resolvedUser,
+      status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
+        ? item.status
+        : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
+      instansi: targetCert?.instansi || activeItemCert?.instansi || parsedKet.instansi || itemMeta?.instansi || itemMeta?.instansiPenerbit || (item.instansi && item.instansi !== '-' && !item.instansi.trim().startsWith('{') ? item.instansi : '') || '',
+      noSertifikat: targetCert?.noSertifikat || item.noSertifikat || item.certNo || item.certificateNo || itemMeta?.noSertifikat || '',
+      tanggalInspeksi: targetCert?.terbit || item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || parentDoc.createdAt || '',
+      tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || targetCert?.terbit || item.terbit || '',
+      masaBerlaku: item.masaBerlaku || '5 Tahun',
+      terbit: targetCert?.terbit || item.terbit || item.issueDate || item.tanggalCiptaan || '',
+      berakhir: targetCert?.expired || item.berakhir || item.expiryDate || item.kapanBerakhir || '',
+      keterangan: resolvedKeterangan,
+      additionalEntities: parsedKet.additionalEntities,
+      fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || targetCert?.fileUrl || ''),
+      namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
+      imageUrl: item.imageUrl || ''
+    };
+  };
+
+  const [formData, setFormData] = useState(buildFormData());
 
   useEffect(() => {
-    const initialKetRaw = isSingleCertScope ? (targetCert?.keterangan || '') : (item.rawKeterangan || item.keterangan || item.notes || item.agency || (isHaki ? 'Dirjen Kekayaan Intelektual (Kemenkumham RI)' : 'Disnaker Kaltim / Sucofindo'));
-    const parsedKet = parseKeterangan(initialKetRaw);
-    const parsedEntities = parsedKet.additionalEntities || [];
+    const rawKet = resolveRawKeterangan();
+    const parsedKetDynamic = parseKeterangan(rawKet);
+    const parsedEntities = parsedKetDynamic.additionalEntities || [];
 
     let finalEntities = parsedEntities;
     if (columnConfigs.length > 0) {
@@ -151,27 +213,41 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
     const targetJenisPeralatanEnt = parsedEntities.find(e => e.key === 'JENIS PERALATAN PABRIK');
     const targetJenisPeralatan = targetJenisPeralatanEnt ? targetJenisPeralatanEnt.value : (parentDoc.jenisPeralatan || item.jenisPeralatan || parentDoc.categoryKey || item.categoryKey || item.kategoriDokumen || 'Perizinan Aset');
 
+    let resolvedMerekItem = parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '';
+    let resolvedTipe = isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || '');
+    
+    if (effectiveCategoryKey === 'peralatan-pabrik') {
+      resolvedMerekItem = parentDoc.title || item.title || parentDoc.merekItem || item.merekItem || '';
+      resolvedTipe = parsedKetDynamic.tipe || item.tipe || '';
+    } else if (isHaki) {
+      resolvedMerekItem = parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '';
+      resolvedTipe = parentDoc.code || item.code || item.tipe || '';
+    }
+
+    const resolvedUser = itemMeta?.penanggungJawab || parsedKetDynamic.penanggungJawab || (isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'));
+    const resolvedKeterangan = parsedKetDynamic.text || itemMeta?.keteranganAsli || (targetCert?.keterangan && targetCert.keterangan !== '-' ? targetCert.keterangan : '') || '';
+
     setFormData({
-      merekItem: parentDoc.title || parentDoc.merekItem || item.merekItem || item.title || item.judulCiptaan || '',
+      merekItem: resolvedMerekItem,
       jenisPeralatan: targetJenisPeralatan,
-      tipe: isSingleCertScope ? (targetCert?.noSertifikat || parentDoc.code || '') : (item.tipe || item.code || ''),
-      nomorSeri: item.nomorSeri || item.nomorSeriTipe || '',
+      tipe: resolvedTipe,
+      nomorSeri: item.nomorSeri || parsedKetDynamic.nomorSeri || itemMeta?.nomorSeri || parentDoc.code || item.code || '',
       kapasitas: item.kapasitas || '',
-      lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || '',
-      user: isSingleCertScope ? (targetCert?.instansi || item.user || 'Umum') : (item.user || item.issuer || 'Umum'),
-      status: (item.status === 'Perpanjang' || item.status === 'in_progress' || item.status === 'Afkir' || item.status === 'decommissioned')
+      lokasi: parentDoc.unitLocation || parentDoc.unit || item.lokasi || item.unitPabrik || item.unit || itemMeta?.unitLocation || '',
+      user: resolvedUser,
+      status: (item.status === 'Afkir' || item.status === 'decommissioned')
         ? item.status
         : (isSingleCertScope ? (targetCert?.status || item.status || 'Aktif') : (item.status || 'Aktif')),
-      instansi: isSingleCertScope ? (targetCert?.instansi || '') : '',
-      noSertifikat: isSingleCertScope ? (targetCert?.noSertifikat || '') : (item.noSertifikat || item.certNo || item.certificateNo || ''),
-      tanggalInspeksi: isSingleCertScope ? (targetCert?.terbit || parentDoc.createdAt || '') : (item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || ''),
-      tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || '',
+      instansi: targetCert?.instansi || activeItemCert?.instansi || parsedKetDynamic.instansi || itemMeta?.instansi || itemMeta?.instansiPenerbit || (item.instansi && item.instansi !== '-' && !item.instansi.trim().startsWith('{') ? item.instansi : '') || '',
+      noSertifikat: targetCert?.noSertifikat || item.noSertifikat || item.certNo || item.certificateNo || itemMeta?.noSertifikat || '',
+      tanggalInspeksi: targetCert?.terbit || item.tanggalInspeksi || item.issueDate || item.tanggalCiptaan || parentDoc.createdAt || '',
+      tanggalCiptaan: item.tanggalCiptaan || item.tanggalInspeksi || item.issueDate || targetCert?.terbit || item.terbit || '',
       masaBerlaku: item.masaBerlaku || '5 Tahun',
-      terbit: isSingleCertScope ? (targetCert?.terbit || '') : (item.terbit || item.issueDate || ''),
-      berakhir: isSingleCertScope ? (targetCert?.expired || '') : (item.berakhir || item.expiryDate || item.kapanBerakhir || ''),
-      keterangan: parsedKet.text,
+      terbit: targetCert?.terbit || item.terbit || item.issueDate || item.tanggalCiptaan || '',
+      berakhir: targetCert?.expired || item.berakhir || item.expiryDate || item.kapanBerakhir || '',
+      keterangan: resolvedKeterangan,
       additionalEntities: finalEntities,
-      fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || ''),
+      fileUrl: isSingleCertScope ? (targetCert?.fileUrl || '') : (item.fileUrl || item.pdfUrl || targetCert?.fileUrl || ''),
       namaSertifikat: targetCert?.namaSertifikat || targetCert?.jenisSertifikat || item.namaSertifikat || '',
       imageUrl: item.imageUrl || ''
     });
@@ -187,41 +263,39 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
         }
       } catch (_) {}
 
-      const payloadData = { ...formData };
+      let finalEntities = formData.additionalEntities || [];
       if (formData.additionalEntities) {
-        const finalEntities = [...formData.additionalEntities];
+        finalEntities = [...formData.additionalEntities];
         const jenisIdx = finalEntities.findIndex(e => e.key === 'JENIS PERALATAN PABRIK');
         if (jenisIdx > -1) {
           finalEntities[jenisIdx] = { ...finalEntities[jenisIdx], value: formData.jenisPeralatan };
         } else {
           finalEntities.push({ key: 'JENIS PERALATAN PABRIK', value: formData.jenisPeralatan, type: 'text' });
         }
-        payloadData.keterangan = JSON.stringify({
-          ...origMeta,
-          keteranganAsli: formData.keterangan || '',
-          additionalEntities: finalEntities,
-          penanggungJawab: formData.user || origMeta.penanggungJawab || 'Umum',
-          tipe: formData.tipe || origMeta.tipe || '',
-          nomorSeri: formData.nomorSeri || origMeta.nomorSeri || ''
-        });
       }
       
-      const metaObject = {
-        keteranganAsli: formData.keterangan || '-',
-        additionalEntities: formData.additionalEntities || [],
-        tipe: formData.tipe,
-        nomorSeri: formData.nomorSeri,
-        penanggungJawab: formData.user,
-        namaSertifikat: formData.namaSertifikat,
-      };
+      let updatedTitle = formData.title || formData.merekItem || item.title || item.merekItem || '';
+      let updatedCode = formData.code || formData.nomorSeri || formData.tipe || item.code || item.tipe || '';
 
       if (effectiveCategoryKey === 'peralatan-pabrik') {
-        updatedTitle = formData.jenisPeralatan;
-        updatedCode = formData.merekItem;
+        updatedTitle = formData.merekItem || formData.title || item.title || '';
+        updatedCode = formData.nomorSeri || formData.code || item.code || '';
       } else if (isHaki) {
         updatedTitle = formData.merekItem;
         updatedCode = formData.tipe;
       }
+
+      const metaObject = {
+        ...origMeta,
+        keteranganAsli: formData.keterangan || '-',
+        additionalEntities: finalEntities,
+        tipe: formData.tipe,
+        nomorSeri: formData.nomorSeri || updatedCode,
+        penanggungJawab: formData.user,
+        namaSertifikat: formData.namaSertifikat,
+        instansi: formData.instansi,
+        noSertifikat: formData.noSertifikat,
+      };
 
       const payloadData = {
         title: updatedTitle,
@@ -232,6 +306,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
         issueDate: isHaki ? formData.tanggalCiptaan : (formData.terbit || formData.issueDate),
         expiryDate: isHaki ? formData.masaBerlaku : (formData.berakhir || formData.expiryDate),
         categoryKey: effectiveCategoryKey,
+        imageUrl: formData.imageUrl,
       };
 
       const targetId = item?.MasterId || item?.id;
@@ -288,6 +363,7 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
         await updateCertificate(targetCert.id, {
           namaSertifikat: formData.namaSertifikat,
           noSertifikat: formData.noSertifikat,
+          instansi: formData.instansi,
           terbit: formData.terbit,
           expired: formData.berakhir,
           status: formData.status,
@@ -312,12 +388,12 @@ export function useDocumentDetail({ item: rawItem, onBack, onSaveUpdate, onDelet
 
   const currentStatus = formData.status || item.status || 'Aktif';
   const lowerStatus = currentStatus.toLowerCase();
-  const isAfkirStatus = lowerStatus === 'afkir' || lowerStatus === 'decommissioned';
+  const isDecommissionedStatus = lowerStatus === 'decommissioned' || lowerStatus === 'non-aktif' || lowerStatus === 'afkir' || lowerStatus.includes('non aktif') || lowerStatus.includes('tidak aktif') || lowerStatus.includes('inactive');
   const isPerpanjangStatus = lowerStatus.includes('perpanjang') || lowerStatus === 'in progress' || lowerStatus === 'in_progress' || lowerStatus === 'proses';
 
   return {
     parentDoc, effectiveCategoryKey, targetCert, isSingleCertScope,
-    isHaki, isEquipment, isMultiCertItem, currentStatus, isAfkirStatus, isPerpanjangStatus,
+    isHaki, isEquipment, isMultiCertItem, currentStatus, isDecommissionedStatus, isPerpanjangStatus,
     isEditing, setIsEditing, formData, setFormData, handleSave, localDocumentStatus,
     activeCertId, setActiveCertId,
     columnConfigs,

@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { createCertificateForMasterItem, deleteCertificate } from '../../services/masterItemsService';
+import toast from 'react-hot-toast';
+import { useState, useEffect, useMemo } from 'react';
+import { createCertificateForMasterItem, deleteCertificate, updateMasterItem } from '../../services/masterItemsService';
 
 export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefreshRequired }) {
   const getTimestamp = (dateStr) => {
@@ -15,7 +16,7 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
     if (!certsList) return [];
     return certsList.filter(c => {
       const s = (c.status || '').toLowerCase();
-      return s !== 'diarsipkan' && s !== 'direvisi';
+      return s !== 'diarsipkan' && s !== 'direvisi' && c.isDeleted !== true;
     });
   };
 
@@ -31,38 +32,23 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
 
   const [sortDateOrder, setSortDateOrder] = useState('desc');
 
-  const prevItemIdRef = useRef(item?.id);
+  const targetListStr = JSON.stringify(item?.linkedCertificates || item?.certificates || []);
 
   useEffect(() => {
-    const currentItemId = item?.id || item?.MasterId;
     const doc = item;
-
-    // Hanya sync ulang linkedCerts dari server jika item yang ditampilkan ganti
-    // (bukan sekadar re-render akibat refresh data yang sama)
-    if (prevItemIdRef.current !== currentItemId || !prevItemIdRef.current) {
-      prevItemIdRef.current = currentItemId;
-      const targetList = doc?.linkedCertificates || doc?.certificates;
-      if (targetList) {
-        const certs = filterActiveCerts(targetList);
-        certs.sort((a, b) => {
-          const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit) || new Date(a.createdAt || 0).getTime();
-          const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit) || new Date(b.createdAt || 0).getTime();
-          return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
-        });
-        setLinkedCerts(certs);
-      }
-    } else {
-      // item ID sama tapi sortDateOrder berubah - hanya sort ulang tanpa ganti referensi
-      setLinkedCerts(prev => {
-        if (!prev || prev.length === 0) return prev;
-        return [...prev].sort((a, b) => {
-          const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit) || new Date(a.createdAt || 0).getTime();
-          const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit) || new Date(b.createdAt || 0).getTime();
-          return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
-        });
+    const targetList = doc?.linkedCertificates || doc?.certificates;
+    if (targetList) {
+      const certs = filterActiveCerts(targetList);
+      certs.sort((a, b) => {
+        const timeA = getTimestamp(a.expired) || getTimestamp(a.terbit) || new Date(a.createdAt || 0).getTime();
+        const timeB = getTimestamp(b.expired) || getTimestamp(b.terbit) || new Date(b.createdAt || 0).getTime();
+        return sortDateOrder === 'desc' ? timeB - timeA : timeA - timeB;
       });
+      setLinkedCerts(certs);
+    } else {
+      setLinkedCerts([]);
     }
-  }, [item?.id, item?.MasterId, sortDateOrder]);
+  }, [targetListStr, sortDateOrder, item]);
 
   const certStats = useMemo(() => {
     return (linkedCerts && linkedCerts.length > 0 ? linkedCerts : (targetCert ? [targetCert] : [])).reduce((acc, c) => {
@@ -88,11 +74,21 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
       if (pdfFile) {
         const fd = new FormData();
         fd.append('file', pdfFile);
-        const uploadRes = await fetch(UPLOAD_ENDPOINT, { method: 'POST', body: fd });
-        if (uploadRes.ok) {
-          const json = await uploadRes.json();
-          fileUrl = json?.data?.url || json?.data?.fileUrl || null;
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+        const uploadRes = await fetch(UPLOAD_ENDPOINT, { 
+          method: 'POST', 
+          credentials: 'include',
+          headers, 
+          body: fd 
+        });
+        if (!uploadRes.ok) {
+          const errorJson = await uploadRes.json().catch(() => ({}));
+          throw new Error(errorJson.message || errorJson.error || 'Gagal upload file ke server');
         }
+        const json = await uploadRes.json();
+        fileUrl = json?.data?.url || json?.data?.fileUrl || null;
       }
       // Prioritize MasterId, then parentDoc.id (if item is a child-scoped view), then item.id
       const masterItemId = item?.MasterId || item?.parentDoc?.id || item?.id;
@@ -110,7 +106,8 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
       setIsAddCertModalOpen(false);
     } catch (err) {
       console.error('Failed to save linked certificate:', err);
-      alert('Gagal menyimpan sertifikat terhubung: ' + (err.message || 'Error'));
+      const errorMsg = err.response?.data?.message || err.message || 'Error';
+      toast.error('Gagal menyimpan sertifikat terhubung: ' + errorMsg);
     }
   };
 
@@ -120,14 +117,19 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
       if (id) {
         await deleteCertificate(id);
       }
+      
+      setLinkedCerts(prev => prev.filter(c => c.id !== id));
+      
       await fetchHistory();
       if (onRefreshRequired) onRefreshRequired();
       if (activeCertId === id) {
-        setActiveCertId(null);
+        const remaining = linkedCerts.filter(c => c.id !== id);
+        if (setActiveCertId) setActiveCertId(remaining.length > 0 ? remaining[0].id : null);
       }
+      toast.success('Berhasil menghapus sertifikat terhubung');
     } catch (err) {
       console.error('Failed to delete linked certificate:', err);
-      alert('Gagal menghapus sertifikat terhubung: ' + (err.message || 'Error'));
+      toast.error('Gagal menghapus sertifikat terhubung');
     } finally {
       setIsDeletingLinkedCert(false);
       setDeletingLinkedCertId(null);
@@ -141,7 +143,7 @@ export function useLinkedCertificates({ item, targetCert, fetchHistory, onRefres
     deletingLinkedCertId, setDeletingLinkedCertId,
     isDeletingLinkedCert,
     newCertData, setNewCertData,
-    handleAddLinkedCert, handleDeleteLinkedCert,
-    sortDateOrder, setSortDateOrder
+    sortDateOrder, setSortDateOrder,
+    handleAddLinkedCert, handleDeleteLinkedCert
   };
 }

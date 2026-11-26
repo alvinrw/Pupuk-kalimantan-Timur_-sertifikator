@@ -7,11 +7,11 @@ import { CsvImportService } from './csv-import.service';
 
 @Controller('csv-import')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Super Admin', 'Admin', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'Viewer')
 export class CsvImportController {
   constructor(private readonly csvImportService: CsvImportService) {}
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Post('upload')
   @UseInterceptors(FileInterceptor('file', {
     limits: { fileSize: 5 * 1024 * 1024 },
@@ -31,7 +31,7 @@ export class CsvImportController {
     return this.csvImportService.processCsv(file, type, categoryKey);
   }
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Post('bulk-nested')
   async bulkNested(
     @Body('data') data: any[],
@@ -49,7 +49,7 @@ export class CsvImportController {
     return this.csvImportService.getImportHistory(categoryKey);
   }
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Delete('history/:id')
   async deleteHistory(@Param('id') id: string) {
     return this.csvImportService.deleteImportHistory(id);

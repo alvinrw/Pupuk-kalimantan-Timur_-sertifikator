@@ -1,5 +1,5 @@
-import React from 'react';
-import { PlusCircle, X, Save } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { PlusCircle, X, Save, ChevronDown, History, Edit3 } from 'lucide-react';
 import RoleGuard from './RoleGuard';
 
 export default function IuranFormModal({
@@ -16,6 +16,13 @@ export default function IuranFormModal({
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const kompartemenRef = useRef(null);
   const statusRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('histori');
+
+  useEffect(() => {
+    if (isOpen && modalMode === 'edit') {
+      setActiveTab('histori');
+    }
+  }, [isOpen, modalMode]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -40,15 +47,15 @@ export default function IuranFormModal({
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-200 bg-white flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-[#005ea4] text-white flex-shrink-0">
-              <PlusCircle className="w-6 h-6" />
+            <div className={`p-2.5 rounded-xl text-white flex-shrink-0 ${modalMode === 'edit' && activeTab === 'histori' ? 'bg-emerald-600' : 'bg-[#005ea4]'}`}>
+              {modalMode === 'edit' && activeTab === 'histori' ? <History className="w-6 h-6" /> : (modalMode === 'edit' ? <Edit3 className="w-6 h-6" /> : <PlusCircle className="w-6 h-6" />)}
             </div>
             <div>
               <h3 className="font-bold text-lg text-slate-900">
-                {modalMode === 'add' ? 'Input Data Iuran Baru' : 'Edit Data Iuran'}
+                {modalMode === 'add' ? 'Unggah Data Baru' : (activeTab === 'histori' ? 'Riwayat Data' : 'Edit Data')}
               </h3>
               <p className="text-sm text-slate-500 mt-0.5">
-                Lengkapi form di bawah dengan data yang valid
+                {modalMode === 'add' ? 'Lengkapi form di bawah dengan data yang valid' : (activeTab === 'histori' ? 'Informasi waktu pembuatan dan pembaruan data' : 'Perbarui informasi data di bawah ini')}
               </p>
             </div>
           </div>
@@ -57,9 +64,34 @@ export default function IuranFormModal({
           </button>
         </div>
 
+        {/* Tabs for Edit Mode */}
+        {modalMode === 'edit' && (
+          <div className="flex px-6 border-b border-slate-200 bg-slate-50 gap-6">
+            <button
+              onClick={() => setActiveTab('histori')}
+              className={`py-3.5 text-sm font-bold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === 'histori' ? 'border-[#005ea4] text-[#005ea4]' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <History className="w-4 h-4" />
+              <span>Histori Pembuatan</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('edit')}
+              className={`py-3.5 text-sm font-bold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+                activeTab === 'edit' ? 'border-[#005ea4] text-[#005ea4]' : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              <span>Edit Data</span>
+            </button>
+          </div>
+        )}
+
         {/* Body Form */}
         <div className="p-6 overflow-y-auto">
-          <form id="iuranForm" onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
+          {modalMode === 'add' || (modalMode === 'edit' && activeTab === 'edit') ? (
+            <form id="iuranForm" onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
             <div ref={kompartemenRef} className="relative z-20">
               <label className="block text-sm font-bold text-slate-900 mb-2">
                 Kompartemen <span className="text-red-500">*</span>
@@ -153,7 +185,7 @@ export default function IuranFormModal({
                   value={formData.asosiasi}
                   onChange={handleInputChange}
                   required
-                  placeholder="misal: Asosiasi Profesi Keuangan"
+                  placeholder="Asosiasi Profesi Keuangan"
                   className="w-full text-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 focus:bg-white focus:border-[#005ea4] focus:ring-4 focus:ring-blue-50 transition-all outline-none"
                 />
               </div>
@@ -306,26 +338,52 @@ export default function IuranFormModal({
                 className="w-full text-sm px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 focus:bg-white focus:border-[#005ea4] focus:ring-4 focus:ring-blue-50 transition-all outline-none resize-none"
               ></textarea>
             </div>
+
           </form>
+          ) : (
+            <div className="space-y-6 font-mono-data">
+              <div className="p-5 bg-blue-50 border border-blue-100 rounded-2xl space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-blue-100 rounded-lg text-blue-700 shrink-0 mt-0.5">
+                    <PlusCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm">Data Dibuat Pada</h4>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {formData.createdAt 
+                        ? new Date(formData.createdAt).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) 
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="w-full border-t border-blue-200"></div>
+
+                <div className="flex items-start gap-4">
+                  <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700 shrink-0 mt-0.5">
+                    <Edit3 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm">Terakhir Diperbarui</h4>
+                    <p className="text-xs text-slate-600 mt-1">
+                      {formData.updatedAt 
+                        ? new Date(formData.updatedAt).toLocaleString('id-ID', { dateStyle: 'full', timeStyle: 'short' }) 
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-600 text-center leading-relaxed">
+                Anda dapat mengubah informasi data ini dengan berpindah ke tab <strong className="text-slate-800">Edit Data</strong>.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-100 bg-white rounded-b-2xl flex items-center justify-between">
           <div>
-            {modalMode === 'edit' && onDelete && (
-              <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleCloseModal();
-                    onDelete();
-                  }}
-                  className="px-4 py-2.5 text-sm font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer flex items-center gap-2"
-                >
-                  Hapus Data
-                </button>
-              </RoleGuard>
-            )}
           </div>
           <div className="flex gap-4">
             <button
@@ -335,11 +393,11 @@ export default function IuranFormModal({
             >
               Batal
             </button>
-            <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+            <RoleGuard allowedRoles={['Super Admin', 'Admin']}>
               <button
                 type="submit"
                 form="iuranForm"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (modalMode === 'edit' && activeTab === 'histori')}
                 className="px-6 py-2.5 text-sm font-bold text-white bg-[#005ea4] hover:bg-[#004780] rounded-lg shadow-sm transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? (

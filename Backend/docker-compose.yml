@@ -82,6 +82,9 @@ services:
       FASTAPI_OCR_URL: "http://fastapi-ocr:8000"
       REDIS_HOST: "redis"
       REDIS_PORT: 6379
+      ALLOWED_ORIGINS: "http://localhost:5173,http://localhost:5174"
+      JWT_SECRET: "super_secret_sertifikator_key_2026"
+      JWT_EXPIRES_IN: "7d"
     depends_on:
       - postgres
       - minio

@@ -1,6 +1,6 @@
+import toast from 'react-hot-toast';
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { socket } from '../services/socket';
-import toast from 'react-hot-toast';
 
 const AuthContext = createContext();
 
@@ -25,28 +25,29 @@ export function AuthProvider({ children }) {
   // Verifikasi token saat pertama kali dimuat (misal saat direfresh)
   useEffect(() => {
     const verifyToken = async () => {
-      if (token) {
+      // Hanya verifikasi jika ada data user yang tersimpan
+      if (user) {
         try {
           const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3005/api/v1';
+          const token = sessionStorage.getItem('token');
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
           const response = await fetch(`${baseUrl}/auth/heartbeat`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            }
+            headers,
+            credentials: 'include'
           });
           
           // Jika token tidak valid / unauthorized
           if (!response.ok) {
             setUser(null);
-            setToken(null);
-            sessionStorage.removeItem('token');
             sessionStorage.removeItem('user');
+            sessionStorage.removeItem('token');
             socket.disconnect();
             console.log("Sesi kedaluwarsa, harap login kembali.");
           }
         } catch (error) {
-          console.error("Gagal memverifikasi token ke server", error);
+          console.error("Gagal memverifikasi session ke server", error);
         }
       }
     };
@@ -74,6 +75,14 @@ export function AuthProvider({ children }) {
       // Simpan data user SAJA, token disimpan rahasia oleh browser via Cookie
       setUser(data.user);
       sessionStorage.setItem('user', JSON.stringify(data.user));
+      if (data.access_token) {
+        sessionStorage.setItem('token', data.access_token);
+        localStorage.setItem('token', data.access_token);
+      }
+      if (data.refresh_token) {
+        sessionStorage.setItem('refreshToken', data.refresh_token);
+        localStorage.setItem('refreshToken', data.refresh_token);
+      }
 
       // Koneksi socket akan tertrigger oleh useEffect
 
@@ -100,6 +109,10 @@ export function AuthProvider({ children }) {
       socket.disconnect();
       setUser(null);
       sessionStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('refreshToken');
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
     }
   };
 

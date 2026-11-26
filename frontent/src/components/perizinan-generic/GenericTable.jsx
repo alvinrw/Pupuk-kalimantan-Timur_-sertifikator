@@ -1,5 +1,5 @@
-import React from 'react';
-import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronRight, FileText, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileCheck, FileWarning, Eye, ShieldAlert, CheckCircle2, XCircle, ChevronDown, ChevronRight, FileText, Plus, Edit3 } from 'lucide-react';
 import { getFullFileUrl } from '../../config/api';
 import RoleGuard from '../RoleGuard';
 
@@ -41,6 +41,7 @@ export default function GenericTable({
   toggleSelectStaging,
   setDetailModalItem,
   setResolveTargetItem,
+  setEditStagingItem,
   visibleColumnKeys,
   allColumns = [],
   childColumns = [],
@@ -51,12 +52,20 @@ export default function GenericTable({
   sortOrder,
   toggleSort
 }) {
+  const [isJenisDropdownOpen, setIsJenisDropdownOpen] = useState(false);
+  const [isLokasiDropdownOpen, setIsLokasiDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+
   const rowsToRender = masterRows || expandedRows || [];
+
+  const isHakiCategory = (categoryName || '').toLowerCase().includes('paten') || 
+                          (categoryName || '').toLowerCase().includes('cipta') || 
+                          (categoryName || '').toLowerCase() === 'administrasi-lainnya';
 
   return (
     <>
       {/* BULK ACTION BAR */}
-      {activeMainTab === 'staging' && selectedStagingIds.length > 0 && (
+      {activeMainTab === 'staging' && selectedStagingIds.length > 0 && !isHakiCategory && (
         <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-center justify-between mt-4 shadow-2xs font-mono-data">
           <div className="text-amber-800 text-xs font-bold">
             {selectedStagingIds.length} item terpilih
@@ -73,28 +82,39 @@ export default function GenericTable({
       )}
 
       {/* Main Table */}
-      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
-        <div className="overflow-x-auto">
+      <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 && !isHakiCategory ? 'mt-4' : 'mt-0'}`}>
+        <div className="overflow-x-auto min-h-[350px]">
           <table className="w-full text-center border-collapse">
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider text-center align-middle">
-                {activeMainTab === 'staging' && (
-                  <th className="py-3.5 px-3 w-10 text-center align-middle">
-                    <input
-                      type="checkbox"
-                      checked={rowsToRender.length > 0 && selectedStagingIds.length === rowsToRender.length}
-                      onChange={() => toggleSelectAllStaging(rowsToRender)}
-                      className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
-                    />
-                  </th>
+                {!isHakiCategory && (
+                  <th className="py-3.5 px-2 w-10 text-center align-middle"></th>
                 )}
-                <th className="py-3.5 px-2 w-10 text-center align-middle"></th>
 
                 {allColumns.map(col => {
                   if (!isVisible(col.key)) return null;
 
                   if (col.key === 'no') {
-                    return <th key="no" className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">NO.</th>;
+                    return (
+                      <th key="no" className="py-3.5 px-3 text-center font-bold whitespace-nowrap align-middle w-16 min-w-[64px]">
+                        {activeMainTab === 'staging' && !isHakiCategory ? (
+                          <div className="flex items-center justify-center gap-1.5">
+                            {rowsToRender.length > 0 && (
+                              <input
+                                type="checkbox"
+                                checked={selectedStagingIds.length === rowsToRender.length && rowsToRender.length > 0}
+                                onChange={() => toggleSelectAllStaging(rowsToRender)}
+                                className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                                title="Pilih Semua"
+                              />
+                            )}
+                            <span>NO.</span>
+                          </div>
+                        ) : (
+                          <span>NO.</span>
+                        )}
+                      </th>
+                    );
                   }
 
                   if (col.key === 'namaItem') {
@@ -115,19 +135,39 @@ export default function GenericTable({
 
                   if (col.key === 'jenisItem') {
                     return (
-                      <th key="jenisItem" className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                        <div className="flex items-center gap-1.5 justify-center">
+                      <th key="jenisItem" className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle overflow-visible">
+                        <div className="flex items-center gap-1.5 justify-center relative z-40">
                           <span>{col.label}</span>
-                          <select
-                            value={filterJenis}
-                            onChange={(e) => setFilterJenis(e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
-                          >
-                            <option value="All">Semua</option>
-                            {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
-                              <option key={idx} value={j}>{j}</option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                setIsJenisDropdownOpen(!isJenisDropdownOpen);
+                                setIsLokasiDropdownOpen(false);
+                                setIsStatusDropdownOpen(false);
+                              }}
+                              className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer"
+                            >
+                              <span className="truncate max-w-[70px]">{filterJenis === 'All' ? 'Semua' : filterJenis}</span>
+                              <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isJenisDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <div className={`absolute left-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden origin-top-left transition-all duration-200 ease-out ${isJenisDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                              <button
+                                onClick={() => { setFilterJenis('All'); setIsJenisDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterJenis === 'All' ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                Semua
+                              </button>
+                              {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => { setFilterJenis(j); setIsJenisDropdownOpen(false); }}
+                                  className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterJenis === j ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                                >
+                                  {j}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </th>
                     );
@@ -135,19 +175,39 @@ export default function GenericTable({
 
                   if (col.key === 'unit') {
                     return (
-                      <th key="unit" className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                        <div className="flex items-center justify-center gap-1.5">
+                      <th key="unit" className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle overflow-visible">
+                        <div className="flex items-center justify-center gap-1.5 relative z-30">
                           <span>{col.label}</span>
-                          <select
-                            value={filterLokasi}
-                            onChange={(e) => setFilterLokasi(e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
-                          >
-                            <option value="All">Semua</option>
-                            {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
-                              <option key={idx} value={l}>{l}</option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                setIsLokasiDropdownOpen(!isLokasiDropdownOpen);
+                                setIsJenisDropdownOpen(false);
+                                setIsStatusDropdownOpen(false);
+                              }}
+                              className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer"
+                            >
+                              <span className="truncate max-w-[70px]">{filterLokasi === 'All' ? 'Semua' : filterLokasi}</span>
+                              <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isLokasiDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <div className={`absolute left-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden origin-top-left transition-all duration-200 ease-out ${isLokasiDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                              <button
+                                onClick={() => { setFilterLokasi('All'); setIsLokasiDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterLokasi === 'All' ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                Semua
+                              </button>
+                              {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => { setFilterLokasi(l); setIsLokasiDropdownOpen(false); }}
+                                  className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterLokasi === l ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                                >
+                                  {l}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </th>
                     );
@@ -163,19 +223,39 @@ export default function GenericTable({
 
                   if (col.key === 'status') {
                     return (
-                      <th key="status" className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
-                        <div className="flex items-center justify-center gap-1.5">
+                      <th key="status" className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle overflow-visible">
+                        <div className="flex items-center justify-center gap-1.5 relative z-20">
                           <span>{col.label}</span>
-                          <select
-                            value={filterStatus}
-                            onChange={(e) => setFilterStatus(e.target.value)}
-                            className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 font-bold cursor-pointer max-w-[100px]"
-                          >
-                            <option value="All">Semua</option>
-                            {uniqueStatus.filter(s => s !== 'All').map((s, idx) => (
-                              <option key={idx} value={s}>{s}</option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <button
+                              onClick={() => {
+                                setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                                setIsJenisDropdownOpen(false);
+                                setIsLokasiDropdownOpen(false);
+                              }}
+                              className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer"
+                            >
+                              <span className="truncate max-w-[70px]">{filterStatus === 'All' ? 'Semua' : filterStatus}</span>
+                              <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            <div className={`absolute right-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden origin-top-right transition-all duration-200 ease-out ${isStatusDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                              <button
+                                onClick={() => { setFilterStatus('All'); setIsStatusDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterStatus === 'All' ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                Semua
+                              </button>
+                              {uniqueStatus.filter(s => s !== 'All').map((s, idx) => (
+                                <button
+                                  key={idx}
+                                  onClick={() => { setFilterStatus(s); setIsStatusDropdownOpen(false); }}
+                                  className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterStatus === s ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                                >
+                                  {s}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         </div>
                       </th>
                     );
@@ -194,9 +274,9 @@ export default function GenericTable({
               {rowsToRender.length > 0 ? (
                 rowsToRender.map((row, index) => {
                   const doc = row.parentDoc;
-                  const rowClass = getRowStatusStyle ? getRowStatusStyle({ status: row.status, documentStatus: row.documentStatus }) : 'bg-white hover:bg-slate-50 border-b border-slate-200';
+                  const rowClass = getRowStatusStyle ? getRowStatusStyle(row) : 'bg-white hover:bg-slate-50 border-b border-slate-200';
                   const statusStr = (row.status || '').toLowerCase();
-                  const isAfkir = statusStr === 'afkir' || statusStr === 'decommissioned';
+                  const isDecommissioned = statusStr === 'decommissioned' || statusStr === 'decommissioned';
                   const isExpired = statusStr === 'expired';
                   const isPerpanjang = statusStr === 'perpanjang' || statusStr === 'perpanjangan' || statusStr === 'in progress' || statusStr === 'proses';
 
@@ -212,50 +292,62 @@ export default function GenericTable({
                   return (
                     <React.Fragment key={row.id || index}>
                       {/* Master Row */}
-                      <tr className={`transition-colors font-mono-data text-xs bg-white hover:bg-slate-50 border-b border-slate-200 text-slate-800`}>
-                        {activeMainTab === 'staging' && (
-                          <td className="py-3.5 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
-                              onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
-                              className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
-                            />
+                      <tr className={`transition-colors font-mono-data text-xs ${rowClass}`}>
+                        {!isHakiCategory && (
+                          <td className="py-3.5 px-2 text-center align-middle">
+                            {hasCertsOrExempt ? (
+                              <button
+                                onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
+                                className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                                  isExpanded
+                                    ? 'bg-blue-100 text-[#005ea4] border-blue-300 shadow-2xs'
+                                    : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
+                                }`}
+                                title={isExpanded ? 'Sembunyikan Sertifikat' : 'Lihat Sertifikat Terhubung'}
+                              >
+                                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </button>
+                            ) : (
+                              <span className="text-slate-300 font-bold text-xs">-</span>
+                            )}
                           </td>
                         )}
-
-
-                        <td className="py-3.5 px-2 text-center align-middle">
-                          {hasCertsOrExempt ? (
-                            <button
-                              onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
-                              className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                                isExpanded
-                                  ? 'bg-blue-100 text-[#005ea4] border-blue-300 shadow-2xs'
-                                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-300'
-                              }`}
-                              title={isExpanded ? 'Sembunyikan Sertifikat' : 'Lihat Sertifikat Terhubung'}
-                            >
-                              {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                            </button>
-                          ) : (
-                            <span className="text-slate-300 font-bold text-xs">-</span>
-                          )}
-                        </td>
 
                         {allColumns.map(col => {
                           if (!isVisible(col.key)) return null;
 
                           if (col.key === 'no') {
                             return (
-                              <td key="no" className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">
-                                {index + 1}
+                              <td key="no" className="py-3.5 px-3 text-center font-bold whitespace-nowrap align-middle w-16 min-w-[64px]">
+                                {activeMainTab === 'staging' && !isHakiCategory ? (
+                                  <div className="flex items-center justify-center gap-2">
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedStagingIds.includes(doc.id || doc.MasterId)}
+                                      onChange={() => toggleSelectStaging(doc.id || doc.MasterId)}
+                                      className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                                    />
+                                    <span className="text-slate-600 font-mono text-xs">{index + 1}</span>
+                                  </div>
+                                ) : (
+                                  <span>{index + 1}</span>
+                                )}
                               </td>
                             );
                           }
 
                           if (col.key === 'namaItem') {
-                            const certsCount = row.certs.length;
+                            const certs = row.certs || [];
+                            let issuanceCount = 1;
+                            if (certs.length > 0) {
+                              const primaryCert = certs[0];
+                              if (Array.isArray(primaryCert?.history) && primaryCert.history.length > 0) {
+                                issuanceCount = 1 + primaryCert.history.length;
+                              } else if (certs.length > 1) {
+                                issuanceCount = certs.length;
+                              }
+                            }
+
                             return (
                               <td
                                 key="namaItem"
@@ -266,20 +358,13 @@ export default function GenericTable({
                                 <div className="flex items-center justify-center gap-2">
                                   <FileCheck className={`w-3.5 h-3.5 shrink-0 ${row.certs.some(c => c.hasPdf) ? 'text-emerald-600' : 'text-slate-400'}`} />
                                   <span className="max-w-[200px] truncate block">{row.docNamaItem}</span>
-                                  {certsCount > 0 && (
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (activeMainTab !== 'staging') {
-                                          setDetailModalItem({ ...doc, _scrollToHistory: true });
-                                        }
-                                      }}
-                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black bg-[#005ea4] text-white border border-[#005ea4] hover:bg-[#004881] hover:border-[#004881] transition-all shadow-sm cursor-pointer shrink-0"
-                                      title={`${certsCount} sertifikat terbit. Klik untuk langsung ke histori dokumen.`}
+                                  {activeMainTab !== 'staging' && !isHakiCategory && (
+                                    <span
+                                      className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black bg-[#005ea4] text-white border border-[#005ea4] shadow-2xs shrink-0"
+                                      title={`Jumlah penerbitan: ${issuanceCount}`}
                                     >
-                                      {certsCount}
-                                    </button>
+                                      {issuanceCount}
+                                    </span>
                                   )}
                                 </div>
                               </td>
@@ -327,28 +412,19 @@ export default function GenericTable({
                                     Menunggu Dokumen
                                   </span>
                                 ) : row.certs.length > 0 ? (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (activeMainTab !== 'staging') {
-                                        setDetailModalItem({ ...doc, _scrollToHistory: true });
-                                      }
-                                    }}
-                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 shadow-2xs cursor-pointer transition-colors"
-                                    title="Klik untuk langsung melihat detail dan histori dokumen"
+                                  <span
+                                    className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-300 shadow-2xs"
                                   >
                                     <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
                                     <span>{row.certs.length} Sertifikat</span>
-                                  </button>
+                                  </span>
                                 ) : row.documentStatus === 'EXEMPT' ? (
-                                  <button
-                                    onClick={() => toggleExpandMaster && toggleExpandMaster(row.id)}
-                                    className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 cursor-pointer"
+                                  <span
+                                    className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-300"
                                   >
                                     <XCircle className="w-3.5 h-3.5" />
                                     Tanpa Sertifikat (Pengecualian)
-                                  </button>
+                                  </span>
                                 ) : (
                                   <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
                                     Belum Ada
@@ -362,7 +438,7 @@ export default function GenericTable({
                             return (
                               <td key="status" className="py-3.5 px-4 text-center whitespace-nowrap">
                                 <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
-                                  isAfkir
+                                  isDecommissioned
                                     ? 'bg-slate-800 text-white border-slate-600'
                                     : isExpired
                                     ? 'bg-rose-100 text-rose-900 border-rose-300'
@@ -372,6 +448,38 @@ export default function GenericTable({
                                 }`}>
                                   {row.status}
                                 </span>
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'certificateNo') {
+                            return (
+                              <td key="certificateNo" className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-bold text-slate-800">
+                                {doc.certificateNo || '-'}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'issueDate' || col.key === 'terbit') {
+                            return (
+                              <td key={col.key} className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
+                                {doc.issueDate || '-'}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'expiryDate' || col.key === 'berakhir') {
+                            return (
+                              <td key={col.key} className="py-3.5 px-4 whitespace-nowrap text-center align-middle">
+                                {doc.expiryDate || '-'}
+                              </td>
+                            );
+                          }
+
+                          if (col.key === 'instansi') {
+                            return (
+                              <td key="instansi" className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-semibold text-slate-800">
+                                {doc.instansi || '-'}
                               </td>
                             );
                           }
@@ -419,6 +527,20 @@ export default function GenericTable({
                                   </button>
                                 );
                               } else {
+                                if (isHakiCategory) {
+                                  return (
+                                    <button
+                                      onClick={() => {
+                                        const targetItem = (row.certs && row.certs.length > 0) ? row.certs[0] : doc;
+                                        setResolveTargetItem(targetItem);
+                                      }}
+                                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg shadow-2xs inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+                                    >
+                                      <FileWarning className="w-3.5 h-3.5" />
+                                      <span>Perbaiki / Lengkapi</span>
+                                    </button>
+                                  );
+                                }
                                 return (
                                   <button
                                     disabled
@@ -455,23 +577,26 @@ export default function GenericTable({
                       </tr>
 
                       {/* Expanded Sub-table Row */}
-                      {isExpanded && (
-                        <tr className="bg-slate-50/90 border-b-2 border-slate-300 shadow-inner">
-                          <td colSpan={100} className="p-4 text-left font-sans">
-                            <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+                      {!isHakiCategory && (
+                        <tr className={`p-0 m-0 border-0 transition-colors duration-300 ${isExpanded ? 'bg-slate-50/90 shadow-inner' : 'bg-transparent'}`}>
+                          <td colSpan={100} className="p-0 border-0">
+                            <div className={`grid transition-[grid-template-rows] duration-300 ease-in-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                              <div className="overflow-hidden">
+                                <div className={`p-4 text-left font-sans transition-colors duration-300 ${isExpanded ? 'border-b-2 border-slate-300' : 'border-b-0 border-transparent'}`}>
+                                  <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
                               {/* Sub-table Header */}
                               <div className="bg-slate-50 px-4 py-2.5 flex items-center justify-between border-b border-slate-200">
                                 <div className="flex items-center gap-2">
                                   <FileText className="w-4 h-4 text-[#005ea4]" />
                                   <span className="font-bold text-xs text-slate-800 font-mono-data uppercase tracking-wide">
-                                    Daftar Sertifikat / Izin Terhubung ({row.certs.length})
+                                    Daftar Sertifikat / Izin Terhubung
                                   </span>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <span className="text-[11px] text-slate-500 font-mono-data">
                                     Master: <strong className="text-slate-800">{row.docNamaItem}</strong> ({row.docCode})
                                   </span>
-                                  <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                                  <RoleGuard allowedRoles={['Super Admin', 'Admin']}>
                                     {setAddCertTargetMaster && (
                                       <button
                                         onClick={() => activeMainTab !== 'staging' && setAddCertTargetMaster(row.parentDoc || row)}
@@ -580,15 +705,55 @@ export default function GenericTable({
                                         const isCertExpiredReal = certExpiredTimestamp > 0 && certExpiredTimestamp < todayTimestamp;
                                         const isCertExpired = certStatusLower === 'expired' || isCertExpiredReal || isMissingBothDates;
                                         
-                                        const isCertAfkir = certStatusLower === 'afkir' || certStatusLower === 'decommissioned' || certStatusLower === 'dicabut';
+                                        const isCertDecommissioned = certStatusLower === 'decommissioned' || certStatusLower === 'decommissioned' || certStatusLower === 'dicabut' || certStatusLower === 'non aktif' || certStatusLower === 'tidak aktif';
                                         const isCertPerpanjang = certStatusLower === 'perpanjang' || certStatusLower === 'perpanjangan' || certStatusLower === 'in progress';
 
                                         const childRowClass = getRowStatusStyle 
                                           ? getRowStatusStyle({ 
-                                              status: isCertExpired ? 'expired' : cert.status, 
-                                              documentStatus: isCertExpired ? 'expired' : cert.status 
+                                              status: isCertDecommissioned ? 'decommissioned' : (isCertPerpanjang ? 'perpanjang' : (isCertExpired ? 'expired' : cert.status)), 
+                                              documentStatus: cert.status,
+                                              expired: cert.expired
                                             }) 
                                           : 'bg-white hover:bg-blue-50/40';
+
+                                        const getIssuanceCount = (c) => {
+                                          if (!c) return 0;
+                                          const statusL = (c.status || '').toLowerCase();
+                                          const noS = c.noSertifikat || c.certNo || '';
+                                          const isEmptyNoS = !noS || noS === '-' || noS === 'BELUM_ADA_SERTIFIKAT' || noS === 'EXEMPT';
+                                          if (statusL === 'exempt' || (isEmptyNoS && !c.fileUrl && !c.terbit && !c.expired)) return 0;
+
+                                          if (Array.isArray(c.history) && c.history.length > 0) {
+                                            return 1 + c.history.length;
+                                          }
+
+                                          const allC = row?.linkedCertificates || row?.parentDoc?.linkedCertificates || row?.certificates || row?.parentDoc?.certificates || [];
+                                          const certTypesCount = row?.certs?.length || 1;
+
+                                          if (allC.length > 0) {
+                                            const cJenis = c.jenisSertifikat || c.jenisItem || '';
+                                            const cName = c.namaSertifikat || c.jenisSertifikat || '';
+
+                                            if (cJenis) {
+                                              const matchingJenis = allC.filter(item => (item.jenisSertifikat || item.jenisItem) === cJenis);
+                                              if (matchingJenis.length > 0) return matchingJenis.length;
+                                            }
+
+                                            if (cName) {
+                                              const matchingName = allC.filter(item => (item.namaSertifikat || item.jenisSertifikat) === cName);
+                                              if (matchingName.length > 0) {
+                                                if (certTypesCount === 1 && allC.length > matchingName.length) {
+                                                  return allC.length;
+                                                }
+                                                return matchingName.length;
+                                              }
+                                            }
+
+                                            if (certTypesCount === 1) return allC.length;
+                                          }
+                                          return 1;
+                                        };
+                                        const issuanceCount = getIssuanceCount(cert);
 
                                         return (
                                           <tr key={cert.id || certIdx} className={`transition-colors ${childRowClass}`}>
@@ -597,7 +762,7 @@ export default function GenericTable({
 
                                               if (col.key === 'no') {
                                                 return (
-                                                  <td key="no" className={`py-2.5 px-3 font-bold text-center ${isCertAfkir ? 'text-slate-400' : 'text-slate-500'}`}>
+                                                  <td key="no" className={`py-2.5 px-3 font-bold text-center ${isCertDecommissioned ? 'text-slate-400' : 'text-slate-500'}`}>
                                                     {certIdx + 1}
                                                   </td>
                                                 );
@@ -616,33 +781,36 @@ export default function GenericTable({
                                                       if (setActiveCertId) setActiveCertId(targetId);
                                                       setDetailModalItem(row.parentDoc || row);
                                                     }}
-                                                    className={`py-2.5 px-4 text-left font-bold ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : (isCertAfkir ? 'cursor-pointer hover:underline text-white hover:text-blue-300' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')}`}
+                                                    className={`py-2.5 px-4 text-left font-bold ${activeMainTab === 'staging' ? 'cursor-default text-slate-800' : (isCertDecommissioned ? 'cursor-pointer hover:underline text-white hover:text-blue-300' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')}`}
                                                     title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : 'Klik untuk Lihat Detail Halaman Penuh Sertifikat'}
                                                   >
-                                                    {cert.namaSertifikat || '-'}
+                                                    <div className="flex items-center gap-2">
+                                                      <span>{cert.namaSertifikat || '-'}</span>
+                                                    </div>
                                                   </td>
                                                 );
                                               }
 
                                               if (col.key === 'noSertifikat') {
                                                 return (
-                                                  <td key="noSertifikat" className={`py-2.5 px-4 text-center font-bold ${isCertAfkir ? 'text-blue-300' : 'text-[#005ea4]'}`}>
+                                                  <td key="noSertifikat" className={`py-2.5 px-4 text-center font-bold ${isCertDecommissioned ? 'text-blue-300' : 'text-[#005ea4]'}`}>
                                                     {cert.noSertifikat || '-'}
                                                   </td>
                                                 );
                                               }
 
                                               if (col.key === 'instansi') {
+                                                const instansiVal = cert.instansi || cert.issuer || cert.agency || '-';
                                                 return (
-                                                  <td key="instansi" className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>
-                                                    {cert.instansi || '-'}
+                                                  <td key="instansi" className={`py-2.5 px-4 text-center font-bold font-mono-data ${isCertDecommissioned ? 'text-slate-300' : 'text-slate-800'}`}>
+                                                    {instansiVal}
                                                   </td>
                                                 );
                                               }
 
                                               if (col.key === 'terbit') {
                                                 return (
-                                                  <td key="terbit" className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                  <td key="terbit" className={`py-2.5 px-4 text-center ${isCertDecommissioned ? 'text-slate-300' : 'text-slate-600'}`}>
                                                     {cert.terbit || '-'}
                                                   </td>
                                                 );
@@ -650,7 +818,7 @@ export default function GenericTable({
 
                                               if (col.key === 'expired') {
                                                 return (
-                                                  <td key="expired" className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : (isCertAfkir ? 'text-slate-200' : 'text-slate-800')}`}>
+                                                  <td key="expired" className={`py-2.5 px-4 text-center font-bold ${isCertExpired ? 'text-rose-600' : (isCertDecommissioned ? 'text-slate-200' : 'text-slate-800')}`}>
                                                     {cert.expired || '-'}
                                                   </td>
                                                 );
@@ -659,12 +827,12 @@ export default function GenericTable({
                                               if (col.key === 'status') {
                                                 const rawStatus = (cert.status || '').toLowerCase();
                                                 const isStatusExpired = rawStatus === 'expired' || isCertExpiredReal || isMissingBothDates;
-                                                const isStatusAfkir = rawStatus === 'afkir' || rawStatus === 'decommissioned' || rawStatus === 'dicabut';
+                                                const isStatusDecommissioned = rawStatus === 'decommissioned' || rawStatus === 'decommissioned' || rawStatus === 'dicabut';
                                                 const isStatusPerpanjang = rawStatus === 'perpanjang' || rawStatus === 'perpanjangan' || rawStatus === 'in progress' || rawStatus === 'proses';
                                                 return (
                                                   <td key="status" className="py-2.5 px-4 text-center whitespace-nowrap">
                                                     <span className={`inline-block px-2 py-0.5 text-[10px] font-bold rounded-full border ${
-                                                      isStatusAfkir
+                                                      isStatusDecommissioned
                                                         ? 'bg-slate-800 text-white border-slate-600'
                                                         : isStatusExpired
                                                         ? 'bg-rose-100 text-rose-900 border-rose-300'
@@ -678,10 +846,13 @@ export default function GenericTable({
                                                 );
                                               }
 
+
+
                                               if (col.key === 'keterangan') {
+                                                const ketVal = cert.keterangan || cert.catatan || cert.notes || cert.description || '-';
                                                 return (
-                                                  <td key="keterangan" className={`py-2.5 px-4 text-center ${isCertAfkir ? 'text-slate-300' : 'text-slate-600'}`}>
-                                                    {cert.keterangan || '-'}
+                                                  <td key="keterangan" className={`py-2.5 px-4 text-center ${isCertDecommissioned ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                    {ketVal}
                                                   </td>
                                                 );
                                               }
@@ -710,7 +881,6 @@ export default function GenericTable({
                                                 </td>
                                               );
                                             })}
-
                                             <td className="py-2.5 px-4 text-center whitespace-nowrap font-mono-data">
                                               <div className="flex items-center justify-center gap-1.5">
                                                 {activeMainTab === 'staging' ? (
@@ -720,20 +890,13 @@ export default function GenericTable({
                                                       <span>Tidak Perlu</span>
                                                     </span>
                                                   ) : cert.hasPdf ? (
-                                                    <button
-                                                      type="button"
-                                                      onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        e.preventDefault();
-                                                        if (setActiveCertId) setActiveCertId(null);
-                                                        const raw = cert.certObj || cert || {};
-                                                        setViewingCert(raw);
-                                                      }}
-                                                      className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold rounded-md border border-emerald-600 inline-flex items-center gap-1 cursor-pointer transition-colors"
+                                                    <span
+                                                      className="px-2.5 py-1 bg-emerald-600 text-white text-[11px] font-bold rounded-md border border-emerald-600 inline-flex items-center gap-1"
+                                                      title="Dokumen sudah lengkap"
                                                     >
                                                       <CheckCircle2 className="w-3.5 h-3.5" />
                                                       <span>Sudah Lengkap</span>
-                                                    </button>
+                                                    </span>
                                                   ) : (
                                                     <button
                                                       type="button"
@@ -752,8 +915,8 @@ export default function GenericTable({
                                                       <FileWarning className="w-3.5 h-3.5" />
                                                       <span>
                                                         {cert.noSertifikat && cert.noSertifikat !== '-' && cert.noSertifikat !== 'BELUM_ADA_SERTIFIKAT' 
-                                                          ? 'Upload PDF' 
-                                                          : 'Lengkapi'}
+                                                          ? 'Upload PDF / Edit' 
+                                                          : 'Lengkapi & Edit'}
                                                       </span>
                                                     </button>
                                                   )
@@ -802,7 +965,7 @@ export default function GenericTable({
                                 </div>
                               ) : (
                                 <div className="p-6 text-center text-slate-400 italic text-xs flex flex-col items-center justify-center gap-2">
-                                  <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                                  <RoleGuard allowedRoles={['Super Admin', 'Admin']}>
                                     {setAddCertTargetMaster && (
                                       <button
                                         onClick={() => setAddCertTargetMaster(row.parentDoc || row)}
@@ -816,6 +979,9 @@ export default function GenericTable({
                                 </div>
                               )}
                             </div>
+                                </div>
+                              </div>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -824,7 +990,7 @@ export default function GenericTable({
                 })
               ) : (
                 <tr>
-                  <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 2 : 2)} className="py-8 text-center text-slate-400 font-mono-data">
+                  <td colSpan={100} className="py-8 text-center text-slate-400 font-mono-data">
                     Data perizinan tidak ditemukan.
                   </td>
                 </tr>

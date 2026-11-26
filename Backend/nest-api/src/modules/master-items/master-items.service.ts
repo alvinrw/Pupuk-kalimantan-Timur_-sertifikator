@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, OnModuleInit } from '@nestjs/common';
 import { CreateMasterItemDto } from './dto/create-master-item.dto';
 import { UpdateMasterItemDto } from './dto/update-master-item.dto';
 import { PrismaService } from '../../database/prisma.service';
@@ -80,6 +80,7 @@ export class MasterItemsService implements OnModuleInit {
       ],
       include: {
         certificates: {
+          where: { isDeleted: false },
           include: {
             notificationSetting: true
           }
@@ -101,6 +102,7 @@ export class MasterItemsService implements OnModuleInit {
       where: { id },
       include: {
         certificates: {
+          where: { isDeleted: false },
           include: {
             notificationSetting: true
           }
@@ -123,6 +125,13 @@ export class MasterItemsService implements OnModuleInit {
 
   async update(id: string, updateMasterItemDto: UpdateMasterItemDto) {
     const item = await this.findOne(id); // Check if exists
+
+    const isCurrentlyDeactivated = ['afkir', 'non aktif', 'decommissioned'].includes(item.status?.toLowerCase() || '');
+    const isActivating = updateMasterItemDto.status?.toLowerCase() === 'aktif';
+
+    if (isCurrentlyDeactivated && !isActivating) {
+      throw new BadRequestException('Item sedang dinonaktifkan (Afkir) dan tidak dapat diedit. Aktifkan kembali terlebih dahulu.');
+    }
 
     // Resolve any active notifications on manual update/renewal
     await this.prisma.reminderNotification.updateMany({

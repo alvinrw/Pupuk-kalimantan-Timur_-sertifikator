@@ -16,14 +16,16 @@ export default function InformasiWebsite() {
               Kenali lebih dekat platform PERISAI dan unduh panduan penggunaannya.
             </p>
           </div>
-          <button
-            disabled
-            className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-slate-400 font-bold shadow-xs cursor-not-allowed transition-all"
-            title="Sedang dalam penyusunan"
+          <a
+            href="/Guide_book.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-[#005ea4] rounded-xl text-[#005ea4] font-bold shadow-xs hover:bg-blue-50 transition-all cursor-pointer"
+            title="Buka Guide Book"
           >
             <DownloadCloud className="w-5 h-5" />
-            <span>Guide Book (Segera Hadir)</span>
-          </button>
+            <span>Unduh Guide Book</span>
+          </a>
         </div>
       </div>
 
@@ -100,9 +102,9 @@ export default function InformasiWebsite() {
                 </p>
               </div>
 
-              {/* Badge Segera Hadir */}
-              <div className="absolute top-6 right-6 bg-orange-100 text-orange-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
-                Coming Soon
+              {/* Badge Tersedia */}
+              <div className="absolute top-6 right-6 bg-emerald-100 text-emerald-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-wider">
+                Tersedia
               </div>
             </div>
           </div>

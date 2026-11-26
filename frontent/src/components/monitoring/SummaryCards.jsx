@@ -12,7 +12,7 @@ export default function SummaryCards({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-      {/* Card 1: Inventaris Expired */}
+      {/* Card 1: Expired */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'expired' ? 'all' : 'expired')}
         className={`p-4 rounded-xl border cursor-pointer transition-all bg-white shadow-2xs ${
@@ -20,7 +20,7 @@ export default function SummaryCards({
         }`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Inventaris Expired</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Expired</span>
           <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center">
             <ShieldAlert className="w-3.5 h-3.5 text-slate-700" />
           </div>
@@ -63,7 +63,7 @@ export default function SummaryCards({
         </div>
       </div>
 
-      {/* Card 3: Sertifikat Valid */}
+      {/* Card 3: Aktif */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'valid' ? 'all' : 'valid')}
         className={`p-4 rounded-xl border cursor-pointer transition-all bg-white shadow-2xs ${
@@ -71,7 +71,7 @@ export default function SummaryCards({
         }`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Sertifikat Valid</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Aktif</span>
           <div className="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center">
             <CheckCircle2 className="w-3.5 h-3.5 text-slate-700" />
           </div>
@@ -82,7 +82,7 @@ export default function SummaryCards({
         </div>
       </div>
 
-      {/* Card 4: Proses Perpanjangan */}
+      {/* Card 4: Perpanjangan */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'in_progress' ? 'all' : 'in_progress')}
         className={`p-4 rounded-xl border cursor-pointer transition-all bg-white shadow-2xs ${
@@ -90,7 +90,7 @@ export default function SummaryCards({
         }`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Proses Perpanjangan</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600">Perpanjangan</span>
           <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center">
             <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
           </div>
@@ -101,7 +101,7 @@ export default function SummaryCards({
         </div>
       </div>
 
-      {/* Card 5: Aset Afkir / Non-Aktif */}
+      {/* Card 5: Aset Decommissioned / Non-Aktif */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'decommissioned' ? 'all' : 'decommissioned')}
         className={`p-4 rounded-xl border cursor-pointer transition-all bg-[#0f172a] text-white shadow-xs ${
@@ -109,7 +109,7 @@ export default function SummaryCards({
         }`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Aset Afkir / Non-Aktif</span>
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-300">Aset Decommissioned / Non-Aktif</span>
           <div className="w-7 h-7 rounded-lg bg-slate-800 text-white border border-slate-700 flex items-center justify-center">
             <Ban className="w-3.5 h-3.5 text-slate-200" />
           </div>

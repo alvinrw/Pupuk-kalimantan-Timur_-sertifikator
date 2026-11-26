@@ -1,7 +1,7 @@
+import toast from 'react-hot-toast';
 import { useState, useRef } from 'react';
 import { updateCertificate, updateMasterItem, createCertificate } from '../../services/masterItemsService';
 import { UPLOAD_ENDPOINT } from '../../config/api';
-import toast from 'react-hot-toast';
 
 const getTimestamp = (dateStr) => {
   if (!dateStr || dateStr === '-') return 0;
@@ -20,7 +20,7 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
   const manualFileInputRef = useRef(null);
 
   const openUploadModal = (type, rowId = null) => {
-    setUploadData({ type, rowId, namaSertifikat: '', noSertifikat: '', instansi: '', terbit: '', expired: '' });
+    setUploadData({ type, rowId, namaSertifikat: '', noSertifikat: '', instansi: '', keterangan: '', terbit: '', expired: '' });
     setSelectedUploadFile(null);
     setIsUploadModalOpen(true);
   };
@@ -34,13 +34,19 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
       if (selectedUploadFile) {
         const fd = new FormData();
         fd.append('file', selectedUploadFile);
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
 
         const res = await fetch(UPLOAD_ENDPOINT, { 
           method: 'POST', 
           credentials: 'include',
+          headers,
           body: fd
         });
-        if (!res.ok) throw new Error('Gagal upload file ke server');
+        if (!res.ok) {
+          const errorJson = await res.json().catch(() => ({}));
+          throw new Error('Gagal upload file ke server: ' + (errorJson.message || errorJson.error || res.statusText || 'Unknown error'));
+        }
 
         const json = await res.json();
         newFileUrl = json?.data?.url || json?.data?.fileUrl;
@@ -56,17 +62,19 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
       // Only treat the new certificate as active if its expiration date is later than the current one
       const isNewer = newExpiredTime > currentExpiredTime;
 
+      const cleanVal = (val) => (val && val !== 'null' ? val : undefined);
+
       const certPayload = {
         itemId: masterItemId,
-        noSertifikat: uploadData.noSertifikat || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`,
-        namaSertifikat: uploadData.namaSertifikat || (targetCert ? targetCert.namaSertifikat : 'Sertifikat Utama'),
-        jenisSertifikat: (targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || 'Sertifikat Utama',
-        instansi: uploadData.instansi || targetCert?.instansi || null,
-        terbit: uploadData.terbit || undefined,
-        expired: uploadData.expired || undefined,
+        noSertifikat: cleanVal(uploadData.noSertifikat) || `CERT-AUTO-${Math.floor(1000 + Math.random() * 9000)}`,
+        namaSertifikat: cleanVal(uploadData.namaSertifikat) || (targetCert ? targetCert.namaSertifikat : 'Sertifikat Utama'),
+        jenisSertifikat: cleanVal(targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || 'Sertifikat Utama',
+        instansi: cleanVal(uploadData.instansi) || cleanVal(targetCert?.instansi) || undefined,
+        terbit: cleanVal(uploadData.terbit) || undefined,
+        expired: cleanVal(uploadData.expired) || undefined,
         status: isNewer ? 'Aktif' : 'Diarsipkan',
-        fileUrl: newFileUrl,
-        keterangan: targetCert?.keterangan || null,
+        fileUrl: newFileUrl || undefined,
+        keterangan: cleanVal(uploadData.keterangan) || cleanVal(targetCert?.keterangan) || undefined,
       };
 
       if (uploadData.type === 'current') {
@@ -77,6 +85,7 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
             jenisSertifikat: (targetCert ? targetCert.jenisSertifikat : uploadData.namaSertifikat) || undefined,
             noSertifikat: uploadData.noSertifikat || undefined,
             instansi: uploadData.instansi || undefined,
+            keterangan: uploadData.keterangan || undefined,
             terbit: uploadData.terbit || undefined,
             expired: uploadData.expired || undefined,
             status: 'Aktif',
@@ -123,6 +132,9 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
       await fetchHistory();
 
       const updatedFields = { fileUrl: newFileUrl };
+      if (uploadData.instansi) updatedFields.instansi = uploadData.instansi;
+      if (uploadData.noSertifikat) updatedFields.noSertifikat = uploadData.noSertifikat;
+      if (uploadData.keterangan) updatedFields.keterangan = uploadData.keterangan;
       if (uploadData.type === 'archive' && isNewer) {
         updatedFields.status = 'Aktif';
         if (uploadData.terbit) updatedFields.issueDate = uploadData.terbit;
@@ -131,10 +143,6 @@ export function useDocumentUpload({ item, targetCert, fetchHistory, onSaveUpdate
       }
       if (onSaveUpdate) onSaveUpdate({ ...item, ...updatedFields });
       if (onRefreshRequired) onRefreshRequired();
-      // Optional callback
-      if (onSaveUpdate) onSaveUpdate({ ...item, fileUrl: newFileUrl });
-      
-      setSelectedUploadFile(null);
       
     } catch (err) {
       console.error('Upload fail:', err);

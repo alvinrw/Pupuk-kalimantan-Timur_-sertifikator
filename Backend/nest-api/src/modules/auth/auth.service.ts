@@ -24,9 +24,14 @@ export class AuthService {
     });
   }
 
-  async login(username: string, pass: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { username },
+  async login(identifier: string, pass: string) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          { username: identifier },
+          { npk: identifier },
+        ],
+      },
       include: { role: true },
     });
     
@@ -59,7 +64,7 @@ export class AuthService {
       },
     });
 
-    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '15m' });
+    const accessToken = await this.jwtService.signAsync(payload, { expiresIn: '24h' });
     const refreshToken = await this.jwtService.signAsync(payload, { expiresIn: '7d' });
 
     return {
@@ -86,7 +91,7 @@ export class AuthService {
       }
       
       const newPayload = { sub: payload.sub, username: payload.username, role: payload.role, npk: payload.npk };
-      const newAccessToken = await this.jwtService.signAsync(newPayload, { expiresIn: '15m' });
+      const newAccessToken = await this.jwtService.signAsync(newPayload, { expiresIn: '24h' });
       return { access_token: newAccessToken };
     } catch (e) {
       throw new UnauthorizedException('Invalid refresh token.');

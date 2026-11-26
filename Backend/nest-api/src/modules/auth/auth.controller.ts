@@ -16,19 +16,23 @@ export class AuthController {
     
     res.cookie('access_token', result.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
-      maxAge: 15 * 60 * 1000, // 15 minutes
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
     res.cookie('refresh_token', result.refresh_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    return { user: result.user };
+    return { 
+      user: result.user,
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+    };
   }
 
   @SkipThrottle() // Heartbeat dipanggil sering, tidak perlu dibatasi
@@ -70,11 +74,11 @@ export class AuthController {
     
     res.cookie('access_token', result.access_token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: false,
       sameSite: 'lax',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
-    return { message: 'Token refreshed successfully' };
+    return { message: 'Token refreshed successfully', access_token: result.access_token };
   }
 }

@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import toast from 'react-hot-toast';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import api from '../services/api';
 import {
   Search,
   PlusCircle,
@@ -31,13 +33,37 @@ export default function IuranKeanggotaan() {
     handleSubmit,
     handleDelete: defaultHandleDelete,
     setData,
+    fetchData,
     sortOrder,
     setSortOrder
   } = useIuranKeanggotaan();
 
+  const [detailModalItem, setDetailModalItem] = useState(null);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [filterKompartemen, setFilterKompartemen] = useState('');
   const [isKompartemenFilterOpen, setIsKompartemenFilterOpen] = useState(false);
+
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+
+  // Helpers to open one dropdown while closing all others
+  const openSort = () => { setIsSortOpen(true); setIsColumnDropdownOpen(false); setIsKompartemenFilterOpen(false); };
+  const openColumnDropdown = () => { setIsColumnDropdownOpen(true); setIsSortOpen(false); setIsKompartemenFilterOpen(false); };
+  const openKompartemenFilter = () => { setIsKompartemenFilterOpen(true); setIsSortOpen(false); setIsColumnDropdownOpen(false); };
+
+  const dropdownsRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownsRef.current && !dropdownsRef.current.contains(event.target)) {
+        setIsSortOpen(false);
+        setIsColumnDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const uniqueKompartemen = useMemo(() => {
     const list = data.map(item => item.kompartemen).filter(Boolean);
@@ -49,20 +75,44 @@ export default function IuranKeanggotaan() {
   const [historyModalItem, setHistoryModalItem] = useState(null);
 
   // Column Selection
-  const allColumns = [
+  const defaultColumns = useMemo(() => [
     { key: "kompartemen", label: "KOMPARTEMEN" },
     { key: "unitKerja", label: "UNIT KERJA" },
     { key: "asosiasi", label: "ASOSIASI" },
+    { key: "tanggalMulai", label: "TAHUN PENDAFTARAN" },
     { key: "periode", label: "TAHUN AKTIF" },
     { key: "nominal", label: "NOMINAL" },
     { key: "status", label: "STATUS" },
     { key: "nama", label: "NAMA" },
     { key: "npk", label: "NPK" },
     { key: "keterangan", label: "KETERANGAN" }
-  ];
+  ], []);
 
-  const [visibleColumnKeys, setVisibleColumnKeys] = useState(allColumns.map(c => c.key));
-  const [isColumnDropdownOpen, setIsColumnDropdownOpen] = useState(false);
+  const [allColumns, setAllColumns] = useState(defaultColumns);
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState(defaultColumns.map(c => c.key));
+
+  useEffect(() => {
+    const loadColumns = async () => {
+      try {
+        const res = await api.get('/column-configs/iuran-keanggotaan');
+        const fetched = res.data || [];
+        if (fetched.length > 0) {
+          const cols = fetched
+            .filter(c => c.fieldKey !== 'no')
+            .map(c => ({
+              key: c.fieldKey,
+              label: c.label,
+              isVisible: c.isVisible
+            }));
+          setAllColumns(cols);
+          setVisibleColumnKeys(cols.filter(c => c.isVisible).map(c => c.key));
+        }
+      } catch (err) {
+        console.error('Failed to load iuran-keanggotaan column configs:', err);
+      }
+    };
+    loadColumns();
+  }, []);
 
   const toggleColumn = (key) => {
     setVisibleColumnKeys(prev =>
@@ -87,7 +137,7 @@ export default function IuranKeanggotaan() {
       setData(prev => prev.filter(item => item.id !== pendingDeleteRowItem.id));
     } catch (err) {
       console.error(err);
-      alert('Gagal menghapus data dari database.');
+      toast.error('Gagal menghapus data dari database.');
     } finally {
       setRowConfirmModalOpen(false);
       setPendingDeleteRowItem(null);
@@ -125,20 +175,20 @@ export default function IuranKeanggotaan() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="font-bold text-xl text-[#0F172A]">
-            Iuran Keanggotaan Sertifikasi & Profesi
+            Data Keanggotaan
           </h2>
           <p className="text-xs text-[#64748B] font-mono-data">
-            Daftar iuran keanggotaan institusi, sertifikasi badan usaha, dan asosiasi profesi karyawan
+            Kelola informasi keanggotaan institusi, sertifikasi badan usaha, dan asosiasi profesi
           </p>
         </div>
 
-        <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+        <RoleGuard allowedRoles={['Super Admin', 'Admin']}>
           <button
             onClick={handleOpenAddModal}
             className="flex items-center gap-2 px-4 py-2 bg-[#005ea4] hover:bg-[#004881] text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>+ Input Data Iuran</span>
+            <span>Unggah Data</span>
           </button>
         </RoleGuard>
       </div>
@@ -156,19 +206,38 @@ export default function IuranKeanggotaan() {
           />
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3" ref={dropdownsRef}>
           <div className="text-xs font-bold text-slate-800 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-mono-data">
             {filteredData.length} data ditemukan
           </div>
 
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            className="text-xs bg-white border border-[#e2e8f0] rounded-md px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
-          >
-            <option value="desc">Terbaru</option>
-            <option value="asc">Terlama</option>
-          </select>
+          <div className="relative">
+            <button
+              onClick={() => isSortOpen ? setIsSortOpen(false) : openSort()}
+              className="flex items-center justify-between min-w-[100px] px-3 py-1.5 bg-white border border-[#e2e8f0] rounded-md text-xs text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer"
+            >
+              <span>{sortOrder === 'desc' ? 'Terbaru' : 'Terlama'}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${isSortOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <div
+              className={`absolute right-0 top-full mt-1.5 w-32 bg-white border border-slate-200 rounded-lg shadow-xl py-1.5 z-50 text-left font-normal normal-case flex flex-col origin-top-right transition-all duration-200 ease-out overflow-hidden ${
+                isSortOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2'
+              }`}
+            >
+              <button
+                onClick={() => { setSortOrder('desc'); setIsSortOpen(false); }}
+                className={`w-full px-4 py-2 text-xs text-left transition-colors ${sortOrder === 'desc' ? 'bg-blue-50/70 font-bold text-[#005ea4]' : 'text-slate-700 hover:bg-slate-50'}`}
+              >
+                Terbaru
+              </button>
+              <button
+                onClick={() => { setSortOrder('asc'); setIsSortOpen(false); }}
+                className={`w-full px-4 py-2 text-xs text-left transition-colors ${sortOrder === 'asc' ? 'bg-blue-50/70 font-bold text-[#005ea4]' : 'text-slate-700 hover:bg-slate-50'}`}
+              >
+                Terlama
+              </button>
+            </div>
+          </div>
 
           {filterKompartemen && (
             <button
@@ -182,48 +251,46 @@ export default function IuranKeanggotaan() {
           {/* Column Selector Dropdown */}
           <div className="relative">
             <button
-              onClick={() => setIsColumnDropdownOpen(!isColumnDropdownOpen)}
+              onClick={() => isColumnDropdownOpen ? setIsColumnDropdownOpen(false) : openColumnDropdown()}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 text-xs font-bold rounded-md shadow-2xs cursor-pointer"
             >
               <Columns className="w-4 h-4 text-[#005ea4]" />
               <span>Pilih Kolom ({visibleColumnKeys.length}/{allColumns.length})</span>
             </button>
 
-            {isColumnDropdownOpen && (
-              <div className="absolute right-0 top-10 z-40 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 space-y-2 text-xs font-sans-clean">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <span className="font-bold text-slate-900 text-xs">Centang Kolom yang Tampil</span>
-                  <button
-                    onClick={selectAllColumns}
-                    className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline cursor-pointer"
-                  >
-                    Pilih Semua
-                  </button>
-                </div>
-
-                <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
-                  {allColumns.map((col) => {
-                    const checked = isVisible(col.key);
-                    return (
-                      <label
-                        key={col.key}
-                        onClick={() => toggleColumn(col.key)}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
-                          }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => { }}
-                          className="rounded border-slate-300 accent-[#005ea4]"
-                        />
-                        <span className="text-xs">{col.label}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+            <div className={`absolute right-0 top-10 z-40 w-72 bg-white rounded-xl shadow-2xl border border-slate-200 p-3 space-y-2 text-xs font-sans-clean transition-all duration-200 origin-top-right ease-out ${isColumnDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span className="font-bold text-slate-900 text-xs">Centang Kolom yang Tampil</span>
+                <button
+                  onClick={selectAllColumns}
+                  className="text-[11px] font-mono-data font-bold text-[#005ea4] hover:underline cursor-pointer"
+                >
+                  Pilih Semua
+                </button>
               </div>
-            )}
+
+              <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                {allColumns.map((col) => {
+                  const checked = isVisible(col.key);
+                  return (
+                    <label
+                      key={col.key}
+                      onClick={() => toggleColumn(col.key)}
+                      className={`flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors ${checked ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-100'
+                        }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => { }}
+                        className="rounded border-slate-300 accent-[#005ea4]"
+                      />
+                      <span className="text-xs">{col.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -240,7 +307,7 @@ export default function IuranKeanggotaan() {
                     <div className="flex items-center justify-center gap-1.5 relative">
                       <span>KOMPARTEMEN</span>
                       <button
-                        onClick={() => setIsKompartemenFilterOpen(!isKompartemenFilterOpen)}
+                        onClick={() => isKompartemenFilterOpen ? setIsKompartemenFilterOpen(false) : openKompartemenFilter()}
                         className="p-1 hover:bg-white/80 rounded transition-colors"
                       >
                         <ChevronDown className={`w-3.5 h-3.5 text-slate-600 transition-transform duration-200 ${isKompartemenFilterOpen ? 'rotate-180' : ''}`} />
@@ -267,18 +334,14 @@ export default function IuranKeanggotaan() {
                 )}
                 {isVisible('unitKerja') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">UNIT KERJA</th>}
                 {isVisible('asosiasi') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">ASOSIASI</th>}
-                {isVisible('periode') && (
-                  <>
-                    <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">TAHUN PENDAFTARAN</th>
-                    <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">TAHUN AKTIF</th>
-                  </>
-                )}
+                {isVisible('tanggalMulai') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">TAHUN PENDAFTARAN</th>}
+                {isVisible('periode') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">TAHUN AKTIF</th>}
                 {isVisible('nominal') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">NOMINAL</th>}
                 {isVisible('status') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">STATUS</th>}
                 {isVisible('nama') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">NAMA</th>}
                 {isVisible('npk') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">NPK</th>}
                 {isVisible('keterangan') && <th rowSpan={2} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle border-r border-slate-200/50">KETERANGAN</th>}
-                <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                <RoleGuard allowedRoles={['Super Admin', 'Admin']}>
                   <th rowSpan={2} className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">AKSI</th>
                 </RoleGuard>
               </tr>
@@ -309,23 +372,21 @@ export default function IuranKeanggotaan() {
                     {isVisible('kompartemen') && <td className="py-3.5 px-4 font-semibold text-slate-700 whitespace-nowrap text-center align-middle">{item.kompartemen || '-'}</td>}
                     {isVisible('unitKerja') && <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle">{item.unitKerja || '-'}</td>}
                     {isVisible('asosiasi') && <td className="py-3.5 px-4 font-medium text-slate-700 whitespace-nowrap text-center align-middle">{item.asosiasi || '-'}</td>}
-                    {isVisible('periode') && (() => {
+                    {isVisible('tanggalMulai') && (() => {
                       let tDaftar = '-';
-                      let tAkhir = '-';
                       if (item.periode && item.periode.includes(' s/d ')) {
-                        const parts = item.periode.split(' s/d ');
-                        tDaftar = parts[0].substring(0, 4);
-                        tAkhir = parts[1].substring(0, 4);
+                        tDaftar = item.periode.split(' s/d ')[0].substring(0, 4);
                       } else if (item.periode) {
                         tDaftar = item.periode.substring(0, 4);
-                        tAkhir = '-';
                       }
-                      return (
-                        <>
-                          <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-semibold text-[#005ea4] bg-blue-50/20">{tDaftar}</td>
-                          <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-semibold text-rose-600 bg-rose-50/20">{tAkhir}</td>
-                        </>
-                      );
+                      return <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-semibold text-[#005ea4] bg-blue-50/20">{tDaftar}</td>;
+                    })()}
+                    {isVisible('periode') && (() => {
+                      let tAkhir = '-';
+                      if (item.periode && item.periode.includes(' s/d ')) {
+                        tAkhir = item.periode.split(' s/d ')[1].substring(0, 4);
+                      }
+                      return <td className="py-3.5 px-4 whitespace-nowrap text-center align-middle font-semibold text-rose-600 bg-rose-50/20">{tAkhir}</td>;
                     })()}
                     {isVisible('nominal') && (
                       <td className="py-3.5 px-4 font-semibold text-slate-700 whitespace-nowrap text-center align-middle">
@@ -345,7 +406,7 @@ export default function IuranKeanggotaan() {
                     {isVisible('nama') && <td className="py-3.5 px-4 font-medium whitespace-nowrap text-center align-middle">{item.nama || '-'}</td>}
                     {isVisible('npk') && <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-center align-middle">{item.npk || '-'}</td>}
                     {isVisible('keterangan') && <td className="py-3.5 px-4 text-slate-600 whitespace-nowrap text-center align-middle">{item.keterangan || '-'}</td>}
-                    <RoleGuard allowedRoles={['Super Admin', 'Admin', 'User']}>
+                    <RoleGuard allowedRoles={['Super Admin', 'Admin']}>
                       <td className="py-3 px-4 text-center whitespace-nowrap align-middle">
                         <div className="flex flex-col items-center justify-center gap-2">
                           <button
@@ -355,8 +416,7 @@ export default function IuranKeanggotaan() {
                             }}
                             className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-white border border-[#005ea4] text-[#005ea4] rounded-lg shadow-sm font-bold text-[10px] hover:bg-blue-50 transition-colors mt-1 w-full max-w-[100px] cursor-pointer"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
-                            <span>Lihat Detail</span>
+                            <span>Riwayat</span>
                           </button>
                         </div>
                       </td>
@@ -381,47 +441,39 @@ export default function IuranKeanggotaan() {
         onDelete={() => requestDeleteRow(formData)}
       />
 
-      {/* Delete Confirmation Modal */}
+      {/* Confirm Delete Row Modal */}
       {rowConfirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden border border-slate-200">
-            <div className="p-8 text-center space-y-4 flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">
-                <AlertTriangle className="w-8 h-8" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center gap-3 text-rose-600 mb-4">
+              <div className="p-2 bg-rose-100 rounded-lg">
+                <AlertTriangle className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-xl text-slate-900 mt-2">Konfirmasi Hapus Data</h4>
-              <p className="text-sm text-slate-600 font-medium">
-                Apakah Anda yakin ingin menghapus seluruh data untuk <br />
-                <span className="font-bold text-slate-800">"{pendingDeleteRowItem?.asosiasi || '-'}"</span> ?<br />
-                Tindakan ini tidak dapat dibatalkan.
-              </p>
-
-              <div className="w-full border-t border-slate-100 mt-4 pt-6"></div>
-
-              <div className="flex justify-center gap-3 w-full">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRowConfirmModalOpen(false);
-                    setPendingDeleteRowItem(null);
-                  }}
-                  className="flex-1 py-2.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold rounded-xl text-sm transition-colors border border-slate-200 cursor-pointer"
-                >
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmDeleteRow}
-                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-sm shadow-xs transition-colors cursor-pointer"
-                >
-                  Ya, Hapus Data
-                </button>
-              </div>
+              <h3 className="text-base font-bold text-slate-900">Konfirmasi Hapus Data</h3>
+            </div>
+            <p className="text-xs text-slate-600 mb-6 font-mono-data leading-relaxed">
+              Apakah Anda yakin ingin menghapus data keanggotaan ini? Tindakan ini tidak dapat dibatalkan.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setRowConfirmModalOpen(false);
+                  setPendingDeleteRowItem(null);
+                }}
+                className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-50 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmDeleteRow}
+                className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer"
+              >
+                Hapus Data
+              </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 }

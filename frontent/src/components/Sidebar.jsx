@@ -70,13 +70,15 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
         { id: "perizinan-produk", label: "Perizinan Produk", icon: PackageCheck },
         { 
           id: "administrasi-dropdown", 
-          label: "Administrasi Lainnya", 
+          label: "Perizinan Administrasi Lainnya", 
           icon: FileSpreadsheet,
           isDropdown: true,
           subItems: [
-            { id: "iuran-keanggotaan", label: "Data Keanggotaan" }
+            { id: "administrasi-hak-cipta", label: "Hak Cipta" },
+            { id: "administrasi-hak-paten", label: "Hak Paten" }
           ]
         },
+        { id: "iuran-keanggotaan", label: "Keanggotaan", icon: Users },
       ]
     },
     {
@@ -94,9 +96,12 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
             { id: "atur-kolom-baris-aset", label: "Perizinan Aset" },
             { id: "atur-kolom-baris-proyek", label: "Perizinan Proyek" },
             { id: "atur-kolom-baris-produk", label: "Perizinan Produk" },
+            { id: "atur-kolom-baris-hak-cipta", label: "Hak Cipta" },
+            { id: "atur-kolom-baris-hak-paten", label: "Hak Paten" },
+            { id: "atur-kolom-baris-keanggotaan", label: "Keanggotaan" },
           ]
         },
-        { id: "tugas-terdekat", label: "Agenda & Perpanjangan", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin', 'User'] },
+        { id: "tugas-terdekat", label: "Agenda & Perpanjangan", icon: ClipboardList, roleGuard: ['Super Admin', 'Admin'] },
         {
           id: "informasi-website",
           label: "Informasi Website",
@@ -109,7 +114,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
   ];
 
   const sidebarContent = (
-    <aside className="w-64 bg-white text-slate-800 flex flex-col h-full font-sans-clean border-r border-slate-200 shadow-xs">
+    <aside className="w-[280px] bg-white text-slate-800 flex flex-col h-full font-sans-clean border-r border-slate-200 shadow-xs">
       {/* Brand Header */}
       <div className="h-20 px-6 flex items-center justify-between border-b border-slate-200 bg-slate-50/50 shrink-0">
         <div className="flex flex-col justify-center">
@@ -169,7 +174,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
                           }
                         }}
                         title={isCollapsed ? item.label : ""}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition-all duration-200 overflow-hidden ${
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all duration-200 overflow-hidden ${
                           hasActiveChild && isCollapsed
                             ? "bg-[#005ea4] text-white shadow-md shadow-[#005ea4]/20" 
                             : hasActiveChild
@@ -187,7 +192,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
                           }`} />
                           <span 
                             className={`whitespace-nowrap transition-all duration-300 ease-in-out ${
-                              isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[190px] opacity-100'
+                              isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[215px] opacity-100'
                             }`}
                           >
                             {item.label}
@@ -226,7 +231,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
                             })}
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                   
@@ -256,7 +261,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
                       <Icon className={`w-5 h-5 shrink-0 transition-colors duration-200 ${isActive ? "text-white" : "text-slate-400"}`} />
                       <span 
                         className={`whitespace-nowrap transition-all duration-300 ease-in-out ${
-                          isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[210px] opacity-100'
+                          isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[215px] opacity-100'
                         }`}
                       >
                         {item.label}
@@ -309,72 +314,7 @@ export default function Sidebar({ activeTab, setActiveTab, isMobileOpen, onMobil
             className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Keluar"
           >
-            <div className="p-3 border-b border-slate-100 bg-slate-50/50">
-              <p className="text-xs font-bold text-slate-900 truncate">{user?.nama || 'Pengguna'}</p>
-              <p className="text-[10px] text-slate-500 font-mono mt-0.5">NPK: {user?.npk || '-'}</p>
-            </div>
-            <div className="p-1.5 space-y-0.5">
-              <button 
-                onClick={() => {
-                  setActiveTab('profil');
-                  setIsProfileOpen(false);
-                }}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 hover:text-[#005ea4] rounded-lg transition-colors"
-              >
-                <User className="w-4 h-4 text-slate-400 shrink-0" />
-                Profil & Akun
-              </button>
-              <button 
-                onClick={logout}
-                className="w-full flex items-center gap-2.5 px-2.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                <LogOut className="w-4 h-4 text-red-500 shrink-0" />
-                Keluar
-              </button>
-            </div>
-          </div>
-
-          {/* Profile Button */}
-          <button 
-            onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className={`flex items-center p-2 rounded-xl border transition-all duration-300 w-full overflow-hidden ${
-              isProfileOpen 
-                ? "bg-slate-100 border-slate-300 shadow-inner" 
-                : "bg-white border-slate-200 shadow-sm hover:bg-slate-50 hover:border-slate-300"
-            }`}
-            title={isCollapsed ? `${user?.nama} (${user?.role})` : ""}
-          >
-            <div className="flex items-center gap-3">
-              <img 
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.nama || 'User')}&background=eff6ff&color=005ea4`} 
-                alt="User Avatar" 
-                className="w-8 h-8 rounded-full ring-2 ring-slate-100 object-cover shrink-0" 
-              />
-              <div 
-                className={`flex flex-col text-left transition-all duration-300 ease-in-out whitespace-nowrap ${
-                  isCollapsed ? 'max-w-0 opacity-0 ml-0' : 'max-w-[120px] opacity-100'
-                }`}
-              >
-                <span className="text-sm font-bold text-slate-900 truncate tracking-tight">
-                  {(() => {
-                    const fullName = user?.nama;
-                    if (!fullName) return 'Pengguna';
-                    const parts = fullName.trim().split(/\s+/);
-                    if (parts.length <= 2) return fullName;
-                    const firstTwo = parts.slice(0, 2).join(' ');
-                    const abbreviated = parts.slice(2).map(p => p[0].toUpperCase() + '.').join(' ');
-                    return `${firstTwo} ${abbreviated}`;
-                  })()}
-                </span>
-                <span className="text-[11px] font-medium text-slate-500 truncate mt-0.5">{user?.role || 'Sistem RBAC'}</span>
-              </div>
-            </div>
-            
-            <ChevronDown 
-              className={`w-4 h-4 text-slate-400 shrink-0 transform transition-all duration-300 ease-in-out ml-auto ${
-                isProfileOpen ? 'rotate-180' : ''
-              } ${isCollapsed ? 'max-w-0 opacity-0 ml-0 hidden' : 'max-w-[20px] opacity-100'}`} 
-            />
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </div>

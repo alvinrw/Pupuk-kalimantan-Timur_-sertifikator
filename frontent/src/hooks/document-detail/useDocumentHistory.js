@@ -1,8 +1,9 @@
+import toast from 'react-hot-toast';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { updateCertificate, deleteCertificate, restoreCertificate } from '../../services/masterItemsService';
 import { UPLOAD_ENDPOINT } from '../../config/api';
 
-export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
+export function useDocumentHistory({ item, targetCert, onRefreshRequired, isMultiCertItem }) {
   const [historyList, setHistoryList] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [selectedHistoryToDelete, setSelectedHistoryToDelete] = useState(null);
@@ -93,6 +94,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
         let isCurrent = m.id === activeCertId;
         return {
           ...m,
+          type: 'certificate',
           periode: m.periode || `${getYearFromStr(m.terbit || m.issueDate)} - ${getYearFromStr(m.expired || m.expiryDate)}`,
           noSertifikat: m.noSertifikat || m.certNo || m.certificateNo || '-',
           terbit: formatToDDMMYYYY(m.terbit || m.issueDate || '-'),
@@ -135,7 +137,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
       if (!selectedHistoryToDelete?.id) return;
       setIsDeletingHistory(true);
 
-      if (historyList.length === 1 && selectedHistoryToDelete.isCurrent) {
+      if (false) {
         // Ini adalah baris satu-satunya (child). Jangan hapus agar "slot" tidak hilang,
         // melainkan reset isinya ke kosong (Belum Ada)
         await updateCertificate(selectedHistoryToDelete.id, {
@@ -147,7 +149,31 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
           instansi: 'Dihapus dari histori'
         });
       } else {
-        await deleteCertificate(selectedHistoryToDelete.id);
+        if (!selectedHistoryToDelete.itemId && selectedHistoryToDelete.categoryKey) {
+          // Ini adalah MasterItem (tidak punya child certificate, data tersimpan di metadata)
+          let newKet = selectedHistoryToDelete.keterangan || '';
+          if (newKet && newKet.startsWith('{')) {
+             try {
+               let parsed = JSON.parse(newKet);
+               parsed.namaSertifikat = '';
+               parsed.noSertifikat = '';
+               parsed.terbit = '';
+               parsed.expired = '';
+               parsed.instansi = '';
+               newKet = JSON.stringify(parsed);
+             } catch(e) {}
+          }
+          const { updateMasterItem } = await import('../../services/masterItemsService');
+          await updateMasterItem(selectedHistoryToDelete.id, {
+            documentStatus: 'EXEMPT',
+            exemptionNote: 'Semua sertifikat telah dihapus',
+            issueDate: null,
+            expiryDate: null,
+            keterangan: newKet
+          });
+        } else {
+          await deleteCertificate(selectedHistoryToDelete.id);
+        }
       }
 
       await fetchHistory();
@@ -156,7 +182,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
       console.error('Failed to delete history row:', err);
       // Revert jika gagal
       fetchHistory();
-      alert('Gagal menghapus baris histori: ' + (err.message || 'Error'));
+      toast.error('Gagal menghapus baris histori: ' + (err.message || 'Error'));
     } finally {
       setIsDeletingHistory(false);
       setSelectedHistoryToDelete(null);
@@ -185,7 +211,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
     } catch (err) {
       console.error('Failed to restore cert:', err);
       fetchHistory();
-      alert('Gagal memulihkan dokumen: ' + (err.message || 'Error'));
+      toast.error('Gagal memulihkan dokumen: ' + (err.message || 'Error'));
     }
   };
 
@@ -202,7 +228,10 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
           credentials: 'include',
           headers: token ? { 'Authorization': `Bearer ${token}` } : {}
         });
-        if (!res.ok) throw new Error('Gagal upload file ke server');
+        if (!res.ok) {
+          const errorJson = await res.json().catch(() => ({}));
+          throw new Error('Gagal upload file ke server: ' + (errorJson.message || res.statusText || 'Unknown error'));
+        }
         const json = await res.json();
         const newFileUrl = json?.data?.url || json?.data?.fileUrl;
         if (newFileUrl) {
@@ -257,7 +286,7 @@ export function useDocumentHistory({ item, targetCert, onRefreshRequired }) {
       if (onRefreshRequired) onRefreshRequired();
     } catch (err) {
       console.error('Failed to update history row:', err);
-      alert('Gagal mengupdate baris histori: ' + (err.message || 'Error'));
+      toast.error('Gagal mengupdate baris histori: ' + (err.message || 'Error'));
     } finally {
       setEditingHistoryRow(null);
       setSelectedHistoryFile(null);

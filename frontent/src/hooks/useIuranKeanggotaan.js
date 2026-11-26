@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import {
   getIuranKeanggotaan,
@@ -33,13 +34,15 @@ export default function useIuranKeanggotaan() {
     nama: '',
     npk: '',
     keterangan: '',
+    createdAt: '',
+    updatedAt: '',
   });
 
   const fetchData = async () => {
     try {
       setLoading(true);
       const result = await getIuranKeanggotaan();
-      setData(result);
+      setData(Array.isArray(result) ? result : (result?.data || []));
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to fetch data');
@@ -70,6 +73,8 @@ export default function useIuranKeanggotaan() {
       nama: '',
       npk: '',
       keterangan: '',
+      createdAt: '',
+      updatedAt: '',
     });
     setIsModalOpen(true);
   };
@@ -102,6 +107,8 @@ export default function useIuranKeanggotaan() {
       nama: item.nama || '',
       npk: item.npk || '',
       keterangan: item.keterangan || '',
+      createdAt: item.createdAt || '',
+      updatedAt: item.updatedAt || '',
     });
     setIsModalOpen(true);
   };
@@ -151,7 +158,7 @@ export default function useIuranKeanggotaan() {
       setIsModalOpen(false);
     } catch (err) {
       console.error('Submit error:', err);
-      alert('Gagal menyimpan data.');
+      toast.error('Gagal menyimpan data.');
     } finally {
       setIsSubmitting(false);
     }
@@ -164,7 +171,7 @@ export default function useIuranKeanggotaan() {
         await fetchData();
       } catch (err) {
         console.error('Delete error:', err);
-        alert('Gagal menghapus data.');
+        toast.error('Gagal menghapus data.');
       }
     }
   };

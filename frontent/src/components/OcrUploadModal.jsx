@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState } from 'react';
 import { X, Upload, FileText, CheckCircle2, AlertTriangle, Sparkles, Loader2, Link2, ShieldAlert } from 'lucide-react';
 
@@ -51,7 +52,7 @@ export default function OcrUploadModal({ isOpen, onClose, onAddEquipment }) {
       setStep('result');
     } catch (error) {
       console.error("OCR API Error:", error);
-      alert("Gagal mengekstraksi data PDF menggunakan AI OCR. Pastikan Backend FastAPI menyala di port 8000.");
+      toast.error("Gagal mengekstraksi data PDF menggunakan AI OCR. Pastikan Backend FastAPI menyala di port 8000.");
       setStep('upload');
     }
   };

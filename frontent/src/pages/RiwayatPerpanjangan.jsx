@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useMemo } from 'react';
 import {
   History,
@@ -38,12 +39,18 @@ export default function RiwayatPerpanjangan() {
           if (item.certificates?.length > 0) docs.push(...item.certificates);
           if (item.permits?.length > 0) docs.push(...item.permits);
 
+          let meta = {};
+          try {
+            if (item.keterangan && item.keterangan.startsWith('{')) meta = JSON.parse(item.keterangan);
+          } catch (_) {}
+          const resolvedJenis = meta.additionalEntities?.find(e => e.key.toUpperCase() === 'JENIS PERALATAN PABRIK')?.value || meta.jenisPeralatan || meta.tipe || (item.categoryKey === 'peralatan-pabrik' ? 'Peralatan Pabrik' : (item.categoryKey || 'Lainnya'));
+
           // We will map all documents as 'history' items. If an item has 0 docs, we use the item info.
           if (docs.length === 0) {
             flattened.push({
               id: item.id,
               merekItem: item.title || 'Unknown',
-              jenisItem: item.categoryKey || 'Lainnya',
+              jenisItem: resolvedJenis,
               unitPabrik: item.unitLocation || 'Umum',
               noSertifikatBaru: item.code || '-',
               noSertifikatLama: '-',
@@ -59,7 +66,7 @@ export default function RiwayatPerpanjangan() {
               flattened.push({
                 id: doc.id,
                 merekItem: item.title || 'Unknown',
-                jenisItem: item.categoryKey || 'Lainnya',
+                jenisItem: resolvedJenis,
                 unitPabrik: item.unitLocation || 'Umum',
                 noSertifikatBaru: doc.noSertifikat || doc.noIzin || item.code || '-',
                 noSertifikatLama: '-',
@@ -111,10 +118,10 @@ export default function RiwayatPerpanjangan() {
         onBack={() => setSelectedDetailDoc(null)}
         onSaveUpdate={() => {}}
         onQuickRenew={(id) => {
-          alert(`Inisiasi Perpanjangan untuk log ${id}.`);
+          toast(`Inisiasi Perpanjangan untuk log ${id}.`);
         }}
         onQuickDecommission={(id) => {
-          alert(`Menandai log ${id} sebagai Afkir.`);
+          toast(`Menandai log ${id} sebagai Decommissioned.`);
         }}
       />
     );
@@ -199,12 +206,12 @@ export default function RiwayatPerpanjangan() {
             <thead>
               <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none text-center align-middle">
                 <th className="py-3 px-3 text-center font-bold whitespace-nowrap align-middle">NO.</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">NAMA ITEM & UNIT</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-[#005ea4] text-center align-middle">ALAT & UNIT</th>
                 <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">NO. SERTIFIKAT BARU</th>
                 <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL INSPEKSI</th>
                 <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">TGL TERBIT SK</th>
                 <th className="py-3 px-3 font-bold whitespace-nowrap text-rose-700 text-center align-middle">TGL EXPIRATION</th>
-                <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">INSTANSI / PENGUJI</th>
+                <th className="py-3 px-3 font-bold whitespace-nowrap text-center align-middle">INSTANSI PENERBIT</th>
                 <th className="py-3 px-3 font-bold text-center whitespace-nowrap align-middle">DOKUMEN</th>
               </tr>
             </thead>
@@ -263,7 +270,7 @@ export default function RiwayatPerpanjangan() {
                     {/* Action Download / Preview */}
                     <td className="py-3.5 px-3 text-center whitespace-nowrap align-middle">
                       <button
-                        onClick={() => alert(`Membuka berkas sertifikat terlampir: ${log.fileName}`)}
+                        onClick={() => toast(`Membuka berkas sertifikat terlampir: ${log.fileName}`)}
                         className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-[#005ea4] border border-blue-200 rounded-lg text-xs font-bold flex items-center gap-1.5 mx-auto cursor-pointer transition-colors"
                       >
                         <FileText className="w-3.5 h-3.5 text-[#005ea4]" />

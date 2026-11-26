@@ -23,7 +23,7 @@ export class UsersController {
   }
 
   @Patch('change-password')
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   changePassword(@Body() body: any, @Req() req: any) {
     return this.usersService.changePassword(req.user.id, body.currentPassword, body.newPassword);
   }

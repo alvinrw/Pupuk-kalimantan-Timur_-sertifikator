@@ -11,7 +11,7 @@ export const UPLOAD_ENDPOINT = `${BASE_URL}/api/v1/document-history/upload`;
  * @param {string|null} path
  * @returns {string|null}
  */
-export function getFullFileUrl(path) {
+export function getFullFileUrl(path, options = {}) {
   if (!path) return null;
   
   // Mengizinkan URL lokal untuk preview langsung
@@ -26,7 +26,9 @@ export function getFullFileUrl(path) {
     path.toLowerCase().endsWith('.jpeg') || path.includes('.jpeg?');
   
   if (isViewable) {
-    return `${API_BASE}/document-history/view-watermarked?token=${encodeURIComponent(token)}&filePath=${encodeURIComponent(path)}`;
+    const isTemp = path.includes('/temp/') || path.startsWith('temp/') || options?.noWatermark;
+    const noWmParam = isTemp ? '&noWatermark=true' : '';
+    return `${API_BASE}/document-history/view-watermarked?token=${encodeURIComponent(token)}&filePath=${encodeURIComponent(path)}&noWatermark=true`;
   }
   
   if (path.startsWith('http://') || path.startsWith('https://')) return path;

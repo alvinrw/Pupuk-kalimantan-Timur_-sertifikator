@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Menu } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -132,6 +132,26 @@ export default function App() {
         return <RiwayatPerpanjangan />;
       case 'informasi-website':
         return <InformasiWebsite />;
+      case 'administrasi-hak-cipta':
+        return (
+          <PerizinanGeneric
+            key="administrasi-hak-cipta"
+            title="Hak Cipta"
+            subtitle=""
+            categoryName="Hak Cipta"
+            onAddRenewalBatch={handleAddRenewalBatch}
+          />
+        );
+      case 'administrasi-hak-paten':
+        return (
+          <PerizinanGeneric
+            key="administrasi-hak-paten"
+            title="Hak Paten"
+            subtitle=""
+            categoryName="Hak Paten"
+            onAddRenewalBatch={handleAddRenewalBatch}
+          />
+        );
       case 'iuran-keanggotaan':
         return <IuranKeanggotaan />;
       case 'tugas-terdekat':
@@ -148,6 +168,12 @@ export default function App() {
         return <AturKolomBaris categoryKey="perizinan-proyek" onBack={() => setActiveTab('perizinan-proyek')} />;
       case 'atur-kolom-baris-produk':
         return <AturKolomBaris categoryKey="perizinan-produk" onBack={() => setActiveTab('perizinan-produk')} />;
+      case 'atur-kolom-baris-hak-cipta':
+        return <AturKolomBaris categoryKey="administrasi-lainnya" onBack={() => setActiveTab('administrasi-hak-cipta')} />;
+      case 'atur-kolom-baris-hak-paten':
+        return <AturKolomBaris categoryKey="administrasi-lainnya" onBack={() => setActiveTab('administrasi-hak-paten')} />;
+      case 'atur-kolom-baris-keanggotaan':
+        return <AturKolomBaris categoryKey="iuran-keanggotaan" onBack={() => setActiveTab('iuran-keanggotaan')} />;
       default:
         return (
           <Dashboard

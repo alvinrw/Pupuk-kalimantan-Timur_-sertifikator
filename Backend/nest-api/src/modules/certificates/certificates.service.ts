@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateCertificateDto } from './dto/create-certificate.dto';
 import { UpdateCertificateDto } from './dto/update-certificate.dto';
 import { PrismaService } from '../../database/prisma.service';
@@ -8,6 +8,18 @@ export class CertificatesService {
   constructor(private prisma: PrismaService) {}
 
   async create(createCertificateDto: CreateCertificateDto) {
+    if (createCertificateDto.itemId) {
+      const masterItem = await this.prisma.masterItem.findUnique({
+        where: { id: createCertificateDto.itemId }
+      });
+      if (masterItem) {
+        const isMasterDeactivated = ['afkir', 'non aktif', 'decommissioned'].includes(masterItem.status?.toLowerCase() || '');
+        if (isMasterDeactivated) {
+          throw new BadRequestException('Tidak dapat menambahkan sertifikat karena item utama sedang dinonaktifkan (Afkir).');
+        }
+      }
+    }
+
     if (createCertificateDto.itemId && createCertificateDto.noSertifikat) {
       const existingCert = await this.prisma.certificate.findFirst({
         where: {
@@ -121,6 +133,25 @@ export class CertificatesService {
   async update(id: string, updateCertificateDto: UpdateCertificateDto, currentUser?: string) {
     const cert = await this.findOne(id);
     
+    // Check if certificate itself is deactivated
+    const isCertDeactivated = ['afkir', 'non aktif', 'decommissioned'].includes(cert.status?.toLowerCase() || '');
+    const isCertActivating = updateCertificateDto.status?.toLowerCase() === 'aktif';
+    if (isCertDeactivated && !isCertActivating) {
+      throw new BadRequestException('Sertifikat ini sedang dinonaktifkan (Afkir) dan tidak dapat diedit. Aktifkan kembali terlebih dahulu.');
+    }
+
+    if (cert.itemId) {
+      const masterItem = await this.prisma.masterItem.findUnique({
+        where: { id: cert.itemId }
+      });
+      if (masterItem) {
+        const isMasterDeactivated = ['afkir', 'non aktif', 'decommissioned'].includes(masterItem.status?.toLowerCase() || '');
+        if (isMasterDeactivated && !isCertActivating) {
+          throw new BadRequestException('Tidak dapat mengedit sertifikat karena item utama sedang dinonaktifkan (Afkir).');
+        }
+      }
+    }
+    
     // Auto-activate certificate if it was EXEMPT but is now being updated
     const updatedStatus = cert.status === 'EXEMPT' ? 'Aktif' : undefined;
 
@@ -216,13 +247,28 @@ export class CertificatesService {
       });
 
       if (remainingCerts.length === 0) {
+        const masterItem = await this.prisma.masterItem.findUnique({ where: { id: cert.itemId }});
+        let newKet = masterItem?.keterangan || '';
+        if (newKet && newKet.startsWith('{')) {
+           try {
+             let parsed = JSON.parse(newKet);
+             parsed.namaSertifikat = '';
+             parsed.noSertifikat = '';
+             parsed.terbit = '';
+             parsed.expired = '';
+             parsed.instansi = '';
+             newKet = JSON.stringify(parsed);
+           } catch(e) {}
+        }
+
         await this.prisma.masterItem.update({
           where: { id: cert.itemId },
           data: {
-            documentStatus: 'EXEMPT',
-            exemptionNote: 'Semua sertifikat telah dihapus',
+            documentStatus: 'PENDING_DOC',
+            exemptionNote: null,
             issueDate: null,
             expiryDate: null,
+            keterangan: newKet
           },
         }).catch(() => {});
       } else {

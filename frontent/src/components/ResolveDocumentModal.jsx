@@ -4,9 +4,15 @@ import { API_BASE, getFullFileUrl } from '../config/api';
 import { resolveMasterItemExemption, createCertificateForMasterItem, updateNotificationSetting, updateCertificate } from '../services/masterItemsService';
 import BaseSplitScreenUploadModal from './common/BaseSplitScreenUploadModal';
 import PdfCanvasOcrViewer from './common/PdfCanvasOcrViewer';
+import CustomSelect from './common/CustomSelect';
 
 export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onResolveSuccess, onSuccess }) {
   const activeDoc = doc || item;
+  const isHaki = activeDoc?.categoryKey === 'administrasi-lainnya' || 
+                 (activeDoc?.kategori || '').toLowerCase().includes('cipta') || 
+                 (activeDoc?.kategori || '').toLowerCase().includes('paten') ||
+                 (activeDoc?.title || '').toLowerCase().includes('cipta') ||
+                 (activeDoc?.title || '').toLowerCase().includes('paten');
   const isValidVal = (val) => val && val !== '-' && String(val).trim() !== '';
   const hasExistingCertDetails = activeDoc ? (
     isValidVal(activeDoc.noSertifikat || activeDoc.certificateNo) && 
@@ -31,12 +37,45 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
   const [sertifikatMode, setSertifikatMode] = useState('dengan'); // 'dengan' | 'tanpa'
   
   const [tempUrl, setTempUrl] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
   const [isUploadingTemp, setIsUploadingTemp] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [ocrSuccess, setOcrSuccess] = useState(false);
   const [ocrErrorMsg, setOcrErrorMsg] = useState('');
   const [isScanningOcr, setIsScanningOcr] = useState(false);
   const [scanMode, setScanMode] = useState(null);
+
+  const formatToIsoDate = (rawDateStr) => {
+    if (!rawDateStr || rawDateStr === '-' || rawDateStr === 'BELUM_ADA_SERTIFIKAT' || rawDateStr === 'EXEMPT') return '';
+    const str = String(rawDateStr).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+    if (str.includes('T')) return str.split('T')[0];
+    if (/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/.test(str)) {
+      const parts = str.split(/[\/\-]/);
+      let p1 = parseInt(parts[0], 10);
+      let p2 = parseInt(parts[1], 10);
+      let year = parseInt(parts[2], 10);
+      if (year < 100) year += 2000;
+      let day, month;
+      if (p1 > 12) { day = p1; month = p2; }
+      else if (p2 > 12) { month = p1; day = p2; }
+      else { day = p1; month = p2; }
+      const yyyy = String(year);
+      const mm = String(month).padStart(2, '0');
+      const dd = String(day).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
+    try {
+      const d = new Date(str);
+      if (!isNaN(d.getTime())) {
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    } catch (_) {}
+    return '';
+  };
 
   // ─── Handler untuk hasil OCR dari Canvas ─────────────────────────────────
   const handleOcrResult = async (fieldKey, rawText) => {
@@ -49,12 +88,14 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       } else if (fieldKey === 'terbit' || fieldKey === 'expired') {
         const parsed = parseDate(rawText);
         if (parsed) {
-          setFormData(prev => ({ ...prev, [fieldKey]: parsed.iso }));
+          setFormData(prev => ({ ...prev, [fieldKey]: formatToIsoDate(parsed.iso || rawText) }));
         } else {
           setOcrErrorMsg(`Gagal mendeteksi tanggal untuk ${fieldKey}.`);
         }
       } else if (fieldKey === 'instansi') {
         setFormData(prev => ({ ...prev, instansi: rawText.replace(/\n+/g, ' ').trim() }));
+      } else if (fieldKey === 'namaSertifikat') {
+        setFormData(prev => ({ ...prev, namaSertifikat: rawText.replace(/\n+/g, ' ').trim() }));
       }
       
       setOcrSuccess(true);
@@ -66,15 +107,27 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
 
   const fileInputRef = useRef(null);
 
+  const parseInitialKeterangan = (raw) => {
+    if (!raw || raw === '-') return '';
+    try {
+      if (typeof raw === 'string' && raw.trim().startsWith('{')) {
+        const parsed = JSON.parse(raw);
+        const text = parsed.keteranganAsli !== undefined ? parsed.keteranganAsli : raw;
+        return text === '-' ? '' : text;
+      }
+    } catch (_) {}
+    return raw === '-' ? '' : raw;
+  };
+
   useEffect(() => {
     if (isOpen && activeDoc) {
       setFormData({
-        namaSertifikat: activeDoc.namaSertifikat || activeDoc.title || '',
-        noSertifikat: activeDoc.noSertifikat || activeDoc.nomorSertifikat || '',
-        terbit: activeDoc.terbit || activeDoc.tanggalInspeksi || '',
-        expired: activeDoc.expired || activeDoc.tanggalExpired || activeDoc.berakhir || '',
-        instansi: activeDoc.instansi || '',
-        keterangan: activeDoc.keterangan || '',
+        namaSertifikat: '',
+        noSertifikat: '',
+        terbit: '',
+        expired: '',
+        instansi: '',
+        keterangan: '',
         reminderEnabled: activeDoc.notificationSetting ? activeDoc.notificationSetting.isEnabled !== false : (activeDoc.reminderEnabled !== undefined ? activeDoc.reminderEnabled : true),
         reminderType: activeDoc.notificationSetting ? (activeDoc.notificationSetting.triggerType || 'DAYS') : 'DAYS',
         reminderDays: activeDoc.notificationSetting ? (activeDoc.notificationSetting.triggerDays ?? 30) : 30,
@@ -145,6 +198,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
           namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat,
           noSertifikat: isExempt ? (formData.noSertifikat || 'EXEMPT') : formData.noSertifikat,
           instansi: formData.instansi,
+          keterangan: formData.keterangan,
           terbit: formData.terbit,
           expired: formData.expired,
           fileUrl: isExempt ? null : finalUrl,
@@ -163,6 +217,7 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
           namaSertifikat: formData.namaSertifikat || activeDoc.namaSertifikat || "Sertifikat Baru",
           noSertifikat: isExempt ? (formData.noSertifikat || 'EXEMPT') : formData.noSertifikat,
           instansi: formData.instansi,
+          keterangan: formData.keterangan,
           terbit: formData.terbit,
           expired: formData.expired,
           fileUrl: isExempt ? null : finalUrl,
@@ -227,7 +282,8 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       submitDisabled={isUploadingTemp || isScanningOcr || !!uploadError || (sertifikatMode === 'dengan' && !selectedFile && !tempUrl && !activeDoc.fileUrl)}
       submitText="Simpan & Selesaikan"
       submitIcon={Save}
-      tempUrl={tempUrl || activeDoc.fileUrl}
+      tempUrl={sertifikatMode === 'tanpa' ? null : (tempUrl || activeDoc.fileUrl)}
+      hidePreview={sertifikatMode === 'tanpa'}
       rightPanelContent={
         (previewUrl || tempUrl || activeDoc.fileUrl) ? (
           <PdfCanvasOcrViewer
@@ -239,29 +295,31 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
         ) : null
       }
     >
-      {/* Mode Toggle */}
-      <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-        <button
-          type="button"
-          onClick={() => setSertifikatMode('dengan')}
-          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-            sertifikatMode === 'dengan' ? 'bg-white text-[#005ea4] shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <FileCheck className="w-4 h-4" />
-          <span>Dengan Sertifikat (PDF)</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => setSertifikatMode('tanpa')}
-          className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-            sertifikatMode === 'tanpa' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <AlertTriangle className="w-4 h-4 text-amber-600" />
-          <span>Tanpa Sertifikat (Exempt)</span>
-        </button>
-      </div>
+      {/* Mode Toggle: Khusus Hak Cipta & Paten harus memiliki sertifikat */}
+      {!isHaki && (
+        <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
+          <button
+            type="button"
+            onClick={() => setSertifikatMode('dengan')}
+            className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              sertifikatMode === 'dengan' ? 'bg-white text-[#005ea4] shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FileCheck className="w-4 h-4" />
+            <span>Dengan Sertifikat (PDF)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSertifikatMode('tanpa')}
+            className={`py-2 px-3 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+              sertifikatMode === 'tanpa' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-amber-600" />
+            <span>Tanpa Sertifikat (Exempt)</span>
+          </button>
+        </div>
+      )}
 
       {sertifikatMode === 'dengan' && (
         <div className="space-y-4">
@@ -300,11 +358,30 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                         setIsUploadingTemp(true);
                         const fdTemp = new FormData();
                         fdTemp.append('file', file);
-                        const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
-                          method: 'POST',
-                          credentials: 'include',
-                          body: fdTemp
-                        });
+                        
+                        const fdOcr = new FormData();
+                        fdOcr.append('file', file);
+
+                        const token = sessionStorage.getItem('token');
+                        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+                        const [uploadRes, ocrRes] = await Promise.all([
+                          fetch(`${API_BASE}/document-history/upload-temp`, {
+                            method: 'POST',
+                            credentials: 'include',
+                            headers,
+                            body: fdTemp
+                          }),
+                          fetch(`${API_BASE}/ocr/scan-pdf`, {
+                            method: 'POST',
+                            headers,
+                            body: fdOcr
+                          }).catch(err => {
+                            console.error('OCR API error:', err);
+                            return null;
+                          })
+                        ]);
+
                         if (uploadRes.ok) {
                           const json = await uploadRes.json();
                           if (json.data?.url) {
@@ -320,6 +397,31 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                           } catch(_) {}
                           setUploadError(errMsg);
                           console.error('Upload temp error:', errMsg);
+                        }
+
+                        if (ocrRes && ocrRes.ok) {
+                          const ocrJson = await ocrRes.json();
+                          if (ocrJson.success && ocrJson.data) {
+                            const data = ocrJson.data;
+                            if (!data.noSertifikat && !data.terbit && !data.expired) {
+                              const { toast } = await import('react-hot-toast');
+                              toast.error("AI (PaddleOCR) belum menemukan data sertifikat otomatis. Silakan isi manual.");
+                            } else {
+                              const { toast } = await import('react-hot-toast');
+                              toast.success("AI OCR (PaddleOCR) berhasil mengekstrak sebagian data!");
+                            }
+                            setFormData(prev => ({
+                              ...prev,
+                              noSertifikat: data.noSertifikat || prev.noSertifikat || '',
+                              terbit: data.terbit || prev.terbit || '',
+                              expired: data.expired || prev.expired || '',
+                              instansi: data.instansi || prev.instansi || '',
+                              namaSertifikat: data.namaPeralatan || data.namaSertifikat || prev.namaSertifikat || ''
+                            }));
+                          }
+                        } else if (ocrRes) {
+                          const { toast } = await import('react-hot-toast');
+                          toast.error("Gagal melakukan proses AI OCR.");
                         }
                       } catch (err) {
                         const msg = err?.message || 'Koneksi gagal. Pastikan server backend berjalan.';
@@ -380,162 +482,148 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
       )}
 
       {/* Form Data */}
-      {hasExistingCertDetails ? (
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 space-y-2">
-              <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Detail Sertifikat Terdaftar</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">No. Sertifikat</span>
-                  <span className="font-bold text-[#005ea4]">{formData.noSertifikat || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">Nama Sertifikat</span>
-                  <span className="font-bold text-slate-800">{formData.namaSertifikat || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Terbit</span>
-                  <span className="font-bold text-slate-800">{formData.terbit || '-'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[10px] uppercase">Tanggal Expired</span>
-                  <span className="font-bold text-rose-700">{formData.expired || '-'}</span>
-                </div>
-                {formData.instansi && (
-                  <div className="col-span-2">
-                    <span className="text-slate-400 block text-[10px] uppercase">Instansi Penerbit</span>
-                    <span className="font-bold text-slate-800">{formData.instansi}</span>
-                  </div>
-                )}
-              </div>
+      <div className="space-y-3">
+        <div>
+          <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={formData.namaSertifikat}
+              onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+              placeholder="SKP Pesawat Angkat"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-[#005ea4]"
+            />
+            {sertifikatMode === 'dengan' && (
+            <button
+              type="button"
+              onClick={() => setScanMode(scanMode === 'namaSertifikat' ? null : 'namaSertifikat')}
+              className={`p-2 rounded-lg border shrink-0 transition-all ${
+                scanMode === 'namaSertifikat' 
+                ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+              }`}
+            >
+              <Crosshair className="w-4 h-4" />
+            </button>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              required
+              value={formData.noSertifikat}
+              onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+              placeholder="SKP-2024/DISNAKER/1234"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-[#005ea4] focus:ring-2 focus:ring-[#005ea4]"
+            />
+            {sertifikatMode === 'dengan' && (
+            <button
+              type="button"
+              onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
+              className={`p-2 rounded-lg border shrink-0 transition-all ${
+                scanMode === 'noSertifikat' 
+                ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+              }`}
+            >
+              <Crosshair className="w-4 h-4" />
+            </button>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
+            <div className="flex gap-1.5">
+              <input
+                type="date"
+                value={formData.terbit}
+                onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                className="w-full px-2 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:ring-2 focus:ring-[#005ea4]"
+              />
+              {sertifikatMode === 'dengan' && (
+              <button
+                type="button"
+                onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
+                className={`p-2 rounded-lg border shrink-0 transition-all ${
+                  scanMode === 'terbit' 
+                  ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                }`}
+              >
+                <Crosshair className="w-4 h-4" />
+              </button>
+              )}
             </div>
-          ) : (
-            <div className="space-y-3">
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Nama Sertifikat</label>
-                <input
-                  type="text"
-                  value={formData.namaSertifikat}
-                  onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-                  placeholder="Contoh: SKP Pesawat Angkat"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">No. Sertifikat <span className="text-rose-500">*</span></label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={formData.noSertifikat}
-                    onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-[#005ea4]"
-                  />
-                  {sertifikatMode === 'dengan' && (
-                  <button
-                    type="button"
-                    onClick={() => setScanMode(scanMode === 'noSertifikat' ? null : 'noSertifikat')}
-                    className={`p-2 rounded-lg border shrink-0 transition-all ${
-                      scanMode === 'noSertifikat' 
-                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
-                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
-                    }`}
-                  >
-                    <Crosshair className="w-4 h-4" />
-                  </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-slate-700 block mb-1">Tanggal Terbit</label>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="date"
-                      value={formData.terbit}
-                      onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
-                      className="w-full px-2 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
-                    />
-                    {sertifikatMode === 'dengan' && (
-                    <button
-                      type="button"
-                      onClick={() => setScanMode(scanMode === 'terbit' ? null : 'terbit')}
-                      className={`p-2 rounded-lg border shrink-0 transition-all ${
-                        scanMode === 'terbit' 
-                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
-                        : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
-                      }`}
-                    >
-                      <Crosshair className="w-4 h-4" />
-                    </button>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Expired</label>
-                  <div className="flex gap-1.5">
-                    <input
-                      type="date"
-                      value={formData.expired}
-                      onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
-                      className="w-full px-2 py-2 bg-white border border-rose-300 rounded-lg text-xs focus:ring-2 focus:ring-rose-500"
-                    />
-                    {sertifikatMode === 'dengan' && (
-                    <button
-                      type="button"
-                      onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
-                      className={`p-2 rounded-lg border shrink-0 transition-all ${
-                        scanMode === 'expired' 
-                        ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
-                        : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
-                      }`}
-                    >
-                      <Crosshair className="w-4 h-4" />
-                    </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Instansi Penerbit</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={formData.instansi}
-                    onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4]"
-                  />
-                  {sertifikatMode === 'dengan' && (
-                  <button
-                    type="button"
-                    onClick={() => setScanMode(scanMode === 'instansi' ? null : 'instansi')}
-                    className={`p-2 rounded-lg border shrink-0 transition-all ${
-                      scanMode === 'instansi' 
-                      ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
-                      : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
-                    }`}
-                  >
-                    <Crosshair className="w-4 h-4" />
-                  </button>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">Keterangan / Catatan Tambahan</label>
-                <textarea
-                  rows="2"
-                  value={formData.keterangan}
-                  onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
-                  placeholder="Tambahkan catatan jika diperlukan..."
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4] font-mono-data resize-none"
-                />
-              </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-rose-700 block mb-1">Tanggal Expired</label>
+            <div className="flex gap-1.5">
+              <input
+                type="date"
+                value={formData.expired}
+                onChange={(e) => setFormData({ ...formData, expired: e.target.value })}
+                className="w-full px-2 py-2 bg-white border border-rose-300 rounded-lg text-xs font-bold text-rose-700 focus:ring-2 focus:ring-rose-500"
+              />
+              {sertifikatMode === 'dengan' && (
+              <button
+                type="button"
+                onClick={() => setScanMode(scanMode === 'expired' ? null : 'expired')}
+                className={`p-2 rounded-lg border shrink-0 transition-all ${
+                  scanMode === 'expired' 
+                  ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                  : 'bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100'
+                }`}
+              >
+                <Crosshair className="w-4 h-4" />
+              </button>
+              )}
             </div>
-          )}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-slate-700 block mb-1">Instansi Penerbit</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={formData.instansi}
+              onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+              placeholder="Disnaker Kaltim"
+              className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:ring-2 focus:ring-[#005ea4]"
+            />
+            {sertifikatMode === 'dengan' && (
+            <button
+              type="button"
+              onClick={() => setScanMode(scanMode === 'instansi' ? null : 'instansi')}
+              className={`p-2 rounded-lg border shrink-0 transition-all ${
+                scanMode === 'instansi' 
+                ? 'bg-rose-100 border-rose-300 text-rose-700 shadow-inner' 
+                : 'bg-blue-50 border-blue-200 text-[#005ea4] hover:bg-blue-100'
+              }`}
+            >
+              <Crosshair className="w-4 h-4" />
+            </button>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-slate-700 block mb-1">Keterangan</label>
+          <textarea
+            rows="2"
+            value={formData.keterangan}
+            onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
+            placeholder="Tambahkan keterangan jika diperlukan..."
+            className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-[#005ea4] font-mono-data resize-none"
+          />
+        </div>
+      </div>
 
       {/* SECTION AGENDA & PERPANJANGAN */}
       <div className="space-y-4 pt-4 border-t border-slate-200">
@@ -558,17 +646,15 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
 
           {formData.reminderEnabled && (
             <div className="grid grid-cols-2 gap-3 pt-2">
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Tipe Pemicu</label>
-                <select
-                  value={formData.reminderType}
-                  onChange={(e) => setFormData({ ...formData, reminderType: e.target.value })}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
-                >
-                  <option value="DAYS">Berdasarkan Sisa Hari (H-)</option>
-                  <option value="DATE">Berdasarkan Tanggal Spesifik</option>
-                </select>
-              </div>
+              <CustomSelect
+                label="Tipe Pemicu"
+                value={formData.reminderType}
+                onChange={(val) => setFormData({ ...formData, reminderType: val })}
+                options={[
+                  { value: 'DAYS', label: 'Berdasarkan Sisa Hari (H-)' },
+                  { value: 'DATE', label: 'Berdasarkan Tanggal Spesifik' },
+                ]}
+              />
               {formData.reminderType === 'DAYS' ? (
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
@@ -576,7 +662,8 @@ export default function ResolveDocumentModal({ isOpen, onClose, doc, item, onRes
                     type="number"
                     min="1"
                     value={formData.reminderDays}
-                    onChange={(e) => setFormData({ ...formData, reminderDays: parseInt(e.target.value) || 30 })}
+                    onChange={(e) => setFormData({ ...formData, reminderDays: e.target.value === '' ? '' : parseInt(e.target.value) })}
+                    placeholder="30"
                     className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4]"
                   />
                 </div>

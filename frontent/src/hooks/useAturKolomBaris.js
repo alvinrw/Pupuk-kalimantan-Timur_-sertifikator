@@ -89,57 +89,78 @@ export function useAturKolomBaris(propCategoryKey) {
       // 1. Load Column Configs
       const colRes = await api.get(`/column-configs/${categoryKey}`);
       const fetchedCols = colRes.data || [];
-      const filteredCols = fetchedCols.filter(c => c.fieldKey !== 'certCount');
+      const obsoleteKeanggotaanKeys = ['title', 'code', 'jenisItem', 'unitLocation', 'user', 'certCount'];
+      const filteredCols = fetchedCols.filter(c => {
+        if (c.fieldKey === 'certCount') return false;
+        if (categoryKey === 'iuran-keanggotaan' && obsoleteKeanggotaanKeys.includes(c.fieldKey)) {
+          return false;
+        }
+        return true;
+      });
       setColumns(filteredCols);
 
-      // 2. Load Master Items (Rows)
+      // 2. Load Master Items / Rows Data
       const baseCategoryKey = categoryKey.replace('-child', '');
-      const rowRes = await api.get(`/master-items?categoryKey=${baseCategoryKey}`);
-      const rawRows = rowRes.data || [];
-      const nonStagingRows = rawRows.filter(row => row.documentStatus !== 'PENDING_DOC');
-      const parsedRows = nonStagingRows.map(row => {
-        let keteranganAsli = '';
-        let additionalEntities = [];
-        let rawMeta = {};
-        try {
-          if (row.keterangan && row.keterangan.startsWith('{')) {
-            const parsed = JSON.parse(row.keterangan);
-            keteranganAsli = parsed.keteranganAsli || '';
-            additionalEntities = parsed.additionalEntities || [];
-            rawMeta = parsed;
-          } else {
+      
+      if (baseCategoryKey === 'iuran-keanggotaan') {
+        const rowRes = await api.get('/iuran-keanggotaan');
+        const rawRows = rowRes.data || [];
+        const parsedRows = rawRows.map(row => ({
+          ...row,
+          title: row.asosiasi || row.kompartemen || 'Keanggotaan',
+          code: row.npk || row.unitKerja || '-',
+          user: row.nama || '-',
+          keteranganAsli: row.keterangan || '',
+          certificates: []
+        }));
+        setRows(parsedRows);
+      } else {
+        const rowRes = await api.get(`/master-items?categoryKey=${baseCategoryKey}`);
+        const rawRows = rowRes.data || [];
+        const nonStagingRows = rawRows.filter(row => row.documentStatus !== 'PENDING_DOC');
+        const parsedRows = nonStagingRows.map(row => {
+          let keteranganAsli = '';
+          let additionalEntities = [];
+          let rawMeta = {};
+          try {
+            if (row.keterangan && row.keterangan.startsWith('{')) {
+              const parsed = JSON.parse(row.keterangan);
+              keteranganAsli = parsed.keteranganAsli || '';
+              additionalEntities = parsed.additionalEntities || [];
+              rawMeta = parsed;
+            } else {
+              keteranganAsli = row.keterangan || '';
+            }
+          } catch (_) {
             keteranganAsli = row.keterangan || '';
           }
-        } catch (_) {
-          keteranganAsli = row.keterangan || '';
-        }
-        // Try to get dates from primary certificate if they exist, otherwise fallback to item dates
-        const certs = row.certificates || [];
-        const activeCerts = certs.filter(c => {
-          const s = (c.status || '').toLowerCase();
-          return s === 'aktif' || s === 'active' || s.includes('perpanjang') || s.includes('proses') || !c.status;
+          const certs = row.certificates || [];
+          const activeCerts = certs.filter(c => {
+            const s = (c.status || '').toLowerCase();
+            return s === 'aktif' || s === 'active' || s.includes('perpanjang') || s.includes('proses') || !c.status;
+          });
+          
+          let primaryCert = null;
+          if (activeCerts.length > 0) {
+            primaryCert = activeCerts[0];
+          } else if (certs.length > 0) {
+            primaryCert = certs[0];
+          }
+
+          const issueDate = primaryCert?.terbit || row.issueDate || '';
+          const expiryDate = primaryCert?.expired || row.expiryDate || '';
+
+          return {
+            ...row,
+            keteranganAsli,
+            additionalEntities,
+            rawMeta,
+            issueDate,
+            expiryDate
+          };
         });
-        
-        let primaryCert = null;
-        if (activeCerts.length > 0) {
-          primaryCert = activeCerts[0]; // Simplified for AturKolomBaris
-        } else if (certs.length > 0) {
-          primaryCert = certs[0];
-        }
-
-        const issueDate = primaryCert?.terbit || row.issueDate || '';
-        const expiryDate = primaryCert?.expired || row.expiryDate || '';
-
-        return {
-          ...row,
-          keteranganAsli,
-          additionalEntities,
-          rawMeta,
-          issueDate,
-          expiryDate
-        };
-      });
-      setRows(parsedRows);
+        setRows(parsedRows);
+      }
     } catch (err) {
       console.error('Failed to load columns & rows configs:', err);
       showToast('Gagal memuat konfigurasi kolom dan baris.', 'error');
@@ -501,7 +522,10 @@ export function useAturKolomBaris(propCategoryKey) {
 
   const getModuleLabel = () => {
     if (!categoryKey) return '';
-    return categoryKey.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+    const cleanKey = categoryKey.replace('-child', '');
+    if (cleanKey === 'administrasi-lainnya') return 'Hak Cipta';
+    if (cleanKey === 'iuran-keanggotaan') return 'Keanggotaan';
+    return cleanKey.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
   };
 
   return {

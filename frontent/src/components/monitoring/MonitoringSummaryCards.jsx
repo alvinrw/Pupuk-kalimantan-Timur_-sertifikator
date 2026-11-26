@@ -38,13 +38,13 @@ export default function MonitoringSummaryCards({
         </div>
       </div>
 
-      {/* Card 3: Sertifikat Aktif */}
+      {/* Card 3: Aktif */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'valid' ? 'all' : 'valid')}
         className={`${cardBase} ${expiryTab === 'valid' ? activeRing : inactiveCard}`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Sertifikat Aktif</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Aktif</span>
           <CheckCircle2 className="w-4 h-4 text-slate-400 shrink-0" />
         </div>
         <div className="flex items-end gap-1">
@@ -53,13 +53,13 @@ export default function MonitoringSummaryCards({
         </div>
       </div>
 
-      {/* Card 4: Inventaris Expired */}
+      {/* Card 4: Expired */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'expired' ? 'all' : 'expired')}
         className={`${cardBase} ${expiryTab === 'expired' ? activeRing : inactiveCard}`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Inventaris Expired</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Expired</span>
           <ShieldAlert className="w-4 h-4 text-slate-400 shrink-0" />
         </div>
         <div className="flex items-end gap-1">
@@ -98,13 +98,13 @@ export default function MonitoringSummaryCards({
         </div>
       </div>
 
-      {/* Card 5.5: Diperpanjang */}
+      {/* Card 5.5: Perpanjangan */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'in_progress' ? 'all' : 'in_progress')}
         className={`${cardBase} ${expiryTab === 'in_progress' ? activeRing : inactiveCard}`}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Diperpanjang</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Perpanjangan</span>
           <Activity className="w-4 h-4 text-slate-400 shrink-0" />
         </div>
         <div className="flex items-end gap-1">
@@ -113,7 +113,7 @@ export default function MonitoringSummaryCards({
         </div>
       </div>
 
-      {/* Card 6: Non-Aktif / Afkir */}
+      {/* Card 6: Non-Aktif / Decommissioned */}
       <div
         onClick={() => setExpiryTab(expiryTab === 'decommissioned' ? 'all' : 'decommissioned')}
         className={`${cardBase} ${expiryTab === 'decommissioned' ? activeRing : inactiveCard}`}

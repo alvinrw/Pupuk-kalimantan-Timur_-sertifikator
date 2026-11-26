@@ -2,7 +2,7 @@ import React from 'react';
 import { Clock, Ban, AlertCircle } from 'lucide-react';
 
 export default function DocumentStatusBar({ hook, item }) {
-  const { currentStatus, isAfkirStatus, formData } = hook;
+  const { currentStatus, isDecommissionedStatus, formData } = hook;
   
   const expiryStr = formData?.berakhir || item?.berakhir || item?.expiryDate;
   let sisaHari = 0;
@@ -28,11 +28,11 @@ export default function DocumentStatusBar({ hook, item }) {
         <div>
           <span className="text-slate-400 font-bold block text-[10px] uppercase tracking-wider">Sisa Masa Berlaku</span>
           <div className="flex items-center gap-2">
-            {isAfkirStatus ? <Ban className="w-4 h-4 shrink-0" /> : <Clock className="w-4 h-4 shrink-0" />}
+            {isDecommissionedStatus ? <Ban className="w-4 h-4 shrink-0" /> : <Clock className="w-4 h-4 shrink-0" />}
             <span className="font-bold text-sm text-slate-900">
-              {isAfkirStatus ? 'Non-Aktif' : sisaHari <= 0 ? `Expired (${Math.abs(sisaHari)} hari lalu)` : `${sisaHari.toLocaleString()} Hari`}
+              {isDecommissionedStatus ? 'Non-Aktif' : sisaHari <= 0 ? `Expired (${Math.abs(sisaHari)} hari lalu)` : `${sisaHari.toLocaleString()} Hari`}
             </span>
-            {!isAfkirStatus && sisaHari <= 0 && <AlertCircle className="w-4 h-4 text-red-500 shrink-0 animate-pulse" />}
+            {!isDecommissionedStatus && sisaHari <= 0 && <AlertCircle className="w-4 h-4 text-red-500 shrink-0 animate-pulse" />}
           </div>
         </div>
       </div>

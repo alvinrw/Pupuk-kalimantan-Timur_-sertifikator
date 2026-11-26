@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 // hooks/usePerizinanAset.js
 // Business logic hook untuk halaman Perizinan Aset & Bangunan Pabrik
 // Diekstrak dari pages/PerizinanAset.jsx untuk memisahkan logic dari UI
@@ -251,7 +252,7 @@ export default function usePerizinanAset() {
       await loadData();
     } catch (err) {
       console.error(err);
-      alert('Gagal melakukan bulk action.');
+      toast.error('Gagal melakukan bulk action.');
     } finally {
       setIsSubmittingBulkExempt(false);
     }
@@ -291,10 +292,10 @@ export default function usePerizinanAset() {
         });
       }
       loadData();
-      alert(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP AI!`);
+      toast.success(`Berhasil menyimpan ${successfulItems.length} data aset dari hasil ZIP AI!`);
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan saat menyimpan data Batch ZIP!');
+      toast.error('Terjadi kesalahan saat menyimpan data Batch ZIP!');
     }
   };
 
@@ -346,6 +347,8 @@ export default function usePerizinanAset() {
             terbit: newItem.terbit || undefined,
             expired: newItem.expired || undefined,
             fileUrl,
+            instansi: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
+            keterangan: (newItem.keterangan && newItem.keterangan !== '-') ? newItem.keterangan : undefined,
           });
         }
 
@@ -358,7 +361,7 @@ export default function usePerizinanAset() {
       loadData();
     } catch (error) {
       console.error(error);
-      alert(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
+      toast.error(`Gagal menyimpan data ke database! Error: ${error?.response?.data?.message || error.message}`);
     }
   };
 

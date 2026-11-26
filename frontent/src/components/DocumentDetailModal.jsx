@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState } from 'react';
 import {
   X,
@@ -37,6 +38,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
     tanggalInspeksi: item.tanggalInspeksi || item.issueDate || '',
     terbit: item.terbit || item.issueDate || '',
     berakhir: item.berakhir || item.expiryDate || '',
+    instansi: item.instansi || '',
     keterangan: item.keterangan || item.notes || item.agency || ''
   });
 
@@ -116,7 +118,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-2xs"
             >
               <Ban className="w-3.5 h-3.5 text-slate-300" />
-              <span>Afkir / Decommission</span>
+              <span>Decommissioned / Decommission</span>
             </button>
           </div>
         </div>
@@ -133,7 +135,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">Merek / Nama Item</label>
+                  <label className="font-bold text-slate-800 block mb-1">Merek</label>
                   <input
                     type="text"
                     value={formData.merekItem}
@@ -153,7 +155,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">Tipe / Kode</label>
+                  <label className="font-bold text-slate-800 block mb-1">Tipe</label>
                   <input
                     type="text"
                     value={formData.tipe}
@@ -163,7 +165,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">Nomor Seri / Tag</label>
+                  <label className="font-bold text-slate-800 block mb-1">Nomor Seri</label>
                   <input
                     type="text"
                     value={formData.nomorSeri}
@@ -183,7 +185,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">Lokasi / Unit Pabrik</label>
+                  <label className="font-bold text-slate-800 block mb-1">Unit</label>
                   <input
                     type="text"
                     value={formData.lokasi}
@@ -193,7 +195,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">User / Dept Penanggung Jawab</label>
+                  <label className="font-bold text-slate-800 block mb-1">User</label>
                   <input
                     type="text"
                     value={formData.user}
@@ -252,7 +254,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Keterangan & Catatan Pengujian</label>
+                <label className="font-bold text-slate-800 block mb-1">Keterangan</label>
                 <textarea
                   value={formData.keterangan}
                   onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })}
@@ -290,7 +292,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 font-mono-data text-xs">
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">Merek / Nama Item</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">Merek</span>
                     <span className="font-bold text-slate-900 text-sm">{formData.merekItem}</span>
                   </div>
 
@@ -300,19 +302,19 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">Unit Pabrik / Lokasi</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">Unit</span>
                     <span className="font-bold text-slate-800 bg-white px-2 py-0.5 rounded border border-slate-200 inline-block mt-0.5">
                       {formData.lokasi}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">Tipe / Kode</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">Tipe</span>
                     <span className="font-bold text-slate-800">{formData.tipe}</span>
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">Nomor Seri / Tag</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">Nomor Seri</span>
                     <span className="font-bold text-slate-800">{formData.nomorSeri}</span>
                   </div>
 
@@ -322,7 +324,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">User / Dept Penanggung Jawab</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">User</span>
                     <span className="font-bold text-slate-800">{formData.user || 'Dept. Operasi'}</span>
                   </div>
 
@@ -346,7 +348,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                   <span>Status Legalitas Sertifikat Perizinan Active</span>
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
                   <div>
                     <span className="text-[11px] text-slate-500 font-sans block">No. Sertifikat Aktif</span>
                     <span className="font-bold text-[#005ea4] text-sm">{formData.noSertifikat}</span>
@@ -358,8 +360,12 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                   </div>
 
                   <div>
-                    <span className="text-[11px] text-slate-500 font-sans block">Instansi / Penguji</span>
-                    <span className="font-bold text-slate-800 font-sans">{formData.keterangan || 'Disnaker Kaltim / Sucofindo'}</span>
+                    <span className="text-[11px] text-slate-500 font-sans block">Instansi Penerbit</span>
+                    <span className="font-bold text-slate-800 font-sans">{formData.instansi || '-'}</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-slate-500 font-sans block">Keterangan</span>
+                    <span className="font-bold text-slate-800 font-sans truncate" title={formData.keterangan || '-'}>{formData.keterangan || '-'}</span>
                   </div>
                 </div>
 
@@ -369,7 +375,7 @@ export default function DocumentDetailModal({ item, onClose, onSaveUpdate, onQui
                     <span className="font-bold text-slate-800">Dokumen Digital SK (PDF Terlampir)</span>
                   </div>
                   <button
-                    onClick={() => alert(`Membuka PDF Sertifikat: ${formData.noSertifikat}.pdf`)}
+                    onClick={() => toast(`Membuka PDF Sertifikat: ${formData.noSertifikat}.pdf`)}
                     className="px-3 py-1 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <span>Buka File PDF</span>

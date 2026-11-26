@@ -285,3 +285,17 @@ export const restoreCertificate = async (id) => {
   const response = await api.put(`/certificates/${id}/restore`);
   return response.data;
 };
+
+/**
+ * Update staging item metadata & linked certificate
+ */
+export const updateStagingItem = async (masterId, masterData, certData) => {
+  if (USE_DUMMY_DATA) {
+    console.log(`[DUMMY MODE] Updating Staging Item ${masterId}...`, { masterData, certData });
+    await new Promise(res => setTimeout(res, 300));
+    return { masterId, masterData, certData };
+  }
+  console.log(`[REAL API] Updating Staging Item ${masterId}...`);
+  const response = await api.put(`/master-items/${masterId}/staging-edit`, { masterData, certData });
+  return response.data;
+};

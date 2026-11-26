@@ -6,7 +6,7 @@ import { Roles } from '../auth/roles.decorator';
 
 @Controller('column-configs')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Super Admin', 'Admin', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'Viewer')
 export class ColumnConfigsController {
   constructor(private readonly columnConfigsService: ColumnConfigsService) {}
 

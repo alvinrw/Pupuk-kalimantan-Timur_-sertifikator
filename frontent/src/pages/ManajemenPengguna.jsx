@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, Plus, Edit2, Trash2, Search, CheckCircle, AlertCircle, AlertTriangle, KeyRound } from 'lucide-react';
+import { Users, Shield, Plus, Edit2, Trash2, Search, CheckCircle, AlertCircle, AlertTriangle, KeyRound, ChevronDown } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { socket } from '../services/socket';
@@ -8,6 +8,7 @@ export default function ManajemenPengguna() {
   const { user: currentUser, logout } = useAuth();
   
   const [users, setUsers] = useState([]);
+  const [debugRaw, setDebugRaw] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState({ type: '', title: '', user: null });
   const [deleteConfirmData, setDeleteConfirmData] = useState({ isOpen: false, user: null });
@@ -15,6 +16,7 @@ export default function ManajemenPengguna() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ nama: '', npk: '', username: '', password: '', roleName: 'Admin' });
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
 
   const showToast = (message, type = 'success') => {
@@ -26,26 +28,38 @@ export default function ManajemenPengguna() {
     try {
       setIsLoading(true);
       const response = await api.get('/users');
-      const formattedUsers = response.data
-        .map(u => ({
-          id: u.id,
-          nama: u.nama,
-          npk: u.npk,
-          username: u.username,
-          role: typeof u.role === 'object' ? u.role.name : u.role,
-          isOnline: u.isOnline
-        }))
-        .filter(u => u.role !== 'Super Admin');
-      setUsers(formattedUsers);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      if (error.response?.status === 401) {
-        showToast('Sesi Anda telah habis. Silakan Log Out dan Log In kembali.', 'error');
-      } else if (error.response?.status === 403) {
-        showToast('Anda tidak memiliki akses ke halaman ini.', 'error');
-      } else {
-        showToast('Gagal memuat data pengguna. Memeriksa koneksi backend...', 'error');
-      }
+        // Handle if response.data is nested or not an array
+        const rawData = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+        
+        const debugObj = {
+          status: response.status,
+          hasData: !!response.data,
+          dataType: typeof response.data,
+          isArray: Array.isArray(response.data),
+          dataPreview: response.data
+        };
+        setDebugRaw(JSON.stringify(debugObj, null, 2)); // DEBUG
+        
+        const formattedUsers = rawData
+          .map(u => ({
+            id: u.id,
+            nama: u.nama,
+            npk: u.npk,
+            username: u.username,
+            role: typeof u.role === 'object' && u.role !== null ? u.role.name : u.role,
+            isOnline: u.isOnline
+          }))
+          .filter(u => u.role !== 'User');
+        setUsers(formattedUsers);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        if (error.response?.status === 401) {
+          showToast('Sesi Anda telah habis. Silakan Log Out dan Log In kembali.', 'error');
+        } else if (error.response?.status === 403) {
+          showToast('Anda tidak memiliki akses ke halaman ini.', 'error');
+        } else {
+          showToast(`Gagal memuat data: ${error.message}`, 'error');
+        }
     } finally {
       setIsLoading(false);
     }
@@ -212,12 +226,12 @@ export default function ManajemenPengguna() {
           <table className="w-full text-center text-sm whitespace-nowrap">
             <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
               <tr className="text-center">
-                <th className="px-6 py-4 font-semibold">Nama Pengguna</th>
-                <th className="px-6 py-4 font-semibold">NPK</th>
-                <th className="px-6 py-4 font-semibold">Username</th>
-                <th className="px-6 py-4 font-semibold">Role</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold">Aksi</th>
+                <th className="px-6 py-4 font-semibold text-center">Nama Pengguna</th>
+                <th className="px-6 py-4 font-semibold text-center">NPK</th>
+                <th className="px-6 py-4 font-semibold text-center">Username</th>
+                <th className="px-6 py-4 font-semibold text-center">Role</th>
+                <th className="px-6 py-4 font-semibold text-center">Status</th>
+                <th className="px-6 py-4 font-semibold text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -233,7 +247,10 @@ export default function ManajemenPengguna() {
               ) : users.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-slate-500 font-medium bg-slate-50/50">
-                    Belum ada data pengguna yang ditambahkan.
+                    <p className="mb-2">Belum ada data pengguna yang ditambahkan.</p>
+                    <div className="text-xs bg-slate-200 p-2 text-left overflow-auto max-h-40 max-w-xl mx-auto rounded">
+                      <strong>DEBUG DATA:</strong> {debugRaw}
+                    </div>
                   </td>
                 </tr>
               ) : users.map((u) => {
@@ -242,20 +259,19 @@ export default function ManajemenPengguna() {
 
                 return (
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">
-                      <div className="flex items-center gap-2 w-56 mx-auto">
+                    <td className="px-6 py-4 font-medium text-slate-900 text-center">
+                      <div className="flex items-center justify-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-[#005ea4] font-bold text-xs shrink-0">
                           {u.nama.charAt(0)}
                         </div>
-                        <span className="truncate">{u.nama}</span>
+                        <span className="truncate max-w-[200px]">{u.nama}</span>
                         {isAdmin1 && <Shield className="w-3.5 h-3.5 text-purple-500 shrink-0" title="Super Admin" />}
                       </div>
-                      {u.nama}
                     </td>
-                    <td className="px-6 py-4 text-slate-500 font-mono text-xs">{u.npk}</td>
-                    <td className="px-6 py-4 text-slate-500">{u.username}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5">
+                    <td className="px-6 py-4 text-slate-500 font-mono text-xs text-center">{u.npk}</td>
+                    <td className="px-6 py-4 text-slate-500 text-center">{u.username}</td>
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
                         <span className={`px-2.5 py-1 text-[10px] uppercase font-bold rounded-md border ${getRoleBadge(u.role)}`}>
                           {u.role.replace(/Admin \d+/, 'Admin')}
                         </span>
@@ -270,8 +286,8 @@ export default function ManajemenPengguna() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-center gap-2">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
                         <button 
                           onClick={() => openModal('edit', 'Edit Pengguna', u)}
                           className={`p-1.5 rounded-lg transition-colors ${isActionDisabled ? 'text-slate-300 cursor-not-allowed' : 'text-[#005ea4] hover:bg-blue-50'}`}
@@ -300,7 +316,7 @@ export default function ManajemenPengguna() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md animate-in fade-in zoom-in duration-200">
             <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">{modalData.title}</h2>
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600">
@@ -336,18 +352,40 @@ export default function ManajemenPengguna() {
                   disabled={modalData.type === 'edit' && modalData.user?.role === 'Viewer' && currentUser.role !== 'Super Admin'}
                 />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 relative">
                 <label className="text-sm font-semibold text-slate-700">Pilih Role</label>
-                <select name="roleName" value={formData.roleName} onChange={handleInputChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none">
-                  <option value="Super Admin" disabled={currentUser.role !== 'Super Admin'}>Super Admin</option>
-                  <option value="Admin">Admin</option>
-                  <option value="User">User</option>
-                  <option value="Viewer">Viewer</option>
-                </select>
+                <button
+                  type="button"
+                  onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-50 focus:ring-2 focus:ring-[#005ea4]/50 outline-none flex items-center justify-between cursor-pointer"
+                >
+                  <span className="text-slate-700">{formData.roleName}</span>
+                  <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isRoleDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                <div className={`absolute left-0 right-0 top-[100%] mt-1 z-50 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden origin-top transition-all duration-200 ease-out ${isRoleDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                  {['Super Admin', 'Admin', 'Viewer'].map((role) => {
+                    return (
+                      <button
+                        key={role}
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, roleName: role }));
+                          setIsRoleDropdownOpen(false);
+                        }}
+                        className={`w-full px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                          formData.roleName === role ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {role}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+            <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 rounded-b-2xl">
               <button onClick={closeModal} className="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
                 Batal
               </button>

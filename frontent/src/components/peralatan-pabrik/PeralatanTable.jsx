@@ -1,5 +1,5 @@
-import React from 'react';
-import { CheckCircle2, FileCheck, FileWarning, HelpCircle, ShieldAlert, XCircle, Search, Eye, Wrench, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle2, FileCheck, FileWarning, HelpCircle, ShieldAlert, XCircle, Search, Eye, Wrench, Check, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const formatToDDMMYYYY = (rawDateStr) => {
@@ -43,47 +43,82 @@ export default function PeralatanTable({
   toggleSort,
   allColumns = []
 }) {
+  const [isJenisDropdownOpen, setIsJenisDropdownOpen] = useState(false);
+  const [isLokasiDropdownOpen, setIsLokasiDropdownOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+
   const { user } = useAuth();
   const isViewer = user?.role === 'Viewer';
   
   return (
     <div className={`bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden ${activeMainTab === 'staging' && selectedStagingIds.length > 0 ? 'mt-4' : 'mt-0'}`}>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto min-h-[350px]">
         <table className="w-full text-center border-collapse">
           <thead>
             <tr className="bg-slate-100/90 border-b border-slate-200 text-[11px] font-mono-data text-slate-700 uppercase tracking-wider select-none">
-              {activeMainTab === 'staging' && (
-                <th className="py-3.5 px-4 text-center whitespace-nowrap w-12">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-slate-300 accent-amber-600 cursor-pointer"
-                    checked={expandedRows.length > 0 && selectedStagingIds.length === expandedRows.length}
-                    onChange={() => toggleSelectAllStaging(expandedRows)}
-                  />
-                </th>
-              )}
               {allColumns.map((col) => {
                 if (!isVisible(col.key)) return null;
 
                 if (col.key === 'no') {
-                  return <th key="no" className="py-3.5 px-4 text-center font-bold whitespace-nowrap align-middle">NO.</th>;
+                  return (
+                    <th key="no" className="py-3.5 px-3 text-center font-bold whitespace-nowrap align-middle w-16 min-w-[64px]">
+                      {activeMainTab === 'staging' ? (
+                        <div className="flex items-center justify-center gap-1.5">
+                          {expandedRows.length > 0 && (
+                            <input 
+                              type="checkbox" 
+                              className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                              checked={selectedStagingIds.length === expandedRows.length && expandedRows.length > 0}
+                              onChange={() => toggleSelectAllStaging(expandedRows)}
+                              title="Pilih Semua"
+                            />
+                          )}
+                          <span>NO.</span>
+                        </div>
+                      ) : (
+                        <span>NO.</span>
+                      )}
+                    </th>
+                  );
                 }
 
                 if (col.key === 'jenisPeralatan') {
                   return (
-                    <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle overflow-visible">
+                      <div className="flex items-center justify-center gap-1.5 relative z-40">
                         <span>JENIS PERALATAN PABRIK</span>
-                        <select
-                          value={filterJenis}
-                          onChange={(e) => setFilterJenis(e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
-                        >
-                          <option value="All">Semua</option>
-                          {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
-                            <option key={idx} value={j}>{j}</option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              setIsJenisDropdownOpen(!isJenisDropdownOpen);
+                              setIsLokasiDropdownOpen(false);
+                              setIsUserDropdownOpen(false);
+                              setIsStatusDropdownOpen(false);
+                            }}
+                            className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer shadow-2xs"
+                          >
+                            <span className="truncate max-w-[70px]">{filterJenis === 'All' ? 'Semua' : filterJenis}</span>
+                            <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isJenisDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div className={`absolute left-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[250px] overflow-y-auto origin-top-left transition-all duration-200 ease-out ${isJenisDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                            <button
+                              onClick={() => { setFilterJenis('All'); setIsJenisDropdownOpen(false); }}
+                              className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterJenis === 'All' ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                            >
+                              Semua
+                            </button>
+                            {uniqueJenis.filter(j => j !== 'All').map((j, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => { setFilterJenis(j); setIsJenisDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterJenis === j ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                {j}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </th>
                   );
@@ -91,19 +126,40 @@ export default function PeralatanTable({
 
                 if (col.key === 'lokasi') {
                   return (
-                    <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle overflow-visible">
+                      <div className="flex items-center justify-center gap-1.5 relative z-30">
                         <span>LOKASI</span>
-                        <select
-                          value={filterLokasi}
-                          onChange={(e) => setFilterLokasi(e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
-                        >
-                          <option value="All">Semua</option>
-                          {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
-                            <option key={idx} value={l}>{l}</option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              setIsLokasiDropdownOpen(!isLokasiDropdownOpen);
+                              setIsJenisDropdownOpen(false);
+                              setIsUserDropdownOpen(false);
+                              setIsStatusDropdownOpen(false);
+                            }}
+                            className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer shadow-2xs"
+                          >
+                            <span className="truncate max-w-[70px]">{filterLokasi === 'All' ? 'Semua' : filterLokasi}</span>
+                            <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isLokasiDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div className={`absolute left-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[250px] overflow-y-auto origin-top-left transition-all duration-200 ease-out ${isLokasiDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                            <button
+                              onClick={() => { setFilterLokasi('All'); setIsLokasiDropdownOpen(false); }}
+                              className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterLokasi === 'All' ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                            >
+                              Semua
+                            </button>
+                            {uniqueLokasi.filter(l => l !== 'All').map((l, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => { setFilterLokasi(l); setIsLokasiDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterLokasi === l ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                {l}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </th>
                   );
@@ -111,19 +167,40 @@ export default function PeralatanTable({
 
                 if (col.key === 'user') {
                   return (
-                    <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap bg-blue-50/60 text-center align-middle overflow-visible">
+                      <div className="flex items-center justify-center gap-1.5 relative z-20">
                         <span>USER</span>
-                        <select
-                          value={filterUser}
-                          onChange={(e) => setFilterUser(e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
-                        >
-                          <option value="All">Semua</option>
-                          {uniqueUser.filter(u => u !== 'All').map((u, idx) => (
-                            <option key={idx} value={u}>{u}</option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              setIsUserDropdownOpen(!isUserDropdownOpen);
+                              setIsLokasiDropdownOpen(false);
+                              setIsJenisDropdownOpen(false);
+                              setIsStatusDropdownOpen(false);
+                            }}
+                            className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer shadow-2xs"
+                          >
+                            <span className="truncate max-w-[70px]">{filterUser === 'All' ? 'Semua' : filterUser}</span>
+                            <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div className={`absolute left-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[250px] overflow-y-auto origin-top-left transition-all duration-200 ease-out ${isUserDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                            <button
+                              onClick={() => { setFilterUser('All'); setIsUserDropdownOpen(false); }}
+                              className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterUser === 'All' ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                            >
+                              Semua
+                            </button>
+                            {uniqueUser.filter(u => u !== 'All').map((u, idx) => (
+                              <button
+                                key={idx}
+                                onClick={() => { setFilterUser(u); setIsUserDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterUser === u ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                {u}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </th>
                   );
@@ -131,22 +208,34 @@ export default function PeralatanTable({
 
                 if (col.key === 'status') {
                   return (
-                    <th key={col.key} className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle">
-                      <div className="flex items-center justify-center gap-1.5">
+                    <th key={col.key} className="py-3.5 px-4 font-bold text-center whitespace-nowrap bg-blue-50/60 align-middle overflow-visible">
+                      <div className="flex items-center justify-center gap-1.5 relative z-10">
                         <span>STATUS</span>
-                        <select
-                          value={filterStatus}
-                          onChange={(e) => setFilterStatus(e.target.value)}
-                          className="bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[10px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#005ea4] font-bold font-sans-clean cursor-pointer shadow-2xs max-w-[100px]"
-                        >
-                          <option value="All">Semua</option>
-                          <option value="Aktif">Aktif</option>
-                          <option value="Expired">Expired</option>
-                          <option value="Perpanjang">Perpanjang</option>
-                          <option value="Afkir">Afkir</option>
-                          <option value="Spare">Spare</option>
-                          <option value="Rusak">Rusak</option>
-                        </select>
+                        <div className="relative">
+                          <button
+                            onClick={() => {
+                              setIsStatusDropdownOpen(!isStatusDropdownOpen);
+                              setIsLokasiDropdownOpen(false);
+                              setIsJenisDropdownOpen(false);
+                              setIsUserDropdownOpen(false);
+                            }}
+                            className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none min-w-[70px] text-slate-800 normal-case cursor-pointer shadow-2xs"
+                          >
+                            <span className="truncate max-w-[70px]">{filterStatus === 'All' ? 'Semua' : filterStatus}</span>
+                            <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          <div className={`absolute right-0 top-full mt-1 min-w-[120px] w-max max-w-[200px] z-[99] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[250px] overflow-y-auto origin-top-right transition-all duration-200 ease-out ${isStatusDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                            {['All', 'Aktif', 'Expired', 'Perpanjang', 'Non-aktif'].map((statusOption) => (
+                              <button
+                                key={statusOption}
+                                onClick={() => { setFilterStatus(statusOption); setIsStatusDropdownOpen(false); }}
+                                className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterStatus === statusOption ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-normal'}`}
+                              >
+                                {statusOption === 'All' ? 'Semua' : statusOption}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </th>
                   );
@@ -176,11 +265,11 @@ export default function PeralatanTable({
 
                 return (
                   <th key={col.key} className="py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle">
-                    {col.label.toUpperCase()}
+                    {col.key === 'title' ? 'ALAT' : col.label.toUpperCase()}
                   </th>
                 );
               })}
-              <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle">AKSI</th>
+              <th className="py-3.5 px-4 font-bold text-center whitespace-nowrap align-middle min-w-[160px] w-44">AKSI</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 text-xs">
@@ -188,35 +277,47 @@ export default function PeralatanTable({
               expandedRows.map((row, index) => {
                 const item = row.parentItem;
                 const rowClass = getRowStatusStyle({ status: row.status, berakhir: row.berakhir, documentStatus: row.documentStatus });
-                const isAfkir = row.status === 'Afkir' || row.status === 'Decommissioned' || row.status === 'afkir';
+                const isDecommissioned = row.status === 'Decommissioned' || row.status === 'Decommissioned' || row.status === 'decommissioned';
                 const isExpired = row.status === 'Expired' || row.status === 'expired';
                 const isPerpanjang = row.status === 'Perpanjang' || row.status === 'In Progress' || row.status === 'perpanjang';
 
                 return (
                   <tr key={row.rowId} className={`transition-colors font-mono-data text-xs ${rowClass}`}>
-                    {activeMainTab === 'staging' && (
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap w-12">
-                        <input 
-                          type="checkbox" 
-                          className="rounded border-slate-300 accent-amber-600 cursor-pointer"
-                          checked={selectedStagingIds.includes(item.id || item.MasterId)}
-                          onChange={() => toggleSelectStaging(item.id || item.MasterId)}
-                        />
-                      </td>
-                    )}
                     {allColumns.map((col) => {
                       if (!isVisible(col.key)) return null;
 
                       if (col.key === 'no') {
                         return (
-                          <td key="no" className="py-3.5 px-4 text-center font-bold whitespace-nowrap">
-                            {index + 1}
+                          <td key="no" className="py-3.5 px-3 text-center font-bold whitespace-nowrap align-middle w-16 min-w-[64px]">
+                            {activeMainTab === 'staging' ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <input 
+                                  type="checkbox" 
+                                  className="rounded border-slate-300 accent-[#005ea4] cursor-pointer"
+                                  checked={selectedStagingIds.includes(item.id || item.MasterId)}
+                                  onChange={() => toggleSelectStaging(item.id || item.MasterId)}
+                                />
+                                <span className="text-slate-600 font-mono text-xs">{index + 1}</span>
+                              </div>
+                            ) : (
+                              <span>{index + 1}</span>
+                            )}
                           </td>
                         );
                       }
 
                       if (col.key === 'title') {
-                        const certsCount = item.certificates ? item.certificates.length : 0;
+                        const certs = item.certificates || item.linkedCertificates || [];
+                        let issuanceCount = 1;
+                        if (certs.length > 0) {
+                          const primaryCert = certs[0];
+                          if (Array.isArray(primaryCert?.history) && primaryCert.history.length > 0) {
+                            issuanceCount = 1 + primaryCert.history.length;
+                          } else if (certs.length > 1) {
+                            issuanceCount = certs.length;
+                          }
+                        }
+
                         return (
                           <td
                             key="title"
@@ -226,27 +327,12 @@ export default function PeralatanTable({
                             className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${
                               activeMainTab === 'staging' 
                                 ? 'cursor-default text-slate-800' 
-                                : (isAfkir ? 'cursor-pointer hover:underline text-white' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')
+                                : (isDecommissioned ? 'cursor-pointer hover:underline text-white' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')
                             }`}
                             title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : "Klik untuk Lihat Detail"}
                           >
                             <div className="flex items-center justify-center gap-2">
                               <span>{item.title || row.jenisPeralatan || '-'}</span>
-                              {!row.isLinked && certsCount > 0 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (activeMainTab !== 'staging') {
-                                      setDetailModalItem({ ...item, _scrollToHistory: true });
-                                    }
-                                  }}
-                                  className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black bg-[#005ea4] text-white border border-[#005ea4] hover:bg-[#004881] hover:border-[#004881] transition-all shadow-sm cursor-pointer shrink-0"
-                                  title={`${certsCount} sertifikat terbit. Klik untuk langsung ke histori dokumen.`}
-                                >
-                                  {certsCount}
-                                </button>
-                              )}
                             </div>
                           </td>
                         );
@@ -288,7 +374,7 @@ export default function PeralatanTable({
                             className={`py-3.5 px-4 font-bold whitespace-nowrap text-center align-middle ${
                               activeMainTab === 'staging' 
                                 ? 'cursor-default text-slate-800' 
-                                : (isAfkir ? 'cursor-pointer hover:underline text-white' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')
+                                : (isDecommissioned ? 'cursor-pointer hover:underline text-white' : 'cursor-pointer hover:underline text-slate-900 hover:text-[#005ea4]')
                             }`}
                             title={activeMainTab === 'staging' ? 'Detail tidak tersedia di mode Staging' : "Klik untuk Lihat Detail"}
                           >
@@ -341,7 +427,7 @@ export default function PeralatanTable({
                         return (
                           <td key="status" className="py-3.5 px-4 text-center whitespace-nowrap align-middle">
                             <span className={`inline-block px-2.5 py-0.5 text-[11px] font-bold rounded-full border ${
-                              isAfkir
+                              isDecommissioned
                                 ? 'bg-slate-800 text-white border-slate-600'
                                 : isExpired
                                 ? 'bg-rose-100 text-rose-900 border-rose-300'
@@ -443,6 +529,14 @@ export default function PeralatanTable({
                         );
                       }
 
+                      if (col.key === 'instansi') {
+                        return (
+                          <td key="instansi" className="py-3.5 px-4 text-slate-700 font-medium whitespace-nowrap text-center align-middle">
+                            {row.instansi || '-'}
+                          </td>
+                        );
+                      }
+
                       if (col.key === 'keterangan') {
                         return (
                           <td key="keterangan" className="py-3.5 px-4 text-slate-700 font-medium whitespace-nowrap text-center align-middle">
@@ -468,7 +562,7 @@ export default function PeralatanTable({
                         </td>
                       );
                     })}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle">
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap font-mono-data align-middle min-w-[160px] w-44">
                       {(!isViewer && (row.documentStatus === 'PENDING_DOC' || activeMainTab === 'staging')) ? (
                         <button
                           onClick={() => setResolveTargetItem(item)}
@@ -492,17 +586,9 @@ export default function PeralatanTable({
             })
             ) : (
               <tr>
-                <td colSpan={visibleColumnKeys.length + (activeMainTab === 'staging' ? 1 : 0)} className="py-12 text-center text-[#64748B]">
+                <td colSpan={100} className="py-12 text-center text-[#64748B]">
                   {activeMainTab === 'staging' ? (
-                    <div className="max-w-sm mx-auto space-y-2 py-4">
-                      <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
-                        <Check className="w-6 h-6" />
-                      </div>
-                      <h4 className="font-bold text-sm text-slate-900 font-sans-clean">Semua Dokumen Lengkap!</h4>
-                      <p className="text-xs text-slate-500 font-sans-clean">
-                        Tidak ada data baru yang membutuhkan tindakan. Semua aset di modul ini sudah terverifikasi atau telah diberikan catatan penanganan.
-                      </p>
-                    </div>
+                    <span className="font-mono-data">Data peralatan tidak ditemukan.</span>
                   ) : (
                     <span className="font-mono-data">Tidak ada peralatan yang sesuai dengan filter pencarian.</span>
                   )}

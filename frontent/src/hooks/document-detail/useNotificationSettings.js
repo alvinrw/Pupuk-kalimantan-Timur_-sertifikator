@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { updateNotificationSetting } from '../../services/masterItemsService';
 
@@ -86,7 +87,7 @@ export function useNotificationSettings({ item, targetCert, onRefreshRequired })
     try {
       await saveSettings({ reminderEnabled: isChecked });
     } catch (err) {
-      alert('Gagal menyimpan pengaturan pengingat: ' + err.message);
+      toast.error('Gagal menyimpan pengaturan pengingat: ' + err.message);
       setReminderEnabled(!isChecked);
     }
   };

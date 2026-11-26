@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { updateMasterItem, deleteMasterItem, updateCertificate } from '../../services/masterItemsService';
 
-export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired, isSingleCertScope, isMultiCertItem }) {
-  const [isAfkirModalOpen, setIsAfkirModalOpen] = useState(false);
-  const [isAfkiring, setIsAfkiring] = useState(false);
+export function useDocumentStatus({ item, targetCert, formData, setFormData, onSaveUpdate, onDeleteSuccess, onRefreshRequired, isSingleCertScope, isMultiCertItem, effectiveCategoryKey }) {
+  const [isDecommissionedModalOpen, setIsDecommissionedModalOpen] = useState(false);
+  const [isDecommissioneding, setIsDecommissioneding] = useState(false);
 
   const [isAktifkanModalOpen, setIsAktifkanModalOpen] = useState(false);
   const [isAktifkaning, setIsAktifkaning] = useState(false);
@@ -21,31 +21,33 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const handleAfkir = () => setIsAfkirModalOpen(true);
-  const confirmAfkir = async () => {
-    setIsAfkiring(true);
+  const handleDecommissioned = () => setIsDecommissionedModalOpen(true);
+  const confirmDecommissioned = async () => {
+    setIsDecommissioneding(true);
     try {
       if (targetCert?.id) {
-        await updateCertificate(targetCert.id, { status: 'Afkir' });
+        await updateCertificate(targetCert.id, { status: 'Decommissioned' });
         const targetId = item?.MasterId || item?.id;
-        if (!isMultiCertItem && targetId) {
-          await updateMasterItem(targetId, { status: 'Afkir' });
+        if ((!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') && targetId) {
+          await updateMasterItem(targetId, { status: 'Decommissioned' });
         }
-        setFormData(prev => ({ ...prev, status: 'Afkir' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir' });
+        setFormData(prev => ({ ...prev, status: 'Decommissioned' }));
+        if (!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') {
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Decommissioned' });
+        }
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
-          await updateMasterItem(targetId, { status: 'Afkir' });
-          setFormData(prev => ({ ...prev, status: 'Afkir' }));
-          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Afkir', id: targetId });
+          await updateMasterItem(targetId, { status: 'Decommissioned' });
+          setFormData(prev => ({ ...prev, status: 'Decommissioned' }));
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Decommissioned', id: targetId });
         }
       }
       if (onRefreshRequired) onRefreshRequired();
-      setIsAfkirModalOpen(false);
+      setIsDecommissionedModalOpen(false);
     } catch (err) {
-      alert('Gagal Afkir: ' + (err.message || 'Error'));
-    } finally { setIsAfkiring(false); }
+      alert('Gagal Decommissioned: ' + (err.message || 'Error'));
+    } finally { setIsDecommissioneding(false); }
   };
 
   const handleAktifkan = () => setIsAktifkanModalOpen(true);
@@ -55,11 +57,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
         const targetId = item?.MasterId || item?.id;
-        if (!isMultiCertItem && targetId) {
+        if ((!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') && targetId) {
           await updateMasterItem(targetId, { status: 'Aktif' });
         }
         setFormData(prev => ({ ...prev, status: 'Aktif' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
+        if (!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') {
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
+        }
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
@@ -81,11 +85,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Perpanjang' });
         const targetId = item?.MasterId || item?.id;
-        if (!isMultiCertItem && targetId) {
+        if ((!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') && targetId) {
           await updateMasterItem(targetId, { status: 'Perpanjang' });
         }
         setFormData(prev => ({ ...prev, status: 'Perpanjang' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang' });
+        if (!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') {
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Perpanjang' });
+        }
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
@@ -107,11 +113,13 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
       if (targetCert?.id) {
         await updateCertificate(targetCert.id, { status: 'Aktif' });
         const targetId = item?.MasterId || item?.id;
-        if (!isMultiCertItem && targetId) {
+        if ((!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') && targetId) {
           await updateMasterItem(targetId, { status: 'Aktif' });
         }
         setFormData(prev => ({ ...prev, status: 'Aktif' }));
-        if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
+        if (!isMultiCertItem || effectiveCategoryKey === 'peralatan-pabrik') {
+          if (onSaveUpdate) onSaveUpdate({ ...item, ...formData, status: 'Aktif' });
+        }
       } else {
         const targetId = item?.MasterId || item?.id;
         if (targetId) {
@@ -158,7 +166,7 @@ export function useDocumentStatus({ item, targetCert, formData, setFormData, onS
   };
 
   return {
-    isAfkirModalOpen, setIsAfkirModalOpen, isAfkiring, handleAfkir, confirmAfkir,
+    isDecommissionedModalOpen, setIsDecommissionedModalOpen, isDecommissioneding, handleDecommissioned, confirmDecommissioned,
     isAktifkanModalOpen, setIsAktifkanModalOpen, isAktifkaning, handleAktifkan, confirmAktifkan,
     isConfirmRenewHeaderModalOpen, setIsConfirmRenewHeaderModalOpen, isRenewingHeader, confirmRenewHeader,
     isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen, isCancelingHeader, confirmCancelHeader,

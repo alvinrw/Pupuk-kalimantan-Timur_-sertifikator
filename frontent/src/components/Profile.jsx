@@ -67,7 +67,7 @@ export default function Profile() {
             <Shield className="w-3.5 h-3.5" />
             {user.role}
           </span>
-          <p className="text-xs text-slate-500">Akun terdaftar dalam sistem Sertifikator</p>
+          <p className="text-xs text-slate-500">Akun terdaftar dalam sistem PERISAI</p>
         </div>
       </div>
 

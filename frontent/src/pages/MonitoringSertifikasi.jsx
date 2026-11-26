@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Filter, Loader2, Search, RotateCcw, Calendar, X, Download } from 'lucide-react';
+import { Activity, Filter, Loader2, Search, RotateCcw, Calendar, X, Download, ChevronDown } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import DocumentDetailPage from './DocumentDetailPage';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,13 +18,14 @@ export default function MonitoringSertifikasi() {
   const [dateRangeStart, setDateRangeStart] = useState('');
   const [dateRangeEnd, setDateRangeEnd] = useState('');
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+  const [isKategoriDropdownOpen, setIsKategoriDropdownOpen] = useState(false);
 
   const handleKategoriChange = (val) => {
     m.setFilterKategori(val);
   };
 
   const handleDownloadExcel = () => {
-    const headers = ['No', 'Kategori Dokumen', 'Jenis Perizinan / Alat', 'Unit Pabrik', 'Merek / Nama Item', 'No Seri / Tag', 'No Sertifikat', 'Tanggal Terbit', 'Tanggal Expired', 'Sisa Hari', 'Status Sistem'];
+    const headers = ['No', 'Kategori Dokumen', 'Jenis Peralatan', 'Unit Pabrik', 'Nama / Objek Perizinan', 'Nomor Seri', 'No Sertifikat', 'Tanggal Terbit', 'Tanggal Expired', 'Sisa Hari', 'Status Sistem'];
     
     const rows = displayedCertificates.map((doc, idx) => [
       idx + 1,
@@ -90,11 +91,11 @@ export default function MonitoringSertifikasi() {
           const updateItem = (d) => {
             const newStatus = updatedDoc.status || d.status;
             const lowerSt = newStatus.toLowerCase();
-            const isAfkir = lowerSt === 'afkir' || lowerSt === 'nonaktif' || lowerSt === 'decommissioned';
+            const isDecommissioned = lowerSt === 'decommissioned' || lowerSt === 'nonaktif' || lowerSt === 'decommissioned';
             const isPerpanjang = lowerSt === 'perpanjang' || lowerSt === 'perpanjangan' || lowerSt === 'in progress' || lowerSt === 'in_progress';
             const isExempt = d.documentStatus === 'EXEMPT' || updatedDoc.documentStatus === 'EXEMPT';
             let calcWf = d.workflowStatus;
-            if (isAfkir) calcWf = 'decommissioned';
+            if (isDecommissioned) calcWf = 'decommissioned';
             else if (isPerpanjang) calcWf = 'in_progress';
             else if (lowerSt === 'aktif' || lowerSt === 'completed') calcWf = isExempt ? 'exempt' : 'completed';
             return { ...d, ...updatedDoc, status: newStatus, statusOperasional: newStatus, workflowStatus: calcWf, id: d.id };
@@ -146,18 +147,46 @@ export default function MonitoringSertifikasi() {
         </div>
 
         {/* Inline Filter Kategori */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3 flex-wrap relative z-30">
+          <div className="flex items-center gap-2 relative">
             <Filter className="w-4 h-4 text-slate-500 shrink-0" />
-            <select
-              value={m.filterKategori}
-              onChange={(e) => handleKategoriChange(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
-            >
-              {kategoriOptions.map(cat => (
-                <option key={cat} value={cat}>{cat === 'All' ? 'Semua Kategori Perizinan' : cat}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                onClick={() => setIsKategoriDropdownOpen(!isKategoriDropdownOpen)}
+                className="flex items-center justify-between gap-2 min-w-[220px] bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#005ea4] cursor-pointer shadow-xs"
+              >
+                <span className="truncate">
+                  {
+                    m.filterKategori === 'All' ? 'Semua Kategori Perizinan' :
+                    m.filterKategori === 'peralatan-pabrik' ? 'Perizinan Peralatan Pabrik' :
+                    m.filterKategori === 'perizinan-aset' ? 'Perizinan Aset' :
+                    m.filterKategori === 'administrasi-lainnya' ? 'Perizinan Administrasi Lainnya' :
+                    m.filterKategori === 'perizinan-proyek' ? 'Perizinan Proyek' :
+                    m.filterKategori === 'perizinan-produk' ? 'Perizinan Produk' : m.filterKategori
+                  }
+                </span>
+                <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isKategoriDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              <div className={`absolute left-0 top-full mt-1 w-full min-w-[220px] z-50 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden origin-top transition-all duration-200 ease-out ${isKategoriDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                {[
+                  { value: 'All', label: 'Semua Kategori Perizinan' },
+                  { value: 'peralatan-pabrik', label: 'Perizinan Peralatan Pabrik' },
+                  { value: 'perizinan-aset', label: 'Perizinan Aset' },
+                  { value: 'perizinan-proyek', label: 'Perizinan Proyek' },
+                  { value: 'perizinan-produk', label: 'Perizinan Produk' },
+                  { value: 'administrasi-lainnya', label: 'Perizinan Administrasi Lainnya' }
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => { handleKategoriChange(opt.value); setIsKategoriDropdownOpen(false); }}
+                    className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${m.filterKategori === opt.value ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50 font-medium'}`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {m.activeFilterCount > 0 && (
@@ -211,14 +240,16 @@ export default function MonitoringSertifikasi() {
                   className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
                 />
               </div>
-              <button
-                onClick={handleDownloadExcel}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00a368] hover:bg-[#008f5a] text-white font-bold text-xs rounded-lg transition-colors shadow-2xs"
-                title="Download Excel"
-              >
-                <Download className="w-4 h-4" />
-                <span className="hidden sm:inline">Excel</span>
-              </button>
+              {!isViewer && (
+                <button
+                  onClick={handleDownloadExcel}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#00a368] hover:bg-[#008f5a] text-white font-bold text-xs rounded-lg transition-colors shadow-2xs"
+                  title="Download Excel"
+                >
+                  <Download className="w-4 h-4" />
+                  <span className="hidden sm:inline">Excel</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -277,7 +308,7 @@ export default function MonitoringSertifikasi() {
           onOpenDetail={(doc) => m.setSelectedDetailDoc(doc)}
           onCompleteModal={m.openCompleteModal}
           onCancelAction={m.handleCancelAction}
-          onCancelAfkir={m.handleCancelAfkir}
+          onCancelDecommissioned={m.handleCancelDecommissioned}
           onQuickRenew={m.handleQuickRenew}
           onQuickDecommission={m.handleQuickDecommission}
         />
@@ -289,8 +320,8 @@ export default function MonitoringSertifikasi() {
       />
 
       <MonitoringActionModals
-        isAfkirModalOpen={m.isAfkirModalOpen}
-        setIsAfkirModalOpen={m.setIsAfkirModalOpen}
+        isDecommissionedModalOpen={m.isDecommissionedModalOpen}
+        setIsDecommissionedModalOpen={m.setIsDecommissionedModalOpen}
         isAktifkanModalOpen={m.isAktifkanModalOpen}
         setIsAktifkanModalOpen={m.setIsAktifkanModalOpen}
         isRenewConfirmModalOpen={m.isRenewConfirmModalOpen}
@@ -302,7 +333,7 @@ export default function MonitoringSertifikasi() {
         activeItemForAction={m.activeItemForAction}
         isProcessingAction={m.isProcessingAction}
         confirmQuickDecommission={m.confirmQuickDecommission}
-        confirmCancelAfkir={m.confirmCancelAfkir}
+        confirmCancelDecommissioned={m.confirmCancelDecommissioned}
         confirmQuickRenew={m.confirmQuickRenew}
         confirmCancelRenew={m.confirmCancelRenew}
         uploadedFile={m.uploadedFile}
@@ -311,6 +342,8 @@ export default function MonitoringSertifikasi() {
         ocrSuccess={m.ocrSuccess}
         newCertNumber={m.newCertNumber}
         setNewCertNumber={m.setNewCertNumber}
+        instansi={m.instansi}
+        setInstansi={m.setInstansi}
         issueDate={m.issueDate}
         setIssueDate={m.setIssueDate}
         newExpiryDate={m.newExpiryDate}

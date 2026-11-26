@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   X, Edit3, Eye, FileText, Download, ExternalLink,
@@ -6,6 +7,7 @@ import {
   Settings, History, Plus, Clock, FileCheck
 } from 'lucide-react';
 import { getFullFileUrl, API_BASE, UPLOAD_ENDPOINT } from '../../config/api';
+import StatusDropdown from '../common/StatusDropdown';
 
 export default function CertDetailModal({
   isOpen,
@@ -121,7 +123,7 @@ export default function CertDetailModal({
       setIsEditing(false);
     } catch (err) {
       console.error('Gagal menyimpan sertifikat:', err);
-      alert('Gagal menyimpan perubahan sertifikat!');
+      toast.error('Gagal menyimpan perubahan sertifikat!');
     } finally {
       setIsSubmitting(false);
     }
@@ -135,7 +137,7 @@ export default function CertDetailModal({
       onClose();
     } catch (err) {
       console.error('Gagal menghapus sertifikat:', err);
-      alert('Gagal menghapus sertifikat!');
+      toast.error('Gagal menghapus sertifikat!');
     } finally {
       setIsDeleting(false);
     }
@@ -182,7 +184,7 @@ export default function CertDetailModal({
     : [activeCert];
 
   const masterStatusLower = (masterItem?.status || masterItem?.docStatus || '').toLowerCase();
-  const isMasterAfkir = masterStatusLower === 'afkir' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut' || masterStatusLower === 'non-aktif';
+  const isMasterDecommissioned = masterStatusLower === 'decommissioned' || masterStatusLower === 'decommissioned' || masterStatusLower === 'dicabut' || masterStatusLower === 'non-aktif';
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 font-sans-clean">
@@ -208,7 +210,7 @@ export default function CertDetailModal({
           </div>
 
           <div className="flex items-center gap-2">
-            {!isEditing && !isMasterAfkir ? (
+            {!isEditing && !isMasterDecommissioned ? (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
@@ -216,7 +218,7 @@ export default function CertDetailModal({
               >
                 <Edit3 className="w-3.5 h-3.5" /> Edit Sertifikat
               </button>
-            ) : (!isEditing && isMasterAfkir) ? null : (
+            ) : (!isEditing && isMasterDecommissioned) ? null : (
               <button
                 type="button"
                 onClick={() => setIsEditing(false)}
@@ -257,7 +259,7 @@ export default function CertDetailModal({
                     onChange={handleInputChange}
                     required
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
-                    placeholder="misal: Sertifikat Crane / SHM"
+                    placeholder="Sertifikat Crane"
                   />
                 </div>
 
@@ -272,7 +274,7 @@ export default function CertDetailModal({
                     onChange={handleInputChange}
                     required
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none font-mono"
-                    placeholder="misal: CERT-8039/DISNAKER-KT/2024"
+                    placeholder="CERT-8039/DISNAKER-KT/2024"
                   />
                 </div>
 
@@ -286,25 +288,22 @@ export default function CertDetailModal({
                     value={formData.instansi}
                     onChange={handleInputChange}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none"
-                    placeholder="misal: Disnaker Kaltim / Kemenperin"
+                    placeholder="Disnaker Kaltim"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Status Sertifikat
-                  </label>
-                  <select
-                    name="status"
+                  <StatusDropdown
+                    label="Status Sertifikat"
                     value={formData.status}
-                    onChange={handleInputChange}
-                    className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none bg-white"
-                  >
-                    <option value="Aktif">Aktif</option>
-                    <option value="Perpanjang">Perpanjang / Dalam Proses</option>
-                    <option value="Expired">Expired / Kadaluarsa</option>
-                    <option value="Decommissioned">Decommissioned / Non-aktif</option>
-                  </select>
+                    onChange={(val) => setFormData({ ...formData, status: val })}
+                    options={[
+                      { value: 'Aktif', label: 'Aktif', desc: 'Sertifikat masih berlaku' },
+                      { value: 'Perpanjang', label: 'Perpanjang / Dalam Proses', desc: 'Sedang diperpanjang' },
+                      { value: 'Expired', label: 'Expired / Kadaluarsa', desc: 'Masa berlaku habis' },
+                      { value: 'Decommissioned', label: 'Decommissioned / Non-aktif', desc: 'Alat/Aset dinonaktifkan' },
+                    ]}
+                  />
                 </div>
 
                 <div>
@@ -335,14 +334,14 @@ export default function CertDetailModal({
 
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Catatan / Keterangan Tambahan
+                    Keterangan
                   </label>
                   <textarea
                     name="keterangan"
                     value={formData.keterangan || ''}
                     onChange={handleInputChange}
                     className="w-full text-xs px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] focus:outline-none min-h-[60px] resize-none"
-                    placeholder="misal: Sertifikat sedang dalam proses pengurusan di kementerian..."
+                    placeholder="Sertifikat sedang dalam proses pengurusan di kementerian..."
                   />
                 </div>
               </div>
@@ -448,7 +447,7 @@ export default function CertDetailModal({
 
                 <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-y-4 gap-x-6 text-xs">
                   <div>
-                    <span className="text-slate-400 block mb-0.5 font-medium">Merek / Nama Item</span>
+                    <span className="text-slate-400 block mb-0.5 font-medium">Merek</span>
                     <strong className="text-slate-900 text-sm">{masterNama}</strong>
                   </div>
 
@@ -463,24 +462,24 @@ export default function CertDetailModal({
                   </div>
 
                   <div>
-                    <span className="text-slate-400 block mb-0.5 font-medium">Tipe / Kode</span>
+                    <span className="text-slate-400 block mb-0.5 font-medium">Tipe</span>
                     <strong className="text-slate-900">{masterJenis}</strong>
                   </div>
 
                   <div>
-                    <span className="text-slate-400 block mb-0.5 font-medium">Nomor Seri / Tag</span>
+                    <span className="text-slate-400 block mb-0.5 font-medium">Nomor Seri</span>
                     <span className="font-mono text-[#005ea4] font-bold">{masterCode}</span>
                   </div>
 
                   <div>
-                    <span className="text-slate-400 block mb-0.5 font-medium">Unit Pabrik / Lokasi</span>
+                    <span className="text-slate-400 block mb-0.5 font-medium">Unit</span>
                     <span className="inline-block bg-slate-100 text-slate-700 font-semibold px-2 py-0.5 rounded border border-slate-200">
                       {masterUnit}
                     </span>
                   </div>
 
                   <div>
-                    <span className="text-slate-400 block mb-0.5 font-medium">User / Dept PJ (Penanggung Jawab)</span>
+                    <span className="text-slate-400 block mb-0.5 font-medium">User</span>
                     <span className="font-semibold text-slate-800">{masterUser}</span>
                   </div>
 
@@ -505,8 +504,8 @@ export default function CertDetailModal({
                   </div>
 
                   <div className="col-span-2 md:col-span-4 mt-2">
-                    <span className="text-slate-400 block mb-0.5 font-medium">Catatan / Keterangan Tambahan</span>
-                    <strong className="text-slate-900 whitespace-pre-wrap">{formData.keterangan || cert.keterangan || '-'}</strong>
+                    <span className="text-slate-400 block mb-0.5 font-medium">Keterangan</span>
+                    <strong className="text-slate-900 whitespace-pre-wrap">{formData.keterangan || cert?.keterangan || '-'}</strong>
                   </div>
                 </div>
               </div>
@@ -644,7 +643,7 @@ export default function CertDetailModal({
                           No. SK: {formData.noSertifikat || 'CERT-8039/DISNAKER-KT/2024'}
                         </strong>
                         <p className="text-[11px] text-slate-500 mt-0.5">
-                          Penerbit/Penguji: <span className="font-medium text-slate-700">{formData.instansi || 'Disnaker / Kemenperin'}</span>
+                          Instansi Penerbit: <span className="font-medium text-slate-700">{formData.instansi || 'Disnaker / Kemenperin'}</span>
                         </p>
                         <p className="text-[11px] text-slate-500">
                           Masa Berlaku: <span className="font-bold text-slate-700">{formData.terbit || '-'} s.d <strong className="text-rose-600">{formData.expired || '-'}</strong></span>

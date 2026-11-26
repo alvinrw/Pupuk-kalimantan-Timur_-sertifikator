@@ -6,12 +6,23 @@ export class ColumnConfigsService {
   constructor(private prisma: PrismaService) {}
 
   async findAll(categoryKey: string) {
+    const defaultConfigs = this.getDefaultConfigs(categoryKey);
+    const validFieldKeys = defaultConfigs.map(d => d.fieldKey);
+
+    if (categoryKey === 'iuran-keanggotaan') {
+      const obsoleteKeys = ['title', 'code', 'jenisItem', 'unitLocation', 'user', 'certCount'];
+      await this.prisma.columnConfig.deleteMany({
+        where: {
+          categoryKey: 'iuran-keanggotaan',
+          fieldKey: { in: obsoleteKeys }
+        }
+      }).catch(() => {});
+    }
+
     let configs = await this.prisma.columnConfig.findMany({
       where: { categoryKey },
       orderBy: { position: 'asc' },
     });
-
-    const defaultConfigs = this.getDefaultConfigs(categoryKey);
 
     if (configs.length === 0) {
       if (defaultConfigs.length > 0) {
@@ -24,6 +35,27 @@ export class ColumnConfigsService {
         });
       }
     } else {
+      // 1. Clean up columns in DB that are no longer part of defaultConfigs for this category (unless custom-added by user)
+      const obsoleteKeysForCategory = categoryKey === 'iuran-keanggotaan'
+        ? ['title', 'code', 'jenisItem', 'unitLocation', 'user', 'certCount']
+        : [];
+
+      const obsolete = configs.filter(c => !validFieldKeys.includes(c.fieldKey) && (!c.isCustom || obsoleteKeysForCategory.includes(c.fieldKey)));
+      if (obsolete.length > 0) {
+        for (const obs of obsolete) {
+          await this.prisma.columnConfig.delete({
+            where: {
+              categoryKey_fieldKey: {
+                categoryKey,
+                fieldKey: obs.fieldKey,
+              },
+            },
+          }).catch(() => {});
+        }
+        configs = configs.filter(c => !obsolete.some(o => o.fieldKey === c.fieldKey));
+      }
+
+      // 2. Create missing default columns
       const missing = defaultConfigs.filter(
         def => !configs.some(c => c.fieldKey === def.fieldKey)
       );
@@ -45,7 +77,7 @@ export class ColumnConfigsService {
       // Sync default column labels in DB if they were changed in the code
       for (const d of defaultConfigs) {
         const existing = configs.find(c => c.fieldKey === d.fieldKey);
-        if (existing && !existing.isCustom && existing.label !== d.label) {
+        if (existing && existing.label !== d.label) {
           await this.prisma.columnConfig.update({
             where: {
               categoryKey_fieldKey: {
@@ -55,7 +87,7 @@ export class ColumnConfigsService {
             },
             data: { label: d.label },
           });
-          existing.label = d.label; // update in memory array
+          existing.label = d.label;
         }
       }
     }
@@ -69,6 +101,8 @@ export class ColumnConfigsService {
       case 'perizinan-aset': return 'Perizinan Aset';
       case 'perizinan-proyek': return 'Perizinan Proyek';
       case 'perizinan-produk': return 'Perizinan Produk';
+      case 'administrasi-lainnya': return 'Perizinan Administrasi Lainnya';
+      case 'iuran-keanggotaan': return 'Keanggotaan';
       default: return categoryKey;
     }
   }
@@ -187,15 +221,15 @@ export class ColumnConfigsService {
         { categoryKey, fieldKey: 'terbit', label: 'TANGGAL TERBIT', type: 'date', position: 5, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'expired', label: 'TANGGAL EXPIRED', type: 'date', position: 6, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'status', label: 'STATUS', type: 'text', position: 7, isVisible: true, isCustom: false },
-        { categoryKey, fieldKey: 'keterangan', label: 'KETERANGAN / CATATAN', type: 'text', position: 8, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'keterangan', label: 'KETERANGAN', type: 'text', position: 8, isVisible: true, isCustom: false },
       ];
     }
 
     if (categoryKey === 'peralatan-pabrik') {
       return [
         { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },
-        { categoryKey, fieldKey: 'title', label: 'NAMA ALAT', type: 'text', position: 1, isVisible: true, isCustom: false },
-        { categoryKey, fieldKey: 'code', label: 'NOMOR TAG / KODE ALAT', type: 'text', position: 2, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'title', label: 'ALAT', type: 'text', position: 1, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'code', label: 'NOMOR SERI', type: 'text', position: 2, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'jenisPeralatan', label: 'JENIS PERALATAN PABRIK', type: 'text', position: 3, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'unitLocation', label: 'LOKASI', type: 'text', position: 4, isVisible: true, isCustom: false },
         { categoryKey, fieldKey: 'user', label: 'PENANGGUNG JAWAB', type: 'text', position: 5, isVisible: true, isCustom: false },
@@ -206,13 +240,44 @@ export class ColumnConfigsService {
       ];
     }
 
+    if (categoryKey === 'administrasi-lainnya') {
+      return [
+        { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'code', label: 'KODE HAKI / EC', type: 'text', position: 1, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'title', label: 'JUDUL CIPTAAN / KARYA', type: 'text', position: 2, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'jenisItem', label: 'JENIS CIPTAAN', type: 'text', position: 3, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'unitLocation', label: 'UNIT OWNER', type: 'text', position: 4, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'user', label: 'PENANGGUNG JAWAB', type: 'text', position: 5, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'terbit', label: 'TANGGAL TERBIT', type: 'date', position: 6, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'berakhir', label: 'TANGGAL EXPIRED', type: 'date', position: 7, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'certCount', label: 'SERTIFIKAT TERHUBUNG', type: 'text', position: 8, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'status', label: 'STATUS', type: 'text', position: 9, isVisible: true, isCustom: false },
+      ];
+    }
+
+    if (categoryKey === 'iuran-keanggotaan') {
+      return [
+        { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'kompartemen', label: 'KOMPARTEMEN', type: 'text', position: 1, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'unitKerja', label: 'UNIT KERJA', type: 'text', position: 2, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'asosiasi', label: 'ASOSIASI', type: 'text', position: 3, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'tanggalMulai', label: 'TAHUN PENDAFTARAN', type: 'text', position: 4, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'periode', label: 'TAHUN AKTIF', type: 'text', position: 5, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'nominal', label: 'NOMINAL', type: 'nominal', position: 6, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'status', label: 'STATUS', type: 'text', position: 7, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'nama', label: 'NAMA', type: 'text', position: 8, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'npk', label: 'NPK', type: 'text', position: 9, isVisible: true, isCustom: false },
+        { categoryKey, fieldKey: 'keterangan', label: 'KETERANGAN', type: 'text', position: 10, isVisible: true, isCustom: false },
+      ];
+    }
+
     const isProyek = categoryKey.includes('proyek');
     const isProduk = categoryKey.includes('produk') || categoryKey.includes('ciptaan');
     const isAset = categoryKey.includes('aset');
     const configs = [
       { categoryKey, fieldKey: 'no', label: 'NO.', type: 'text', position: 0, isVisible: true, isCustom: false },
       { categoryKey, fieldKey: 'title', label: isProyek ? 'NAMA PROYEK' : isProduk ? 'NAMA PRODUK' : isAset ? 'NAMA ASET' : 'NAMA ITEM', type: 'text', position: 1, isVisible: true, isCustom: false },
-      { categoryKey, fieldKey: 'code', label: isProyek ? 'KODE PROYEK' : isProduk ? 'KODE PERIZINAN' : isAset ? 'NOMOR SERI ASSET' : 'KODE REGISTRASI', type: 'text', position: 2, isVisible: true, isCustom: false },
+      { categoryKey, fieldKey: 'code', label: isProyek ? 'KODE PROYEK' : isProduk ? 'KODE PERIZINAN' : isAset ? 'NOMOR SERI' : 'KODE REGISTRASI', type: 'text', position: 2, isVisible: true, isCustom: false },
       { categoryKey, fieldKey: 'jenisItem', label: isProyek ? 'KATEGORI PROYEK' : isProduk ? 'JENIS PRODUK' : isAset ? 'JENIS ASET' : 'JENIS ITEM', type: 'text', position: 3, isVisible: true, isCustom: false },
     ];
 

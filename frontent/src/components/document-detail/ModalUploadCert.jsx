@@ -81,7 +81,7 @@ export default function ModalUploadCert({
       rightPanelContent={
         (localPreviewUrl || uploadData.tempUrl) ? (
           <PdfCanvasOcrViewer
-            pdfUrl={uploadData.tempUrl ? getFullFileUrl(uploadData.tempUrl) : localPreviewUrl}
+            pdfUrl={uploadData.tempUrl ? getFullFileUrl(uploadData.tempUrl, { noWatermark: true }) : localPreviewUrl}
             scanMode={scanMode}
             onScanComplete={handleOcrResult}
             onScanCancel={() => setScanMode(null)}
@@ -131,7 +131,7 @@ export default function ModalUploadCert({
                             setIsUploadingTemp(true);
                             const fdTemp = new FormData();
                             fdTemp.append('file', file);
-                            const token = sessionStorage.getItem('token');
+                            const token = sessionStorage.getItem('token') || localStorage.getItem('token');
                             const uploadRes = await fetch(`${API_BASE}/document-history/upload-temp`, {
                               method: 'POST',
                               body: fdTemp,
@@ -139,7 +139,37 @@ export default function ModalUploadCert({
                             });
                             if (uploadRes.ok) {
                               const json = await uploadRes.json();
-                              setUploadData(prev => ({ ...prev, tempUrl: json.data.url }));
+                              const tempUrl = json.data.url;
+                              setUploadData(prev => ({ ...prev, tempUrl }));
+
+                              // 2. Auto-Extract OCR (fitur AI terotomatisasi)
+                              try {
+                                const fdOcr = new FormData();
+                                fdOcr.append('file', file);
+                                const ocrRes = await fetch(`${API_BASE}/ocr/scan-pdf`, {
+                                  method: 'POST',
+                                  headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                  body: fdOcr
+                                });
+                                if (ocrRes.ok) {
+                                  const ocrJson = await ocrRes.json();
+                                  if (ocrJson.success && ocrJson.data) {
+                                    const ex = ocrJson.data;
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      namaSertifikat: ex.namaPeralatan || ex.namaSertifikat || prev.namaSertifikat,
+                                      noSertifikat: ex.noSertifikat || prev.noSertifikat,
+                                      terbit: ex.terbit || prev.terbit,
+                                      expired: ex.expired || prev.expired,
+                                      instansi: ex.instansi || prev.instansi
+                                    }));
+                                  }
+                                }
+                              } catch (ocrErr) {
+                                console.error('OCR Auto-extract failed:', ocrErr);
+                                // Jangan block proses upload jika OCR gagal
+                              }
+
                             } else {
                               console.error('Failed to upload temp file');
                             }
@@ -148,8 +178,6 @@ export default function ModalUploadCert({
                           } finally {
                             setIsUploadingTemp(false);
                           }
-                          // Fitur AI Auto-Extract keseluruhan saat upload kita matikan
-                          // agar Preview instan muncul. User akan pakai tombol 🎯 field.
                         }
                       }
                     }}
@@ -194,7 +222,7 @@ export default function ModalUploadCert({
                     type="text"
                     value={uploadData.namaSertifikat || ''}
                     onChange={(e) => setUploadData({ ...uploadData, namaSertifikat: e.target.value })}
-                    placeholder="Contoh: SLO Crane, Sertifikat K3"
+                    placeholder="SLO Crane"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
                   />
                   <button
@@ -221,7 +249,7 @@ export default function ModalUploadCert({
                     type="text"
                     value={uploadData.noSertifikat}
                     onChange={(e) => setUploadData({ ...uploadData, noSertifikat: e.target.value })}
-                    placeholder="Contoh: SKP-2024/DISNAKER/1234"
+                    placeholder="SKP-2024/DISNAKER/1234"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
                   />
                   <button
@@ -240,13 +268,13 @@ export default function ModalUploadCert({
               </div>
 
               <div>
-                <label className="font-bold text-slate-800 block mb-1">Instansi Penerbit / Penguji</label>
+                <label className="font-bold text-slate-800 block mb-1">Instansi Penerbit</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={uploadData.instansi}
                     onChange={(e) => setUploadData({ ...uploadData, instansi: e.target.value })}
-                    placeholder="Contoh: Disnaker Kaltim, Sucofindo, BKI"
+                    placeholder="Disnaker Kaltim"
                     className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs"
                   />
                   <button
@@ -311,6 +339,17 @@ export default function ModalUploadCert({
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1">Keterangan</label>
+                <textarea
+                  rows="2"
+                  value={uploadData.keterangan || ''}
+                  onChange={(e) => setUploadData({ ...uploadData, keterangan: e.target.value })}
+                  placeholder="Tambahkan keterangan jika diperlukan..."
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data resize-none"
+                />
               </div>
       </div>
     </BaseSplitScreenUploadModal>

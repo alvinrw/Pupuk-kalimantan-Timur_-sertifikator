@@ -12,7 +12,7 @@ import { Response } from 'express';
 @ApiTags('Document History')
 @Controller('document-history')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Super Admin', 'Admin', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'Viewer')
 export class DocumentHistoryController {
   constructor(
     private readonly documentHistoryService: DocumentHistoryService,
@@ -98,6 +98,7 @@ export class DocumentHistoryController {
   @ApiOperation({ summary: 'Melihat file PDF/Gambar dengan watermark dinamis' })
   async viewWatermarked(
     @Query('filePath') filePath: string,
+    @Query('noWatermark') noWatermark: string,
     @Req() req: any,
     @Res() res: Response
   ) {
@@ -128,18 +129,8 @@ export class DocumentHistoryController {
 
       res.setHeader('Content-Type', contentType);
 
-      if (contentType === 'application/pdf') {
-        const userDesc = `${req.user.username.toUpperCase()} (${req.user.npk || '-'})`;
-        const dateStr = new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' }); // WITA (Bontang time)
-        const watermarkText = `DIKUNJUNGI OLEH ${userDesc} PADA ${dateStr} WITA`;
-        
-        const watermarkedBuffer = await this.pdfWatermarkService.addWatermark(buffer, watermarkText);
-        res.setHeader('Content-Length', watermarkedBuffer.length);
-        res.send(watermarkedBuffer);
-      } else {
-        res.setHeader('Content-Length', buffer.length);
-        res.send(buffer);
-      }
+      res.setHeader('Content-Length', buffer.length);
+      res.send(buffer);
     } catch (error) {
       throw new BadRequestException(`Gagal memuat dokumen: ${error.message}`);
     }

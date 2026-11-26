@@ -1,3 +1,4 @@
+import toast from 'react-hot-toast';
 import React, { useState, useRef } from 'react';
 import {
   X,
@@ -188,15 +189,15 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
 
             const title = getVal(cols, ['title', 'merekitem', 'merek', 'namaperalatan', 'namaproduk', 'judul', 'nama', 'namaaset']);
             const tipe = getVal(cols, ['jenis', 'tipe', 'peruntukan', 'jenisaset']);
-            const code = getVal(cols, ['code', 'registrasi', 'noslf', 'certificateno', 'nomorseri', 'noseriaset', 'noproyek', 'noseri']);
+            const code = getVal(cols, ['code', 'kode', 'registrasi', 'noslf', 'certificateno', 'nomorseri', 'noseriaset', 'noproyek', 'noseri']);
             const unitLocation = getVal(cols, ['unit', 'lokasi', 'lokasiaset']);
             const penanggungJawab = getVal(cols, ['user', 'kontraktor', 'pencipta', 'penanggungjawab']);
-            const status = getVal(cols, ['status', 'kondisi', 'statusaset']);
+            const status = getVal(cols, ['status', 'kondisi', 'statusaset']) || 'Aktif';
 
             const namaSertifikat = getVal(cols, ['namasertifikat', 'jenissertifikat']) || tipe || 'Sertifikat Utama';
             const noSertifikat = getVal(cols, ['nosertifikat', 'certificateno', 'noslf', 'nosurat']);
-            const terbit = getVal(cols, ['terbit', 'issuedate', 'tanggalawal', 'tanggalinspeksi']);
-            const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim', 'expired']);
+            const terbit = getVal(cols, ['terbit', 'issuedate', 'tanggalawal', 'tanggalinspeksi', 'tglciptaan']);
+            const expired = getVal(cols, ['berakhir', 'expirydate', 'mukim', 'expired', 'lisensi', 'masalisensi']);
 
             // Skip completely empty noise rows
             if (!title && !tipe && !code && !unitLocation && !penanggungJawab && !noSertifikat) {
@@ -238,7 +239,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
           anySuccess = true;
         } catch (err) {
           console.error(`Gagal upload ${f.name}`, err);
-          alert(`Gagal upload ${f.name}: ${err.message}`);
+          toast.error(`Gagal upload ${f.name}: ${err.message}`);
           newHistories.push({
             id: `CSV-REAL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             fileName: f.name,
@@ -272,7 +273,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
       onClose();
     } catch (error) {
       console.error("CSV Batch Upload failed", error);
-      alert("Terjadi kesalahan sistem saat mengimpor.");
+      toast.error("Terjadi kesalahan sistem saat mengimpor.");
     } finally {
       setIsUploading(false);
     }
@@ -310,46 +311,51 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
             </div>
           </div>
           <div className="flex items-center gap-3">
-            {categoryKey !== 'administrasi-lainnya' && (
-              <button
-                onClick={() => {
-                  if (categoryKey === 'peralatan-pabrik') {
-                    const link = document.createElement("a");
-                    link.setAttribute("href", "/Template_perizinan Alat pabrik.xlsx");
-                    link.setAttribute("download", "Template_perizinan Alat pabrik.xlsx");
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  } else if (categoryKey === 'perizinan-aset') {
-                    const link = document.createElement("a");
-                    link.setAttribute("href", "/Template_perizinan Aset.xlsx");
-                    link.setAttribute("download", "Template_perizinan Aset.xlsx");
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  } else {
-                    const csvContent =
-                      "Nama Aset / Master (Wajib),Jenis Kategori,Kode / No Seri,Lokasi Unit,Penanggung Jawab,Status Aset,Nama Sertifikat (Child),No Sertifikat Active,Tgl Terbit,Tgl Expired\n" +
-                      "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Layak Operasi,SLO-12345,2026-01-01,2027-01-01\n" +
-                      "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Inspeksi K3,K3-9998,2026-02-15,2027-02-15\n" +
-                      "Area Lahan Pabrik NPK,Tanah / Lahan,LHN-005,Bontang,Dept Aset,Aktif,,,,\n";
-                    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", url);
-                    link.setAttribute("download", `Template_Impor_${categoryKey || 'master'}.csv`);
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                  }
-                }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#005ea4] rounded-lg border border-blue-200 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
-                title="Unduh Template Impor"
-              >
-                <Download className="w-4 h-4" />
-                <span>Unduh Template</span>
-              </button>
-            )}
+            <button
+              onClick={() => {
+                if (categoryKey === 'peralatan-pabrik') {
+                  const link = document.createElement("a");
+                  link.setAttribute("href", "/Template_perizinan Alat pabrik.xlsx");
+                  link.setAttribute("download", "Template_perizinan Alat pabrik.xlsx");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } else if (categoryKey === 'perizinan-aset') {
+                  const link = document.createElement("a");
+                  link.setAttribute("href", "/Template_perizinan Aset.xlsx");
+                  link.setAttribute("download", "Template_perizinan Aset.xlsx");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } else if (categoryKey === 'administrasi-lainnya') {
+                  const link = document.createElement("a");
+                  link.setAttribute("href", "/Template_Hak_Cipta.xlsx");
+                  link.setAttribute("download", "Template_Hak_Cipta.xlsx");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                } else {
+                  const csvContent =
+                    "Nama Aset / Master (Wajib),Jenis Kategori,Kode / No Seri,Lokasi Unit,Penanggung Jawab,Status Aset,Nama Sertifikat (Child),No Sertifikat Active,Tgl Terbit,Tgl Expired\n" +
+                    "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Layak Operasi,SLO-12345,2026-01-01,2027-01-01\n" +
+                    "Overhead Crane 20 Ton,Aset Peralatan,CR-001,Pabrik 1,Dept Pemeliharaan,Aktif,Sertifikat Inspeksi K3,K3-9998,2026-02-15,2027-02-15\n" +
+                    "Area Lahan Pabrik NPK,Tanah / Lahan,LHN-005,Bontang,Dept Aset,Aktif,,,,\n";
+                  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.setAttribute("href", url);
+                  link.setAttribute("download", `Template_Impor_${categoryKey || 'master'}.csv`);
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-[#005ea4] rounded-lg border border-blue-200 hover:bg-blue-100 text-xs font-bold transition-colors cursor-pointer"
+              title="Unduh Template Impor"
+            >
+              <Download className="w-4 h-4" />
+              <span>Unduh Template</span>
+            </button>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-700">
               <X className="w-5 h-5" />
             </button>
@@ -480,7 +486,7 @@ export default function CsvImportModal({ isOpen, onClose, onImportSuccess, impor
                       <span className="text-[11px] text-slate-600 font-mono-data block mt-1">
                         {item.uploadDate} - <strong>{item.totalRows} baris CSV diproses</strong>
                         <br />
-                        <span className="text-emerald-700 font-bold">{item.successCount} Berhasil Disimpan</span> (Mencakup {item.masterCount > 0 ? `${item.masterCount} Master Baru & ` : ''}Sertifikat), <span className="text-amber-700 font-bold">{item.duplicateCount + (item.protectedCount || 0)} Duplikat (Diabaikan/Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>
+                        <span className="text-emerald-700 font-bold">{item.successCount} Berhasil Disimpan</span>{categoryKey !== 'administrasi-lainnya' ? ` (Mencakup ${item.masterCount > 0 ? `${item.masterCount} Master Baru & ` : ''}Sertifikat)` : ''}, <span className="text-amber-700 font-bold">{item.duplicateCount + (item.protectedCount || 0)} Duplikat (Diabaikan/Diperbarui)</span>, <span className="text-rose-700 font-bold">{item.failCount} Gagal</span>
                       </span>
                       {item.failCount > 0 && item.failedRows?.length > 0 && (
                         <button

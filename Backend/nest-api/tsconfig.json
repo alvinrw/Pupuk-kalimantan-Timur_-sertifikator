@@ -19,5 +19,7 @@
     "noFallthroughCasesInSwitch": false,
     "types": ["node", "express"],
     "typeRoots": ["./node_modules/@types"]
-  }
+  },
+  "include": ["src/**/*", "prisma/**/*"],
+  "exclude": ["node_modules", "dist"]
 }

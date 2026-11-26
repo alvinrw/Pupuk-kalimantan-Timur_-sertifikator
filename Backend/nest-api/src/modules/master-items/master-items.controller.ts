@@ -9,14 +9,14 @@ import { PrismaService } from '../../database/prisma.service';
 
 @Controller('master-items')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('Super Admin', 'Admin', 'User', 'Viewer')
+@Roles('Super Admin', 'Admin', 'Viewer')
 export class MasterItemsController {
   constructor(
     private readonly masterItemsService: MasterItemsService,
     private readonly prisma: PrismaService,
   ) {}
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Post('reminders/trigger')
   triggerDeadlineCheck() {
     return this.masterItemsService.runDeadlineCheck();
@@ -52,7 +52,7 @@ export class MasterItemsController {
     return this.masterItemsService.findAll(categoryKey, search);
   }
 
-  @Roles('Super Admin', 'Admin', 'User')
+  @Roles('Super Admin', 'Admin')
   @Get('reminders/tasks')
   getTaskCenterData() {
     return this.masterItemsService.getTaskCenterData();
@@ -68,13 +68,13 @@ export class MasterItemsController {
     return this.masterItemsService.findOne(id);
   }
 
-  @Roles('Super Admin', 'Admin')
+  @Roles('Super Admin', 'Admin', 'User')
   @Put('reorder')
   async reorder(@Body() body: { id: string; position: number }[]) {
     return this.masterItemsService.reorder(body);
   }
 
-  @Roles('Super Admin', 'Admin')
+  @Roles('Super Admin', 'Admin', 'User')
   @Put('bulk')
   async bulkUpdate(@Body() body: any[], @Req() req: any) {
     const result = await this.masterItemsService.bulkUpdate(body);

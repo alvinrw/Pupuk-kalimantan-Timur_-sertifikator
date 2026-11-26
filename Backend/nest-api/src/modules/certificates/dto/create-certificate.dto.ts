@@ -1,47 +1,57 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, ValidateIf } from 'class-validator';
 
 export class CreateCertificateDto {
   @IsString()
   @IsNotEmpty()
   itemId: string;
 
-  @IsString()
   @IsOptional()
-  jenisSertifikat?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  jenisSertifikat?: string | null;
 
-  @IsString()
   @IsOptional()
-  namaSertifikat?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  namaSertifikat?: string | null;
 
-  @IsString()
   @IsOptional()
-  noSertifikat?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  noSertifikat?: string | null;
 
-  @IsString()
   @IsOptional()
-  instansi?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  instansi?: string | null;
 
-  @IsString()
   @IsOptional()
-  terbit?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  terbit?: string | null;
 
-  @IsString()
   @IsOptional()
-  expired?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  expired?: string | null;
 
-  @IsString()
   @IsOptional()
-  status?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  status?: string | null;
 
-  @IsString()
   @IsOptional()
-  fileUrl?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  fileUrl?: string | null;
 
-  @IsString()
   @IsOptional()
-  uploadedBy?: string; // Diisi otomatis dari req.user di controller
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  uploadedBy?: string | null;
 
-  @IsString()
   @IsOptional()
-  keterangan?: string;
+  @ValidateIf((o, v) => v !== null && v !== undefined)
+  @IsString()
+  keterangan?: string | null;
 }

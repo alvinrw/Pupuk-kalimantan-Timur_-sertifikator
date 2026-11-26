@@ -26,7 +26,7 @@ export default function CustomModals({
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Kapasitas Aset"
+                  placeholder="Kapasitas Aset"
                   value={newColLabel}
                   onChange={(e) => setNewColLabel(e.target.value)}
                   className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] outline-none text-xs font-bold"

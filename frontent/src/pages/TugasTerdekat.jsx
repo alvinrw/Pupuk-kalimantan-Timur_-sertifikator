@@ -10,7 +10,8 @@ import {
   Eye,
   RefreshCw,
   Bell,
-  ArrowUpDown
+  ArrowUpDown,
+  ChevronDown
 } from 'lucide-react';
 import api from '../services/api';
 import DocumentDetailPage from './DocumentDetailPage';
@@ -24,6 +25,7 @@ export default function TugasTerdekat() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('prioritas'); // prioritas, terdekat_terjauh, terjauh_terdekat, expired, nama
   const [filterCategory, setFilterCategory] = useState('All');
+  const [isFilterCategoryOpen, setIsFilterCategoryOpen] = useState(false);
 
   const getCategoryLabel = (key) => {
     switch (key) {
@@ -31,6 +33,7 @@ export default function TugasTerdekat() {
       case 'perizinan-aset': return 'Perizinan Aset';
       case 'perizinan-proyek': return 'Perizinan Proyek';
       case 'perizinan-produk': return 'Perizinan Produk';
+      case 'hak-cipta': return 'Hak Cipta';
       case 'administrasi-lainnya': return 'Administrasi Lainnya';
       default: return 'Lainnya';
     }
@@ -334,22 +337,45 @@ export default function TugasTerdekat() {
             <thead>
               <tr className="bg-slate-100 border-b border-slate-200 text-xs text-slate-600 uppercase tracking-wider">
                 <th className="p-3 font-bold text-center w-24">Prioritas</th>
-                <th className="p-3 font-bold">Peralatan / Aset</th>
+                <th className="p-3 font-bold">Peralatan</th>
                 <th className="p-3 font-bold">
-                  <div className="flex items-center justify-between gap-2 min-w-[200px]">
-                    <span>Kategori / Jenis Perizinan</span>
-                    <select
-                      value={filterCategory}
-                      onChange={(e) => setFilterCategory(e.target.value)}
-                      className="px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-24 text-slate-700 normal-case"
-                    >
-                      <option value="All">Semua</option>
-                      <option value="peralatan-pabrik">Peralatan Pabrik</option>
-                      <option value="perizinan-aset">Aset</option>
-                      <option value="administrasi-lainnya">Administrasi</option>
-                      <option value="perizinan-proyek">Proyek</option>
-                      <option value="perizinan-produk">Produk</option>
-                    </select>
+                  <div className="flex items-center justify-between gap-2 min-w-[200px] relative z-20">
+                    <span>Kategori</span>
+                    <div className="relative">
+                      <button
+                        onClick={() => setIsFilterCategoryOpen(!isFilterCategoryOpen)}
+                        className="flex items-center justify-between gap-2 px-1.5 py-0.5 border border-slate-300 rounded text-[10px] bg-white font-bold focus:outline-none w-28 text-slate-700 normal-case cursor-pointer"
+                      >
+                        <span className="truncate">
+                          {filterCategory === 'All' ? 'Semua' :
+                           filterCategory === 'peralatan-pabrik' ? 'Perizinan Peralatan Pabrik' :
+                           filterCategory === 'perizinan-aset' ? 'Perizinan Aset' :
+                           filterCategory === 'administrasi-lainnya' ? 'Perizinan Administrasi Lainnya' :
+                           filterCategory === 'perizinan-proyek' ? 'Perizinan Proyek' :
+                           filterCategory === 'perizinan-produk' ? 'Perizinan Produk' : filterCategory}
+                        </span>
+                        <ChevronDown className={`w-3 h-3 text-slate-500 transition-transform duration-200 ${isFilterCategoryOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      <div className={`absolute right-0 top-full mt-1 w-32 z-50 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden origin-top-right transition-all duration-200 ease-out ${isFilterCategoryOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'}`}>
+                        {[
+                          { value: 'All', label: 'Semua' },
+                          { value: 'peralatan-pabrik', label: 'Perizinan Peralatan Pabrik' },
+                          { value: 'perizinan-aset', label: 'Perizinan Aset' },
+                          { value: 'perizinan-proyek', label: 'Perizinan Proyek' },
+                          { value: 'perizinan-produk', label: 'Perizinan Produk' },
+                          { value: 'administrasi-lainnya', label: 'Perizinan Administrasi Lainnya' }
+                        ].map(opt => (
+                          <button
+                            key={opt.value}
+                            onClick={() => { setFilterCategory(opt.value); setIsFilterCategoryOpen(false); }}
+                            className={`w-full text-left px-3 py-1.5 text-[10px] normal-case transition-colors cursor-pointer ${filterCategory === opt.value ? 'bg-blue-50 text-[#005ea4] font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </th>
                 <th className="p-3 font-bold">Lokasi & PIC</th>

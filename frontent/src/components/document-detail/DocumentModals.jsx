@@ -20,7 +20,7 @@ export default function DocumentModals({ hook, item }) {
     activeCertId, setActiveCertId,
     selectedHistoryToDelete, setSelectedHistoryToDelete, handleDeleteHistoryRow,
     isDeleteDialogOpen, setIsDeleteDialogOpen, isDeleting, handleDeleteMasterItem,
-    isAfkirModalOpen, setIsAfkirModalOpen, isAfkiring, confirmAfkir,
+    isDecommissionedModalOpen, setIsDecommissionedModalOpen, isDecommissioneding, confirmDecommissioned,
     isAktifkanModalOpen, setIsAktifkanModalOpen, isAktifkaning, confirmAktifkan,
     isConfirmRenewHeaderModalOpen, setIsConfirmRenewHeaderModalOpen, isRenewingHeader, confirmRenewHeader,
     isConfirmCancelHeaderModalOpen, setIsConfirmCancelHeaderModalOpen, isCancelingHeader, confirmCancelHeader,
@@ -92,22 +92,22 @@ export default function DocumentModals({ hook, item }) {
         onConfirm={handleDeleteMasterItem}
         isLoading={isDeleting}
         title="Konfirmasi Hapus Seluruh Data Induk"
-        description={<>Apakah Anda yakin ingin menghapus seluruh entitas data untuk <br /><strong className="text-slate-800">{formData.merekItem}</strong>?<br /><br /><span className="text-rose-600 font-bold">PERINGATAN: Tindakan ini akan menghapus entitas induk beserta seluruh histori dan dokumen/sertifikat terhubung di dalamnya secara permanen!</span></>}
+        description={<>Apakah Anda yakin ingin menghapus seluruh entitas data untuk <br /><strong className="text-slate-800">{formData.merekItem || item?.merekItem || item?.title || item?.code || 'Item ini'}</strong>?<br /><br /><span className="text-rose-600 font-bold">PERINGATAN: Tindakan ini akan menghapus entitas induk beserta seluruh histori dan dokumen/sertifikat terhubung di dalamnya secara permanen!</span></>}
         confirmLabel={isDeleting ? 'Menghapus...' : 'Ya, Hapus Seluruh Data & Dokumen'}
         icon={<AlertTriangle className="w-6 h-6" />}
         iconBgClassName="bg-rose-100 text-rose-600"
         confirmClassName="bg-rose-600 hover:bg-rose-700 text-white"
       />
 
-      {/* Afkir */}
+      {/* Decommissioned */}
       <ModalConfirm
-        isOpen={isAfkirModalOpen}
-        onClose={() => setIsAfkirModalOpen(false)}
-        onConfirm={confirmAfkir}
-        isLoading={isAfkiring}
+        isOpen={isDecommissionedModalOpen}
+        onClose={() => setIsDecommissionedModalOpen(false)}
+        onConfirm={confirmDecommissioned}
+        isLoading={isDecommissioneding}
         title="Tandai Sebagai Non Aktif?"
         description={<>Apakah Anda yakin ingin menandai <br /><strong className="text-slate-800">{formData.merekItem || item?.title}</strong> sebagai Non-Aktif?</>}
-        confirmLabel={isAfkiring ? 'Memproses...' : 'Ya, Non-Aktifkan'}
+        confirmLabel={isDecommissioneding ? 'Memproses...' : 'Ya, Non-Aktifkan'}
         icon={<Ban className="w-6 h-6" />}
         iconBgClassName="bg-slate-100 text-slate-600 border border-slate-200"
         confirmClassName="bg-slate-800 hover:bg-slate-900 text-white"

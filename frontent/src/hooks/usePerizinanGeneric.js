@@ -63,7 +63,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     if (catLower.includes('aset')) return 'perizinan-aset';
     if (catLower.includes('proyek')) return 'perizinan-proyek';
     if (catLower.includes('produk')) return 'perizinan-produk';
-    if (catLower.includes('ciptaan')) return 'sertifikat-ciptaan';
+    if (catLower.includes('cipta') || catLower.includes('paten')) return 'administrasi-lainnya';
+    if (catLower.includes('administrasi')) return 'administrasi-lainnya';
     return '';
   }, [categoryName, title]);
 
@@ -195,6 +196,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           namaSertifikat: primaryCert?.namaSertifikat || meta.namaSertifikat || '-',
           status: formatStatus(doc.status),
           user: primaryCert?.instansi || meta.penanggungJawab || "Umum",
+          instansi: primaryCert?.instansi || meta.instansiPenerbit || meta.instansi || "-",
           documentStatus: doc.documentStatus || doc.document_status || 'PENDING_DOC',
           exemptionNote: doc.exemptionNote || null,
           linkedCertificates: certs,
@@ -228,6 +230,25 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
   const isProyek = categoryName?.toLowerCase().includes('proyek');
   const isProduk = categoryName?.toLowerCase().includes('produk') || categoryName?.toLowerCase().includes('ciptaan');
+  const isHaki = categoryName?.toLowerCase().includes('paten') || categoryName?.toLowerCase().includes('cipta') || categoryName?.toLowerCase() === 'administrasi-lainnya';
+  const isHakCipta = categoryName?.toLowerCase().includes('cipta');
+  const isHakPaten = categoryName?.toLowerCase().includes('paten');
+
+  const hakCiptaColumns = useMemo(() => [
+    { key: "no", label: "NO." },
+    { key: "namaItem", label: "JUDUL CIPTA" },
+    { key: "instansi", label: "INSTANSI PENERBIT" },
+    { key: "issueDate", label: "TANGGAL TERBIT" },
+    { key: "certificateNo", label: "NOMER SERTIFIKAT" },
+  ], []);
+
+  const hakPatenColumns = useMemo(() => [
+    { key: "no", label: "NO." },
+    { key: "namaItem", label: "JUDUL PATEN" },
+    { key: "instansi", label: "INSTANSI PENERBIT" },
+    { key: "issueDate", label: "TANGGAL TERBIT" },
+    { key: "certificateNo", label: "NOMER SERTIFIKAT" },
+  ], []);
 
   const defaultColumns = useMemo(() => [
     { key: "no", label: "NO." },
@@ -236,14 +257,14 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "jenisItem", label: isProyek ? "KATEGORI PROYEK" : isProduk ? "JENIS PRODUK" : "JENIS ITEM" },
     ...(!isProduk ? [{ key: "unit", label: isProyek ? "LOKASI PROYEK" : "LOKASI" }] : []),
     { key: "user", label: "PENANGGUNG JAWAB" },
-    { key: "certCount", label: "SERTIFIKAT TERHUBUNG" },
+    ...(!isHaki ? [{ key: "certCount", label: "SERTIFIKAT TERHUBUNG" }] : []),
     ...(!isProduk ? [{ key: "status", label: "STATUS" }] : []),
-  ], [isProyek, isProduk]);
+  ], [isProyek, isProduk, isHaki]);
 
   const asetColumns = useMemo(() => [
     { key: "no", label: "NO." },
     { key: "namaItem", label: "NAMA ASET" },
-    { key: "code", label: "NOMOR SERI ASSET" },
+    { key: "code", label: "NOMOR SERI" },
     { key: "jenisItem", label: "JENIS ASET" },
     { key: "unit", label: "LOKASI" },
     { key: "user", label: "PENANGGUNG JAWAB" },
@@ -251,11 +272,24 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
     { key: "status", label: "STATUS" }
   ], []);
 
-  const fallbackColumns = isAsetCategory ? asetColumns : defaultColumns;
+  const fallbackColumns = isHakCipta ? hakCiptaColumns : isHakPaten ? hakPatenColumns : isAsetCategory ? asetColumns : defaultColumns;
 
   const loadColumns = async () => {
     if (!currentCategoryKey) return;
     try {
+      if (isHakCipta) {
+        setAllColumns(hakCiptaColumns);
+        setVisibleColumnKeys(hakCiptaColumns.map(c => c.key));
+        setChildColumns([]);
+        return;
+      }
+      if (isHakPaten) {
+        setAllColumns(hakPatenColumns);
+        setVisibleColumnKeys(hakPatenColumns.map(c => c.key));
+        setChildColumns([]);
+        return;
+      }
+
       const [masterRes, childRes] = await Promise.all([
         api.get(`/column-configs/${currentCategoryKey}`),
         api.get(`/column-configs/${currentCategoryKey}-child`).catch(() => ({ data: [] }))
@@ -304,7 +338,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
           { key: "terbit", label: "TANGGAL TERBIT" },
           { key: "expired", label: "TANGGAL EXPIRED" },
           { key: "status", label: "STATUS" },
-          { key: "keterangan", label: "KETERANGAN / CATATAN" }
+          { key: "keterangan", label: "KETERANGAN" }
         ]);
       }
     } catch (err) {
@@ -319,7 +353,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         { key: "terbit", label: "TANGGAL TERBIT" },
         { key: "expired", label: "TANGGAL EXPIRED" },
         { key: "status", label: "STATUS" },
-        { key: "keterangan", label: "KETERANGAN / CATATAN" }
+        { key: "keterangan", label: "KETERANGAN" }
       ]);
     }
   };
@@ -423,8 +457,20 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
   const isVisible = (key) => visibleColumnKeys.includes(key);
 
   const categoryFilteredDocs = useMemo(() => {
+    if (isHakCipta) {
+      return documents.filter(doc => {
+        const text = `${doc.jenisItem || ''} ${doc.tipe || ''} ${doc.title || ''} ${doc.merekItem || ''} ${doc.code || ''} ${doc.certificateNo || ''}`.toLowerCase();
+        return !text.includes('paten') && !text.includes('patent') && !text.startsWith('idp') && !text.startsWith('ids');
+      });
+    }
+    if (isHakPaten) {
+      return documents.filter(doc => {
+        const text = `${doc.jenisItem || ''} ${doc.tipe || ''} ${doc.title || ''} ${doc.merekItem || ''} ${doc.code || ''} ${doc.certificateNo || ''}`.toLowerCase();
+        return text.includes('paten') || text.includes('patent') || text.startsWith('idp') || text.startsWith('ids');
+      });
+    }
     return documents;
-  }, [documents, categoryName]);
+  }, [documents, categoryName, isHakCipta, isHakPaten]);
 
   const uniqueJenis = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.jenisItem || i.jenisPeralatan || i.jenisCiptaan || 'General'))], [categoryFilteredDocs]);
   const uniqueLokasi = useMemo(() => ['All', ...new Set(categoryFilteredDocs.map(i => i.unitPabrik || i.unit || i.lokasi || 'Kantor Pusat'))], [categoryFilteredDocs]);
@@ -527,6 +573,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             id: cert.id || `${doc.id}-cert-${idx}`,
             namaSertifikat: cert.namaSertifikat || cert.jenisSertifikat || 'Sertifikat Terhubung',
             noSertifikat: cert.noSertifikat || cert.noIzin || '-',
+            instansi: cert.instansi || cert.issuer || cert.agency || null,
+            keterangan: cert.keterangan || null,
             terbit: cert.terbit || '-',
             expired: cert.expired || '-',
             status: formatStatus(cert.status || 'Aktif'),
@@ -604,6 +652,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
         penanggungJawab: newItem.user || 'Umum',
         noSertifikat: newItem.noSertifikat || '',
         namaSertifikat: newItem.namaSertifikat || '',
+        instansi: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
+        instansiPenerbit: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
         keteranganAsli: newItem.keterangan || '-'
       };
 
@@ -636,6 +686,8 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
             terbit: newItem.terbit || undefined,
             expired: newItem.expired || undefined,
             fileUrl: newItem.fileUrl || null,
+            instansi: (newItem.instansi && newItem.instansi !== '-') ? newItem.instansi : undefined,
+            keterangan: (newItem.keterangan && newItem.keterangan !== '-') ? newItem.keterangan : undefined,
             uploadedBy: user?.nama ? `${user.nama} ${user.npk ? `(${user.npk})` : ''}` : 'Sistem / Single Entry',
           });
         }
@@ -715,7 +767,7 @@ export function usePerizinanGeneric({ title, subtitle, categoryName }) {
 
   const getRowStatusStyle = (doc) => {
     const statusStr = (doc.status || '').toLowerCase();
-    if (statusStr === 'afkir' || statusStr === 'decommissioned') {
+    if (statusStr === 'decommissioned' || statusStr === 'decommissioned') {
       return 'bg-[#0f172a] text-white hover:bg-slate-900 border-b border-slate-700';
     }
     if (statusStr === 'expired') {

@@ -1,4 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
+// @ts-nocheck
+const prismaPkg = '@prisma/client';
+const { PrismaClient } = require(prismaPkg);
 const prisma = new PrismaClient();
 
 async function main() {

@@ -64,7 +64,7 @@ export default function RowConfigTab({
                             <th className="p-3 min-w-[150px]">Instansi Penerbit</th>
                             <th className="p-3 min-w-[150px] text-center">Tanggal Terbit</th>
                             <th className="p-3 min-w-[150px] text-center">Tanggal Expired</th>
-                            <th className="p-3 min-w-[200px]">Keterangan / Catatan</th>
+                            <th className="p-3 min-w-[200px]">Keterangan</th>
                           </>
                         )}
                         <th className="p-3 text-right w-16">Aksi</th>
@@ -112,7 +112,7 @@ export default function RowConfigTab({
                                       <option value="Aktif">Aktif</option>
                                       <option value="Expired">Expired</option>
                                       <option value="Perpanjang">Perpanjang</option>
-                                      <option value="Afkir">Afkir</option>
+                                      <option value="Decommissioned">Decommissioned</option>
                                       <option value="Spare">Spare</option>
                                       <option value="Rusak">Rusak</option>
                                     </select>

@@ -1,470 +1,534 @@
-import React, { useState } from 'react';
-import { Edit3, Save, Trash2, Plus, UploadCloud } from 'lucide-react';
-import { updateNotificationSetting } from '../../services/masterItemsService';
-import { API_BASE, getFullFileUrl } from '../../config/api';
-
-export default function DocumentFormFields({ hook, item }) {
-  const {
-    formData, setFormData, handleSave, setIsEditing,
-    isHaki, isEquipment, effectiveCategoryKey,
-    isEditing,
-    reminderEnabled, setReminderEnabled,
-    triggerType, setTriggerType,
-    reminderDays, setReminderDays,
-    triggerDate, setTriggerDate,
-    saveSettings,
-    columnConfigs = [],
-  } = hook;
-
-  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-
-  if (!isEditing) return null;
-
-  const formatDateForInput = (dateStr) => {
-    if (!dateStr || dateStr === '-') return '';
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return dateStr;
-    }
-    const slashParts = dateStr.split('/');
-    if (slashParts.length === 3) {
-      let day = slashParts[0].padStart(2, '0');
-      let month = slashParts[1].padStart(2, '0');
-      let year = slashParts[2];
-      if (year.length === 2) {
-        year = '20' + year;
-      }
-      return `${year}-${month}-${day}`;
-    }
-    try {
-      const d = new Date(dateStr);
-      if (!isNaN(d.getTime())) {
-        const dd = String(d.getDate()).padStart(2, '0');
-        const mm = String(d.getMonth() + 1).padStart(2, '0');
-        const yyyy = d.getFullYear();
-        return `${yyyy}-${mm}-${dd}`;
-      }
-    } catch (_) { }
-    return '';
-  };
-
-  const formatNumberString = (str) => {
-    if (!str) return '';
-    const clean = String(str).replace(/\D/g, '');
-    if (clean === '') return '';
-    return Number(clean).toLocaleString('id-ID');
-  };
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 font-mono-data">
-      <form onSubmit={handleSave} className="space-y-6">
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2">
-          <Edit3 className="w-5 h-5 text-amber-700 shrink-0" />
-          <span>Mode Edit Data {isHaki ? 'Hak Cipta (HAKI)' : isEquipment ? 'Peralatan Pabrik' : 'Dokumen Perizinan'} - Perbarui informasi di bawah ini:</span>
-        </div>
-
-        {(() => {
-          const showMasterFields = !hook.isMultiCertItem || !hook.isSingleCertScope;
-          const showDocFields = !hook.isMultiCertItem || hook.isSingleCertScope;
-
-          return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
-              {/* MASTER FIELDS */}
-              {showMasterFields && [
-                { label: isHaki ? 'Judul Ciptaan' : 'Merek / Nama Item', key: 'merekItem', type: 'text', bold: true },
-                { label: isHaki ? 'Jenis Ciptaan' : 'Jenis Peralatan / Kategori', key: 'jenisPeralatan', type: 'text' },
-              ].map(({ label, key, type, bold }) => (
-                <div key={key}>
-                  <label className="font-bold text-slate-800 block mb-1.5">{label}</label>
-                  <input
-                    type={type} value={formData[key] || ''}
-                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                    className={`w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs ${bold ? 'font-bold' : ''}`}
-                  />
-                </div>
-              ))}
-
-              {!isHaki && showMasterFields && (
-                <>
-                  {[
-                    { label: 'Tipe / Kode', key: 'tipe' },
-                    { label: 'Nomor Seri / Tag', key: 'nomorSeri' },
-                    { label: 'Lokasi / Unit Pabrik', key: 'lokasi', bold: true },
-                    { label: 'User / Dept Penanggung Jawab', key: 'user' },
-                  ].map(({ label, key, bold }) => (
-                    <div key={key}>
-                      <label className="font-bold text-slate-800 block mb-1.5">{label}</label>
-                      <input
-                        type="text" value={formData[key] || ''}
-                        onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
-                        className={`w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs ${bold ? 'font-bold' : ''}`}
-                      />
-                    </div>
-                  ))}
-                  <div>
-                    <label className="font-bold text-slate-800 block mb-1.5">
-                      {effectiveCategoryKey === 'perizinan-proyek' ? 'Status Proyek' : 'Status Fisik Operasional'}
-                    </label>
-                    <select
-                      value={formData.status || ''}
-                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer"
-                    >
-                      {effectiveCategoryKey === 'perizinan-proyek' ? (
-                        <>
-                          <option value="Aktif">Aktif</option>
-                          <option value="Spare">Selesai</option>
-                          <option value="Rusak">Ditunda</option>
-                        </>
-                      ) : (
-                        <>
-                          <option value="Aktif">Aktif (Normal)</option>
-                          <option value="Spare">Spare (Cadangan)</option>
-                          <option value="Repair">Repair (Overhaul)</option>
-                          <option value="Rusak">Rusak (Out of Service)</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-
-                  {showMasterFields && (
-                    <div>
-                      <label className="font-bold text-slate-800 block mb-1.5">Foto Dokumentasi (Master)</label>
-                      <div className="flex items-center gap-3">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          id="equipment-photo-upload"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files[0];
-                            if (!file) return;
-                            const uploaderData = new FormData();
-                            uploaderData.append('file', file);
-                            try {
-                              setIsUploadingPhoto(true);
-                              const token = sessionStorage.getItem('token');
-                              const response = await fetch(`${API_BASE}/document-history/upload`, {
-                                method: 'POST',
-                                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
-                                body: uploaderData,
-                              });
-                              const resJson = await response.json();
-                              if (response.ok && resJson.data) {
-                                const url = resJson.data.url || resJson.data.fileUrl || (typeof resJson.data === 'string' ? resJson.data : '');
-                                setFormData({ ...formData, imageUrl: url });
-                              } else {
-                                alert('Gagal unggah foto: ' + (resJson.message || 'Error'));
-                              }
-                            } catch (err) {
-                              console.error(err);
-                              alert('Gagal unggah foto');
-                            } finally {
-                              setIsUploadingPhoto(false);
-                            }
-                          }}
-                        />
-                        <label
-                          htmlFor="equipment-photo-upload"
-                          className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-slate-700 inline-flex items-center gap-1.5"
-                        >
-                          <UploadCloud className="w-4 h-4 text-slate-500" />
-                          <span>{isUploadingPhoto ? 'Mengunggah...' : 'Unggah Foto'}</span>
-                        </label>
-                        {formData.imageUrl && (
-                          <div className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden">
-                            <img
-                              src={getFullFileUrl(formData.imageUrl)}
-                              alt="Preview"
-                              className="w-full h-full object-cover"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setFormData({ ...formData, imageUrl: '' })}
-                              className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-0.5 w-4 h-4 flex items-center justify-center text-[8px]"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* DOCUMENT FIELDS */}
-              {!isHaki && showDocFields && (
-                <div>
-                  <label className="font-bold text-slate-800 block mb-1.5">Nama Sertifikat</label>
-                  <input
-                    type="text" value={formData.namaSertifikat || ''}
-                    onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
-                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
-                  />
-                </div>
-              )}
-
-              {isHaki && showDocFields && (
-                <>
-                  <div>
-                    <label className="font-bold text-slate-800 block mb-1.5">Tanggal Ciptaan / Deklarasi</label>
-                    <input type="date" value={formatDateForInput(formData.tanggalCiptaan)}
-                      onChange={(e) => setFormData({ ...formData, tanggalCiptaan: e.target.value, terbit: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-800 block mb-1.5">Masa Berlaku Perlindungan</label>
-                    <input type="text" value={formData.masaBerlaku || ''} placeholder="Contoh: 5 Tahun / Seumur Hidup"
-                      onChange={(e) => setFormData({ ...formData, masaBerlaku: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-                    />
-                  </div>
-                </>
-              )}
-
-              {showDocFields && (
-                <>
-                  <div>
-                    <label className="font-bold text-slate-800 block mb-1.5">{isHaki ? 'No. Sertifikat HAKI' : 'No. Sertifikat SK Active'}</label>
-                    <input type="text" value={formData.noSertifikat || ''}
-                      onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-                    />
-                  </div>
-
-                  {!isHaki && (
-                    <div>
-                      <label className="font-bold text-slate-800 block mb-1.5">Instansi Penerbit</label>
-                      <input type="text" value={formData.instansi || ''}
-                        onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
-                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
-                        placeholder="Contoh: DPMPTSP, BPN"
-                      />
-                    </div>
-                  )}
-
-                  {!isHaki && (
-                    <div>
-                      <label className="font-bold text-slate-800 block mb-1.5">Tanggal Terbit / Berlaku</label>
-                      <input type="date" value={formatDateForInput(formData.terbit)}
-                        onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
-                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data"
-                      />
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="font-bold text-slate-800 block mb-1.5 text-rose-700">{isHaki ? 'Kapan Berakhir' : 'Tanggal Expired'}</label>
-                    <input type="text" value={formData.berakhir || ''} placeholder="YYYY-MM-DD atau Seumur Hidup"
-                      onChange={(e) => setFormData({ ...formData, berakhir: e.target.value })}
-                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
-                    />
-                  </div>
-                </>
-              )}
-
-              {/* COMMON FIELD (Keterangan) */}
-              <div>
-                <label className="font-bold text-slate-800 block mb-1.5">{isHaki ? 'Instansi Penerbit / Keterangan HAKI' : 'Keterangan & Catatan'}</label>
-                <textarea value={formData.keterangan || ''} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} rows={3}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
-                />
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* Spesifikasi Tambahan */}
-        {true && (
-          <div className="mt-4 pt-4 border-t border-slate-200">
-            <div className="flex items-center justify-between mb-3">
-              <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider font-mono-data flex items-center gap-1.5">
-                <Plus className="w-4 h-4 text-[#005ea4]" /> Entitas Spesifikasi Tambahan
-              </label>
-              <button type="button" onClick={() => setFormData({ ...formData, additionalEntities: [...(formData.additionalEntities || []), { key: '', value: '', type: 'text' }] })}
-                disabled={true}
-                title="Penambahan entitas dinonaktifkan"
-                className="text-[11px] bg-slate-100 text-slate-400 px-2 py-1 rounded-lg border border-slate-200 flex items-center gap-1 font-bold cursor-not-allowed opacity-60">
-                <Plus className="w-3 h-3" /> Tambah Field
-              </button>
-            </div>
-            <div className="space-y-2">
-              {(formData.additionalEntities || []).map((ent, idx) => {
-                const isGlobalCol = columnConfigs.some(c => c.label.toLowerCase() === ent.key.toLowerCase());
-                return (
-                  <div key={idx} className="flex gap-2 items-center flex-wrap sm:flex-nowrap bg-slate-50/50 p-2 rounded-xl border border-slate-200">
-                    <input type="text" placeholder="Nama Field (cth: Kapasitas)" value={ent.key}
-                      disabled={isGlobalCol}
-                      onChange={(e) => {
-                        const newEnts = [...formData.additionalEntities];
-                        newEnts[idx].key = e.target.value;
-                        setFormData({ ...formData, additionalEntities: newEnts });
-                      }}
-                      className={`flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
-                    />
-                    <select value={ent.type || 'text'}
-                      disabled={isGlobalCol}
-                      onChange={(e) => {
-                        const newEnts = [...formData.additionalEntities];
-                        newEnts[idx].type = e.target.value;
-                        newEnts[idx].value = ''; // Reset value on type change to avoid format conflicts
-                        setFormData({ ...formData, additionalEntities: newEnts });
-                      }}
-                      className={`px-2 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
-                    >
-                      <option value="text">Teks</option>
-                      <option value="nominal">Nominal / Angka</option>
-                      <option value="date">Tanggal</option>
-                    </select>
-                    {ent.type === 'date' ? (
-                      <input type="date" value={ent.value}
-                        onChange={(e) => {
-                          const newEnts = [...formData.additionalEntities];
-                          newEnts[idx].value = e.target.value;
-                          setFormData({ ...formData, additionalEntities: newEnts });
-                        }}
-                        onClick={(e) => { try { e.target.showPicker(); } catch (_) { } }}
-                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white cursor-pointer"
-                      />
-                    ) : ent.type === 'nominal' ? (
-                      <input type="text" placeholder="Nilai (cth: 5.000.000)" value={formatNumberString(ent.value)}
-                        onChange={(e) => {
-                          const clean = e.target.value.replace(/\D/g, '');
-                          const newEnts = [...formData.additionalEntities];
-                          newEnts[idx].value = clean;
-                          setFormData({ ...formData, additionalEntities: newEnts });
-                        }}
-                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"
-                      />
-                    ) : (
-                      <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
-                        onChange={(e) => {
-                          const newEnts = [...formData.additionalEntities];
-                          newEnts[idx].value = e.target.value;
-                          setFormData({ ...formData, additionalEntities: newEnts });
-                        }}
-                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs bg-white"
-                      />
-                    )}
-                    {!isGlobalCol && (
-                      <button type="button" onClick={() => {
-                        const newEnts = [...formData.additionalEntities];
-                        newEnts.splice(idx, 1);
-                        setFormData({ ...formData, additionalEntities: newEnts });
-                      }}
-                        className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors bg-white">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-              {(!formData.additionalEntities || formData.additionalEntities.length === 0) && (
-                <p className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada field spesifikasi tambahan. Klik "Tambah Field" untuk memasukkan data custom.</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Pengaturan Notifikasi (Edit Mode) */}
-        {true && (
-          <div className="mt-4 pt-4 border-t border-slate-200">
-            <label className="font-bold text-slate-800 block mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider font-mono-data">
-              Pengaturan Pengingat & Notifikasi
-            </label>
-            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="editReminderEnabled"
-                  checked={reminderEnabled}
-                  onChange={async (e) => {
-                    const isChecked = e.target.checked;
-                    setReminderEnabled(isChecked);
-                    try {
-                      await saveSettings({ reminderEnabled: isChecked });
-                    } catch (err) {
-                      console.error('Auto-save failed:', err);
-                    }
-                  }}
-                  className="rounded border-slate-300 accent-[#005ea4] h-4 w-4 cursor-pointer"
-                />
-                <label htmlFor="editReminderEnabled" className="text-xs text-slate-700 font-bold select-none cursor-pointer">
-                  Aktifkan Pengingat Notifikasi untuk Dokumen ini
-                </label>
-              </div>
-              {reminderEnabled && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-600 block mb-1">Tipe Reminder</label>
-                    <select
-                      value={triggerType}
-                      onChange={async (e) => {
-                        const nextVal = e.target.value;
-                        setTriggerType(nextVal);
-                        try {
-                          await saveSettings({ triggerType: nextVal });
-                        } catch (err) { }
-                      }}
-                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4]"
-                    >
-                      <option value="DAYS">Berdasarkan Sisa Hari (H-)</option>
-                      <option value="DATE">Berdasarkan Tanggal Spesifik</option>
-                    </select>
-                  </div>
-                  {triggerType === 'DAYS' ? (
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
-                      <input
-                        type="number" min="1" value={reminderDays}
-                        onChange={async (e) => {
-                          const nextVal = e.target.value === '' ? '' : parseInt(e.target.value);
-                          setReminderDays(nextVal);
-                          try {
-                            await saveSettings({ reminderDays: nextVal });
-                          } catch (err) { }
-                        }}
-                        className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tanggal Pemicu</label>
-                      <input
-                        type="date" value={triggerDate}
-                        onChange={async (e) => {
-                          const nextVal = e.target.value;
-                          setTriggerDate(nextVal);
-                          try {
-                            await saveSettings({ triggerDate: nextVal });
-                          } catch (err) { }
-                        }}
-                        className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => setIsEditing(false)}
-            className="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors cursor-pointer"
-          >
-            Batal
-          </button>
-          <button type="submit" className="px-6 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer">
-            <Save className="w-4 h-4" />
-            <span>Simpan Perubahan Data</span>
-          </button>
-        </div>
-      </form>
-    </div>
-  );
-}
+import React, { useState } from 'react';
+import { Edit3, Save, Trash2, Plus, UploadCloud, ChevronDown } from 'lucide-react';
+import { updateNotificationSetting } from '../../services/masterItemsService';
+import { API_BASE, getFullFileUrl } from '../../config/api';
+import CustomSelect from '../common/CustomSelect';
+
+export default function DocumentFormFields({ hook, item }) {
+  const {
+    formData, setFormData, handleSave, setIsEditing,
+    isHaki, isEquipment, effectiveCategoryKey,
+    isEditing,
+    reminderEnabled, setReminderEnabled,
+    triggerType, setTriggerType,
+    reminderDays, setReminderDays,
+    triggerDate, setTriggerDate,
+    saveSettings,
+    columnConfigs = [],
+  } = hook;
+
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+
+  const isPaten = Boolean(
+    effectiveCategoryKey?.includes('paten') ||
+    item?.categoryKey?.includes('paten') ||
+    (item?.categoryName && item?.categoryName.toLowerCase().includes('paten')) ||
+    (item?.title && item?.title.toLowerCase().includes('paten'))
+  );
+
+  if (!isEditing) return null;
+
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr || dateStr === '-') return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr;
+    }
+    const slashParts = dateStr.split('/');
+    if (slashParts.length === 3) {
+      let day = slashParts[0].padStart(2, '0');
+      let month = slashParts[1].padStart(2, '0');
+      let year = slashParts[2];
+      if (year.length === 2) {
+        year = '20' + year;
+      }
+      return `${year}-${month}-${day}`;
+    }
+    try {
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2, '0');
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yyyy = d.getFullYear();
+        return `${yyyy}-${mm}-${dd}`;
+      }
+    } catch (_) { }
+    return '';
+  };
+
+  const formatNumberString = (str) => {
+    if (!str) return '';
+    const clean = String(str).replace(/\D/g, '');
+    if (clean === '') return '';
+    return Number(clean).toLocaleString('id-ID');
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs p-6 font-mono-data">
+      <form onSubmit={handleSave} className="space-y-6">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs font-bold flex items-center gap-2">
+          <Edit3 className="w-5 h-5 text-amber-700 shrink-0" />
+          <span>Mode Edit Data {isHaki ? 'Hak Cipta (HAKI)' : isEquipment ? 'Peralatan Pabrik' : 'Dokumen Perizinan'} - Perbarui informasi di bawah ini:</span>
+        </div>
+
+        {(() => {
+          const showMasterFields = !hook.isMultiCertItem || !hook.isSingleCertScope;
+          const showDocFields = !hook.isMultiCertItem || hook.isSingleCertScope;
+
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 text-xs">
+              {/* MASTER FIELDS */}
+              {showMasterFields && [
+                { label: isHaki ? 'Judul Ciptaan' : (effectiveCategoryKey === 'peralatan-pabrik' || isEquipment) ? 'Alat' : 'Merek', key: 'merekItem', type: 'text', bold: true },
+                { label: isHaki ? 'Jenis Ciptaan' : (effectiveCategoryKey === 'peralatan-pabrik' || isEquipment) ? 'Jenis Peralatan' : 'Jenis Peralatan / Kategori', key: 'jenisPeralatan', type: 'text' },
+              ].map(({ label, key, type, bold }) => (
+                <div key={key}>
+                  <label className="font-bold text-slate-800 block mb-1.5">{label}</label>
+                  <input
+                    type={type} value={formData[key] || ''}
+                    onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                    className={`w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs ${bold ? 'font-bold' : ''}`}
+                  />
+                </div>
+              ))}
+
+              {isHaki && showMasterFields && (
+                <>
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5">{isPaten ? 'Inventor / Unit Riset' : 'Owner Departemen'}</label>
+                    <input
+                      type="text" value={formData.lokasi || ''}
+                      onChange={(e) => setFormData({ ...formData, lokasi: e.target.value })}
+                      placeholder={isPaten ? "Dept. Riset & Inovasi" : "Dept. IT"}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5">{isPaten ? 'Penanggung Jawab / Inventor' : 'Penanggung Jawab'}</label>
+                    <input
+                      type="text" value={formData.user || ''}
+                      onChange={(e) => setFormData({ ...formData, user: e.target.value })}
+                      placeholder="Departemen DIKLAT"
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                    />
+                  </div>
+                </>
+              )}
+
+              {!isHaki && showMasterFields && (
+                <>
+                  {[
+                    { label: 'Tipe', key: 'tipe' },
+                    { label: 'Nomor Seri', key: 'nomorSeri' },
+                    { label: 'Lokasi', key: 'lokasi', bold: true },
+                    { label: 'User', key: 'user' },
+                  ].map(({ label, key, bold }) => (
+                    <div key={key}>
+                      <label className="font-bold text-slate-800 block mb-1.5">{label}</label>
+                      <input
+                        type="text" value={formData[key] || ''}
+                        onChange={(e) => setFormData({ ...formData, [key]: e.target.value })}
+                        className={`w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs ${bold ? 'font-bold' : ''}`}
+                      />
+                    </div>
+                  ))}
+                  <div className="relative z-20">
+                    <label className="font-bold text-slate-800 block mb-1.5">
+                      {effectiveCategoryKey === 'perizinan-proyek' ? 'Status Proyek' : 'Status Fisik Operasional'}
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-bold text-xs cursor-pointer bg-white flex justify-between items-center text-left"
+                      >
+                        <span className={formData.status ? 'text-slate-900' : 'text-slate-500'}>
+                          {(() => {
+                            const options = effectiveCategoryKey === 'perizinan-proyek'
+                              ? [{v: 'Aktif', l: 'Aktif'}, {v: 'Spare', l: 'Selesai'}, {v: 'Rusak', l: 'Ditunda'}]
+                              : [{v: 'Aktif', l: 'Aktif (Normal)'}, {v: 'Spare', l: 'Spare (Cadangan)'}, {v: 'Repair', l: 'Repair (Overhaul)'}, {v: 'Rusak', l: 'Rusak (Out of Service)'}];
+                            const found = options.find(o => o.v === (formData.status || 'Aktif'));
+                            return found ? found.l : '-- Pilih Status --';
+                          })()}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform duration-300 ${isStatusDropdownOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <div 
+                        className={`absolute left-0 right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden flex flex-col origin-top transition-all duration-300 ease-out ${
+                          isStatusDropdownOpen ? 'opacity-100 scale-100 visible translate-y-0' : 'opacity-0 scale-95 invisible -translate-y-2 pointer-events-none'
+                        }`}
+                      >
+                        {(() => {
+                          const options = effectiveCategoryKey === 'perizinan-proyek'
+                              ? [{v: 'Aktif', l: 'Aktif'}, {v: 'Spare', l: 'Selesai'}, {v: 'Rusak', l: 'Ditunda'}]
+                              : [{v: 'Aktif', l: 'Aktif (Normal)'}, {v: 'Spare', l: 'Spare (Cadangan)'}, {v: 'Repair', l: 'Repair (Overhaul)'}, {v: 'Rusak', l: 'Rusak (Out of Service)'}];
+                          return options.map(opt => (
+                            <button
+                              key={opt.v}
+                              type="button"
+                              onClick={() => {
+                                setFormData({ ...formData, status: opt.v });
+                                setIsStatusDropdownOpen(false);
+                              }}
+                              className={`text-left px-4 py-2.5 text-xs transition-colors hover:bg-slate-50 cursor-pointer ${
+                                (formData.status || 'Aktif') === opt.v ? 'bg-blue-50 text-[#005ea4] font-bold' : 'text-slate-700 font-medium'
+                              }`}
+                            >
+                              {opt.l}
+                            </button>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                    
+                    {/* Invisible backdrop to close when clicking outside */}
+                    {isStatusDropdownOpen && (
+                      <div 
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsStatusDropdownOpen(false)}
+                      ></div>
+                    )}
+                  </div>
+
+                  {showMasterFields && (
+                    <div>
+                      <label className="font-bold text-slate-800 block mb-1.5">Foto Dokumentasi (Master)</label>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          id="equipment-photo-upload"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const uploaderData = new FormData();
+                            uploaderData.append('file', file);
+                            try {
+                              setIsUploadingPhoto(true);
+                              const token = sessionStorage.getItem('token');
+                              const response = await fetch(`${API_BASE}/document-history/upload`, {
+                                method: 'POST',
+                                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                                body: uploaderData,
+                              });
+                              const resJson = await response.json();
+                              if (response.ok && resJson.data) {
+                                const url = resJson.data.url || resJson.data.fileUrl || (typeof resJson.data === 'string' ? resJson.data : '');
+                                setFormData({ ...formData, imageUrl: url });
+                              } else {
+                                alert('Gagal unggah foto: ' + (resJson.message || 'Error'));
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              alert('Gagal unggah foto');
+                            } finally {
+                              setIsUploadingPhoto(false);
+                            }
+                          }}
+                        />
+                        <label
+                          htmlFor="equipment-photo-upload"
+                          className="px-4 py-2 border border-slate-300 rounded-xl hover:bg-slate-50 cursor-pointer font-bold text-slate-700 inline-flex items-center gap-1.5"
+                        >
+                          <UploadCloud className="w-4 h-4 text-slate-500" />
+                          <span>{isUploadingPhoto ? 'Mengunggah...' : 'Unggah Foto'}</span>
+                        </label>
+                        {formData.imageUrl && (
+                          <div className="relative w-12 h-12 rounded-lg border border-slate-200 overflow-hidden">
+                            <img
+                              src={getFullFileUrl(formData.imageUrl)}
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                              className="absolute -top-1 -right-1 bg-rose-600 text-white rounded-full p-0.5 w-4 h-4 flex items-center justify-center text-[8px]"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* DOCUMENT FIELDS */}
+              {!isHaki && showDocFields && (
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1.5">Nama Sertifikat</label>
+                  <input
+                    type="text" value={formData.namaSertifikat || ''}
+                    onChange={(e) => setFormData({ ...formData, namaSertifikat: e.target.value })}
+                    placeholder="SKP Pesawat Angkat"
+                    className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                  />
+                </div>
+              )}
+
+              {isHaki && showDocFields && (
+                <>
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5">Tanggal Ciptaan / Deklarasi</label>
+                    <input type="date" value={formatDateForInput(formData.tanggalCiptaan)}
+                      onChange={(e) => setFormData({ ...formData, tanggalCiptaan: e.target.value, terbit: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5">Masa Berlaku Perlindungan</label>
+                    <input type="text" value={formData.masaBerlaku || ''} placeholder="5 Tahun"
+                      onChange={(e) => setFormData({ ...formData, masaBerlaku: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                    />
+                  </div>
+                </>
+              )}
+
+              {showDocFields && (
+                <>
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5">{isHaki ? 'No. Sertifikat HAKI' : 'No. Sertifikat SK Active'}</label>
+                    <input type="text" value={formData.noSertifikat || ''}
+                      onChange={(e) => setFormData({ ...formData, noSertifikat: e.target.value })}
+                      placeholder="SKP-2024/DISNAKER/1234"
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5">Instansi Penerbit</label>
+                    <input type="text" value={formData.instansi || ''}
+                      onChange={(e) => setFormData({ ...formData, instansi: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                      placeholder={isHaki ? "Ditjen KI Kemenkumham RI" : "DPMPTSP"}
+                    />
+                  </div>
+
+                  {!isHaki && (
+                    <div>
+                      <label className="font-bold text-slate-800 block mb-1.5">Tanggal Terbit / Berlaku</label>
+                      <input type="date" value={formatDateForInput(formData.terbit)}
+                        onChange={(e) => setFormData({ ...formData, terbit: e.target.value })}
+                        className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data"
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1.5 text-rose-700">{isHaki ? 'Tanggal Berakhir' : 'Tanggal Expired'}</label>
+                    <input type="text" value={formData.berakhir || ''} placeholder="YYYY-MM-DD atau Seumur Hidup"
+                      onChange={(e) => setFormData({ ...formData, berakhir: e.target.value })}
+                      className="w-full px-3.5 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] font-bold text-xs"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* COMMON FIELD (Keterangan) */}
+              <div>
+                <label className="font-bold text-slate-800 block mb-1.5">{isHaki ? 'Catatan / Keterangan Tambahan' : 'Keterangan'}</label>
+                <textarea value={formData.keterangan || ''} onChange={(e) => setFormData({ ...formData, keterangan: e.target.value })} rows={3}
+                  placeholder={isHaki ? "Tambahkan catatan khusus, nomor publikasi, atau informasi penting lainnya..." : "Tambahkan keterangan jika diperlukan..."}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs"
+                />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Spesifikasi Tambahan */}
+        {true && (
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <label className="font-bold text-slate-800 text-[11px] uppercase tracking-wider font-mono-data flex items-center gap-1.5">
+                <Plus className="w-4 h-4 text-[#005ea4]" /> Entitas Spesifikasi Tambahan
+              </label>
+              <button type="button" onClick={() => setFormData({ ...formData, additionalEntities: [...(formData.additionalEntities || []), { key: '', value: '', type: 'text' }] })}
+                disabled={true}
+                title="Penambahan entitas dinonaktifkan"
+                className="text-[11px] bg-slate-100 text-slate-400 px-2 py-1 rounded-lg border border-slate-200 flex items-center gap-1 font-bold cursor-not-allowed opacity-60">
+                <Plus className="w-3 h-3" /> Tambah Field
+              </button>
+            </div>
+            <div className="space-y-2">
+              {(formData.additionalEntities || []).map((ent, idx) => {
+                const isGlobalCol = columnConfigs.some(c => c.label.toLowerCase() === ent.key.toLowerCase());
+                return (
+                  <div key={idx} className="flex gap-2 items-center flex-wrap sm:flex-nowrap bg-slate-50/50 p-2 rounded-xl border border-slate-200">
+                    <input type="text" placeholder="Nama Field (cth: Kapasitas)" value={ent.key}
+                      disabled={isGlobalCol}
+                      onChange={(e) => {
+                        const newEnts = [...formData.additionalEntities];
+                        newEnts[idx].key = e.target.value;
+                        setFormData({ ...formData, additionalEntities: newEnts });
+                      }}
+                      className={`flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
+                    />
+                    <select value={ent.type || 'text'}
+                      disabled={isGlobalCol}
+                      onChange={(e) => {
+                        const newEnts = [...formData.additionalEntities];
+                        newEnts[idx].type = e.target.value;
+                        newEnts[idx].value = ''; // Reset value on type change to avoid format conflicts
+                        setFormData({ ...formData, additionalEntities: newEnts });
+                      }}
+                      className={`px-2 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-bold ${isGlobalCol ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : 'bg-white'}`}
+                    >
+                      <option value="text">Teks</option>
+                      <option value="nominal">Nominal / Angka</option>
+                      <option value="date">Tanggal</option>
+                    </select>
+                    {ent.type === 'date' ? (
+                      <input type="date" value={ent.value}
+                        onChange={(e) => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = e.target.value;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        onClick={(e) => { try { e.target.showPicker(); } catch (_) { } }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white cursor-pointer"
+                      />
+                    ) : ent.type === 'nominal' ? (
+                      <input type="text" placeholder="Nilai (cth: 5.000.000)" value={formatNumberString(ent.value)}
+                        onChange={(e) => {
+                          const clean = e.target.value.replace(/\D/g, '');
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = clean;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs font-mono-data bg-white"
+                      />
+                    ) : (
+                      <input type="text" placeholder="Nilai (cth: 20 Ton)" value={ent.value}
+                        onChange={(e) => {
+                          const newEnts = [...formData.additionalEntities];
+                          newEnts[idx].value = e.target.value;
+                          setFormData({ ...formData, additionalEntities: newEnts });
+                        }}
+                        className="flex-1 px-3 py-1.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#005ea4] text-xs bg-white"
+                      />
+                    )}
+                    {!isGlobalCol && (
+                      <button type="button" onClick={() => {
+                        const newEnts = [...formData.additionalEntities];
+                        newEnts.splice(idx, 1);
+                        setFormData({ ...formData, additionalEntities: newEnts });
+                      }}
+                        className="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg border border-rose-200 transition-colors bg-white">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {(!formData.additionalEntities || formData.additionalEntities.length === 0) && (
+                <p className="text-xs text-slate-400 italic bg-slate-50 p-2 rounded-lg border border-slate-100">Belum ada field spesifikasi tambahan. Klik "Tambah Field" untuk memasukkan data custom.</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Pengaturan Notifikasi (Edit Mode) */}
+        {true && (
+          <div className="mt-4 pt-4 border-t border-slate-200">
+            <label className="font-bold text-slate-800 block mb-2 flex items-center gap-1.5 text-xs uppercase tracking-wider font-mono-data">
+              Pengaturan Pengingat & Notifikasi
+            </label>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="editReminderEnabled"
+                  checked={reminderEnabled}
+                  onChange={async (e) => {
+                    const isChecked = e.target.checked;
+                    setReminderEnabled(isChecked);
+                    try {
+                      await saveSettings({ reminderEnabled: isChecked });
+                    } catch (err) {
+                      console.error('Auto-save failed:', err);
+                    }
+                  }}
+                  className="rounded border-slate-300 accent-[#005ea4] h-4 w-4 cursor-pointer"
+                />
+                <label htmlFor="editReminderEnabled" className="text-xs text-slate-700 font-bold select-none cursor-pointer">
+                  Aktifkan Pengingat Notifikasi untuk Dokumen ini
+                </label>
+              </div>
+              {reminderEnabled && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <CustomSelect
+                    label="Tipe Reminder"
+                    value={triggerType}
+                    buttonClassName="py-1.5"
+                    onChange={async (nextVal) => {
+                      setTriggerType(nextVal);
+                      try {
+                        await saveSettings({ triggerType: nextVal });
+                      } catch (err) { }
+                    }}
+                    options={[
+                      { value: 'DAYS', label: 'Berdasarkan Sisa Hari (H-)' },
+                      { value: 'DATE', label: 'Berdasarkan Tanggal Spesifik' },
+                    ]}
+                  />
+                  {triggerType === 'DAYS' ? (
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Pemicu H- (Hari)</label>
+                      <input
+                        type="number" min="1" value={reminderDays}
+                        onChange={async (e) => {
+                          const nextVal = e.target.value === '' ? '' : parseInt(e.target.value);
+                          setReminderDays(nextVal);
+                          try {
+                            await saveSettings({ reminderDays: nextVal });
+                          } catch (err) { }
+                        }}
+                        className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="text-[11px] font-bold text-slate-600 block mb-1">Pilih Tanggal Pemicu</label>
+                      <input
+                        type="date" value={triggerDate}
+                        onChange={async (e) => {
+                          const nextVal = e.target.value;
+                          setTriggerDate(nextVal);
+                          try {
+                            await saveSettings({ triggerDate: nextVal });
+                          } catch (err) { }
+                        }}
+                        className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#005ea4] font-mono-data"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="pt-4 border-t border-slate-200 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => setIsEditing(false)}
+            className="px-5 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors cursor-pointer"
+          >
+            Batal
+          </button>
+          <button type="submit" className="px-6 py-2 bg-[#005ea4] hover:bg-[#004881] text-white font-bold rounded-xl shadow-xs flex items-center gap-1.5 transition-colors cursor-pointer">
+            <Save className="w-4 h-4" />
+            <span>Simpan Perubahan Data</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
